@@ -49,7 +49,8 @@ public class ResponseManager: Logger {
     }
 
     public func getResponseHandler(stanza:Stanza)-> ((Stanza)->Void)? {
-        if (stanza.id == nil) {
+        let type = stanza.type;
+        if (stanza.id == nil || (type != StanzaType.error && type !=  StanzaType.result)) {
             return nil;
         }
         let id = stanza.id!;

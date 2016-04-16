@@ -200,7 +200,8 @@ public class Element : Node {
         if (!nodes.isEmpty) {
             result += ">\n"
             for child in nodes {
-                result += child.toPrettyString() + "\n"
+                let str = child.toPrettyString();
+                result += str + ((child is Element && str.characters.last != "\n") ? "\n" : "")
             }
             result += "</\(self.name)>"
         } else {

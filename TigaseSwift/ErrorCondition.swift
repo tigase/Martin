@@ -21,7 +21,7 @@
 
 import Foundation
 
-public enum ErrorCondition: String {
+public enum ErrorCondition: String, ErrorType {
     case bad_request = "bad-request"
     case conflict
     case feature_not_implemented = "feature-not-implemented"
@@ -95,5 +95,9 @@ public enum ErrorCondition: String {
         case .unexpected_request:
             return "wait";
         }
+    }
+    
+    public func createResponse(stanza:Stanza) -> Stanza {
+        return stanza.errorResult(self)
     }
 }

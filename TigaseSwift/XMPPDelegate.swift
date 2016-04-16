@@ -32,7 +32,7 @@ public class XMPPDelegate : NSObject, XMPPStreamDelegate {
     }
     
     func processElement(packet: Element) {
-        log("got packet:  " + packet.toPrettyString())
+        log("got packet:  " + packet.stringValue)
     }
     
 }

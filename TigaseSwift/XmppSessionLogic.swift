@@ -76,10 +76,16 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                     try module.process(stanza);
                 }
             } else {
-                //TODO: send feature-not-implemented
+                log("feature-not-implemented", stanza);
+                throw ErrorCondition.feature_not_implemented;
             }
-        } catch _ {
-            
+        } catch let error as ErrorCondition {
+            let errorStanza = error.createResponse(stanza);
+            context.writer?.write(errorStanza);
+        } catch {
+            let errorStanza = ErrorCondition.undefined_condition.createResponse(stanza);
+            context.writer?.write(errorStanza);
+            log("unknown unhandled exception", error)
         }
     }
     

@@ -21,7 +21,11 @@
 
 import Foundation
 
-public class Stanza {
+public class Stanza: CustomStringConvertible {
+    
+    public var description: String {
+        return String("Stanza : \(element.stringValue)")
+    }
     
     public let element:Element;
     
@@ -76,6 +80,18 @@ public class Stanza {
         }
     }
     
+    public var errorCondition:ErrorCondition? {
+        get {
+            if type != StanzaType.error {
+                return nil;
+            }
+            if let name = element.findChild("error")?.findChild(xmlns:"urn:ietf:params:xml:ns:xmpp-stanzas")?.name {
+                return ErrorCondition(rawValue: name);
+            }
+            return nil;
+        }
+    }
+
     init(name:String) {
         self.element = Element(name: name);
     }
@@ -96,9 +112,39 @@ public class Stanza {
             return Stanza(elem:elem);
         }
     }
+    
+    public func errorResult(condition:ErrorCondition, text:String? = nil) -> Stanza {
+        return errorResult(condition.type, errorCondition: condition.rawValue);
+    }
+    
+    public func errorResult(errorType:String?, errorCondition:String, errorText:String? = nil, xmlns:String = "urn:ietf:params:xml:ns:xmpp-stanzas") -> Stanza {
+        let elem = element;
+        let response = Stanza.fromElement(elem);
+        response.type = StanzaType.error;
+        response.to = self.from;
+        response.from = self.to;
+        
+        let errorEl = Element(name: "error");
+        errorEl.setAttribute("type", value: errorType);
+        
+        let conditon = Element(name: errorCondition);
+        conditon.xmlns = xmlns;
+        errorEl.addChild(conditon);
+        
+        if errorText != nil {
+            errorEl.addChild(Element(name: "text", cdata: errorText));
+        }
+        
+        response.element.addChild(errorEl);
+        return response;
+    }
 }
 
 public class Message: Stanza {
+  
+    public override var description: String {
+        return String("Message : \(element.stringValue)")
+    }
     
     public init() {
         super.init(name: "message");
@@ -111,6 +157,10 @@ public class Message: Stanza {
 }
 
 public class Presence: Stanza {
+
+    public override var description: String {
+        return String("Presence : \(element.stringValue)")
+    }
     
     public init() {
         super.init(name: "presence");
@@ -124,6 +174,10 @@ public class Presence: Stanza {
 
 public class Iq: Stanza {
 
+    public override var description: String {
+        return String("Iq : \(element.stringValue)")
+    }
+    
     public init() {
         super.init(name: "iq");
     }
