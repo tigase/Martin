@@ -65,6 +65,7 @@ public class ResponseManager: Logger {
         return nil;
     }
     
+    // TODO: add support for passing info about timeout to callback - stanza = nil? or separate callback?
     public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:(Stanza)->Void) {
         var id = stanza.id;
         if id == nil {

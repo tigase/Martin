@@ -21,26 +21,51 @@
 
 import Foundation
 
-class XMLParserDelegate: NSObject,NSXMLParserDelegate {
+public class XMPPParserDelegate: Logger, XMLParserDelegate {
     
-    var logger = Logger();
     var xmlnss = [String:String]();
-    var delegate:XMPPStreamDelegate?;
+    public var delegate:XMPPStreamDelegate?;
     var el_stack = [Element]()
     var all_roots = [Element]()
     
-    func parser(parser: NSXMLParser, foundCDATA CDATABlock: NSData) {
-        var buf = Array<UInt8>(count: CDATABlock.length, repeatedValue: 0);
-        CDATABlock.getBytes(&buf, length: CDATABlock.length);
-        self.parser(parser, foundCharacters: NSString(bytes: &buf, length:CDATABlock.length, encoding: NSUTF8StringEncoding) as String!)
+    public func startElement(elementName:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]) {
+        
+        if namespaces != nil {
+            for (k,v) in namespaces! {
+                if !k.isEmpty {
+                    xmlnss[k] = v;
+                }
+            }
+        }
+        
+        if (elementName == "stream" && prefix == "stream") {
+            var attrs = attributes;
+            if (namespaces != nil) {
+                for (k,v) in namespaces! {
+                    attrs[k] = v;
+                }
+            }
+            delegate?.onStreamStart(attrs);
+            return
+        }
+        
+        let xmlns:String? = (prefix == nil ? nil : xmlnss[prefix!]) ?? namespaces?[""];
+        
+        let name = (prefix != nil && xmlns == nil) ? (prefix! + ":" + elementName) : elementName;
+        
+        let elem = Element(name: name, cdata: nil, attributes: attributes)
+        if (!el_stack.isEmpty) {
+            let defxmlns = el_stack.last!.xmlns
+            elem.setDefXMLNS(defxmlns)
+        }
+        if (xmlns != nil) {
+            elem.xmlns = xmlns;
+        }
+        el_stack.append(elem);
     }
     
-    func parser(parser: NSXMLParser, foundCharacters string: String) {
-        el_stack.last?.addNode(CData(value: string))
-    }
-    
-    func parser(parser: NSXMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
-        if (elementName == "stream:stream") {
+    public func endElement(elementName: String, prefix: String?) {
+        if (elementName == "stream" && prefix == "stream") {
             delegate?.onStreamTerminate()
             return
         }
@@ -53,57 +78,12 @@ class XMLParserDelegate: NSObject,NSXMLParserDelegate {
         }
     }
     
-    func parser(parser: NSXMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String]) {
-        logger.log("using parser", parser);
-        for (k,v) in attributeDict {
-            if let idx = k.characters.indexOf(":") {
-                let prefix = k.substringFromIndex(idx.advancedBy(1))
-                self.xmlnss[prefix] = v
-            }
-        }
-        if (elementName == "stream:stream") {
-            delegate?.onStreamStart(attributeDict)
-            return
-        }
-        
-        var xmlns:String? = namespaceURI
-        if (namespaceURI == nil) {
-            xmlns = attributeDict["xmlns"]
-        }
-        
-        var attributes = attributeDict;
-        var name = elementName;
-        if let idx = elementName.characters.indexOf(":") {
-            let prefix = elementName.substringToIndex(idx)
-            if (xmlnss[prefix] != nil) {
-                xmlns = xmlnss[prefix]
-                attributes["xmlns:" + prefix] = nil
-            }
-            name = elementName.substringFromIndex(idx.advancedBy(1))
-        }
-        
-        let elem = Element(name: name, cdata: nil, attributes: attributes)
-        if (!el_stack.isEmpty) {
-            let defxmlns = el_stack.last!.xmlns
-            elem.setDefXMLNS(defxmlns)
-        }
-        if (xmlns != nil) {
-            elem.xmlns = xmlns;
-        }
-        el_stack.append(elem);
-        
-        //print("starting eleent" + elementName + " with namespace: " + namespaceURI!);
-        //     x += "started:" + elementName + " fqdn: " + (qName)! + "\n"
-        //x += "started:" + elementName + "\n"
+    public func charactersFound(value: String) {
+        el_stack.last?.addNode(CData(value: value))
     }
     
-    func parser(parser: NSXMLParser, parseErrorOccurred parseError: NSError) {
-        switch parseError.code {
-        case NSXMLParserError.DelegateAbortedParseError.rawValue:
-            log("XML parsing aborted for parser", parser)
-        default:
-            log("XML parsing error", parseError);
-        }
+    public func error(msg: String) {
+        log("error occurred", msg);
     }
     
 }

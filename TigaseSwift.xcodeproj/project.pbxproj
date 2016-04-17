@@ -44,6 +44,8 @@
 		FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFDBA1CBD3727000D254E /* StanzaType.swift */; };
 		FE2EFDBD1CBD594C000D254E /* ErrorCondition.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFDBC1CBD594C000D254E /* ErrorCondition.swift */; };
 		FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */; };
+		FE2EFDCC1CC2A27E000D254E /* libxml2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FE2EFDCB1CC2A27E000D254E /* libxml2.tbd */; };
+		FE2EFE201CC417D9000D254E /* XMLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFE1F1CC417D9000D254E /* XMLParser.swift */; };
 		FE3F33D71CA1CBB9001A5CD6 /* TigaseSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FE3F33DE1CA1CBB9001A5CD6 /* TigaseSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */; };
 		FE3F33E31CA1CBB9001A5CD6 /* TigaseSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33E21CA1CBB9001A5CD6 /* TigaseSwiftTests.swift */; };
@@ -103,6 +105,8 @@
 		FE2EFDBA1CBD3727000D254E /* StanzaType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StanzaType.swift; sourceTree = "<group>"; };
 		FE2EFDBC1CBD594C000D254E /* ErrorCondition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ErrorCondition.swift; sourceTree = "<group>"; };
 		FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionEstablishmentModule.swift; sourceTree = "<group>"; };
+		FE2EFDCB1CC2A27E000D254E /* libxml2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libxml2.tbd; path = usr/lib/libxml2.tbd; sourceTree = SDKROOT; };
+		FE2EFE1F1CC417D9000D254E /* XMLParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMLParser.swift; sourceTree = "<group>"; };
 		FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TigaseSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TigaseSwift.h; sourceTree = "<group>"; };
 		FE3F33D81CA1CBB9001A5CD6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -122,6 +126,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE2EFDCC1CC2A27E000D254E /* libxml2.tbd in Frameworks */,
 				FE2EFD631CB29B28000D254E /* libresolv.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -176,6 +181,7 @@
 				FE2EFD7E1CB57D25000D254E /* Element.swift */,
 				FE2EFD7F1CB57D25000D254E /* Node.swift */,
 				FE2EFD801CB57D25000D254E /* XMPPParserDelegate.swift */,
+				FE2EFE1F1CC417D9000D254E /* XMLParser.swift */,
 			);
 			path = xml;
 			sourceTree = "<group>";
@@ -215,6 +221,7 @@
 		FE3F33C91CA1CBB9001A5CD6 = {
 			isa = PBXGroup;
 			children = (
+				FE2EFDCB1CC2A27E000D254E /* libxml2.tbd */,
 				FE2EFD621CB29B28000D254E /* libresolv.tbd */,
 				FE3F33D51CA1CBB9001A5CD6 /* TigaseSwift */,
 				FE3F33E11CA1CBB9001A5CD6 /* TigaseSwiftTests */,
@@ -426,6 +433,7 @@
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
 				FE2EFD7B1CB57C70000D254E /* JID.swift in Sources */,
+				FE2EFE201CC417D9000D254E /* XMLParser.swift in Sources */,
 				FE2EFDBD1CBD594C000D254E /* ErrorCondition.swift in Sources */,
 				FE2EFD981CB66C0C000D254E /* DefaultCredentialsCallback.swift in Sources */,
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
@@ -563,6 +571,7 @@
 					"$(inherited)",
 				);
 				FRAMEWORK_VERSION = A;
+				HEADER_SEARCH_PATHS = "$(SDK_DIR)/usr/include/libxml2/**";
 				INFOPLIST_FILE = TigaseSwift/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks @loader_path/../Frameworks @executable_path/Frameworks";
@@ -571,7 +580,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
-				SWIFT_INCLUDE_PATHS = "";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
@@ -592,6 +601,7 @@
 					"$(inherited)",
 				);
 				FRAMEWORK_VERSION = A;
+				HEADER_SEARCH_PATHS = "$(SDK_DIR)/usr/include/libxml2/**";
 				INFOPLIST_FILE = TigaseSwift/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks @loader_path/../Frameworks @executable_path/Frameworks";
@@ -600,7 +610,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
-				SWIFT_INCLUDE_PATHS = "";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
 			};

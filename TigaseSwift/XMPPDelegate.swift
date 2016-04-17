@@ -23,15 +23,15 @@ import Foundation
 
 public class XMPPDelegate : NSObject, XMPPStreamDelegate {
     
-    func onStreamTerminate() {
+    public func onStreamTerminate() {
         log("stream closed")
     }
     
-    func onStreamStart(attributes: [String : String]) {
+    public func onStreamStart(attributes: [String : String]) {
         log("stream started: \(attributes)")
     }
     
-    func processElement(packet: Element) {
+    public func processElement(packet: Element) {
         log("got packet:  " + packet.stringValue)
     }
     

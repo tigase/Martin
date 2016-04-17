@@ -28,11 +28,9 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     let context:Context;
     let sessionObject:SessionObject;
     var inStream:NSInputStream?
-    var wrappedInStream:NSInputStreamWrapper?;
     var outStream:NSOutputStream?
     var parserDelegate:XMLParserDelegate?
-    // FIXME: replace NSXMLParser with libxml2 to handle partial parsing!
-    var parser:NSXMLParser?
+    var parser:XMLParser?
     let dnsResolver = XMPPDNSSrvResolver();
     weak var sessionLogic:XmppSessionLogic!;
     
@@ -42,7 +40,6 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     public func start() {
-        //let domain = "pandion.im";
         let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
         let domain = userJid.domain;
         let server:String = sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
@@ -82,31 +79,15 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.inStream!.open();
         self.outStream!.open();
         
-        self.wrappedInStream = NSInputStreamWrapper(input: self.inStream!);
+        //self.wrappedInStream = NSInputStreamWrapper(input: self.inStream!);
         
         if (ssl) {
             configureTLS()
         }
         
-        parserDelegate = XMLParserDelegate();
+        parserDelegate = XMPPParserDelegate();
         parserDelegate!.delegate = self
-        parser = NSXMLParser(stream:wrappedInStream!)
-        parser!.delegate = parserDelegate
-        
-        log("sending stream open")
-
-        
-       // send("<?xml version='1.0'?>")
-        //restartStream();
-        
-//        let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
-//        
-//        // replace with this first one to enable see-other-host feature
-//        //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
-//        self.send("<stream:stream to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
-//        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-//            self.parser!.parse()
-//        }
+        parser = XMLParser(delegate: parserDelegate!);
     }
     
     func startTLS() {
@@ -126,11 +107,8 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         let userJid:BareJID = self.sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
         
         let settings:NSDictionary = NSDictionary(objects: [NSStreamSocketSecurityLevelNegotiatedSSL, userJid.domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
-        //    let settings:NSDictionary = NSDictionary(objects: [NSStreamSocketSecurityLevelSSLv3, userJid.domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
                 kCFStreamSSLPeerName as NSString,
                 kCFStreamSSLValidatesCertificateChain as NSString])
-        //settings.setValue(NSStreamSocketSecurityLevelNegotiatedSSL as NSString, forKey: kCFStreamSSLLevel as String);
-        //settings.setValue(userJid.domain as NSString, forKey: kCFStreamSSLPeerName as String);
         let started = CFReadStreamSetProperty(self.inStream! as CFReadStreamRef, kCFStreamPropertySSLSettings, settings as CFTypeRef)
         if (!started) {
             self.log("could not start STARTTLS");
@@ -146,15 +124,8 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     public func restartStream() {
-        self.wrappedInStream?.closed = true;
-        self.wrappedInStream = NSInputStreamWrapper(input: self.inStream!);
-        self.parser?.abortParsing();
-        self.parser = NSXMLParser(stream:self.wrappedInStream!)
-        self.parser!.delegate = self.parserDelegate
+        self.parser = XMLParser(delegate: parserDelegate!);
         self.log("starting new parser", self.parser!);
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-            self.parser!.parse()
-        }
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
             let userJid:BareJID = self.sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
             // replace with this first one to enable see-other-host feature
@@ -163,7 +134,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
-    override func processElement(packet: Element) {
+    override public func processElement(packet: Element) {
         super.processElement(packet);
         if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
             configureTLS();
@@ -203,7 +174,6 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
                 log("setsockopt!");
                 let socketData:NSData = CFReadStreamCopyProperty(self.inStream! as CFReadStream, kCFStreamPropertySocketNativeHandle) as! NSData;
                 var socket:CFSocketNativeHandle = 0;
-                //(CFDataGetBytePtr(socketData).memory);
                 socketData.getBytes(&socket, length: sizeofValue(socket));
                 var value:Int = 0;
                 let size = UInt32(sizeofValue(value));
@@ -230,10 +200,20 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
                 
                 // moved here?
                 restartStream();
+                
+                log("inStream.hasBytesAvailable", inStream?.hasBytesAvailable);
             }
             log("stream event: OpenCompleted");
         case NSStreamEvent.HasBytesAvailable:
             log("stream event: HasBytesAvailable");
+            if aStream == self.inStream {
+                var buffer = [UInt8](count:2048, repeatedValue: 0);
+                while self.inStream!.hasBytesAvailable {
+                    if let read = self.inStream?.read(&buffer, maxLength: buffer.count) {
+                       parser?.parse(&buffer, length: read)
+                    }
+                }
+            }
         case NSStreamEvent.HasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
         case NSStreamEvent.EndEncountered:
@@ -241,59 +221,5 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         default:
             log("stream event:", aStream.description);            
         }
-    }
-    
-    // try to wrap stream to be able to close one nsparser and start new one!
-    class NSInputStreamWrapper: NSInputStream {
-        
-        let logger = Logger();
-        let input:NSInputStream;
-        var closed:Bool = false;
-        
-        init(input:NSInputStream) {
-            self.input = input;
-            super.init(data: "".dataUsingEncoding(NSUTF8StringEncoding)!);
-        }
-        
-        override func open() {
-            input.open()
-        }
-        
-        override func close() {
-            self.closed = true;
-        }
-        
-        override func read(buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
-            if (closed) {
-                logger.log("stream closed");
-                return -1;
-            }
-            
-            while (!self.hasBytesAvailable && !closed) {
-                usleep(10000);
-            }
-            var read = self.input.read(buffer, maxLength: len);
-            if read > 0 {
-                logger.log("read data:", String(data:NSData(bytes: buffer, length: read), encoding: NSUTF8StringEncoding));
-            } else {
-                logger.log("read data of size:", read, "error: ", self.input.streamError, "hasBytesAvailable", self.input.hasBytesAvailable);
-                if read == -1 {
-                    // FIXME: not a good idea!
-                    logger.log("trying to reread");
-                    read = self.input.read(buffer, maxLength: len);
-                }
-                logger.log("read data of size:", read, "error: ", self.input.streamError, "hasBytesAvailable", self.input.hasBytesAvailable);
-            }
-            return read;
-        }
-        
-        override var hasBytesAvailable: Bool {
-            return self.input.hasBytesAvailable;
-        }
-        
-        override func getBuffer(buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>>, length len: UnsafeMutablePointer<Int>) -> Bool {
-            return false;
-        }
-        
     }
 }
