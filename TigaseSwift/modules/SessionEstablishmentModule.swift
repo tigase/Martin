@@ -59,15 +59,15 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
         session.xmlns = SessionEstablishmentModule.SESSION_XMLNS;
         iq.element.addChild(session);
 
-        context.writer?.write(iq) { (stanza:Stanza) in
+        context.writer?.write(iq) { (stanza:Stanza?) in
             var errorCondition:ErrorCondition?;
-            if let type = stanza.type {
+            if let type = stanza?.type {
                 switch type {
                 case .result:
                     self.context.eventBus.fire(SessionEstablishmentSuccessEvent(sessionObject:self.context.sessionObject));
                     return;
                 default:
-                    if let name = stanza.element.findChild("error")?.firstChild()?.name {
+                    if let name = stanza!.element.findChild("error")?.firstChild()?.name {
                         errorCondition = ErrorCondition(rawValue: name);
                     }
                 }

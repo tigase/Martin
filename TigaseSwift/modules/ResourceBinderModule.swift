@@ -53,18 +53,18 @@ public class ResourceBinderModule: XmppModule, ContextAware {
         iq.element.addChild(bind);
         let resource:String? = context.sessionObject.getProperty(SessionObject.RESOURCE);
         bind.addChild(Element(name: "resource", cdata:resource));
-        context.writer?.write(iq) { (stanza:Stanza) in
+        context.writer?.write(iq) { (stanza:Stanza?) in
             var errorCondition:ErrorCondition?;
-            if let type = stanza.type {
+            if let type = stanza?.type {
                 switch type {
                 case .result:
-                    if let name = stanza.element.findChild("bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild("jid")?.value {
+                    if let name = stanza!.element.findChild("bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild("jid")?.value {
                         let jid = JID(name);
                         self.context.eventBus.fire(ResourceBindSuccessEvent(sessionObject: self.context.sessionObject, bindedJid: jid));
                         return;
                     }
                 default:
-                if let name = stanza.element.findChild("error")?.firstChild()?.name {
+                    if let name = stanza!.element.findChild("error")?.firstChild()?.name {
                         errorCondition = ErrorCondition(rawValue: name);
                     }
                 }

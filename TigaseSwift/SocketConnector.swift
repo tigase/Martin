@@ -155,19 +155,19 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     private func send(data:String) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-        self.log("sending stanza:", data);
-        let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!
-        var outBuf = Array<UInt8>(count: buf.length, repeatedValue: 0)
-        buf.getBytes(&outBuf, length: buf.length)
-        let sent = self.outStream?.write(&outBuf, maxLength: buf.length)
-        self.log("sent \(sent) from \(buf.length)")
-        //self.outStream?.write(&outBuf, maxLength: 0);
+            self.log("sending stanza:", data);
+            let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!
+            var outBuf = Array<UInt8>(count: buf.length, repeatedValue: 0)
+            buf.getBytes(&outBuf, length: buf.length)
+            let sent = self.outStream?.write(&outBuf, maxLength: buf.length)
+            self.log("sent \(sent) from \(buf.length)")
         }
     }
     
     public func stream(aStream: NSStream, handleEvent eventCode: NSStreamEvent) {
         switch eventCode {
         case NSStreamEvent.ErrorOccurred:
+            // may happen if cannot connect to server or if connection was broken
             log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
         case NSStreamEvent.OpenCompleted:
             if (aStream == self.inStream) {

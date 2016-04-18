@@ -25,9 +25,9 @@ public class ResponseManager: Logger {
     private class Entry {
         let jid:JID?;
         let timestamp:NSDate;
-        let callback:(Stanza)->Void;
+        let callback:(Stanza?)->Void;
         
-        init(jid:JID?, callback:(Stanza)->Void, timeout:NSTimeInterval) {
+        init(jid:JID?, callback:(Stanza?)->Void, timeout:NSTimeInterval) {
             self.jid = jid;
             self.callback = callback;
             self.timestamp = NSDate(timeIntervalSinceNow: timeout);
@@ -48,7 +48,7 @@ public class ResponseManager: Logger {
         self.context = context;
     }
 
-    public func getResponseHandler(stanza:Stanza)-> ((Stanza)->Void)? {
+    public func getResponseHandler(stanza:Stanza)-> ((Stanza?)->Void)? {
         let type = stanza.type;
         if (stanza.id == nil || (type != StanzaType.error && type !=  StanzaType.result)) {
             return nil;
@@ -65,14 +65,41 @@ public class ResponseManager: Logger {
         return nil;
     }
     
-    // TODO: add support for passing info about timeout to callback - stanza = nil? or separate callback?
-    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:(Stanza)->Void) {
+    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:(Stanza?)->Void) {
         var id = stanza.id;
         if id == nil {
             id = nextUid();
             stanza.id = id;
         }
         handlers[id!] = Entry(jid: stanza.to, callback: callback, timeout: timeout);
+    }
+    
+    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, onSuccess:(Stanza)->Void, onError:(Stanza,ErrorCondition?)->Void, onTimeout:()->Void) {
+        self.registerResponseHandler(stanza, timeout: timeout) { (response:Stanza?)->Void in
+            if response == nil {
+                onTimeout();
+            } else {
+                if response!.type == StanzaType.error {
+                    onError(response!, response!.errorCondition);
+                } else {
+                    onSuccess(response!);
+                }
+            }
+        }
+    }
+    
+    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:AsyncCallback) {
+        self.registerResponseHandler(stanza, timeout: timeout) { (response:Stanza?)->Void in
+            if response == nil {
+                callback.onTimeout();
+            } else {
+                if response!.type == StanzaType.error {
+                    callback.onError(response!, error: response!.errorCondition);
+                } else {
+                    callback.onSuccess(response!);
+                }
+            }
+        }
     }
     
     public func start() {
@@ -90,6 +117,19 @@ public class ResponseManager: Logger {
     }
     
     @objc func checkTimeouts() {
-        
+        for (id,handler) in self.handlers {
+            if handler.checkTimeout() {
+                self.handlers.removeValueForKey(id);
+                handler.callback(nil);
+            }
+        }
     }
+}
+
+public protocol AsyncCallback {
+    
+    func onError(response:Stanza, error:ErrorCondition?);
+    func onSuccess(responseStanza:Stanza);
+    func onTimeout();
+    
 }
