@@ -22,12 +22,12 @@
 import Foundation
 
 
-public class EventBus {
+public class EventBus: Logger {
     
     //    private var handlersByEvent:[String:[(event:Event)->Void]];
     private var handlersByEvent:[String:[EventHandler]];
     
-    public init() {
+    public override init() {
         handlersByEvent = [:];
     }
     
@@ -38,7 +38,9 @@ public class EventBus {
             if handlers == nil {
                 handlers = [EventHandler]();
             }
-            handlers?.append(handler);
+            if (handlers!.indexOf({ $0 === handler }) == nil) {
+                handlers!.append(handler);
+            }
             handlersByEvent[type] = handlers;
         }
     }
@@ -50,6 +52,7 @@ public class EventBus {
                 if let idx = handlers.indexOf({ $0 === handler }) {
                     handlers.removeAtIndex(idx);
                 }
+                handlersByEvent[type] = handlers;
             }
         }
     }

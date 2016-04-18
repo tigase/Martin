@@ -54,7 +54,9 @@
 		FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */; };
 		FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */; };
 		FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */; };
-		FE5F825B1CAEA786002A66B2 /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE5F825A1CAEA786002A66B2 /* Log.swift */; };
+		FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ECE1CC51CE000D0509D /* StreamError.swift */; };
+		FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED11CC5387700D0509D /* Timer.swift */; };
+		FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED31CC53C5C00D0509D /* Log.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -118,7 +120,9 @@
 		FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMPPDelegate.swift; sourceTree = "<group>"; };
 		FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Criteria.swift; sourceTree = "<group>"; };
 		FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketConnector.swift; sourceTree = "<group>"; };
-		FE5F825A1CAEA786002A66B2 /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		FE9A1ECE1CC51CE000D0509D /* StreamError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamError.swift; sourceTree = "<group>"; };
+		FE9A1ED11CC5387700D0509D /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
+		FE9A1ED31CC53C5C00D0509D /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -241,6 +245,7 @@
 		FE3F33D51CA1CBB9001A5CD6 /* TigaseSwift */ = {
 			isa = PBXGroup;
 			children = (
+				FE9A1ED01CC5386100D0509D /* util */,
 				FE2EFDA71CB80956000D254E /* eventbus */,
 				FE2EFD7C1CB57D25000D254E /* xml */,
 				FE2EFD6D1CB57C70000D254E /* dns */,
@@ -253,7 +258,6 @@
 				FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */,
 				FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */,
 				FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */,
-				FE5F825A1CAEA786002A66B2 /* Log.swift */,
 				FE2EFD401CAED46B000D254E /* SessionObject.swift */,
 				FE2EFD421CAED89A000D254E /* ConnectionConfiguration.swift */,
 				FE2EFD681CB4339D000D254E /* XMPPClient.swift */,
@@ -266,6 +270,7 @@
 				FE2EFDB81CBD231B000D254E /* ResponseManager.swift */,
 				FE2EFDBA1CBD3727000D254E /* StanzaType.swift */,
 				FE2EFDBC1CBD594C000D254E /* ErrorCondition.swift */,
+				FE9A1ECE1CC51CE000D0509D /* StreamError.swift */,
 			);
 			path = TigaseSwift;
 			sourceTree = "<group>";
@@ -277,6 +282,15 @@
 				FE3F33E41CA1CBB9001A5CD6 /* Info.plist */,
 			);
 			path = TigaseSwiftTests;
+			sourceTree = "<group>";
+		};
+		FE9A1ED01CC5386100D0509D /* util */ = {
+			isa = PBXGroup;
+			children = (
+				FE9A1ED31CC53C5C00D0509D /* Log.swift */,
+				FE9A1ED11CC5387700D0509D /* Timer.swift */,
+			);
+			path = util;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -407,6 +421,7 @@
 			files = (
 				FE2EFDA41CB680A2000D254E /* Stanza.swift in Sources */,
 				FE2EFDAB1CB80E51000D254E /* Event.swift in Sources */,
+				FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */,
 				FE2EFD901CB59D3A000D254E /* PlainMechanism.swift in Sources */,
 				FE2EFD891CB58088000D254E /* SaslModule.swift in Sources */,
 				FE2EFDAF1CB825D0000D254E /* XmppSessionLogic.swift in Sources */,
@@ -422,12 +437,12 @@
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
 				FE2EFDB51CBD0A64000D254E /* SaslError.swift in Sources */,
 				FE2EFDB71CBD1DE7000D254E /* ResourceBinderModule.swift in Sources */,
-				FE5F825B1CAEA786002A66B2 /* Log.swift in Sources */,
 				FE2EFD9E1CB67145000D254E /* ContextAware.swift in Sources */,
 				FE2EFD9A1CB66DA9000D254E /* StreamFeaturesModule.swift in Sources */,
 				FE2EFD7A1CB57C70000D254E /* BareJID.swift in Sources */,
 				FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */,
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
+				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,
 				FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */,
 				FE2EFD791CB57C70000D254E /* XMPPSrvRecord.swift in Sources */,
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
@@ -435,6 +450,7 @@
 				FE2EFD7B1CB57C70000D254E /* JID.swift in Sources */,
 				FE2EFE201CC417D9000D254E /* XMLParser.swift in Sources */,
 				FE2EFDBD1CBD594C000D254E /* ErrorCondition.swift in Sources */,
+				FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */,
 				FE2EFD981CB66C0C000D254E /* DefaultCredentialsCallback.swift in Sources */,
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,

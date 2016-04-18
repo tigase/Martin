@@ -29,6 +29,8 @@ public protocol XmppSessionLogic:class {
     func receivedIncomingStanza(stanza:Stanza);
     func sendingOutgoingStanza(stanza:Stanza);
     
+    func onStreamError(streamError:Element);
+    
 }
 
 public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
@@ -61,6 +63,16 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         context.eventBus.unregister(self, events: ResourceBinderModule.ResourceBindSuccessEvent.TYPE, ResourceBinderModule.ResourceBindErrorEvent.TYPE);
         responseManager.stop();
         connector.sessionLogic = nil;
+    }
+    
+    public func onStreamError(streamErrorEl: Element) {
+        if let seeOtherHost = streamErrorEl.findChild("see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams") {
+            connector.reconnect(seeOtherHost.value!)
+            return;
+        }
+        let errorName = streamErrorEl.findChild(xmlns: "urn:ietf:params:xml:ns:xmpp-streams")?.name;
+        let streamError = errorName == nil ? nil : StreamError(rawValue: errorName!);
+        context.eventBus.fire(ErrorEvent.init(sessionObject: context.sessionObject, streamError: streamError));
     }
     
     public func receivedIncomingStanza(stanza:Stanza) {
@@ -158,5 +170,24 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         log("checking TLS");
         let featuresElement = StreamFeaturesModule.getStringFeatures(context.sessionObject);
         return (featuresElement?.findChild("starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) != nil;
+    }
+    
+    public class ErrorEvent: Event {
+        
+        public static let TYPE = ErrorEvent();
+        
+        public let type = "errorEvent";
+        public let sessionObject:SessionObject!;
+        public let streamError:StreamError?;
+        
+        init() {
+            sessionObject = nil;
+            streamError = nil;
+        }
+        
+        public init(sessionObject: SessionObject, streamError:StreamError?) {
+            self.sessionObject = sessionObject;
+            self.streamError = streamError;
+        }
     }
 }

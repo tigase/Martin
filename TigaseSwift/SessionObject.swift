@@ -21,7 +21,7 @@
 
 import Foundation
 
-public class SessionObject {
+public class SessionObject: Logger {
     
     public static let PASSWORD = "password";
     
@@ -50,6 +50,20 @@ public class SessionObject {
     }
     
     var properties = [String:Entry]();
+        
+    public func clear(scopes_:Scope...) {
+        var scopes = scopes_;
+        if scopes.isEmpty {
+            scopes.append(Scope.session);
+            scopes.append(Scope.stream);
+        }
+        log("removing properties for scopes", scopes);
+        for (k,v) in properties {
+            if (scopes.indexOf({ $0 == v.scope }) != nil) {
+                properties.removeValueForKey(k);
+            }
+        }
+    }
     
     public func hasProperty(prop:String, scope:Scope? = nil) -> Bool {
         let e = self.properties[prop];

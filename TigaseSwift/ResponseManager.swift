@@ -38,7 +38,7 @@ public class ResponseManager: Logger {
         }
     }
     
-    private var timer:NSTimer?;
+    private var timer:Timer?;
     
     private var handlers = [String:Entry]();
     
@@ -103,12 +103,17 @@ public class ResponseManager: Logger {
     }
     
     public func start() {
-        timer = NSTimer.scheduledTimerWithTimeInterval(NSTimeInterval(30), target: self, selector: #selector(ResponseManager.checkTimeouts), userInfo: nil, repeats: true);
+        timer = Timer(delayInSeconds: 30, repeats: true) {
+            self.checkTimeouts();
+        }
     }
     
     public func stop() {
-        if timer != nil {
-            timer?.invalidate();
+        timer?.cancel();
+        timer = nil;
+        for (id,handler) in handlers {
+            handlers.removeValueForKey(id);
+            handler.callback(nil);
         }
     }
     
@@ -116,7 +121,7 @@ public class ResponseManager: Logger {
         return NSUUID().UUIDString;
     }
     
-    @objc func checkTimeouts() {
+    func checkTimeouts() {
         for (id,handler) in self.handlers {
             if handler.checkTimeout() {
                 self.handlers.removeValueForKey(id);

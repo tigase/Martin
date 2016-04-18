@@ -21,7 +21,7 @@
 
 import Foundation
 
-public class XMPPClient {
+public class XMPPClient: Logger, EventHandler {
     
     public let sessionObject = SessionObject();
     public let connectionConfiguration:ConnectionConfiguration!;
@@ -32,19 +32,47 @@ public class XMPPClient {
     private var sessionLogic:XmppSessionLogic!;
     private let responseManager:ResponseManager;
     
-    public init() {
+    public override init() {
         connectionConfiguration = ConnectionConfiguration(self.sessionObject);
         modulesManager = XmppModulesManager();
         context = Context(sessionObject: self.sessionObject, eventBus:eventBus, modulesManager: modulesManager);
         responseManager = ResponseManager(context: context);
+        super.init()
+        eventBus.register(self, events: SocketConnector.DisconnectedEvent.TYPE);
+    }
+    
+    deinit {
+        eventBus.unregister(self, events: SocketConnector.DisconnectedEvent.TYPE);
     }
     
     public func login() -> Void {
+        let state = socketConnector?.state ?? SocketConnector.State.disconnected;
+        if state != SocketConnector.State.disconnected {
+            log("XMPP in state:", state, " - not starting connection");
+            return;
+        }
+        log("starting connection......");
         socketConnector = SocketConnector(context: context);
         context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager);
         sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context);
         sessionLogic.bind();
         socketConnector?.start()
+    }
+    
+    public func disconnect() -> Void {
+        socketConnector?.stop();
+        sessionLogic.unbind();
+        sessionLogic = nil;
+        log("connection stopped......");
+    }
+    
+    public func handleEvent(event: Event) {
+        switch event {
+        case is SocketConnector.DisconnectedEvent:
+            context.sessionObject.clear();
+        default:
+            log("received unhandled event:", event);
+        }
     }
     
     private class SocketPacketWriter: PacketWriter {

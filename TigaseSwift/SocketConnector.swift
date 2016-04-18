@@ -22,8 +22,15 @@ import Foundation
 
 public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
+    public static let SEE_OTHER_HOST_KEY = "seeOtherHost";
     public static let SERVER_HOST = "serverHost";
     
+    public enum State {
+        case connecting
+        case connected
+        case disconnecting
+        case disconnected
+    }
     
     let context:Context;
     let sessionObject:SessionObject;
@@ -33,16 +40,39 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     var parser:XMLParser?
     let dnsResolver = XMPPDNSSrvResolver();
     weak var sessionLogic:XmppSessionLogic!;
+    var closeTimer:Timer?;
+    
+    private var state_:State = State.disconnected;
+    public var state:State {
+        get {
+            if state_ != State.disconnected && inStream?.streamStatus == NSStreamStatus.Closed || outStream?.streamStatus == NSStreamStatus.Closed {
+                state = State.disconnected;
+            }
+            return state_;
+        }
+        set {
+            if newValue == State.disconnecting && state_ == State.disconnected {
+                return;
+            }
+            if state_ != State.disconnected && newValue == State.disconnected {
+                context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject));
+            }
+            if state_ == State.connecting && newValue == State.connected {
+                context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
+            }
+            state_ = newValue
+        }
+    }
     
     init(context:Context) {
         self.sessionObject = context.sessionObject;
         self.context = context;
     }
     
-    public func start() {
+    public func start(serverToConnect:String? = nil) {
         let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
         let domain = userJid.domain;
-        let server:String = sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
+        let server:String = serverToConnect ?? sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
         let dnsResolver = self.dnsResolver;
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
             dnsResolver.resolve(server, connector:self);
@@ -95,7 +125,25 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     func stop() {
-        
+        switch state {
+        case .disconnected, .disconnecting:
+            log("not connected or already disconnecting");
+            return;
+        case .connected:
+            state = State.disconnecting;
+            log("closing XMPP stream");
+            self.send("</stream:stream>");
+            closeTimer = Timer(delayInSeconds: 3, repeats: false) {
+                self.inStream?.close()
+                self.outStream?.close();
+                self.closeTimer = nil;
+            }
+        case .connecting:
+            state = State.disconnecting;
+            log("closing TCP connection");
+            inStream?.close()
+            outStream?.close()
+        }
     }
     
     func configureTLS() {
@@ -130,18 +178,40 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             let userJid:BareJID = self.sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
             // replace with this first one to enable see-other-host feature
             //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
-            self.send("<stream:stream to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
+            let seeOtherHost = self.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) ? " from='\(userJid)'" : ""
+            self.send("<stream:stream to='\(userJid.domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
         }
     }
     
     override public func processElement(packet: Element) {
         super.processElement(packet);
-        if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
+        if packet.name == "error" && packet.xmlns == "http://etherx.jabber.org/streams" {
+            sessionLogic.onStreamError(packet);
+        } else if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
             configureTLS();
             restartStream();
         } else {
             processStanza(Stanza.fromElement(packet));
         }
+    }
+    
+    override public func onStreamTerminate() {
+        switch state {
+        case .disconnecting:
+            self.inStream?.close()
+            self.outStream?.close()
+        case .connected:
+            state = State.disconnecting;
+            send("</stream:stream>");
+        default:
+            break;
+        }
+    }
+    
+    public func reconnect(newHost:String) {
+        inStream?.close()
+        outStream?.close();
+        start(newHost);
     }
     
     func processStanza(stanza: Stanza) {
@@ -171,6 +241,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
         case NSStreamEvent.OpenCompleted:
             if (aStream == self.inStream) {
+                state = State.connected;
                 log("setsockopt!");
                 let socketData:NSData = CFReadStreamCopyProperty(self.inStream! as CFReadStream, kCFStreamPropertySocketNativeHandle) as! NSData;
                 var socket:CFSocketNativeHandle = 0;
@@ -217,9 +288,46 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case NSStreamEvent.HasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
         case NSStreamEvent.EndEncountered:
+            state = State.disconnected
+            closeTimer?.cancel()
+            closeTimer = nil;
             log("stream event: EndEncountered");
         default:
             log("stream event:", aStream.description);            
         }
+    }
+
+    public class ConnectedEvent: Event {
+        
+        public static let TYPE = ConnectedEvent();
+        
+        public let type = "connectorConnected";
+        public let sessionObject:SessionObject!;
+        
+        init() {
+            sessionObject = nil;
+        }
+        
+        public init(sessionObject: SessionObject) {
+            self.sessionObject = sessionObject;
+        }
+        
+    }
+    
+    public class DisconnectedEvent: Event {
+        
+        public static let TYPE = DisconnectedEvent();
+        
+        public let type = "connectorDisconnected";
+        public let sessionObject:SessionObject!;
+        
+        init() {
+            sessionObject = nil;
+        }
+        
+        public init(sessionObject: SessionObject) {
+            self.sessionObject = sessionObject;
+        }
+        
     }
 }
