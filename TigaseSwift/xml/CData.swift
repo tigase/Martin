@@ -30,12 +30,13 @@ public class CData : Node {
     }
     
     override public var stringValue: String {
-        return value;
+        return EscapeUtils.escape(value);
     }
     
     override public func toPrettyString() -> String {
-        return value
+        return EscapeUtils.escape(value);
     }
+    
 }
 
 public func ==(lhs: CData, rhs: CData) -> Bool {

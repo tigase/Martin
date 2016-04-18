@@ -55,6 +55,9 @@ private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix
         var name = strFromCUtf8(attrsPtr.memory.name);
         var prefix = strFromCUtf8(attrsPtr.memory.prefix);
         var value = String(data: NSData(bytes: attrsPtr.memory.valueBegin, length: attrsPtr.memory.valueEnd-attrsPtr.memory.valueBegin), encoding: NSUTF8StringEncoding);
+        if (value != nil) {
+            value = EscapeUtils.unescape(value!);
+        }
         if prefix == nil {
             attributes[name!] = value;
         } else {
@@ -73,6 +76,9 @@ private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix
             var uri = strFromCUtf8(nsPtr.memory.uri);
             if prefix == nil {
                 prefix = "";
+            }
+            if (uri != nil) {
+                uri = EscapeUtils.unescape(uri!);
             }
             namespaces![prefix!] = uri;
             nsPtr = nsPtr.successor();

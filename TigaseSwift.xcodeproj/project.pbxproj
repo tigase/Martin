@@ -57,6 +57,7 @@
 		FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ECE1CC51CE000D0509D /* StreamError.swift */; };
 		FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED11CC5387700D0509D /* Timer.swift */; };
 		FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED31CC53C5C00D0509D /* Log.swift */; };
+		FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +124,7 @@
 		FE9A1ECE1CC51CE000D0509D /* StreamError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamError.swift; sourceTree = "<group>"; };
 		FE9A1ED11CC5387700D0509D /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
 		FE9A1ED31CC53C5C00D0509D /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscapeUtils.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -186,6 +188,7 @@
 				FE2EFD7F1CB57D25000D254E /* Node.swift */,
 				FE2EFD801CB57D25000D254E /* XMPPParserDelegate.swift */,
 				FE2EFE1F1CC417D9000D254E /* XMLParser.swift */,
+				FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */,
 			);
 			path = xml;
 			sourceTree = "<group>";
@@ -425,6 +428,7 @@
 				FE2EFD901CB59D3A000D254E /* PlainMechanism.swift in Sources */,
 				FE2EFD891CB58088000D254E /* SaslModule.swift in Sources */,
 				FE2EFDAF1CB825D0000D254E /* XmppSessionLogic.swift in Sources */,
+				FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */,
 				FE2EFDB11CB91549000D254E /* PacketWriter.swift in Sources */,
 				FE2EFD781CB57C70000D254E /* XMPPDNSSrvResolver.swift in Sources */,
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,

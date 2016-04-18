@@ -177,7 +177,8 @@ public class Element : Node {
     override public var stringValue: String {
         var result = "<\(self.name)"
         for (k,v) in attributes {
-            result += " \(k)='\(v)'"
+            let val = EscapeUtils.escape(v);
+            result += " \(k)='\(val)'"
         }
         if (!nodes.isEmpty) {
             result += ">"
@@ -195,7 +196,8 @@ public class Element : Node {
     override public func toPrettyString() -> String {
         var result = "<\(self.name)"
         for (k,v) in attributes {
-            result += " \(k)='\(v)'"
+            let val = EscapeUtils.escape(v);
+            result += " \(k)='\(val)'"
         }
         if (!nodes.isEmpty) {
             result += ">\n"
