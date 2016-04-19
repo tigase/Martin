@@ -55,12 +55,13 @@ public class Criteria {
         self.defValue = defValue;
     }
     
-    public func add(crit:Criteria) {
+    public func add(crit:Criteria) -> Criteria {
         if (nextCriteria == nil) {
             nextCriteria = crit;
         } else {
             nextCriteria?.add(crit);
         }
+        return self;
     }
     
     public func match(elem:Element) -> Bool {

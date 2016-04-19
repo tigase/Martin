@@ -58,6 +58,9 @@
 		FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED11CC5387700D0509D /* Timer.swift */; };
 		FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED31CC53C5C00D0509D /* Log.swift */; };
 		FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */; };
+		FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */; };
+		FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */; };
+		FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -125,6 +128,9 @@
 		FE9A1ED11CC5387700D0509D /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
 		FE9A1ED31CC53C5C00D0509D /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscapeUtils.swift; sourceTree = "<group>"; };
+		FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoveryModule.swift; sourceTree = "<group>"; };
+		FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElementProtocol.swift; sourceTree = "<group>"; };
+		FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVersionModule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +182,8 @@
 				FE2EFD9D1CB67145000D254E /* ContextAware.swift */,
 				FE2EFDB61CBD1DE7000D254E /* ResourceBinderModule.swift */,
 				FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */,
+				FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */,
+				FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -189,6 +197,7 @@
 				FE2EFD801CB57D25000D254E /* XMPPParserDelegate.swift */,
 				FE2EFE1F1CC417D9000D254E /* XMLParser.swift */,
 				FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */,
+				FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */,
 			);
 			path = xml;
 			sourceTree = "<group>";
@@ -439,6 +448,7 @@
 				FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */,
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
+				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
 				FE2EFDB51CBD0A64000D254E /* SaslError.swift in Sources */,
 				FE2EFDB71CBD1DE7000D254E /* ResourceBinderModule.swift in Sources */,
 				FE2EFD9E1CB67145000D254E /* ContextAware.swift in Sources */,
@@ -448,6 +458,7 @@
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
 				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,
 				FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */,
+				FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */,
 				FE2EFD791CB57C70000D254E /* XMPPSrvRecord.swift in Sources */,
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
@@ -465,6 +476,7 @@
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
 				FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */,
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,
+				FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */,
 				FE2EFD941CB66B0E000D254E /* AuthModule.swift in Sources */,
 				FE3F33EE1CA1CDFC001A5CD6 /* XMPPStreamDelegate.swift in Sources */,
 			);

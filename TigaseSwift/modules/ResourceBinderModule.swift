@@ -60,6 +60,7 @@ public class ResourceBinderModule: XmppModule, ContextAware {
                 case .result:
                     if let name = stanza!.element.findChild("bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild("jid")?.value {
                         let jid = JID(name);
+                        self.context.sessionObject.setProperty(ResourceBinderModule.BINDED_RESOURCE_JID, value: jid);
                         self.context.eventBus.fire(ResourceBindSuccessEvent(sessionObject: self.context.sessionObject, bindedJid: jid));
                         return;
                     }

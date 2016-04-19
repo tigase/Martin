@@ -21,11 +21,17 @@
 
 import Foundation
 
-public class Element : Node {
-    public var name:String!
+public class Element : Node, ElementProtocol {
+    public var name:String
     var defxmlns:String?
-    private var attributes:[String:String];
+    private var attributes_:[String:String];
     private var nodes = Array<Node>()
+    
+    public var attributes:[String:String] {
+        get {
+            return self.attributes_;
+        }
+    }
     
     public var value:String? {
         get {
@@ -54,7 +60,14 @@ public class Element : Node {
         if (cdata != nil) {
             self.nodes.append(CData(value: cdata!));
         }
-        self.attributes = attributes;
+        self.attributes_ = attributes;
+    }
+    
+    public init(name: String, xmlns: String) {
+        self.name = name;
+        self.attributes_ =  [String:String]();
+        super.init();
+        self.xmlns = xmlns;
     }
     
     public func addChild(child: Element) {
@@ -65,7 +78,8 @@ public class Element : Node {
         self.nodes.append(child)
     }
     
-    func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+    public func
+        findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
         for node in nodes {
             if (node is Element) {
                 let elem = node as! Element;
@@ -94,7 +108,7 @@ public class Element : Node {
         return nil;
     }
     
-    func forEachChild(name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
+    public func forEachChild(name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
         for node in nodes {
             if (node is Element) {
                 let elem = node as! Element;
@@ -113,7 +127,17 @@ public class Element : Node {
         }
     }
     
-    func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+    public func mapChildren<U>(transform: (Element) -> U, filter: ((Element) -> Bool)? = nil) -> [U] {
+        var tmp = getChildren();
+        if filter != nil {
+            tmp = tmp.filter({ e -> Bool in
+                return filter!(e);
+            });
+        };
+        return tmp.map(transform);
+    }
+    
+    public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         var result = Array<Element>();
         for node in nodes {
             if (node is Element) {
@@ -135,7 +159,7 @@ public class Element : Node {
     }
     
     public func getAttribute(key:String) -> String? {
-        return attributes[key];
+        return attributes_[key];
     }
     
     public func removeChild(child: Element) {
@@ -150,23 +174,23 @@ public class Element : Node {
     
     public var xmlns:String? {
         get {
-            let xmlns = attributes["xmlns"]
+            let xmlns = attributes_["xmlns"]
             return xmlns != nil ? xmlns : defxmlns;
         }
         set {
             if (newValue == nil || newValue == defxmlns) {
-                attributes.removeValueForKey("xmlns");
+                attributes_.removeValueForKey("xmlns");
             } else {
-                attributes["xmlns"] = newValue;
+                attributes_["xmlns"] = newValue;
             }
         }
     }
     
-    func setAttribute(key:String, value:String?) {
+    public func setAttribute(key:String, value:String?) {
         if (value == nil) {
-            attributes.removeValueForKey(key);
+            attributes_.removeValueForKey(key);
         } else {
-            attributes[key] = value;
+            attributes_[key] = value;
         }
     }
     
@@ -176,7 +200,7 @@ public class Element : Node {
     
     override public var stringValue: String {
         var result = "<\(self.name)"
-        for (k,v) in attributes {
+        for (k,v) in attributes_ {
             let val = EscapeUtils.escape(v);
             result += " \(k)='\(val)'"
         }
@@ -195,7 +219,7 @@ public class Element : Node {
     
     override public func toPrettyString() -> String {
         var result = "<\(self.name)"
-        for (k,v) in attributes {
+        for (k,v) in attributes_ {
             let val = EscapeUtils.escape(v);
             result += " \(k)='\(val)'"
         }

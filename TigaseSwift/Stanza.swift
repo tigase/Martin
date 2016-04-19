@@ -21,7 +21,7 @@
 
 import Foundation
 
-public class Stanza: CustomStringConvertible {
+public class Stanza: ElementProtocol, CustomStringConvertible {
     
     public var description: String {
         return String("Stanza : \(element.stringValue)")
@@ -92,12 +92,42 @@ public class Stanza: CustomStringConvertible {
         }
     }
 
+    public var xmlns:String? {
+        get {
+            return element.xmlns;
+        }
+    }
+    
     init(name:String) {
         self.element = Element(name: name);
     }
     
     init(elem:Element) {
         self.element = elem;
+    }
+    
+    public func addChild(child: Element) {
+        self.element.addNode(child)
+    }
+    
+    public func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+        return self.element.findChild(name, xmlns: xmlns);
+    }
+    
+    public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+        return self.element.getChildren(name, xmlns: xmlns);
+    }
+    
+    public func getAttribute(key:String) -> String? {
+        return self.element.getAttribute(key);
+    }
+    
+    public func removeChild(child: Element) {
+        self.element.removeChild(child);
+    }
+    
+    public func setAttribute(key:String, value:String?) {
+        self.element.setAttribute(key, value: value);
     }
     
     public static func fromElement(elem:Element) -> Stanza {
@@ -136,6 +166,15 @@ public class Stanza: CustomStringConvertible {
         }
         
         response.element.addChild(errorEl);
+        return response;
+    }
+    
+    public func makeResult(type:StanzaType) -> Stanza {
+        let elem = Element(name: element.name, cdata: nil, attributes: element.attributes);
+        let response = Stanza.fromElement(elem);
+        response.to = self.from;
+        response.from = self.to;
+        response.type = type;
         return response;
     }
 }
