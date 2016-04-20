@@ -21,7 +21,7 @@
 
 import Foundation
 
-public class DiscoveryModule: Logger, XmppModule, ContextAware {
+public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
 
     public static let IDENTITY_CATEGORY_KEY = "discoveryIdentityCategory";
     public static let IDENTITY_TYPE_KEY = "discoveryIdentityType";
@@ -138,22 +138,6 @@ public class DiscoveryModule: Logger, XmppModule, ContextAware {
             }
         });
     }
-    
-    public func process(stanza: Stanza) throws {
-        if let type = stanza.type {
-            switch type {
-            case .set:
-                throw ErrorCondition.not_allowed;
-            case .get:
-                try processGet(stanza);
-                return;
-            default:
-                break;
-            }
-        }
-        throw ErrorCondition.bad_request;
-    }
-    
     public func setNodeCallback(node_: String?, entry: NodeDetailsEntry?) {
         var node = node_ ?? "";
         if entry == nil {
@@ -163,7 +147,7 @@ public class DiscoveryModule: Logger, XmppModule, ContextAware {
         }
     }
     
-    func processGet(stanza:Stanza) throws {
+    public func processGet(stanza:Stanza) throws {
         let query = stanza.findChild("query")!;
         let node = query.getAttribute("node") ?? "";
         if let xmlns = query.xmlns {
@@ -180,6 +164,9 @@ public class DiscoveryModule: Logger, XmppModule, ContextAware {
         } else {
             throw ErrorCondition.bad_request;
         }
+    }
+    public func processSet(stanza:Stanza) throws {
+        throw ErrorCondition.not_allowed;
     }
     
     func processGetInfo(stanza:Stanza, _ node:String, _ nodeDetailsEntry:NodeDetailsEntry) {

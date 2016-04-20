@@ -54,6 +54,7 @@
 		FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */; };
 		FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */; };
 		FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */; };
+		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ECE1CC51CE000D0509D /* StreamError.swift */; };
 		FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED11CC5387700D0509D /* Timer.swift */; };
 		FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED31CC53C5C00D0509D /* Log.swift */; };
@@ -124,6 +125,7 @@
 		FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMPPDelegate.swift; sourceTree = "<group>"; };
 		FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Criteria.swift; sourceTree = "<group>"; };
 		FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketConnector.swift; sourceTree = "<group>"; };
+		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE9A1ECE1CC51CE000D0509D /* StreamError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamError.swift; sourceTree = "<group>"; };
 		FE9A1ED11CC5387700D0509D /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
 		FE9A1ED31CC53C5C00D0509D /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
@@ -184,6 +186,7 @@
 				FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */,
 				FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */,
 				FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */,
+				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -442,6 +445,7 @@
 				FE2EFD781CB57C70000D254E /* XMPPDNSSrvResolver.swift in Sources */,
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,
 				FE3F33F01CA1CE22001A5CD6 /* XmppModule.swift in Sources */,
+				FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */,
 				FE2EFD831CB57D25000D254E /* Node.swift in Sources */,
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
