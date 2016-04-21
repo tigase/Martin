@@ -63,11 +63,14 @@ public class Element : Node, ElementProtocol {
         self.attributes_ = attributes;
     }
     
-    public init(name: String, xmlns: String) {
+    public init(name: String, cdata:String? = nil, xmlns: String) {
         self.name = name;
         self.attributes_ =  [String:String]();
         super.init();
         self.xmlns = xmlns;
+        if (cdata != nil) {
+            self.nodes.append(CData(value: cdata!));
+        }
     }
     
     public func addChild(child: Element) {

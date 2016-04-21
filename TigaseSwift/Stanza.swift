@@ -197,8 +197,99 @@ public class Message: Stanza {
 
 public class Presence: Stanza {
 
+    public enum Show: String {
+        case chat
+        case online
+        case away
+        case xa
+        case dnd
+        
+        var weight:Int {
+            switch self {
+            case chat:
+                return 5;
+            case online:
+                return 4;
+            case away:
+                return 3;
+            case xa:
+                return 2;
+            case dnd:
+                return 1;
+            }
+        }
+    }
+    
     public override var description: String {
         return String("Presence : \(element.stringValue)")
+    }
+
+    public var nickname:String? {
+        get {
+            return findChild("nick", xmlns: "http://jabber.org/protocol/nick")?.value;
+        }
+        set {
+            element.forEachChild("nick", xmlns: "http://jabber.org/protocol/nick") { (e:Element) -> Void in
+                self.element.removeChild(e);
+            };
+            if newValue != nil {
+                element.addChild(Element(name: "nick", cdata: newValue!, xmlns: "http://jabber.org/protocol/nick"));
+            }
+        }
+    }
+    
+    public var priority:Int! {
+        get {
+            let x = findChild("priority")?.value;
+            if x != nil {
+                return Int(x!) ?? 0;
+            }
+            return 0;
+        }
+        set {
+            element.forEachChild("priority") { (e:Element) -> Void in
+                self.element.removeChild(e);
+            };
+            if newValue != nil {
+                element.addChild(Element(name: "priority", cdata: newValue!.description));
+            }
+        }
+    }
+    
+    public var show:Show? {
+        get {
+            let x = findChild("show")?.value;
+            let type = self.type;
+            if (x == nil) {
+                if (type == nil || type == StanzaType.available) {
+                    return .online;
+                }
+                return nil;
+            }
+            return Show(rawValue: x!);
+        }
+        set {
+            element.forEachChild("show") { (e:Element) -> Void in
+                self.element.removeChild(e);
+            };
+            if newValue != nil {
+                element.addChild(Element(name: "show", cdata: newValue!.rawValue));
+            }
+        }
+    }
+    
+    public var status:String? {
+        get {
+            return findChild("status")?.value;
+        }
+        set {
+            element.forEachChild("status") { (e:Element) -> Void in
+                self.element.removeChild(e);
+            };
+            if newValue != nil {
+                element.addChild(Element(name: "status", cdata: newValue!));
+            }
+        }
     }
     
     public init() {

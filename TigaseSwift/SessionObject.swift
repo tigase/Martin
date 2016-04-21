@@ -23,6 +23,8 @@ import Foundation
 
 public class SessionObject: Logger {
     
+    public static let NICKNAME = "nickname";
+    
     public static let PASSWORD = "password";
     
     public static let RESOURCE = "resource";

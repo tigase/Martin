@@ -61,6 +61,8 @@
 		FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5021CC7D3D000FAE755 /* RosterModule.swift */; };
 		FE94E5051CC8DE5A00FAE755 /* RosterCacheProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5041CC8DE5A00FAE755 /* RosterCacheProvider.swift */; };
 		FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5061CC8E95200FAE755 /* Initializable.swift */; };
+		FE94E50A1CC90C5800FAE755 /* PresenceModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5091CC90C5800FAE755 /* PresenceModule.swift */; };
+		FE94E50C1CC90C6400FAE755 /* PresenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E50B1CC90C6400FAE755 /* PresenceStore.swift */; };
 		FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ECE1CC51CE000D0509D /* StreamError.swift */; };
 		FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED11CC5387700D0509D /* Timer.swift */; };
 		FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED31CC53C5C00D0509D /* Log.swift */; };
@@ -138,6 +140,8 @@
 		FE94E5021CC7D3D000FAE755 /* RosterModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterModule.swift; sourceTree = "<group>"; };
 		FE94E5041CC8DE5A00FAE755 /* RosterCacheProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterCacheProvider.swift; sourceTree = "<group>"; };
 		FE94E5061CC8E95200FAE755 /* Initializable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Initializable.swift; sourceTree = "<group>"; };
+		FE94E5091CC90C5800FAE755 /* PresenceModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceModule.swift; sourceTree = "<group>"; };
+		FE94E50B1CC90C6400FAE755 /* PresenceStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceStore.swift; sourceTree = "<group>"; };
 		FE9A1ECE1CC51CE000D0509D /* StreamError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamError.swift; sourceTree = "<group>"; };
 		FE9A1ED11CC5387700D0509D /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
 		FE9A1ED31CC53C5C00D0509D /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
@@ -191,6 +195,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FE94E5081CC90C4A00FAE755 /* presence */,
 				FE94E4FB1CC7AFF900FAE755 /* roster */,
 				FE2EFD861CB58066000D254E /* auth */,
 				FE2EFD991CB66DA9000D254E /* StreamFeaturesModule.swift */,
@@ -323,6 +328,15 @@
 				FE94E5041CC8DE5A00FAE755 /* RosterCacheProvider.swift */,
 			);
 			path = roster;
+			sourceTree = "<group>";
+		};
+		FE94E5081CC90C4A00FAE755 /* presence */ = {
+			isa = PBXGroup;
+			children = (
+				FE94E5091CC90C5800FAE755 /* PresenceModule.swift */,
+				FE94E50B1CC90C6400FAE755 /* PresenceStore.swift */,
+			);
+			path = presence;
 			sourceTree = "<group>";
 		};
 		FE9A1ED01CC5386100D0509D /* util */ = {
@@ -460,6 +474,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE94E50C1CC90C6400FAE755 /* PresenceStore.swift in Sources */,
 				FE2EFDA41CB680A2000D254E /* Stanza.swift in Sources */,
 				FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */,
 				FE2EFDAB1CB80E51000D254E /* Event.swift in Sources */,
@@ -494,6 +509,7 @@
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
 				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,
 				FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */,
+				FE94E50A1CC90C5800FAE755 /* PresenceModule.swift in Sources */,
 				FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */,
 				FE2EFD791CB57C70000D254E /* XMPPSrvRecord.swift in Sources */,
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
