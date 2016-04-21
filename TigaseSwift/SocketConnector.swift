@@ -201,6 +201,9 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case .disconnecting:
             self.inStream?.close()
             self.outStream?.close()
+            inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+            outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+            state = .disconnected;
         case .connected:
             state = State.disconnecting;
             send("</stream:stream>");
@@ -289,6 +292,10 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case NSStreamEvent.HasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
         case NSStreamEvent.EndEncountered:
+            inStream?.close();
+            outStream?.close();
+            inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+            outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
             state = State.disconnected
             closeTimer?.cancel()
             closeTimer = nil;

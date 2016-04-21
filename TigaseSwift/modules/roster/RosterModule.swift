@@ -32,10 +32,10 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
     public var context:Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE);
+                oldValue.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
             if context != nil {
-                context.eventBus.register(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE);
+                context.eventBus.register(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
         }
     }
@@ -76,6 +76,8 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             rosterRequest();
+        case is SessionObject.ClearedEvent:
+            rosterStore.cleared();
         default:
             log("received unknown event", event);
         }
