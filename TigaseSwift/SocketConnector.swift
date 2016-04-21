@@ -73,17 +73,17 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
         let domain = userJid.domain;
         let server:String = serverToConnect ?? sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
+        log("connecting to server:", server);
         let dnsResolver = self.dnsResolver;
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
             dnsResolver.resolve(server, connector:self);
         }
     }
     
-    func connect(dnsRecords:Array<XMPPSrvRecord>) {
+    func connect(dnsName:String, dnsRecords:Array<XMPPSrvRecord>) {
+        log("got dns records:", dnsResolver.srvRecords);
         if (dnsResolver.srvRecords.isEmpty) {
-            let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
-            let domain = userJid.domain;
-            dnsResolver.srvRecords.append(XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: domain));
+            dnsResolver.srvRecords.append(XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: dnsName));
         }
         
         let rec:XMPPSrvRecord = dnsResolver.srvRecords[0];
@@ -93,6 +93,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     private func connect(addr:String, port:Int, ssl:Bool) -> Void {
+        log("connecting to:", addr, port);
         autoreleasepool {
         NSStream.getStreamsToHostWithName(addr, port: port, inputStream: &inStream, outputStream: &outStream)
         }

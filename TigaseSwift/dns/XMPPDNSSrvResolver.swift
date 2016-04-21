@@ -23,10 +23,12 @@ import Foundation
 
 public class XMPPDNSSrvResolver : Logger {
     
+    var domain:String!;
     var srvRecords = [XMPPSrvRecord]();
     weak var connector:SocketConnector!;
 
     func resolve(domain:String, connector:SocketConnector) -> Void {
+        self.domain = domain;
         self.srvRecords.removeAll();
         self.connector = connector;
         let err = DNSQuerySRVRecord("_xmpp-client._tcp." + domain + ".", XMPPDNSSrvResolver.bridge(self), { (record:UnsafeMutablePointer<DNSSrvRecord>, resolverPtr:UnsafeMutablePointer<Void>) -> Void in
@@ -56,7 +58,7 @@ public class XMPPDNSSrvResolver : Logger {
                 return a.weight > b.weight;
             }
         }
-        connector.connect(srvRecords);
+        connector.connect(domain, dnsRecords: srvRecords);
         connector = nil;
     }
     
