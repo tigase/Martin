@@ -25,6 +25,8 @@ public class XmppModulesManager : ContextAware {
     
     public var context:Context!;
     
+    private var initializationRequired = [Initializable]();
+    
     private var modules = [XmppModule]();
     
     private var modulesById = [String:XmppModule]();
@@ -58,6 +60,12 @@ public class XmppModulesManager : ContextAware {
         return modulesById[id] as? T;
     }
     
+    public func initIfRequired() {
+        initializationRequired.forEach { (module) in
+            module.initialize();
+        }
+    }
+    
     public func register<T:XmppModule>(module:T) -> T {
         if var contextAware = module as? ContextAware {
             contextAware.context = context;
@@ -65,6 +73,9 @@ public class XmppModulesManager : ContextAware {
         
         modulesById[module.id] = module;
         modules.append(module);
+        if let initModule = module as? Initializable {
+            initializationRequired.append(initModule);
+        }
         return module;
     }
     

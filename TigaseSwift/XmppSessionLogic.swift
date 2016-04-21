@@ -138,7 +138,8 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                 // here we should report an error
             }
         } else {
-            processSessionBindedAndEstablished(context.sessionObject);
+            //processSessionBindedAndEstablished(context.sessionObject);
+            context.eventBus.fire(SessionEstablishmentModule.SessionEstablishmentSuccessEvent(sessionObject:context.sessionObject));
         }
     }
     

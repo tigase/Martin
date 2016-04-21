@@ -21,14 +21,20 @@
 
 import Foundation
 
-public class BareJID :CustomStringConvertible, Equatable, StringValue {
+public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     
     public let localPart:String?;
-    public let domain:String!;
+    public let domain:String;
+    public let stringValue:String;
+    
+    public var hashValue: Int {
+        return stringValue.hashValue;
+    }
     
     public init(_ jid:BareJID) {
         self.localPart = jid.localPart
         self.domain = jid.domain
+        self.stringValue = BareJID.toString(localPart, domain);
     }
     
     public init(_ jid:String) {
@@ -37,21 +43,20 @@ public class BareJID :CustomStringConvertible, Equatable, StringValue {
         idx = bareJid.characters.indexOf("@");
         localPart = (idx == nil) ? nil : bareJid.substringToIndex(idx!);
         domain = (idx == nil) ? bareJid : bareJid.substringFromIndex(idx!.successor());
+        self.stringValue = BareJID.toString(localPart, domain);
     }
     
     public init (_ jid:JID) {
         self.domain = jid.domain
         self.localPart = jid.localPart
+        self.stringValue = BareJID.toString(localPart, domain);
     }
     
     public var description : String {
-        if (localPart == nil) {
-            return domain;
-        }
-        return "\(localPart!)@\(domain)"
+        return stringValue;
     }
     
-    public var stringValue : String {
+    private static func toString(localPart:String?, _ domain:String) -> String {
         if (localPart == nil) {
             return domain;
         }

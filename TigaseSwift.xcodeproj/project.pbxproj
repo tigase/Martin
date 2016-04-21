@@ -55,6 +55,12 @@
 		FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */; };
 		FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
+		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
+		FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */; };
+		FE94E5011CC7C26300FAE755 /* DefaultRosterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5001CC7C26300FAE755 /* DefaultRosterStore.swift */; };
+		FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5021CC7D3D000FAE755 /* RosterModule.swift */; };
+		FE94E5051CC8DE5A00FAE755 /* RosterCacheProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5041CC8DE5A00FAE755 /* RosterCacheProvider.swift */; };
+		FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5061CC8E95200FAE755 /* Initializable.swift */; };
 		FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ECE1CC51CE000D0509D /* StreamError.swift */; };
 		FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED11CC5387700D0509D /* Timer.swift */; };
 		FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED31CC53C5C00D0509D /* Log.swift */; };
@@ -126,6 +132,12 @@
 		FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Criteria.swift; sourceTree = "<group>"; };
 		FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketConnector.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
+		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
+		FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterStore.swift; sourceTree = "<group>"; };
+		FE94E5001CC7C26300FAE755 /* DefaultRosterStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultRosterStore.swift; sourceTree = "<group>"; };
+		FE94E5021CC7D3D000FAE755 /* RosterModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterModule.swift; sourceTree = "<group>"; };
+		FE94E5041CC8DE5A00FAE755 /* RosterCacheProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterCacheProvider.swift; sourceTree = "<group>"; };
+		FE94E5061CC8E95200FAE755 /* Initializable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Initializable.swift; sourceTree = "<group>"; };
 		FE9A1ECE1CC51CE000D0509D /* StreamError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamError.swift; sourceTree = "<group>"; };
 		FE9A1ED11CC5387700D0509D /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
 		FE9A1ED31CC53C5C00D0509D /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
@@ -179,6 +191,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FE94E4FB1CC7AFF900FAE755 /* roster */,
 				FE2EFD861CB58066000D254E /* auth */,
 				FE2EFD991CB66DA9000D254E /* StreamFeaturesModule.swift */,
 				FE2EFD9D1CB67145000D254E /* ContextAware.swift */,
@@ -286,6 +299,7 @@
 				FE2EFDBA1CBD3727000D254E /* StanzaType.swift */,
 				FE2EFDBC1CBD594C000D254E /* ErrorCondition.swift */,
 				FE9A1ECE1CC51CE000D0509D /* StreamError.swift */,
+				FE94E5061CC8E95200FAE755 /* Initializable.swift */,
 			);
 			path = TigaseSwift;
 			sourceTree = "<group>";
@@ -297,6 +311,18 @@
 				FE3F33E41CA1CBB9001A5CD6 /* Info.plist */,
 			);
 			path = TigaseSwiftTests;
+			sourceTree = "<group>";
+		};
+		FE94E4FB1CC7AFF900FAE755 /* roster */ = {
+			isa = PBXGroup;
+			children = (
+				FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */,
+				FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */,
+				FE94E5001CC7C26300FAE755 /* DefaultRosterStore.swift */,
+				FE94E5021CC7D3D000FAE755 /* RosterModule.swift */,
+				FE94E5041CC8DE5A00FAE755 /* RosterCacheProvider.swift */,
+			);
+			path = roster;
 			sourceTree = "<group>";
 		};
 		FE9A1ED01CC5386100D0509D /* util */ = {
@@ -435,6 +461,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE2EFDA41CB680A2000D254E /* Stanza.swift in Sources */,
+				FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */,
 				FE2EFDAB1CB80E51000D254E /* Event.swift in Sources */,
 				FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */,
 				FE2EFD901CB59D3A000D254E /* PlainMechanism.swift in Sources */,
@@ -446,6 +473,7 @@
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,
 				FE3F33F01CA1CE22001A5CD6 /* XmppModule.swift in Sources */,
 				FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */,
+				FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */,
 				FE2EFD831CB57D25000D254E /* Node.swift in Sources */,
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
@@ -453,11 +481,15 @@
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
+				FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */,
 				FE2EFDB51CBD0A64000D254E /* SaslError.swift in Sources */,
 				FE2EFDB71CBD1DE7000D254E /* ResourceBinderModule.swift in Sources */,
 				FE2EFD9E1CB67145000D254E /* ContextAware.swift in Sources */,
+				FE94E5051CC8DE5A00FAE755 /* RosterCacheProvider.swift in Sources */,
+				FE94E5011CC7C26300FAE755 /* DefaultRosterStore.swift in Sources */,
 				FE2EFD9A1CB66DA9000D254E /* StreamFeaturesModule.swift in Sources */,
 				FE2EFD7A1CB57C70000D254E /* BareJID.swift in Sources */,
+				FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */,
 				FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */,
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
 				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,

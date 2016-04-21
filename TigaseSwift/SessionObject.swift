@@ -49,9 +49,14 @@ public class SessionObject: Logger {
         }
     }
     
-    var properties = [String:Entry]();
-        
-    public func clear(scopes_:Scope...) {
+    private let eventBus:EventBus;
+    private var properties = [String:Entry]();
+    
+    public init(eventBus:EventBus) {
+        self.eventBus = eventBus;
+    }
+    
+    public func clear(scopes scopes_:Scope...) {
         var scopes = scopes_;
         if scopes.isEmpty {
             scopes.append(Scope.session);
@@ -63,6 +68,8 @@ public class SessionObject: Logger {
                 properties.removeValueForKey(k);
             }
         }
+        
+        eventBus.fire(ClearedEvent(sessionObject: self, scopes: scopes));
     }
     
     public func hasProperty(prop:String, scope:Scope? = nil) -> Bool {
@@ -95,5 +102,24 @@ public class SessionObject: Logger {
     
     public func setUserProperty(prop:String, value:Any?) {
         self.setProperty(prop, value: value, scope: Scope.user)
+    }
+    
+    public class ClearedEvent: Event {
+        public static let TYPE = ClearedEvent();
+        
+        public let type = "ClearedEvent";
+        
+        public let sessionObject:SessionObject!;
+        public let scopes:[Scope]!;
+        
+        private init() {
+            self.sessionObject = nil;
+            self.scopes = nil;
+        }
+        
+        public init(sessionObject:SessionObject, scopes:[Scope]) {
+            self.sessionObject = sessionObject;
+            self.scopes = scopes;
+        }
     }
 }

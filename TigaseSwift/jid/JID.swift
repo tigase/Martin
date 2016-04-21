@@ -21,10 +21,11 @@
 
 import Foundation
 
-public class JID : CustomStringConvertible, Equatable, StringValue {
+public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
     
-    public let bareJid:BareJID!;
+    public let bareJid:BareJID;
     public let resource:String?;
+    public let stringValue:String;
     
     public var localPart:String? {
         return self.bareJid.localPart;
@@ -34,32 +35,37 @@ public class JID : CustomStringConvertible, Equatable, StringValue {
         return self.bareJid.domain;
     }
     
+    public var hashValue: Int {
+        get {
+            return stringValue.hashValue;
+        }
+    }
+    
     public init(_ jid:BareJID, resource:String? = nil) {
         self.bareJid = jid;
         self.resource = resource;
+        self.stringValue = JID.toString(bareJid, resource);
     }
     
     public init(_ jid:JID) {
         self.bareJid = jid.bareJid;
-        self.resource = jid.resource
+        self.resource = jid.resource;
+        self.stringValue = JID.toString(bareJid, resource);
     }
     
     public init(_ jid:String) {
         let idx = jid.characters.indexOf("/");
         self.resource = (idx == nil) ? nil : jid.substringFromIndex(idx!.successor())
         self.bareJid = BareJID(jid);
+        self.stringValue = JID.toString(bareJid, resource);
     }
     
     public var description : String {
-        if (self.resource != nil) {
-            return "\(bareJid)/\(resource!)"
-        } else {
-            return bareJid.description
-        }
+        return self.stringValue;
     }
     
-    public var stringValue: String {
-        if (self.resource != nil) {
+    private static func toString(bareJid:BareJID, _ resource:String?) -> String {
+        if (resource != nil) {
             return "\(bareJid)/\(resource!)"
         } else {
             return bareJid.description

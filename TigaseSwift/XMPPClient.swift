@@ -23,7 +23,7 @@ import Foundation
 
 public class XMPPClient: Logger, EventHandler {
     
-    public let sessionObject = SessionObject();
+    public let sessionObject:SessionObject;
     public let connectionConfiguration:ConnectionConfiguration!;
     private var socketConnector:SocketConnector?;
     public let modulesManager:XmppModulesManager!;
@@ -33,6 +33,7 @@ public class XMPPClient: Logger, EventHandler {
     private let responseManager:ResponseManager;
     
     public override init() {
+        sessionObject = SessionObject(eventBus:self.eventBus);
         connectionConfiguration = ConnectionConfiguration(self.sessionObject);
         modulesManager = XmppModulesManager();
         context = Context(sessionObject: self.sessionObject, eventBus:eventBus, modulesManager: modulesManager);
@@ -56,6 +57,7 @@ public class XMPPClient: Logger, EventHandler {
         context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager);
         sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context);
         sessionLogic.bind();
+        modulesManager.initIfRequired();
         socketConnector?.start()
     }
     
