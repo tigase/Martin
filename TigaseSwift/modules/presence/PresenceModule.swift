@@ -102,6 +102,10 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
             case .available, .unavailable, .error:
                 let availabilityChanged = presenceStore.update(presence);
                 context.eventBus.fire(ContactPresenceChanged(sessionObject: context.sessionObject, presence: presence, availabilityChanged: availabilityChanged));
+            case .unsubscribed:
+                context.eventBus.fire(ContactUnsubscribedEvent(sessionObject: context.sessionObject, presence: presence));
+            case .subscribe:
+                context.eventBus.fire(SubscribeRequestEvent(sessionObject: context.sessionObject, presence: presence));
             default:
                 log("received presence with weird type:", type, presence);
             }
