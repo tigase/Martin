@@ -63,6 +63,11 @@
 		FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5061CC8E95200FAE755 /* Initializable.swift */; };
 		FE94E50A1CC90C5800FAE755 /* PresenceModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5091CC90C5800FAE755 /* PresenceModule.swift */; };
 		FE94E50C1CC90C6400FAE755 /* PresenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E50B1CC90C6400FAE755 /* PresenceStore.swift */; };
+		FE94E50F1CCA306300FAE755 /* MessageModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E50E1CCA306300FAE755 /* MessageModule.swift */; };
+		FE94E5111CCA39C800FAE755 /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5101CCA39C800FAE755 /* ChatManager.swift */; };
+		FE94E5131CCA3E9700FAE755 /* DefaultChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5121CCA3E9700FAE755 /* DefaultChatManager.swift */; };
+		FE94E5151CCB847200FAE755 /* ChatStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5141CCB847200FAE755 /* ChatStore.swift */; };
+		FE94E5171CCB961000FAE755 /* UIDGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E5161CCB961000FAE755 /* UIDGenerator.swift */; };
 		FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ECE1CC51CE000D0509D /* StreamError.swift */; };
 		FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED11CC5387700D0509D /* Timer.swift */; };
 		FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED31CC53C5C00D0509D /* Log.swift */; };
@@ -142,6 +147,11 @@
 		FE94E5061CC8E95200FAE755 /* Initializable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Initializable.swift; sourceTree = "<group>"; };
 		FE94E5091CC90C5800FAE755 /* PresenceModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceModule.swift; sourceTree = "<group>"; };
 		FE94E50B1CC90C6400FAE755 /* PresenceStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceStore.swift; sourceTree = "<group>"; };
+		FE94E50E1CCA306300FAE755 /* MessageModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageModule.swift; sourceTree = "<group>"; };
+		FE94E5101CCA39C800FAE755 /* ChatManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatManager.swift; sourceTree = "<group>"; };
+		FE94E5121CCA3E9700FAE755 /* DefaultChatManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultChatManager.swift; sourceTree = "<group>"; };
+		FE94E5141CCB847200FAE755 /* ChatStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatStore.swift; sourceTree = "<group>"; };
+		FE94E5161CCB961000FAE755 /* UIDGenerator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UIDGenerator.swift; sourceTree = "<group>"; };
 		FE9A1ECE1CC51CE000D0509D /* StreamError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamError.swift; sourceTree = "<group>"; };
 		FE9A1ED11CC5387700D0509D /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
 		FE9A1ED31CC53C5C00D0509D /* Log.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
@@ -195,6 +205,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FE94E50D1CCA303900FAE755 /* chat */,
 				FE94E5081CC90C4A00FAE755 /* presence */,
 				FE94E4FB1CC7AFF900FAE755 /* roster */,
 				FE2EFD861CB58066000D254E /* auth */,
@@ -339,11 +350,24 @@
 			path = presence;
 			sourceTree = "<group>";
 		};
+		FE94E50D1CCA303900FAE755 /* chat */ = {
+			isa = PBXGroup;
+			children = (
+				FE94E50E1CCA306300FAE755 /* MessageModule.swift */,
+				FE94E5101CCA39C800FAE755 /* ChatManager.swift */,
+				FE94E5121CCA3E9700FAE755 /* DefaultChatManager.swift */,
+				FE94E5141CCB847200FAE755 /* ChatStore.swift */,
+			);
+			name = chat;
+			path = TigaseSwift/chat;
+			sourceTree = SOURCE_ROOT;
+		};
 		FE9A1ED01CC5386100D0509D /* util */ = {
 			isa = PBXGroup;
 			children = (
 				FE9A1ED31CC53C5C00D0509D /* Log.swift */,
 				FE9A1ED11CC5387700D0509D /* Timer.swift */,
+				FE94E5161CCB961000FAE755 /* UIDGenerator.swift */,
 			);
 			path = util;
 			sourceTree = "<group>";
@@ -478,6 +502,7 @@
 				FE2EFDA41CB680A2000D254E /* Stanza.swift in Sources */,
 				FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */,
 				FE2EFDAB1CB80E51000D254E /* Event.swift in Sources */,
+				FE94E5111CCA39C800FAE755 /* ChatManager.swift in Sources */,
 				FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */,
 				FE2EFD901CB59D3A000D254E /* PlainMechanism.swift in Sources */,
 				FE2EFD891CB58088000D254E /* SaslModule.swift in Sources */,
@@ -496,9 +521,11 @@
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
+				FE94E5131CCA3E9700FAE755 /* DefaultChatManager.swift in Sources */,
 				FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */,
 				FE2EFDB51CBD0A64000D254E /* SaslError.swift in Sources */,
 				FE2EFDB71CBD1DE7000D254E /* ResourceBinderModule.swift in Sources */,
+				FE94E50F1CCA306300FAE755 /* MessageModule.swift in Sources */,
 				FE2EFD9E1CB67145000D254E /* ContextAware.swift in Sources */,
 				FE94E5051CC8DE5A00FAE755 /* RosterCacheProvider.swift in Sources */,
 				FE94E5011CC7C26300FAE755 /* DefaultRosterStore.swift in Sources */,
@@ -519,6 +546,7 @@
 				FE2EFDBD1CBD594C000D254E /* ErrorCondition.swift in Sources */,
 				FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */,
 				FE2EFD981CB66C0C000D254E /* DefaultCredentialsCallback.swift in Sources */,
+				FE94E5151CCB847200FAE755 /* ChatStore.swift in Sources */,
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,
 				FE2EFD761CB57C70000D254E /* DNSSrv.c in Sources */,
@@ -528,6 +556,7 @@
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
 				FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */,
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,
+				FE94E5171CCB961000FAE755 /* UIDGenerator.swift in Sources */,
 				FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */,
 				FE2EFD941CB66B0E000D254E /* AuthModule.swift in Sources */,
 				FE3F33EE1CA1CDFC001A5CD6 /* XMPPStreamDelegate.swift in Sources */,

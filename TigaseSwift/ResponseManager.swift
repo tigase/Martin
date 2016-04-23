@@ -118,7 +118,7 @@ public class ResponseManager: Logger {
     }
     
     func nextUid() -> String {
-        return NSUUID().UUIDString;
+        return UIDGenerator.nextUid;
     }
     
     func checkTimeouts() {

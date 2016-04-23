@@ -55,7 +55,7 @@ public class Element : Node, ElementProtocol {
         }
     }
     
-    public init(name: String, cdata: String? = nil, attributes: [String:String] = [String:String]()) {
+    public init(name: String, cdata: String? = nil, attributes: [String:String]) {
         self.name = name;
         if (cdata != nil) {
             self.nodes.append(CData(value: cdata!));
@@ -63,7 +63,7 @@ public class Element : Node, ElementProtocol {
         self.attributes_ = attributes;
     }
     
-    public init(name: String, cdata:String? = nil, xmlns: String) {
+    public init(name: String, cdata:String? = nil, xmlns: String? = nil) {
         self.name = name;
         self.attributes_ =  [String:String]();
         super.init();
@@ -75,6 +75,12 @@ public class Element : Node, ElementProtocol {
     
     public func addChild(child: Element) {
         self.addNode(child)
+    }
+    
+    public func addChildren(children: [Element]) {
+        children.forEach { (c) in
+            self.addChild(c);
+        }
     }
     
     func addNode(child:Node) {

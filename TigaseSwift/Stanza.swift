@@ -23,6 +23,8 @@ import Foundation
 
 public class Stanza: ElementProtocol, CustomStringConvertible {
     
+    private let defStanzaType:StanzaType?;
+    
     public var description: String {
         return String("Stanza : \(element.stringValue)")
     }
@@ -73,10 +75,10 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
             if let type = element.getAttribute("type") {
                 return StanzaType(rawValue: type);
             }
-            return nil;
+            return defStanzaType;
         }
         set {
-            element.setAttribute("type", value: newValue?.rawValue);
+            element.setAttribute("type", value: (newValue == defStanzaType) ? nil : newValue?.rawValue);
         }
     }
     
@@ -98,16 +100,22 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
-    init(name:String) {
+    init(name:String, defStanzaType:StanzaType? = nil) {
         self.element = Element(name: name);
+        self.defStanzaType = defStanzaType;
     }
     
-    init(elem:Element) {
+    init(elem:Element, defStanzaType:StanzaType? = nil) {
         self.element = elem;
+        self.defStanzaType = defStanzaType;
     }
     
     public func addChild(child: Element) {
         self.element.addNode(child)
+    }
+    
+    public func addChildren(children: [Element]) {
+        self.element.addChildren(children);
     }
     
     public func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
@@ -177,20 +185,60 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         response.type = type;
         return response;
     }
+    
+    func getElementValue(name:String?, xmlns:String? = nil) -> String? {
+        return findChild(name, xmlns: xmlns)?.value;
+    }
+    
+    func setElementValue(name:String, xmlns:String? = nil, value:String?) {
+        element.forEachChild(name, xmlns: xmlns) { (e:Element) -> Void in
+            self.element.removeChild(e);
+        };
+        if value != nil {
+            element.addChild(Element(name: name, cdata: value!, xmlns: xmlns));
+        }
+    }
 }
 
 public class Message: Stanza {
-  
+    
+    public var body:String? {
+        get {
+            return getElementValue("body");
+        }
+        set {
+            setElementValue("body", value: newValue);
+        }
+    }
+    
+    public var subject:String? {
+        get {
+            return getElementValue("subject");
+        }
+        set {
+            setElementValue("subject", value: newValue);
+        }
+    }
+    
+    public var thread:String? {
+        get {
+            return getElementValue("thread");
+        }
+        set {
+            setElementValue("thread", value: newValue);
+        }
+    }
+    
     public override var description: String {
         return String("Message : \(element.stringValue)")
     }
     
     public init() {
-        super.init(name: "message");
+        super.init(name: "message", defStanzaType: StanzaType.normal);
     }
     
-    public override init(elem: Element) {
-        super.init(elem: elem);
+    public init(elem: Element) {
+        super.init(elem: elem, defStanzaType: StanzaType.normal);
     }
 
 }
@@ -226,15 +274,10 @@ public class Presence: Stanza {
 
     public var nickname:String? {
         get {
-            return findChild("nick", xmlns: "http://jabber.org/protocol/nick")?.value;
+            return getElementValue("nick", xmlns: "http://jabber.org/protocol/nick");
         }
         set {
-            element.forEachChild("nick", xmlns: "http://jabber.org/protocol/nick") { (e:Element) -> Void in
-                self.element.removeChild(e);
-            };
-            if newValue != nil {
-                element.addChild(Element(name: "nick", cdata: newValue!, xmlns: "http://jabber.org/protocol/nick"));
-            }
+            setElementValue("nick", xmlns: "http://jabber.org/protocol/nick", value: newValue);
         }
     }
     
@@ -296,7 +339,7 @@ public class Presence: Stanza {
         super.init(name: "presence");
     }
     
-    public override init(elem: Element) {
+    public init(elem: Element) {
         super.init(elem: elem);
     }
 
@@ -312,7 +355,7 @@ public class Iq: Stanza {
         super.init(name: "iq");
     }
     
-    public override init(elem: Element) {
+    public init(elem: Element) {
         super.init(elem: elem);
     }
     

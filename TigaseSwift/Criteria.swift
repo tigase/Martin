@@ -31,16 +31,23 @@ public class Criteria {
         return OrImpl(criteria: criteria);
     }
     
-    public static func name(name: String, xmlns: String? = nil) -> Criteria {
-        return ElementCriteria(name: name, xmlns: xmlns, attributes: nil);
+    public static func name(name: String, xmlns: String? = nil, types:[String]? = nil) -> Criteria {
+        return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil);
+    }
+
+    public static func name(name: String, xmlns: String? = nil, types:[StanzaType]) -> Criteria {
+        var typesStr = types.map { (type) -> String in
+            return type.rawValue;
+        }
+        return ElementCriteria(name: name, xmlns: xmlns, types: typesStr, attributes: nil);
     }
     
     public static func name(name:String?, attributes:[String:String]) -> Criteria {
-        return ElementCriteria(name: name, xmlns: nil, attributes: attributes);
+        return ElementCriteria(name: name, attributes: attributes);
     }
     
     public static func xmlns(xmlns:String) -> Criteria {
-        return ElementCriteria(name: nil, xmlns: xmlns, attributes: nil);
+        return ElementCriteria(xmlns: xmlns, attributes: nil);
     }
     
     private var nextCriteria:Criteria?;
@@ -83,10 +90,12 @@ public class Criteria {
         let name:String?;
         let xmlns:String?;
         let attributes:[String:String]?;
+        let types:[String]?;
         
-        init(name: String?, xmlns: String?, attributes:[String:String]?) {
+        init(name: String? = nil, xmlns: String? = nil, types:[String]? = nil, attributes:[String:String]?) {
             self.name = name;
             self.xmlns = xmlns;
+            self.types = types;
             self.attributes = attributes;
             super.init();
         }
@@ -98,6 +107,10 @@ public class Criteria {
             }
             if (xmlns != nil) {
                 match = match && (xmlns == elem.xmlns);
+            }
+            if (types != nil) {
+                let type = elem.getAttribute("type") ?? "";
+                match = match && (types?.indexOf(type) != nil);
             }
             if (attributes != nil) {
                 for (k,v) in self.attributes! {
