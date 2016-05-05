@@ -46,9 +46,12 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
     
     public var versionProvider:RosterCacheProvider?;
     
-    private var rosterStore:RosterStore {
+    public var rosterStore:RosterStore {
         get {
             return RosterModule.getRosterStore(context.sessionObject);
+        }
+        set {
+            context.sessionObject.setProperty(RosterModule.ROSTER_STORE_KEY, value: newValue, scope: .user);
         }
     }
     

@@ -23,6 +23,8 @@ import Foundation
 
 public protocol ChatManager {
  
+    var count:Int { get }
+    
     func close(chat:Chat) ->Bool;
     func createChat(jid:JID, thread:String?) -> Chat?;
     func getChat(jid:JID, thread:String?) -> Chat?;

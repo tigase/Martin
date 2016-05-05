@@ -54,6 +54,12 @@ public class SessionObject: Logger {
     private let eventBus:EventBus;
     private var properties = [String:Entry]();
     
+    public var userBareJid:BareJID? {
+        get {
+            return self.getProperty(SessionObject.USER_BARE_JID);
+        }
+    }
+    
     public init(eventBus:EventBus) {
         self.eventBus = eventBus;
     }

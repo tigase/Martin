@@ -21,8 +21,29 @@
 
 import Foundation
 
-public protocol Event {
+public protocol Event: class {
     
     var type:String { get }
     
+}
+
+public func ==(lhs:Event, rhs:Event) -> Bool {
+    return lhs === rhs || lhs.type == rhs.type;
+}
+
+public func ==(lhs:[Event], rhs:[Event]) -> Bool {
+    guard lhs.count == rhs.count else {
+        return false;
+    }
+    
+    for le in lhs {
+        if let idx = rhs.indexOf({(re) -> Bool in
+            return le == re;
+        }) {
+            // this is ok
+        } else {
+            return false;
+        }
+    }
+    return true;
 }

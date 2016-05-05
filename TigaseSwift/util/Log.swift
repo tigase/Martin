@@ -51,6 +51,11 @@ public struct Log {
 }
 
 public class Logger {
+    
+    public init() {
+        
+    }
+    
     public func log(items: Any...) {
         #if !DISABLE_LOG
             Log.logInternal(items, from: self.dynamicType)

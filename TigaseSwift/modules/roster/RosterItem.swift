@@ -21,12 +21,12 @@
 
 import Foundation
 
-public class RosterItem: CustomStringConvertible {
+public class RosterItem: RosterItemProtocol, CustomStringConvertible {
     
     public let jid:JID;
     public var name:String?;
     public var subscription = Subscription.none;
-    var ask:Bool = false;
+    public var ask:Bool = false;
     public var groups = [String]();
     
     public var description: String {
@@ -64,4 +64,8 @@ public class RosterItem: CustomStringConvertible {
             }
         }
     }
+}
+
+public protocol RosterItemProtocol: class {
+    var jid:JID { get };
 }

@@ -39,16 +39,12 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
     }
     
     public func createChat(jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
-        let chat = chatManager.createChat(jid, thread: thread);
-        if chat != nil {
-            fire(ChatCreatedEvent(sessionObject: context.sessionObject, chat:chat!));
-        }
-        return chat;
+        return chatManager.createChat(jid, thread: thread);
     }
     
     public func initialize() {
         if chatManager == nil {
-            chatManager = DefaultChatManager();
+            chatManager = DefaultChatManager(context: context);
         }
     }
     
@@ -66,9 +62,6 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         
         if chat == nil {
             chat = chatManager.createChat(message.from!, thread: message.thread);
-            if chat != nil {
-                fire(ChatCreatedEvent(sessionObject: context.sessionObject, chat:chat!));
-            }
         } else {
             if chat!.jid != message.from {
                 chat!.jid = message.from!;
@@ -83,9 +76,10 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         }
     }
     
-    public func sendMessage(chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) {
+    public func sendMessage(chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
         let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
         context.writer?.write(msg);
+        return msg;
     }
     
     func fire(event:Event) {
@@ -111,6 +105,25 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         }
     }
 
+    public class ChatClosedEvent: Event {
+        public static let TYPE = ChatClosedEvent();
+        
+        public let type = "ChatClosedEvent";
+        
+        public let sessionObject:SessionObject!;
+        public let chat:Chat!;
+        
+        private init() {
+            self.sessionObject = nil;
+            self.chat = nil;
+        }
+        
+        public init(sessionObject:SessionObject, chat:Chat) {
+            self.sessionObject = sessionObject;
+            self.chat = chat;
+        }
+    }
+    
     public class MessageReceivedEvent: Event {
         public static let TYPE = MessageReceivedEvent();
         

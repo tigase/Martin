@@ -32,6 +32,10 @@ public class EventBus: Logger {
     }
     
     public func register(handler:EventHandler, events:Event...) {
+        register(handler, events: events);
+    }
+    
+    public func register(handler:EventHandler, events:[Event]) {
         for event in events {
             let type = event.type;
             var handlers = handlersByEvent[type];
@@ -46,6 +50,10 @@ public class EventBus: Logger {
     }
     
     public func unregister(handler:EventHandler, events:Event...) {
+        unregister(handler, events: events);
+    }
+    
+    public func unregister(handler:EventHandler, events:[Event]) {
         for event in events {
             let type = event.type;
             if var handlers = handlersByEvent[type] {

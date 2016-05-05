@@ -23,34 +23,53 @@ import Foundation
 
 public class DefaultChatManager: ChatManager {
     
-    public var chatStore:ChatStore? = ChatStore();
+    public let chatStore:ChatStore;
+    public let context:Context;
+    
+    public var count:Int {
+        get {
+            return chatStore.count;
+        }
+    }
+    
+    public init(context: Context, chatStore:ChatStore = DefaultChatStore()) {
+        self.context = context;
+        self.chatStore = chatStore;
+    }
     
     public func close(chat: Chat) -> Bool {
-        return chatStore!.close(chat);
+        let result = chatStore.close(chat);
+        if result {
+            context.eventBus.fire(MessageModule.ChatClosedEvent(sessionObject: context.sessionObject, chat: chat));
+        }
+        return result;
     }
     
     public func createChat(jid: JID, thread: String? = nil) -> Chat? {
-        let chat = Chat(jid: jid, thread: thread);
-        return chatStore!.open(chat);
+        let chat:Chat? = chatStore.open(Chat(jid: jid, thread: thread));
+        if chat != nil {
+            context.eventBus.fire(MessageModule.ChatCreatedEvent(sessionObject: context.sessionObject, chat:chat!));
+        }
+        return chat;
     }
     
     public func getChat(jid:JID, thread:String? = nil) -> Chat? {
         var chat:Chat? = nil;
         
         if thread != nil {
-            chat = chatStore!.get(jid.bareJid, filter:{ (c) -> Bool in
+            chat = chatStore.get(jid.bareJid, filter:{ (c) -> Bool in
                 return c.thread == thread;
             });
         }
         
         if chat == nil && jid.resource != nil {
-            chat = chatStore!.get(jid.bareJid, filter: { (c) -> Bool in
+            chat = chatStore.get(jid.bareJid, filter: { (c) -> Bool in
                 return c.jid == jid;
             });
         }
         
         if chat == nil {
-            chat = chatStore!.get(jid.bareJid, filter: { (c) -> Bool in
+            chat = chatStore.get(jid.bareJid, filter: { (c) -> Bool in
                 return c.jid.bareJid == jid.bareJid;
             });
         }
@@ -59,10 +78,10 @@ public class DefaultChatManager: ChatManager {
     }
     
     public func getChats() -> [Chat] {
-        return chatStore!.getAll();
+        return chatStore.getAll();
     }
     
     public func isChatOpenFor(jid: BareJID) -> Bool {
-        return chatStore!.isFor(jid);
+        return chatStore.isFor(jid);
     }
 }

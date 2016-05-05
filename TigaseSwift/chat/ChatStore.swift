@@ -21,9 +21,27 @@
 
 import Foundation
 
-public class ChatStore {
+public protocol ChatStore {
+    
+    var count:Int { get }
+    var items:[ChatProtocol] { get }
+    
+    func get<T:ChatProtocol>(jid:BareJID, filter: (T)->Bool) -> T?;
+    func getAll<T:ChatProtocol>() -> [T];
+    func isFor(jid:BareJID) -> Bool;
+    func open<T:ChatProtocol>(chat:ChatProtocol) -> T?;
+    func close(chat:ChatProtocol) -> Bool;
+}
+
+public class DefaultChatStore: ChatStore {
     
     private var chatsByBareJid = [BareJID:[ChatProtocol]]();
+    
+    public var count:Int {
+        get {
+            return chatsByBareJid.count;
+        }
+    }
     
     public var items:[ChatProtocol] {
         get {

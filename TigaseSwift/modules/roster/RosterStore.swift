@@ -30,7 +30,11 @@ public class RosterStore {
     }
     
     public var handler:RosterStoreHandler?;
+    
+    public init() {
         
+    }
+    
     public func add(jid:JID, name:String?, groups:[String] = [String](), onSuccess:(stanza:Stanza) -> Void, onError:(errorCondition:ErrorCondition?) -> Void) {
         handler?.add(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
     }
