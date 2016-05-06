@@ -23,6 +23,8 @@ import Foundation
 
 public protocol XmppSessionLogic:class {
     
+    var state:SocketConnector.State { get }
+    
     func bind();
     func unbind();
     
@@ -39,6 +41,14 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     private let modulesManager:XmppModulesManager;
     private let connector:SocketConnector;
     private let responseManager:ResponseManager;
+
+    public var state:SocketConnector.State {
+        let s = connector.state;
+        if s == .connected && ResourceBinderModule.getBindedJid(context.sessionObject) == nil {
+            return .connecting;
+        }
+        return s;
+    }
     
     public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context) {
         self.connector = connector;

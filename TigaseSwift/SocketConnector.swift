@@ -45,7 +45,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     private var state_:State = State.disconnected;
     public var state:State {
         get {
-            if state_ != State.disconnected && inStream?.streamStatus == NSStreamStatus.Closed || outStream?.streamStatus == NSStreamStatus.Closed {
+            if state_ != State.disconnected && (inStream?.streamStatus == NSStreamStatus.Closed || outStream?.streamStatus == NSStreamStatus.Closed) {
                 state = State.disconnected;
             }
             return state_;
@@ -54,13 +54,14 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             if newValue == State.disconnecting && state_ == State.disconnected {
                 return;
             }
-            if state_ != State.disconnected && newValue == State.disconnected {
+            let oldState = state_;
+            state_ = newValue
+            if oldState != State.disconnected && newValue == State.disconnected {
                 context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject));
             }
-            if state_ == State.connecting && newValue == State.connected {
+            if oldState == State.connecting && newValue == State.connected {
                 context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
             }
-            state_ = newValue
         }
     }
     
@@ -70,6 +71,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     public func start(serverToConnect:String? = nil) {
+        state = .connecting;
         let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
         let domain = userJid.domain;
         let server:String = serverToConnect ?? sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
@@ -135,16 +137,17 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             log("closing XMPP stream");
             self.send("</stream:stream>");
             closeTimer = Timer(delayInSeconds: 3, repeats: false) {
-                self.inStream?.close()
-                self.outStream?.close();
-                self.closeTimer = nil;
+                self.closeSocket(State.disconnected);
             }
         case .connecting:
             state = State.disconnecting;
             log("closing TCP connection");
-            inStream?.close()
-            outStream?.close()
+            self.closeSocket(State.disconnected);
         }
+    }
+    
+    func forceStop() {
+        closeSocket(State.disconnected);
     }
     
     func configureTLS() {
@@ -199,22 +202,19 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     override public func onStreamTerminate() {
         switch state {
         case .disconnecting:
-            self.inStream?.close()
-            self.outStream?.close()
-            inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-            outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-            state = .disconnected;
+            closeSocket(State.disconnected);
         case .connected:
             state = State.disconnecting;
-            send("</stream:stream>");
+            if !sendSync("</stream:stream>") {
+                closeSocket(State.disconnected);
+            }
         default:
             break;
         }
     }
     
     public func reconnect(newHost:String) {
-        inStream?.close()
-        outStream?.close();
+        closeSocket(nil);
         start(newHost);
     }
     
@@ -229,13 +229,18 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     private func send(data:String) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-            self.log("sending stanza:", data);
-            let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!
-            var outBuf = Array<UInt8>(count: buf.length, repeatedValue: 0)
-            buf.getBytes(&outBuf, length: buf.length)
-            let sent = self.outStream?.write(&outBuf, maxLength: buf.length)
-            self.log("sent \(sent) from \(buf.length)")
+            self.sendSync(data);
         }
+    }
+    
+    private func sendSync(data:String) -> Bool {
+        self.log("sending stanza:", data);
+        let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!
+        var outBuf = Array<UInt8>(count: buf.length, repeatedValue: 0)
+        buf.getBytes(&outBuf, length: buf.length)
+        let sent = self.outStream?.write(&outBuf, maxLength: buf.length)
+        self.log("sent \(sent) from \(buf.length)")
+        return sent != nil && ((sent!) != -1);
     }
     
     public func stream(aStream: NSStream, handleEvent eventCode: NSStreamEvent) {
@@ -243,6 +248,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case NSStreamEvent.ErrorOccurred:
             // may happen if cannot connect to server or if connection was broken
             log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
+            onStreamTerminate();
         case NSStreamEvent.OpenCompleted:
             if (aStream == self.inStream) {
                 state = State.connected;
@@ -283,7 +289,8 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             log("stream event: HasBytesAvailable");
             if aStream == self.inStream {
                 var buffer = [UInt8](count:2048, repeatedValue: 0);
-                while self.inStream!.hasBytesAvailable {
+                let inStream = self.inStream!;
+                while inStream.hasBytesAvailable {
                     if let read = self.inStream?.read(&buffer, maxLength: buffer.count) {
                        parser?.parse(&buffer, length: read)
                     }
@@ -292,17 +299,25 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case NSStreamEvent.HasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
         case NSStreamEvent.EndEncountered:
-            inStream?.close();
-            outStream?.close();
-            inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-            outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-            state = State.disconnected
-            closeTimer?.cancel()
-            closeTimer = nil;
             log("stream event: EndEncountered");
+            closeSocket(State.disconnected);
         default:
             log("stream event:", aStream.description);            
         }
+    }
+    
+    private func closeSocket(newState: State?) {
+        inStream?.close();
+        outStream?.close();
+        inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+        outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+        inStream = nil;
+        outStream = nil;
+        if newState != nil {
+            state = newState!;
+        }
+        closeTimer?.cancel()
+        closeTimer = nil;
     }
 
     public class ConnectedEvent: Event {

@@ -29,8 +29,12 @@ public class XMPPClient: Logger, EventHandler {
     public let modulesManager:XmppModulesManager!;
     public let eventBus:EventBus = EventBus();
     public let context:Context!;
-    private var sessionLogic:XmppSessionLogic!;
+    private var sessionLogic:XmppSessionLogic?;
     private let responseManager:ResponseManager;
+    
+    public var state:SocketConnector.State {
+        return sessionLogic?.state ?? socketConnector?.state ?? .disconnected;
+    }
     
     public override init() {
         sessionObject = SessionObject(eventBus:self.eventBus);
@@ -47,7 +51,6 @@ public class XMPPClient: Logger, EventHandler {
     }
     
     public func login() -> Void {
-        let state = socketConnector?.state ?? SocketConnector.State.disconnected;
         if state != SocketConnector.State.disconnected {
             log("XMPP in state:", state, " - not starting connection");
             return;
@@ -56,15 +59,20 @@ public class XMPPClient: Logger, EventHandler {
         socketConnector = SocketConnector(context: context);
         context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager);
         sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context);
-        sessionLogic.bind();
+        sessionLogic!.bind();
         modulesManager.initIfRequired();
         socketConnector?.start()
     }
     
-    public func disconnect() -> Void {
-        socketConnector?.stop();
-        sessionLogic.unbind();
+    public func disconnect(force: Bool = false) -> Void {
+        let oldSessionLogic = sessionLogic;
         sessionLogic = nil;
+        if force {
+            socketConnector?.forceStop();
+        } else {
+            socketConnector?.stop();
+        }
+        oldSessionLogic?.unbind();
         log("connection stopped......");
     }
     
