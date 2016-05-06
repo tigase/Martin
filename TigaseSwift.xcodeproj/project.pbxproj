@@ -46,6 +46,8 @@
 		FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */; };
 		FE2EFDCC1CC2A27E000D254E /* libxml2.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FE2EFDCB1CC2A27E000D254E /* libxml2.tbd */; };
 		FE2EFE201CC417D9000D254E /* XMLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFE1F1CC417D9000D254E /* XMLParser.swift */; };
+		FE3024241CDD1C6B00466497 /* Delay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3024231CDD1C6B00466497 /* Delay.swift */; };
+		FE3024261CDD1F6500466497 /* DelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3024251CDD1F6500466497 /* DelayTests.swift */; };
 		FE3F33D71CA1CBB9001A5CD6 /* TigaseSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FE3F33DE1CA1CBB9001A5CD6 /* TigaseSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */; };
 		FE3F33E31CA1CBB9001A5CD6 /* TigaseSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33E21CA1CBB9001A5CD6 /* TigaseSwiftTests.swift */; };
@@ -127,6 +129,8 @@
 		FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionEstablishmentModule.swift; sourceTree = "<group>"; };
 		FE2EFDCB1CC2A27E000D254E /* libxml2.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libxml2.tbd; path = usr/lib/libxml2.tbd; sourceTree = SDKROOT; };
 		FE2EFE1F1CC417D9000D254E /* XMLParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMLParser.swift; sourceTree = "<group>"; };
+		FE3024231CDD1C6B00466497 /* Delay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Delay.swift; sourceTree = "<group>"; };
+		FE3024251CDD1F6500466497 /* DelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DelayTests.swift; sourceTree = "<group>"; };
 		FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TigaseSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TigaseSwift.h; sourceTree = "<group>"; };
 		FE3F33D81CA1CBB9001A5CD6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -316,6 +320,7 @@
 				FE2EFDBC1CBD594C000D254E /* ErrorCondition.swift */,
 				FE9A1ECE1CC51CE000D0509D /* StreamError.swift */,
 				FE94E5061CC8E95200FAE755 /* Initializable.swift */,
+				FE3024231CDD1C6B00466497 /* Delay.swift */,
 			);
 			path = TigaseSwift;
 			sourceTree = "<group>";
@@ -325,6 +330,7 @@
 			children = (
 				FE3F33E21CA1CBB9001A5CD6 /* TigaseSwiftTests.swift */,
 				FE3F33E41CA1CBB9001A5CD6 /* Info.plist */,
+				FE3024251CDD1F6500466497 /* DelayTests.swift */,
 			);
 			path = TigaseSwiftTests;
 			sourceTree = "<group>";
@@ -558,6 +564,7 @@
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,
 				FE94E5171CCB961000FAE755 /* UIDGenerator.swift in Sources */,
 				FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */,
+				FE3024241CDD1C6B00466497 /* Delay.swift in Sources */,
 				FE2EFD941CB66B0E000D254E /* AuthModule.swift in Sources */,
 				FE3F33EE1CA1CDFC001A5CD6 /* XMPPStreamDelegate.swift in Sources */,
 			);
@@ -568,6 +575,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FE3F33E31CA1CBB9001A5CD6 /* TigaseSwiftTests.swift in Sources */,
+				FE3024261CDD1F6500466497 /* DelayTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

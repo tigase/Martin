@@ -1,5 +1,5 @@
 //
-// TigaseSwiftTests.swift
+// DelayTests.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -20,29 +20,24 @@
 //
 
 import XCTest
+@testable import TigaseSwift
 
-class TigaseSwiftTests: XCTestCase {
+class DelayTests: XCTestCase {
     
-    override func setUp() {
-        super.setUp()
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-    
-    override func tearDown() {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-        super.tearDown()
-    }
-    
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
-    
-    func testPerformanceExample() {
-        // This is an example of a performance test case.
-        self.measureBlock {
-            // Put the code you want to measure the time of here.
-        }
+    func testParsing() {
+        let from = JID("test@example.com");
+        var el = Element(name: "delay", attributes:["from": from.stringValue, "stamp": "2016-05-06T20:65:32Z"]);
+        let delay = Delay(element: el);
+        XCTAssertNotNil(delay);
+        XCTAssertNotNil(delay.stamp);
+        XCTAssertEqual(delay.from, from);
+        
+        let delay2 = Element(name: "delay", attributes:["from": from.stringValue, "stamp": "2016-05-06T20:65:32.453Z"]);
+        XCTAssertNotNil(delay2);
+        XCTAssertNotNil(delay2.stamp);
+        XCTAssertEqual(delay2.from, from);
+        XCTAssertEqual(delay.stamp!.earlierDate(delay2.stamp!), delay.stamp!);
+        XCTAssertEqual(delay2.stamp!.laterDate(delay1.stamp!), delay2.stamp!);
     }
     
 }

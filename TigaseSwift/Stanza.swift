@@ -31,6 +31,13 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     
     public let element:Element;
     
+    public var delay:Delay? {
+        if let delayEl = element.findChild("delay", xmlns: "urn:xmpp:delay") {
+            return Delay(element: delayEl);
+        }
+        return nil;
+    }
+    
     public var name:String {
         get {
             return element.name;
