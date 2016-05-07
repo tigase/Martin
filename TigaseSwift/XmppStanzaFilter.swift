@@ -1,5 +1,5 @@
 //
-// Initializable.swift
+// XmppStanzaFilter.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -21,8 +21,19 @@
 
 import Foundation
 
-public protocol Initializable: class {
+public protocol XmppStanzaFilter: class {
     
-    func initialize();
+    /**
+     Filters incoming packet and returns true if packet should not be processed any more
+     
+     - parameter stanza: Incoming stanza
+     
+     - returns: false - to keep processing or true to stop processing
+     */
+    func processIncomingStanza(stanza:Stanza) -> Bool;
     
+    /**
+     Filters outgoing stanza by processing it
+     */
+    func processOutgoingStanza(stanza:Stanza);
 }

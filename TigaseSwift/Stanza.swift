@@ -107,8 +107,8 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
-    init(name:String, defStanzaType:StanzaType? = nil) {
-        self.element = Element(name: name);
+    init(name:String, defStanzaType:StanzaType? = nil, xmlns: String? = nil) {
+        self.element = Element(name: name, xmlns: xmlns);
         self.defStanzaType = defStanzaType;
     }
     

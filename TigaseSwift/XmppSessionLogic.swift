@@ -33,6 +33,7 @@ public protocol XmppSessionLogic:class {
     
     func onStreamError(streamError:Element);
     
+    func serverToConnect() -> String;
 }
 
 public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
@@ -75,6 +76,13 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         connector.sessionLogic = nil;
     }
     
+    public func serverToConnect() -> String {
+        let userJid:BareJID = context.sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
+        let domain = userJid.domain;
+        let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
+        return streamManagementModule?.resumptionLocation ?? context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
+    }
+    
     public func onStreamError(streamErrorEl: Element) {
         if let seeOtherHost = streamErrorEl.findChild("see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams") {
             connector.reconnect(seeOtherHost.value!)
@@ -87,6 +95,12 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     
     public func receivedIncomingStanza(stanza:Stanza) {
         do {
+            for filter in modulesManager.filters {
+                if filter.processIncomingStanza(stanza) {
+                    return;
+                }
+            }
+            
             if let handler = responseManager.getResponseHandler(stanza) {
                 handler(stanza);
                 return;
@@ -112,7 +126,9 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     }
     
     public func sendingOutgoingStanza(stanza: Stanza) {
-    
+        for filter in modulesManager.filters {
+            filter.processOutgoingStanza(stanza);
+        }
     }
     
     public func handleEvent(event: Event) {
@@ -127,6 +143,12 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
             processResourceBindSuccess(event as! ResourceBinderModule.ResourceBindSuccessEvent);
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             processSessionBindedAndEstablished((event as! SessionEstablishmentModule.SessionEstablishmentSuccessEvent).sessionObject);
+        case let re as StreamManagementModule.ResumedEvent:
+            processSessionBindedAndEstablished(re.sessionObject);
+        case let rfe as StreamManagementModule.FailedEvent:
+            if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
+                bindModule.bind();
+            }
         default:
             log("received unhandled event:", event);
         }
@@ -155,12 +177,20 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     
     func processSessionBindedAndEstablished(sessionObject:SessionObject) {
         log("session binded and established");
+        if let streamManagementModule:StreamManagementModule = context.modulesManager.getModule(StreamManagementModule.ID) {
+            if streamManagementModule.isAvailable() {
+                streamManagementModule.enable();
+            }
+        }
     }
     
     func processStreamFeatures(featuresElement: Element) {
         log("processing stream features");
         let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
         let authorized = context.sessionObject.getProperty(AuthModule.AUTHORIZED, defValue: false);
+        let streamManagementModule:StreamManagementModule? = context.modulesManager.getModule(StreamManagementModule.ID);
+        let resumption = (streamManagementModule?.resumptionEnabled ?? false) && (streamManagementModule?.isAvailable() ?? false);
+        
         if (startTlsActive != true)
             && (context.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED) == nil) && self.isStartTLSAvailable() {
             connector.startTLS();
@@ -170,8 +200,12 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                 authModule.login();
             }
         } else if authorized {
-            if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
-                bindModule.bind();
+            if resumption {
+                streamManagementModule!.resume();
+            } else {
+                if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
+                    bindModule.bind();
+                }
             }
         }
         log("finished processing stream features");

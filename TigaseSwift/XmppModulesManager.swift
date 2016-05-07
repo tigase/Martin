@@ -25,6 +25,8 @@ public class XmppModulesManager : ContextAware {
     
     public var context:Context!;
     
+    public var filters = [XmppStanzaFilter]();
+    
     private var initializationRequired = [Initializable]();
     
     private var modules = [XmppModule]();
@@ -76,6 +78,9 @@ public class XmppModulesManager : ContextAware {
         if let initModule = module as? Initializable {
             initializationRequired.append(initModule);
         }
+        if let filter = module as? XmppStanzaFilter {
+            filters.append(filter);
+        }
         return module;
     }
     
@@ -83,6 +88,16 @@ public class XmppModulesManager : ContextAware {
         modulesById.removeValueForKey(module.id)
         if let idx = self.modules.indexOf({ $0 === module}) {
             self.modules.removeAtIndex(idx);
+        }
+        if let initModule = module as? Initializable {
+            if let idx = self.initializationRequired.indexOf({ $0 === initModule }) {
+                self.initializationRequired.removeAtIndex(idx);
+            }
+        }
+        if let filter = module as? XmppStanzaFilter {
+            if let idx = self.filters.indexOf({ $0 === filter }) {
+                self.filters.removeAtIndex(idx);
+            }
         }
         return module;
     }

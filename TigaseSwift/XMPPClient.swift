@@ -51,7 +51,7 @@ public class XMPPClient: Logger, EventHandler {
     }
     
     public func login() -> Void {
-        if state != SocketConnector.State.disconnected {
+        guard state == SocketConnector.State.disconnected else {
             log("XMPP in state:", state, " - not starting connection");
             return;
         }
@@ -65,6 +65,10 @@ public class XMPPClient: Logger, EventHandler {
     }
     
     public func disconnect(force: Bool = false) -> Void {
+        guard state == SocketConnector.State.connected || state == SocketConnector.State.connecting else {
+            log("XMPP in state:", state, " - not stopping connection");
+            return;
+        }
         let oldSessionLogic = sessionLogic;
         sessionLogic = nil;
         if force {
@@ -78,8 +82,12 @@ public class XMPPClient: Logger, EventHandler {
     
     public func handleEvent(event: Event) {
         switch event {
-        case is SocketConnector.DisconnectedEvent:
-            context.sessionObject.clear();
+        case let de as SocketConnector.DisconnectedEvent:
+            if de.clean {
+                context.sessionObject.clear();
+            } else {
+                context.sessionObject.clear(scopes: SessionObject.Scope.stream);
+            }
         default:
             log("received unhandled event:", event);
         }

@@ -46,7 +46,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     public var state:State {
         get {
             if state_ != State.disconnected && (inStream?.streamStatus == NSStreamStatus.Closed || outStream?.streamStatus == NSStreamStatus.Closed) {
-                state = State.disconnected;
+                return State.disconnected;
             }
             return state_;
         }
@@ -57,7 +57,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             let oldState = state_;
             state_ = newValue
             if oldState != State.disconnected && newValue == State.disconnected {
-                context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject));
+                context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject, clean: State.disconnecting == oldState));
             }
             if oldState == State.connecting && newValue == State.connected {
                 context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
@@ -72,9 +72,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     public func start(serverToConnect:String? = nil) {
         state = .connecting;
-        let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
-        let domain = userJid.domain;
-        let server:String = serverToConnect ?? sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
+        let server:String = serverToConnect ?? sessionLogic.serverToConnect();
         log("connecting to server:", server);
         let dnsResolver = self.dnsResolver;
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
@@ -343,13 +341,16 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         
         public let type = "connectorDisconnected";
         public let sessionObject:SessionObject!;
+        public let clean:Bool;
         
         init() {
             sessionObject = nil;
+            clean = false;
         }
         
-        public init(sessionObject: SessionObject) {
+        public init(sessionObject: SessionObject, clean: Bool) {
             self.sessionObject = sessionObject;
+            self.clean = clean;
         }
         
     }
