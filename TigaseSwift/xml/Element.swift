@@ -249,6 +249,27 @@ public class Element : Node, ElementProtocol {
         return result;
     }
     
+    public static func fromString(toParse: String) -> Element? {
+        class Holder: XMPPStreamDelegate {
+            var parsed:Element?;
+            private func onStreamStart(attributes: [String : String]) {
+            }
+            private func onStreamTerminate() {
+            }
+            private func processElement(packet: Element) {
+                parsed = packet;
+            }
+        }
+        
+        var holder = Holder();
+        var xmlDelegate = XMPPParserDelegate();
+        xmlDelegate.delegate = holder;
+        let parser = XMLParser(delegate: xmlDelegate);
+        var data = toParse.dataUsingEncoding(NSUTF8StringEncoding);
+        var ptr = UnsafeMutablePointer<UInt8>(data!.bytes);
+        parser.parse(ptr, length: data!.length);
+        return holder.parsed;
+    }
 }
 
 public func ==(lhs: Element, rhs: Element) -> Bool {

@@ -51,6 +51,7 @@
 		FE30242C1CDDF52400466497 /* XmppStanzaFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */; };
 		FE30242E1CDDF53500466497 /* StreamManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242D1CDDF53500466497 /* StreamManagementModule.swift */; };
 		FE3024301CE0D7F300466497 /* VCardModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242F1CE0D7F300466497 /* VCardModule.swift */; };
+		FE3024351CE20C2300466497 /* Crypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3024341CE20C2300466497 /* Crypto.swift */; };
 		FE3F33D71CA1CBB9001A5CD6 /* TigaseSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FE3F33DE1CA1CBB9001A5CD6 /* TigaseSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */; };
 		FE3F33E31CA1CBB9001A5CD6 /* TigaseSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33E21CA1CBB9001A5CD6 /* TigaseSwiftTests.swift */; };
@@ -137,6 +138,8 @@
 		FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XmppStanzaFilter.swift; sourceTree = "<group>"; };
 		FE30242D1CDDF53500466497 /* StreamManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamManagementModule.swift; sourceTree = "<group>"; };
 		FE30242F1CE0D7F300466497 /* VCardModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModule.swift; sourceTree = "<group>"; };
+		FE3024341CE20C2300466497 /* Crypto.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Crypto.swift; sourceTree = "<group>"; };
+		FE3024361CE20CB000466497 /* libcommonCrypto.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcommonCrypto.tbd; path = usr/lib/system/libcommonCrypto.tbd; sourceTree = SDKROOT; };
 		FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TigaseSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TigaseSwift.h; sourceTree = "<group>"; };
 		FE3F33D81CA1CBB9001A5CD6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -278,9 +281,18 @@
 			path = eventbus;
 			sourceTree = "<group>";
 		};
+		FE3024331CE20C1900466497 /* crypto */ = {
+			isa = PBXGroup;
+			children = (
+				FE3024341CE20C2300466497 /* Crypto.swift */,
+			);
+			path = crypto;
+			sourceTree = "<group>";
+		};
 		FE3F33C91CA1CBB9001A5CD6 = {
 			isa = PBXGroup;
 			children = (
+				FE3024361CE20CB000466497 /* libcommonCrypto.tbd */,
 				FE2EFDCB1CC2A27E000D254E /* libxml2.tbd */,
 				FE2EFD621CB29B28000D254E /* libresolv.tbd */,
 				FE3F33D51CA1CBB9001A5CD6 /* TigaseSwift */,
@@ -301,6 +313,7 @@
 		FE3F33D51CA1CBB9001A5CD6 /* TigaseSwift */ = {
 			isa = PBXGroup;
 			children = (
+				FE3024331CE20C1900466497 /* crypto */,
 				FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */,
 				FE9A1ED01CC5386100D0509D /* util */,
 				FE2EFDA71CB80956000D254E /* eventbus */,
@@ -534,6 +547,7 @@
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
 				FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */,
 				FE30242C1CDDF52400466497 /* XmppStanzaFilter.swift in Sources */,
+				FE3024351CE20C2300466497 /* Crypto.swift in Sources */,
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
@@ -708,12 +722,17 @@
 				INFOPLIST_FILE = TigaseSwift/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks @loader_path/../Frameworks @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SDKROOT)/usr/lib/system",
+				);
 				OTHER_LDFLAGS = "$(OTHER_LDFLAGS)";
 				PRODUCT_BUNDLE_IDENTIFIER = tigase.TigaseSwift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
-				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2 $(SRCROOT)/CommonCrypto";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
@@ -738,12 +757,17 @@
 				INFOPLIST_FILE = TigaseSwift/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks @loader_path/../Frameworks @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SDKROOT)/usr/lib/system",
+				);
 				OTHER_LDFLAGS = "$(OTHER_LDFLAGS)";
 				PRODUCT_BUNDLE_IDENTIFIER = tigase.TigaseSwift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
-				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2";
+				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2 $(SRCROOT)/CommonCrypto";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
 			};

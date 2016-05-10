@@ -68,9 +68,13 @@ public class VCardModule: XmppModule, ContextAware {
         }
     }
 
-    public class VCard {
+    public class VCard: StringValue {
         
         var element: Element!;
+        
+        public var stringValue: String {
+            return element.stringValue;
+        }
         
         public var bday: String? {
             get {
