@@ -50,6 +50,7 @@
 		FE3024261CDD1F6500466497 /* DelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3024251CDD1F6500466497 /* DelayTests.swift */; };
 		FE30242C1CDDF52400466497 /* XmppStanzaFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */; };
 		FE30242E1CDDF53500466497 /* StreamManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242D1CDDF53500466497 /* StreamManagementModule.swift */; };
+		FE3024301CE0D7F300466497 /* VCardModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242F1CE0D7F300466497 /* VCardModule.swift */; };
 		FE3F33D71CA1CBB9001A5CD6 /* TigaseSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FE3F33DE1CA1CBB9001A5CD6 /* TigaseSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */; };
 		FE3F33E31CA1CBB9001A5CD6 /* TigaseSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33E21CA1CBB9001A5CD6 /* TigaseSwiftTests.swift */; };
@@ -135,6 +136,7 @@
 		FE3024251CDD1F6500466497 /* DelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DelayTests.swift; sourceTree = "<group>"; };
 		FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XmppStanzaFilter.swift; sourceTree = "<group>"; };
 		FE30242D1CDDF53500466497 /* StreamManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamManagementModule.swift; sourceTree = "<group>"; };
+		FE30242F1CE0D7F300466497 /* VCardModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModule.swift; sourceTree = "<group>"; };
 		FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TigaseSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TigaseSwift.h; sourceTree = "<group>"; };
 		FE3F33D81CA1CBB9001A5CD6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -225,6 +227,7 @@
 				FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */,
 				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
 				FE30242D1CDDF53500466497 /* StreamManagementModule.swift */,
+				FE30242F1CE0D7F300466497 /* VCardModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -548,6 +551,7 @@
 				FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */,
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
 				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,
+				FE3024301CE0D7F300466497 /* VCardModule.swift in Sources */,
 				FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */,
 				FE94E50A1CC90C5800FAE755 /* PresenceModule.swift in Sources */,
 				FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */,

@@ -33,6 +33,10 @@ public class Element : Node, ElementProtocol {
         }
     }
     
+    public var hasChildren:Bool {
+        return !nodes.isEmpty && !getChildren().isEmpty;
+    }
+    
     public var value:String? {
         get {
             var result:String? = nil;
