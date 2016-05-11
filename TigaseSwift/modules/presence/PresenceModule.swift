@@ -113,14 +113,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
     
     public func sendInitialPresence() {
-        var presence = Presence();
-        if let nick:String = context.sessionObject.getProperty(SessionObject.NICKNAME) {
-            presence.nickname = nick;
-        }
-        
-        context.eventBus.fire(BeforePresenceSendEvent());
-        
-        context.writer?.write(presence);
+        setPresence(.online, status: nil, priority: nil);
     }
     
     public func setPresence(show:Presence.Show, status:String?, priority:Int?) {
@@ -133,7 +126,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
             presence.nickname = nick;
         }
         
-        context.eventBus.fire(BeforePresenceSendEvent());
+        context.eventBus.fire(BeforePresenceSendEvent(sessionObject: context.sessionObject, presence: presence));
         
         context.writer?.write(presence);
     }
