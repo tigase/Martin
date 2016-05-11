@@ -81,6 +81,7 @@
 		FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */; };
 		FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */; };
 		FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */; };
+		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
 		FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */; };
 /* End PBXBuildFile section */
 
@@ -173,6 +174,7 @@
 		FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoveryModule.swift; sourceTree = "<group>"; };
 		FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElementProtocol.swift; sourceTree = "<group>"; };
 		FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCarbonsModule.swift; sourceTree = "<group>"; };
+		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
 		FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVersionModule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -234,6 +236,7 @@
 				FE30242D1CDDF53500466497 /* StreamManagementModule.swift */,
 				FE30242F1CE0D7F300466497 /* VCardModule.swift */,
 				FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */,
+				FEA554871CE3A55B00676608 /* MobileModeModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -591,6 +594,7 @@
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
 				FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */,
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,
+				FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */,
 				FE94E5171CCB961000FAE755 /* UIDGenerator.swift in Sources */,
 				FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */,
 				FE30242E1CDDF53500466497 /* StreamManagementModule.swift in Sources */,

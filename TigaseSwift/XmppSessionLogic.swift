@@ -105,6 +105,11 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                 handler(stanza);
                 return;
             }
+            
+            guard stanza.name != "iq" || (stanza.type != StanzaType.result && stanza.type != StanzaType.error) else {
+                return;
+            }
+            
             let modules = modulesManager.findModules(stanza);
             log("stanza:", stanza, "will be processed by", modules);
             if !modules.isEmpty {
