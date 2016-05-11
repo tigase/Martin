@@ -50,30 +50,33 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
     
     public func process(stanza: Stanza) throws {
         let message = stanza as! Message;
-        try processMessage(message);
+        try processMessage(message, interlocutorJid: message.from);
     }
     
-    func processMessage(message: Message) throws {
-        var chat = chatManager.getChat(message.from!, thread: message.thread);
+    func processMessage(message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
+        var chat = chatManager.getChat(interlocutorJid!, thread: message.thread);
         
         if chat == nil && message.body == nil {
             fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: nil, message: message));
+            return nil;
         }
         
         if chat == nil {
-            chat = chatManager.createChat(message.from!, thread: message.thread);
+            chat = chatManager.createChat(interlocutorJid!, thread: message.thread);
         } else {
-            if chat!.jid != message.from {
-                chat!.jid = message.from!;
+            if chat!.jid != interlocutorJid {
+                chat!.jid = interlocutorJid!;
             }
             if chat!.thread != message.thread {
                 chat!.thread = message.thread;
             }
         }
         
-        if chat != nil {
+        if chat != nil &&  fireEvents {
             fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: chat, message: message));
         }
+        
+        return chat;
     }
     
     public func sendMessage(chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {

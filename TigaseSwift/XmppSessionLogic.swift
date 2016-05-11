@@ -177,6 +177,10 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     
     func processSessionBindedAndEstablished(sessionObject:SessionObject) {
         log("session binded and established");
+        if let discoveryModule:DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) {
+            discoveryModule.discoverServerFeatures(nil, onError: nil);
+        }
+        
         if let streamManagementModule:StreamManagementModule = context.modulesManager.getModule(StreamManagementModule.ID) {
             if streamManagementModule.isAvailable() {
                 streamManagementModule.enable();

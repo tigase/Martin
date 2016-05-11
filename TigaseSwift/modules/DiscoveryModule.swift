@@ -63,9 +63,12 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         ));
     }
     
-    public func discoverServerFeatures(onInfoReceived:(node: String?, identities: [Identity], features: [String]) -> Void, onError: (errorCondition: ErrorCondition?) -> Void) {
+    public func discoverServerFeatures(onInfoReceived:((node: String?, identities: [Identity], features: [String]) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
-            getInfo(JID(jid.domain), onInfoReceived: onInfoReceived, onError: onError);
+            getInfo(JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
+                self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
+                onInfoReceived?(node: node, identities: identities, features: features);
+                }, onError: onError);
         }
     }
     
@@ -82,7 +85,7 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
-    public func getInfo(jid:JID, node:String? = nil, onInfoReceived:(node: String?, identities: [Identity], features: [String]) -> Void, onError: (errorCondition: ErrorCondition?) -> Void) {
+    public func getInfo(jid:JID, node:String? = nil, onInfoReceived:(node: String?, identities: [Identity], features: [String]) -> Void, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
         getInfo(jid, node:node, callback: {(stanza: Stanza?) -> Void in
             var type = stanza?.type ?? StanzaType.error;
             switch type {
@@ -101,7 +104,7 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
                 onInfoReceived(node: query?.getAttribute("node"), identities: identities, features: features);
             default:
                 var errorCondition = stanza?.errorCondition;
-                onError(errorCondition: errorCondition);
+                onError?(errorCondition: errorCondition);
             }
         })
     }
@@ -259,6 +262,26 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             get {
                 return "Item(jid=\(jid), node=\(node), name=\(name))";
             }
+        }
+    }
+    
+    public class ServerFeaturesReceivedEvent: Event {
+        
+        public static let TYPE = ServerFeaturesReceivedEvent();
+        
+        public let type = "ServerFeaturesReceivedEvent";
+        
+        public let sessionObject: SessionObject!;
+        public let features: [String]!;
+        
+        init() {
+            self.sessionObject = nil;
+            self.features = nil;
+        }
+        
+        public init(sessionObject: SessionObject, features: [String]) {
+            self.sessionObject = sessionObject;
+            self.features = features;
         }
     }
 }

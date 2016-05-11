@@ -80,6 +80,7 @@
 		FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */; };
 		FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */; };
 		FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */; };
+		FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */; };
 		FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */; };
 /* End PBXBuildFile section */
 
@@ -171,6 +172,7 @@
 		FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscapeUtils.swift; sourceTree = "<group>"; };
 		FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoveryModule.swift; sourceTree = "<group>"; };
 		FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElementProtocol.swift; sourceTree = "<group>"; };
+		FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCarbonsModule.swift; sourceTree = "<group>"; };
 		FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVersionModule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -231,6 +233,7 @@
 				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
 				FE30242D1CDDF53500466497 /* StreamManagementModule.swift */,
 				FE30242F1CE0D7F300466497 /* VCardModule.swift */,
+				FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -546,6 +549,7 @@
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
 				FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */,
+				FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */,
 				FE30242C1CDDF52400466497 /* XmppStanzaFilter.swift in Sources */,
 				FE3024351CE20C2300466497 /* Crypto.swift in Sources */,
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
