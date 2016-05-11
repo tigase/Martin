@@ -310,6 +310,10 @@ public class Presence: Stanza {
         get {
             let x = findChild("show")?.value;
             let type = self.type;
+            guard type != StanzaType.error && type != StanzaType.unavailable else {
+                return nil;
+            }
+            
             if (x == nil) {
                 if (type == nil || type == StanzaType.available) {
                     return .online;
@@ -322,7 +326,7 @@ public class Presence: Stanza {
             element.forEachChild("show") { (e:Element) -> Void in
                 self.element.removeChild(e);
             };
-            if newValue != nil {
+            if newValue != nil && newValue != Show.online {
                 element.addChild(Element(name: "show", cdata: newValue!.rawValue));
             }
         }

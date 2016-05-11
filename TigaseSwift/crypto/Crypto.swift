@@ -72,7 +72,7 @@ public enum Digest: DigestProtocol {
     
     public func digestToHex(data: NSData?) -> String? {
         if let result:[UInt8] = digest(data) {
-            return result.map() { String(format: "%02X", $0) }.reduce("", combine: +);
+            return result.map() { String(format: "%02x", $0) }.reduce("", combine: +);
         }
         return nil;
     }
