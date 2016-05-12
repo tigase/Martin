@@ -175,14 +175,11 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         var query = Element(name:"query", xmlns:"jabber:iq:roster");
         
         if isRosterVersioningAvailable() {
-            var x = versionProvider?.getCachedVersion(context.sessionObject);
+            var x = versionProvider?.getCachedVersion(context.sessionObject) ?? "";
             if (rosterStore.count == 0) {
-                x = "";
                 versionProvider?.updateReceivedVersion(context.sessionObject, ver: x);
             }
-            if x != nil {
-                query.setAttribute("ver", value: x);
-            }
+            query.setAttribute("ver", value: x);
         }
         iq.addChild(query);
         
