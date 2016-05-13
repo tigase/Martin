@@ -177,6 +177,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         if isRosterVersioningAvailable() {
             var x = versionProvider?.getCachedVersion(context.sessionObject) ?? "";
             if (rosterStore.count == 0) {
+                x = "";
                 versionProvider?.updateReceivedVersion(context.sessionObject, ver: x);
             }
             query.setAttribute("ver", value: x);
