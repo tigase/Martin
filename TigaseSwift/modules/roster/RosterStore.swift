@@ -35,7 +35,7 @@ public class RosterStore {
         
     }
     
-    public func add(jid:JID, name:String?, groups:[String] = [String](), onSuccess:(stanza:Stanza) -> Void, onError:(errorCondition:ErrorCondition?) -> Void) {
+    public func add(jid:JID, name:String?, groups:[String] = [String](), onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
         handler?.add(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
     }
     
@@ -44,11 +44,11 @@ public class RosterStore {
         handler?.cleared();
     }
 
-    public func remove(jid:JID, onSuccess:(stanza:Stanza) -> Void, onError:(errorCondition:ErrorCondition?) -> Void) {
+    public func remove(jid:JID, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
         handler?.remove(jid, onSuccess: onSuccess, onError: onError);
     }
 
-    public func update(rosterItem:RosterItem, onSuccess:(stanza:Stanza) -> Void, onError:(errorCondition:ErrorCondition?) -> Void) {
+    public func update(rosterItem:RosterItem, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
         handler?.update(rosterItem, onSuccess: onSuccess, onError: onError);
     }
     
@@ -69,9 +69,9 @@ public class RosterStore {
 
 public protocol RosterStoreHandler {
 
-    func add(jid:JID, name:String?, groups:[String], onSuccess:(stanza:Stanza) -> Void, onError:(errorCondition:ErrorCondition?) -> Void);
+    func add(jid:JID, name:String?, groups:[String], onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);
     func cleared();
-    func remove(jid:JID, onSuccess:(stanza:Stanza) -> Void, onError:(errorCondition:ErrorCondition?) -> Void);
-    func update(rosterItem:RosterItem, onSuccess:(stanza:Stanza) -> Void, onError:(errorCondition:ErrorCondition?) -> Void);
+    func remove(jid:JID, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);
+    func update(rosterItem:RosterItem, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);
     
 }

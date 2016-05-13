@@ -27,7 +27,7 @@ public class Timer: NSObject {
     private var callback: (Void ->Void)?
     private var repeats:Bool;
     
-    init(delayInSeconds: NSTimeInterval, repeats: Bool, callback: Void->Void) {
+    public init(delayInSeconds: NSTimeInterval, repeats: Bool, callback: Void->Void) {
         self.callback = callback;
         self.repeats = repeats;
         super.init();

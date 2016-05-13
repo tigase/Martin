@@ -192,7 +192,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         })
     }
     
-    func updateItem(jid:JID, name:String?, groups:[String], subscription:RosterItem.Subscription? = nil, onSuccess:(stanza:Stanza)->Void, onError:(errorCondition:ErrorCondition?)->Void) {
+    func updateItem(jid:JID, name:String?, groups:[String], subscription:RosterItem.Subscription? = nil, onSuccess:((stanza:Stanza)->Void)?, onError:((errorCondition:ErrorCondition?)->Void)?) {
         var iq = Iq();
         iq.type = .set;
         
@@ -213,9 +213,9 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         
         context.writer?.write(iq, callback: {(result:Stanza?) -> Void in
             if result?.type == StanzaType.result {
-                onSuccess(stanza: result!);
+                onSuccess?(stanza: result!);
             } else {
-                onError(errorCondition: result?.errorCondition);
+                onError?(errorCondition: result?.errorCondition);
             }
         });
     }
@@ -281,15 +281,15 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
             self.rosterModule = module;
         }
         
-        func add(jid: JID, name: String?, groups: [String], onSuccess: (stanza: Stanza) -> Void, onError: (errorCondition: ErrorCondition?) -> Void) {
+        func add(jid: JID, name: String?, groups: [String], onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
         }
         
-        func remove(jid: JID, onSuccess: (stanza: Stanza) -> Void, onError: (errorCondition: ErrorCondition?) -> Void) {
+        func remove(jid: JID, onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(jid, name: nil, groups: [String](), subscription: RosterItem.Subscription.remove, onSuccess: onSuccess, onError: onError);
         }
         
-        func update(item: RosterItem, onSuccess: (stanza: Stanza) -> Void, onError: (errorCondition: ErrorCondition?) -> Void) {
+        func update(item: RosterItem, onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(item.jid, name: item.name, groups: item.groups, onSuccess: onSuccess, onError: onError);
         }
         
