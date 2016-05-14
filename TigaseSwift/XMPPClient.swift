@@ -25,7 +25,11 @@ public class XMPPClient: Logger, EventHandler {
     
     public let sessionObject:SessionObject;
     public let connectionConfiguration:ConnectionConfiguration!;
-    private var socketConnector:SocketConnector?;
+    private var socketConnector:SocketConnector? {
+        willSet {
+            sessionLogic?.unbind();
+        }
+    }
     public let modulesManager:XmppModulesManager!;
     public let eventBus:EventBus = EventBus();
     public let context:Context!;
