@@ -41,6 +41,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     let dnsResolver = XMPPDNSSrvResolver();
     weak var sessionLogic:XmppSessionLogic!;
     var closeTimer:Timer?;
+    var zlib:Zlib?;
     
     private var state_:State = State.disconnected;
     public var state:State {
@@ -125,6 +126,12 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.send("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
     }
     
+    func startZlib() {
+        let e = Element(name: "compress", xmlns: "http://jabber.org/protocol/compress");
+        e.addChild(Element(name: "method", cdata: "zlib"));
+        self.send(e.stringValue);
+    }
+    
     func stop() {
         switch state {
         case .disconnected, .disconnecting:
@@ -185,13 +192,25 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
+    func proceedTLS() {
+        configureTLS();
+        restartStream();
+    }
+    
+    func proceedZlib() {
+        zlib = Zlib(compressionLevel: .Default, flush: .Sync);
+        self.context.sessionObject.setProperty(SessionObject.COMPRESSION_ACTIVE, value: true, scope: SessionObject.Scope.stream);
+        restartStream();
+    }
+    
     override public func processElement(packet: Element) {
         super.processElement(packet);
         if packet.name == "error" && packet.xmlns == "http://etherx.jabber.org/streams" {
             sessionLogic.onStreamError(packet);
         } else if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
-            configureTLS();
-            restartStream();
+            proceedTLS();
+        } else if packet.name == "compressed" && packet.xmlns == "http://jabber.org/protocol/compress" {
+            proceedZlib();
         } else {
             processStanza(Stanza.fromElement(packet));
         }
@@ -233,10 +252,14 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     private func sendSync(data:String) -> Bool {
         self.log("sending stanza:", data);
-        let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!
-        var outBuf = Array<UInt8>(count: buf.length, repeatedValue: 0)
-        buf.getBytes(&outBuf, length: buf.length)
-        let sent = self.outStream?.write(&outBuf, maxLength: buf.length)
+        let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!;
+        var sent: Int? = 0;
+        if zlib != nil {
+            var outBuf = zlib!.compress(UnsafePointer<UInt8>(buf.bytes), length: buf.length);
+            sent = self.outStream?.write(&outBuf, maxLength: outBuf.count);
+        } else {
+            sent = self.outStream?.write(UnsafePointer<UInt8>(buf.bytes), maxLength: buf.length)
+        }
         self.log("sent \(sent) from \(buf.length)")
         return sent != nil && ((sent!) != -1);
     }
@@ -246,7 +269,9 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case NSStreamEvent.ErrorOccurred:
             // may happen if cannot connect to server or if connection was broken
             log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
-            onStreamTerminate();
+            if (aStream == self.inStream) {
+                onStreamTerminate();
+            }
         case NSStreamEvent.OpenCompleted:
             if (aStream == self.inStream) {
                 state = State.connected;
@@ -290,7 +315,12 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
                 let inStream = self.inStream!;
                 while inStream.hasBytesAvailable {
                     if let read = self.inStream?.read(&buffer, maxLength: buffer.count) {
-                       parser?.parse(&buffer, length: read)
+                        if zlib != nil {
+                            var data = zlib!.decompress(buffer, length: read);
+                            parser?.parse(&data, length: data.count);
+                        } else {
+                            parser?.parse(&buffer, length: read);
+                        }
                     }
                 }
             }
@@ -311,6 +341,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
         inStream = nil;
         outStream = nil;
+        zlib = nil;
         if newState != nil {
             state = newState!;
         }

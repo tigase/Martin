@@ -196,13 +196,16 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     func processStreamFeatures(featuresElement: Element) {
         log("processing stream features");
         let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
+        let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
         let authorized = context.sessionObject.getProperty(AuthModule.AUTHORIZED, defValue: false);
         let streamManagementModule:StreamManagementModule? = context.modulesManager.getModule(StreamManagementModule.ID);
         let resumption = (streamManagementModule?.resumptionEnabled ?? false) && (streamManagementModule?.isAvailable() ?? false);
         
-        if (startTlsActive != true)
-            && (context.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED) == nil) && self.isStartTLSAvailable() {
+        if (!startTlsActive)
+            && (context.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED) != true) && self.isStartTLSAvailable() {
             connector.startTLS();
+        } else if ((!compressionActive) && (context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED) != true) && self.isZlibAvailable()) {
+            connector.startZlib();
         } else if !authorized {
             log("starting authentication");
             if let authModule:AuthModule = modulesManager.getModule(AuthModule.ID) {
@@ -226,6 +229,11 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         return (featuresElement?.findChild("starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) != nil;
     }
     
+    func isZlibAvailable() -> Bool {
+        let featuresElement = StreamFeaturesModule.getStringFeatures(context.sessionObject);
+        return (featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").indexOf({(e) in e.findChild("method")?.value == "zlib" })) != nil;
+    }
+
     public class ErrorEvent: Event {
         
         public static let TYPE = ErrorEvent();

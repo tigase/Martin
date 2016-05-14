@@ -35,6 +35,10 @@ public class SessionObject: Logger {
     
     public static let STARTTLS_DISLABLED = "starttls#disabled";
     
+    public static let COMPRESSION_ACTIVE = "compression#active";
+    
+    public static let COMPRESSION_DISABLED = "compression#disabled";
+    
     public enum Scope {
         case session
         case stream
