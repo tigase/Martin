@@ -110,6 +110,24 @@ public class Room: ChatProtocol, ContextAware {
         return presence;
     }
     
+    public func sendMessage(body: String?, additionalElements: [Element]? = nil) {
+        let msg = createMessage(body);
+        if additionalElements != nil {
+            for elem in additionalElements! {
+                msg.addChild(elem);
+            }
+        }
+        context.writer?.write(msg);
+    }
+    
+    public func createMessage(body: String?) -> Message {
+        var msg = Message();
+        msg.to = jid;
+        msg.type = StanzaType.groupchat;
+        msg.body = body;
+        return msg;
+    }
+    
     public func add(occupant: Occupant) {
         _presences[occupant.nickname!] = occupant;
     }

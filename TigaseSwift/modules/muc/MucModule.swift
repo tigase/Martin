@@ -53,7 +53,7 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
     
     public let features = [String]();
     
-    public var roomsManager: AbstractRoomsManager! {
+    public var roomsManager: DefaultRoomsManager! {
         didSet {
             oldValue?.context = nil;
             if roomsManager != nil {
@@ -68,7 +68,7 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
     
     public func initialize() {
         if roomsManager == nil {
-            roomsManager = AbstractRoomsManager();
+            roomsManager = DefaultRoomsManager();
         }
         roomsManager.context = context;
         roomsManager.initialize();
