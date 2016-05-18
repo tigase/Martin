@@ -140,14 +140,20 @@ public class Element : Node, ElementProtocol {
         }
     }
     
-    public func mapChildren<U>(transform: (Element) -> U, filter: ((Element) -> Bool)? = nil) -> [U] {
+    public func mapChildren<U>(transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
         var tmp = getChildren();
         if filter != nil {
             tmp = tmp.filter({ e -> Bool in
                 return filter!(e);
             });
         };
-        return tmp.map(transform);
+        var result = [U]();
+        for e in tmp {
+            if let u = transform(e) {
+                result.append(u);
+            }
+        }
+        return result;
     }
     
     public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {

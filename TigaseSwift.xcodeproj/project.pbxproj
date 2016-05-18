@@ -84,6 +84,13 @@
 		FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */; };
 		FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */; };
 		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
+		FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514111CE9C3FB003AF765 /* MucModule.swift */; };
+		FEC514141CE9C4CA003AF765 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514131CE9C4CA003AF765 /* Room.swift */; };
+		FEC514161CE9C702003AF765 /* Role.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514151CE9C702003AF765 /* Role.swift */; };
+		FEC514181CE9C9AE003AF765 /* Affiliation.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514171CE9C9AE003AF765 /* Affiliation.swift */; };
+		FEC5141A1CE9CC2A003AF765 /* Occupant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514191CE9CC2A003AF765 /* Occupant.swift */; };
+		FEC5141C1CE9CD8F003AF765 /* XMucUserElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */; };
+		FEC5141E1CE9E012003AF765 /* DefaultRoomsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */; };
 		FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */; };
 /* End PBXBuildFile section */
 
@@ -179,6 +186,13 @@
 		FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElementProtocol.swift; sourceTree = "<group>"; };
 		FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCarbonsModule.swift; sourceTree = "<group>"; };
 		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
+		FEC514111CE9C3FB003AF765 /* MucModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucModule.swift; sourceTree = "<group>"; };
+		FEC514131CE9C4CA003AF765 /* Room.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
+		FEC514151CE9C702003AF765 /* Role.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Role.swift; sourceTree = "<group>"; };
+		FEC514171CE9C9AE003AF765 /* Affiliation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Affiliation.swift; sourceTree = "<group>"; };
+		FEC514191CE9CC2A003AF765 /* Occupant.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Occupant.swift; sourceTree = "<group>"; };
+		FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMucUserElement.swift; sourceTree = "<group>"; };
+		FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultRoomsManager.swift; sourceTree = "<group>"; };
 		FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVersionModule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -227,6 +241,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FEC514101CE9C3EC003AF765 /* muc */,
 				FE94E50D1CCA303900FAE755 /* chat */,
 				FE94E5081CC90C4A00FAE755 /* presence */,
 				FE94E4FB1CC7AFF900FAE755 /* roster */,
@@ -413,6 +428,20 @@
 			path = util;
 			sourceTree = "<group>";
 		};
+		FEC514101CE9C3EC003AF765 /* muc */ = {
+			isa = PBXGroup;
+			children = (
+				FEC514111CE9C3FB003AF765 /* MucModule.swift */,
+				FEC514131CE9C4CA003AF765 /* Room.swift */,
+				FEC514151CE9C702003AF765 /* Role.swift */,
+				FEC514171CE9C9AE003AF765 /* Affiliation.swift */,
+				FEC514191CE9CC2A003AF765 /* Occupant.swift */,
+				FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */,
+				FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */,
+			);
+			path = muc;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -539,6 +568,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEC514181CE9C9AE003AF765 /* Affiliation.swift in Sources */,
 				FE94E50C1CC90C6400FAE755 /* PresenceStore.swift in Sources */,
 				FE2EFDA41CB680A2000D254E /* Stanza.swift in Sources */,
 				FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */,
@@ -558,6 +588,7 @@
 				FE2EFD831CB57D25000D254E /* Node.swift in Sources */,
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
+				FEC5141E1CE9E012003AF765 /* DefaultRoomsManager.swift in Sources */,
 				FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */,
 				FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */,
 				FE30242C1CDDF52400466497 /* XmppStanzaFilter.swift in Sources */,
@@ -565,6 +596,7 @@
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
 				FE3A45D31CE7289600C36264 /* Zlib.swift in Sources */,
+				FEC514161CE9C702003AF765 /* Role.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
 				FE94E5131CCA3E9700FAE755 /* DefaultChatManager.swift in Sources */,
 				FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */,
@@ -589,7 +621,9 @@
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
 				FE2EFD7B1CB57C70000D254E /* JID.swift in Sources */,
 				FE2EFE201CC417D9000D254E /* XMLParser.swift in Sources */,
+				FEC514141CE9C4CA003AF765 /* Room.swift in Sources */,
 				FE2EFDBD1CBD594C000D254E /* ErrorCondition.swift in Sources */,
+				FEC5141C1CE9CD8F003AF765 /* XMucUserElement.swift in Sources */,
 				FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */,
 				FE2EFD981CB66C0C000D254E /* DefaultCredentialsCallback.swift in Sources */,
 				FE94E5151CCB847200FAE755 /* ChatStore.swift in Sources */,
@@ -600,9 +634,11 @@
 				FE2EFDAD1CB80E7A000D254E /* EventHandler.swift in Sources */,
 				FE2EFDB91CBD231B000D254E /* ResponseManager.swift in Sources */,
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
+				FEC5141A1CE9CC2A003AF765 /* Occupant.swift in Sources */,
 				FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */,
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,
 				FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */,
+				FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */,
 				FE94E5171CCB961000FAE755 /* UIDGenerator.swift in Sources */,
 				FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */,
 				FE30242E1CDDF53500466497 /* StreamManagementModule.swift in Sources */,

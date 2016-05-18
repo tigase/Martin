@@ -31,6 +31,12 @@ public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue 
         return stringValue.hashValue;
     }
     
+    public init(localPart: String? = nil, domain: String) {
+        self.localPart = localPart;
+        self.domain = domain;
+        self.stringValue = BareJID.toString(localPart, domain);
+    }
+    
     public init(_ jid:BareJID) {
         self.localPart = jid.localPart
         self.domain = jid.domain

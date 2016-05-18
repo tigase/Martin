@@ -31,23 +31,23 @@ public class Criteria {
         return OrImpl(criteria: criteria);
     }
     
-    public static func name(name: String, xmlns: String? = nil, types:[String]? = nil) -> Criteria {
-        return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil);
+    public static func name(name: String, xmlns: String? = nil, types:[String]? = nil, containsAttribute: String? = nil) -> Criteria {
+        return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil, containsAttribute: containsAttribute);
     }
 
-    public static func name(name: String, xmlns: String? = nil, types:[StanzaType]) -> Criteria {
+    public static func name(name: String, xmlns: String? = nil, types:[StanzaType], containsAttribute: String? = nil) -> Criteria {
         var typesStr = types.map { (type) -> String in
             return type.rawValue;
         }
-        return ElementCriteria(name: name, xmlns: xmlns, types: typesStr, attributes: nil);
+        return ElementCriteria(name: name, xmlns: xmlns, types: typesStr, attributes: nil, containsAttribute: containsAttribute);
     }
     
     public static func name(name:String?, attributes:[String:String]) -> Criteria {
         return ElementCriteria(name: name, attributes: attributes);
     }
     
-    public static func xmlns(xmlns:String) -> Criteria {
-        return ElementCriteria(xmlns: xmlns, attributes: nil);
+    public static func xmlns(xmlns:String, containsAttribute: String? = nil) -> Criteria {
+        return ElementCriteria(xmlns: xmlns, attributes: nil, containsAttribute: containsAttribute);
     }
     
     private var nextCriteria:Criteria?;
@@ -91,12 +91,14 @@ public class Criteria {
         let xmlns:String?;
         let attributes:[String:String]?;
         let types:[String]?;
+        let containsAttribute: String?;
         
-        init(name: String? = nil, xmlns: String? = nil, types:[String]? = nil, attributes:[String:String]?) {
+        init(name: String? = nil, xmlns: String? = nil, types:[String]? = nil, attributes:[String:String]?, containsAttribute: String? = nil) {
             self.name = name;
             self.xmlns = xmlns;
             self.types = types;
             self.attributes = attributes;
+            self.containsAttribute = containsAttribute;
             super.init();
         }
         
@@ -119,6 +121,9 @@ public class Criteria {
                         return false;
                     }
                 }
+            }
+            if (containsAttribute != nil) {
+                match = match && elem.getAttribute(containsAttribute!) != nil;
             }
             return match && super.match(elem);
         }

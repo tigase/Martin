@@ -23,10 +23,10 @@ import Foundation
 
 public protocol XmppModule: class {
     
-    var id:String { get };
-    var criteria:Criteria { get };
-    var features:[String] { get };
+    var id: String { get };
+    var criteria: Criteria { get };
+    var features: [String] { get };
     
-    func process(elem:Stanza) throws
+    func process(stanza: Stanza) throws
     
 }
