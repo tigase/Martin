@@ -41,23 +41,30 @@ public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
         }
     }
     
-    public init(_ jid:BareJID, resource:String? = nil) {
+    public init(_ jid: BareJID, resource: String? = nil) {
         self.bareJid = jid;
         self.resource = resource;
         self.stringValue = JID.toString(bareJid, resource);
     }
     
-    public init(_ jid:JID) {
+    public init(_ jid: JID) {
         self.bareJid = jid.bareJid;
         self.resource = jid.resource;
         self.stringValue = JID.toString(bareJid, resource);
     }
     
-    public init(_ jid:String) {
+    public init(_ jid: String) {
         let idx = jid.characters.indexOf("/");
         self.resource = (idx == nil) ? nil : jid.substringFromIndex(idx!.successor())
         self.bareJid = BareJID(jid);
         self.stringValue = JID.toString(bareJid, resource);
+    }
+    
+    public convenience init?(_ jid: String?) {
+        guard jid != nil else {
+            return nil;
+        }
+        self.init(jid!);
     }
     
     public var description : String {

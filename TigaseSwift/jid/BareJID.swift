@@ -37,13 +37,13 @@ public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue 
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
-    public init(_ jid:BareJID) {
+    public init(_ jid: BareJID) {
         self.localPart = jid.localPart
         self.domain = jid.domain
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
-    public init(_ jid:String) {
+    public init(_ jid: String) {
         var idx = jid.characters.indexOf("/");
         let bareJid = (idx == nil) ? jid : jid.substringToIndex(idx!);
         idx = bareJid.characters.indexOf("@");
@@ -52,7 +52,14 @@ public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue 
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
-    public init (_ jid:JID) {
+    public convenience init?(_ jid: String?) {
+        guard jid != nil else {
+            return nil;
+        }
+        self.init(jid!);
+    }
+    
+    public init(_ jid: JID) {
         self.domain = jid.domain
         self.localPart = jid.localPart
         self.stringValue = BareJID.toString(localPart, domain);

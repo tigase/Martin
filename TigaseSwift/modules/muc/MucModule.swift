@@ -94,6 +94,33 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
         }
     }
     
+    public func declineInvitation(invitation: Invitation, reason: String?) {
+        if invitation is MediatedInvitation {
+            let message = Message();
+            message.to = JID(invitation.roomJid);
+            
+            let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
+            
+            let decline = Element(name: "decline");
+            if reason != nil {
+                decline.addChild(Element(name: "reason", cdata: reason));
+            }
+            x.addChild(decline);
+            
+            message.addChild(x);
+            context.writer?.write(message);
+        }
+    }
+    
+    
+    public func invite(room: Room, invitee: JID, reason: String?) {
+        room.invite(invitee, reason: reason);
+    }
+    
+    public func inviteDirectly(room: Room, invitee: JID, reason: String?, threadId: String?) {
+        room.inviteDirectly(invitee, reason: reason, threadId: threadId);
+    }
+    
     public func join(roomName: String, mucServer: String, nickname: String, password: String? = nil) -> Room {
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
@@ -238,15 +265,36 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
     }
     
     func processDirectInvitationMessage(message: Message) {
+        let x = message.findChild("x", xmlns: "jabber:x:conference");
+        let contStr = x?.getAttribute("continue");
+        let cont = contStr == "true" || contStr == "1";
         
+        let invitation = DirectInvitation(sessionObject: context.sessionObject, message: message, roomJid: BareJID(x!.getAttribute("jid")!), inviter: message.from!, reason: x?.getAttribute("reason"), password: x?.getAttribute("password"), threadId: x?.getAttribute("thread"), continueFlag: cont);
+        
+        context.eventBus.fire(InvitationReceivedEvent(sessionObject: context.sessionObject, invitation: invitation));
     }
     
     func processMediatedInvitationMessage(message: Message) {
+        let x = message.findChild("x", xmlns: "http://jabber.org/protocol/muc#user");
+        let invite = x?.findChild("invite");
         
+        let invitation = MediatedInvitation(sessionObject: context.sessionObject, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.stringValue), reason: invite?.getAttribute("reason"), password: x?.getAttribute("password"));
+        
+        context.eventBus.fire(InvitationReceivedEvent(sessionObject: context.sessionObject, invitation: invitation));
     }
     
     func processInvitationDeclinedMessage(message: Message) {
+        let from = message.from!.bareJid;
+        let room = roomsManager.get(from);
+        guard room != nil else {
+            return;
+        }
         
+        let decline = message.findChild("x", xmlns: "http://jabber.org/protocol/muc#user")?.findChild("decline");
+        let reason = decline?.findChild("reason")?.stringValue;
+        let invitee = decline?.getAttribute("from");
+        
+        context.eventBus.fire(InvitationDeclinedEvent(sessionObject: context.sessionObject, message: message, room: room!, invitee: invitee == nil ? nil : JID(invitee!), reason: reason));
     }
 
     public class JoinRequestedEvent: Event {
@@ -524,5 +572,94 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
             self.room = room;
             self.nickname = nickname;
         }
+    }
+    
+    public class InvitationDeclinedEvent: Event {
+        
+        public static let TYPE = InvitationDeclinedEvent();
+        
+        public let type = "MucModuleInvitationDeclinedEvent";
+        
+        public let sessionObject: SessionObject!;
+        public let message: Message!;
+        public let room: Room!;
+        public let invitee: JID?;
+        public let reason: String?;
+        
+        private init() {
+            self.sessionObject = nil;
+            self.message = nil;
+            self.room = nil;
+            self.invitee = nil;
+            self.reason = nil;
+        }
+    
+        public init(sessionObject: SessionObject, message: Message, room: Room, invitee: JID?, reason: String?) {
+            self.sessionObject = sessionObject;
+            self.message = message;
+            self.room = room;
+            self.invitee = invitee;
+            self.reason = reason;
+        }
+    }
+    
+    public class InvitationReceivedEvent: Event {
+        
+        public static let TYPE = InvitationReceivedEvent();
+        
+        public let type = "MucModuleInvitationReceivedEvent";
+        
+        public let sessionObject: SessionObject!;
+        public let invitation: Invitation!;
+        
+        private init() {
+            self.sessionObject = nil;
+            self.invitation = nil;
+        }
+        
+        public init(sessionObject: SessionObject, invitation: Invitation) {
+            self.sessionObject = sessionObject;
+            self.invitation = invitation;
+        }
+        
+    }
+    
+    public class Invitation {
+        
+        public let sessionObject: SessionObject;
+        public let message: Message;
+        public let roomJid: BareJID;
+        public let inviter: JID?;
+        public let password: String?;
+        public let reason: String?;
+        
+        public init(sessionObject: SessionObject, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?) {
+            self.sessionObject = sessionObject;
+            self.message = message;
+            self.roomJid = roomJid;
+            self.inviter = inviter;
+            self.reason = reason;
+            self.password = password;
+        }
+    }
+    
+    public class DirectInvitation: Invitation {
+        
+        public let threadId: String?;
+        public let continueFlag: Bool;
+        
+        public init(sessionObject: SessionObject, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?, threadId: String?, continueFlag: Bool) {
+            self.threadId = threadId;
+            self.continueFlag = continueFlag;
+            super.init(sessionObject: sessionObject, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
+        }
+    }
+    
+    public class MediatedInvitation: Invitation {
+        
+        public override init(sessionObject: SessionObject, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?) {
+            super.init(sessionObject: sessionObject, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
+        }
+        
     }
 }

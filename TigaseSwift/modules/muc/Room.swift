@@ -128,6 +128,51 @@ public class Room: ChatProtocol, ContextAware {
         return msg;
     }
     
+    public func invite(invitee: JID, reason: String?) {
+        let message = self.createInvitation(invitee, reason: reason);
+        
+        context.writer?.write(message);
+    }
+    
+    public func createInvitation(invitee: JID, reason: String?) -> Message {
+        let message = Message();
+        message.to = JID(self.roomJid);
+        
+        let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
+        let invite = Element(name: "invite");
+        invite.setAttribute("to", value: invitee.stringValue);
+        if (reason != nil) {
+            invite.addChild(Element(name: "reason", cdata: reason!));
+        }
+        x.addChild(invite);
+        message.addChild(x);
+
+        return message;
+    }
+    
+    public func inviteDirectly(invitee: JID, reason: String?, threadId: String?) {
+        let message = createDirectInvitation(invitee, reason: reason, threadId: threadId);
+        context.writer?.write(message);
+    }
+    
+    public func createDirectInvitation(invitee: JID, reason: String?, threadId: String?) -> Message {
+        let message = Message();
+        message.to = invitee;
+        
+        let x = Element(name: "x", xmlns: "jabber:x:conference");
+        x.setAttribute("jid", value: roomJid.stringValue);
+        
+        x.setAttribute("password", value: password);
+        x.setAttribute("reason", value: reason);
+        
+        if threadId != nil {
+            x.setAttribute("thread", value: threadId);
+            x.setAttribute("continue", value: "true");
+        }
+        
+        return message;
+    }
+    
     public func add(occupant: Occupant) {
         _presences[occupant.nickname!] = occupant;
     }
