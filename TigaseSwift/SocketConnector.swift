@@ -102,16 +102,18 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.inStream!.delegate = self
         self.outStream!.delegate = self
         
-        CFReadStreamSetProperty(self.inStream! as CFReadStreamRef, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeBackground)
-        CFWriteStreamSetProperty(self.outStream! as CFWriteStreamRef, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeBackground)
+        let r1 = CFReadStreamSetProperty(self.inStream! as CFReadStreamRef, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeVoIP)
+        let r2 = CFWriteStreamSetProperty(self.outStream! as CFWriteStreamRef, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeVoIP)
+        
+        if !r1 || !r2 {
+            log("failed to enabled background connection feature", r1, r2);
+        }
         
         self.inStream!.scheduleInRunLoop(.mainRunLoop(), forMode: NSDefaultRunLoopMode)
         self.outStream!.scheduleInRunLoop(.mainRunLoop(), forMode: NSDefaultRunLoopMode)
         
         self.inStream!.open();
         self.outStream!.open();
-        
-        //self.wrappedInStream = NSInputStreamWrapper(input: self.inStream!);
         
         if (ssl) {
             configureTLS()
