@@ -36,6 +36,9 @@ public class XMPPClient: Logger, EventHandler {
     private var sessionLogic:XmppSessionLogic?;
     private let responseManager:ResponseManager;
     
+    private var keepaliveTimer: Timer?;
+    public var keepaliveTimeout: NSTimeInterval = (3 * 60) - 5;
+    
     public var state:SocketConnector.State {
         return sessionLogic?.state ?? socketConnector?.state ?? .disconnected;
     }
@@ -65,6 +68,14 @@ public class XMPPClient: Logger, EventHandler {
         sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context);
         sessionLogic!.bind();
         modulesManager.initIfRequired();
+        
+        keepaliveTimer?.cancel();
+        if keepaliveTimeout > 0 {
+            keepaliveTimer = Timer(delayInSeconds: keepaliveTimeout, repeats: true, callback: { Void->Void in self.keepalive() });
+        } else {
+            keepaliveTimer = nil;
+        }
+        
         socketConnector?.start()
     }
     
@@ -84,9 +95,18 @@ public class XMPPClient: Logger, EventHandler {
         log("connection stopped......");
     }
     
+    public func keepalive() {
+        guard state == .connected else {
+            return;
+        }
+        sessionLogic?.keepalive();
+    }
+    
     public func handleEvent(event: Event) {
         switch event {
         case let de as SocketConnector.DisconnectedEvent:
+            keepaliveTimer?.cancel();
+            keepaliveTimer = nil;
             if de.clean {
                 context.sessionObject.clear();
             } else {

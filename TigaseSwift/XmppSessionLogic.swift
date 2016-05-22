@@ -31,6 +31,8 @@ public protocol XmppSessionLogic:class {
     func receivedIncomingStanza(stanza:Stanza);
     func sendingOutgoingStanza(stanza:Stanza);
     
+    func keepalive();
+    
     func onStreamError(streamError:Element);
     
     func serverToConnect() -> String;
@@ -133,6 +135,18 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     public func sendingOutgoingStanza(stanza: Stanza) {
         for filter in modulesManager.filters {
             filter.processOutgoingStanza(stanza);
+        }
+    }
+    
+    public func keepalive() {
+        if let pingModule: PingModule = modulesManager.getModule(PingModule.ID) {
+            pingModule.ping(JID(context.sessionObject.userBareJid!), stanza: { (stanza) in
+                if stanza == nil {
+                    self.log("no response on ping packet - possible that connection is broken, reconnecting...");
+                }
+            });
+        } else {
+            connector.keepAlive();
         }
     }
     

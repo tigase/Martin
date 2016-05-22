@@ -246,6 +246,10 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.send(stanza.element.stringValue)
     }
     
+    public func keepAlive() {
+        self.send(" ");
+    }
+    
     private func send(data:String) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
             self.sendSync(data);
