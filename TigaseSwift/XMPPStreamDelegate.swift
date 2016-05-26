@@ -25,6 +25,7 @@ public protocol XMPPStreamDelegate {
     
     func onStreamStart(attributes:[String:String])
     func onStreamTerminate();
+    func onError(msg: String?);
     func processElement(packet:Element)
     
 }

@@ -84,6 +84,7 @@ public class XMPPParserDelegate: Logger, XMLParserDelegate {
     
     public func error(msg: String) {
         log("error occurred", msg);
+        delegate?.onError(msg);
     }
     
 }

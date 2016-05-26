@@ -23,6 +23,10 @@ import Foundation
 
 public class XMPPDelegate : NSObject, XMPPStreamDelegate {
     
+    public func onError(msg: String?) {
+        log("error parsing XML", msg);
+    }
+    
     public func onStreamTerminate() {
         log("stream closed")
     }

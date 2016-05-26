@@ -258,6 +258,8 @@ public class Element : Node, ElementProtocol {
     public static func fromString(toParse: String) -> Element? {
         class Holder: XMPPStreamDelegate {
             var parsed:Element?;
+            private func onError(msg: String?) {
+            }
             private func onStreamStart(attributes: [String : String]) {
             }
             private func onStreamTerminate() {

@@ -218,6 +218,10 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
+    override public func onError(msg: String?) {
+        closeSocket(State.disconnected);
+    }
+    
     override public func onStreamTerminate() {
         switch state {
         case .disconnecting:
@@ -317,9 +321,10 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case NSStreamEvent.HasBytesAvailable:
             log("stream event: HasBytesAvailable");
             if aStream == self.inStream {
-                var buffer = [UInt8](count:2048, repeatedValue: 0);
+//                var buffer = [UInt8](count:2048, repeatedValue: 0);
                 let inStream = self.inStream!;
                 while inStream.hasBytesAvailable {
+                    var buffer = [UInt8](count:2048, repeatedValue: 0);
                     if let read = self.inStream?.read(&buffer, maxLength: buffer.count) {
                         if zlib != nil {
                             var data = zlib!.decompress(buffer, length: read);
