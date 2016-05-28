@@ -68,6 +68,8 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         return _resumptionLocation;
     }
     
+    public var maxResumptionTimeout: Int?;
+    
     private var _resumptionTime: NSTimeInterval?;
     public var resumptionTime: NSTimeInterval? {
         return _resumptionTime;
@@ -77,7 +79,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         super.init();
     }
     
-    public func enable(resumption: Bool = true) {
+    public func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) {
         guard !(ackEnabled || resumptionEnabled) else {
             return;
         }
@@ -86,6 +88,10 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         var enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS);
         if resumption {
             enable.setAttribute("resume", value: "true");
+            let timeout = maxResumptionTimeout ?? self.maxResumptionTimeout;
+            if timeout != nil {
+                enable.setAttribute("max", value: String(timeout!));
+            }
         }
         
         context.writer?.write(enable);

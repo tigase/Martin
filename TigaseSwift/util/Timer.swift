@@ -34,7 +34,7 @@ public class Timer: NSObject {
         self.timer = NSTimer.scheduledTimerWithTimeInterval(delayInSeconds, target: self, selector: #selector(Timer.execute), userInfo: nil, repeats: repeats);
     }
     
-    func execute() {
+    public func execute() {
         callback?();
         if !repeats {
             cancel();
