@@ -43,7 +43,29 @@ public class VCardModule: XmppModule, ContextAware {
         throw ErrorCondition.unexpected_request;
     }
     
-    public func retrieveVCard(jid: JID, callback: (Stanza?) -> Void) {
+    public func publishVCard(vcard: VCard, callback: ((Stanza?) -> Void)? = nil) {
+        var iq = Iq();
+        iq.type = StanzaType.set;
+        iq.addChild(vcard.element);
+        
+        context.writer?.write(iq, callback: callback);
+    }
+    
+    public func publishVCard(vcard: VCard, onSuccess: (()->Void)?, onError: ((errorCondition: ErrorCondition?)->Void)?) {
+        publishVCard(vcard) { (stanza) in
+            var type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                onSuccess?();
+            default:
+                var errorCondition = stanza?.errorCondition;
+                onError?(errorCondition: errorCondition);
+            }
+        }
+    }
+    
+    
+    public func retrieveVCard(jid: JID? = nil, callback: (Stanza?) -> Void) {
         var iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid;
@@ -52,7 +74,7 @@ public class VCardModule: XmppModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
-    public func retrieveVCard(jid: JID, onSuccess: (vcard: VCard)->Void, onError: (errorCondition: ErrorCondition?)->Void) {
+    public func retrieveVCard(jid: JID? = nil, onSuccess: (vcard: VCard)->Void, onError: (errorCondition: ErrorCondition?)->Void) {
         retrieveVCard(jid) { (stanza) in
             var type = stanza?.type ?? StanzaType.error;
             switch type {

@@ -65,24 +65,32 @@ public class ResponseManager: Logger {
         return nil;
     }
     
-    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:(Stanza?)->Void) {
+    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:((Stanza?)->Void)?) {
+        guard callback != nil else {
+            return;
+        }
+        
         var id = stanza.id;
         if id == nil {
             id = nextUid();
             stanza.id = id;
         }
-        handlers[id!] = Entry(jid: stanza.to, callback: callback, timeout: timeout);
+        handlers[id!] = Entry(jid: stanza.to, callback: callback!, timeout: timeout);
     }
     
-    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, onSuccess:(Stanza)->Void, onError:(Stanza,ErrorCondition?)->Void, onTimeout:()->Void) {
+    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, onSuccess:((Stanza)->Void)?, onError:((Stanza,ErrorCondition?)->Void)?, onTimeout:(()->Void)?) {
+        guard (onSuccess != nil) || (onError != nil) || (onTimeout != nil) else {
+            return;
+        }
+        
         self.registerResponseHandler(stanza, timeout: timeout) { (response:Stanza?)->Void in
             if response == nil {
-                onTimeout();
+                onTimeout?();
             } else {
                 if response!.type == StanzaType.error {
-                    onError(response!, response!.errorCondition);
+                    onError?(response!, response!.errorCondition);
                 } else {
-                    onSuccess(response!);
+                    onSuccess?(response!);
                 }
             }
         }

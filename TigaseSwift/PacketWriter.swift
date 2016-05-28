@@ -23,17 +23,17 @@ import Foundation
 
 public class PacketWriter {
     
-    public func write(stanza:Stanza) {
+    public func write(stanza: Stanza) {
         
     }
     
-    public func write(stanza:Stanza, timeout:NSTimeInterval = 30, callback:(Stanza?)->Void) {
+    public func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback: ((Stanza?)->Void)?) {
     }
     
-    public func write(stanza:Stanza, timeout:NSTimeInterval = 30, onSuccess:(Stanza)->Void, onError:(Stanza,ErrorCondition?)->Void, onTimeout:()->Void) {
+    public func write(stanza: Stanza, timeout: NSTimeInterval = 30, onSuccess: ((Stanza)->Void)?, onError: ((Stanza,ErrorCondition?)->Void)?, onTimeout: (()->Void)?) {
     }
     
-    public func write(stanza:Stanza, timeout:NSTimeInterval = 30, callback:AsyncCallback) {
+    public func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback:AsyncCallback) {
     
     }
 }

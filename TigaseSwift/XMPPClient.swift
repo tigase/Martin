@@ -127,12 +127,12 @@ public class XMPPClient: Logger, EventHandler {
             self.responseManager = responseManager;
         }
         
-        override func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback: (Stanza?) -> Void) {
+        override func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback: ((Stanza?) -> Void)?) {
             responseManager.registerResponseHandler(stanza, timeout: timeout, callback: callback);
             self.write(stanza);
         }
         
-        override func write(stanza: Stanza, timeout: NSTimeInterval = 30, onSuccess: (Stanza) -> Void, onError: (Stanza,ErrorCondition?) -> Void, onTimeout: () -> Void) {
+        override func write(stanza: Stanza, timeout: NSTimeInterval = 30, onSuccess: ((Stanza) -> Void)?, onError: ((Stanza,ErrorCondition?) -> Void)?, onTimeout: (() -> Void)?) {
             responseManager.registerResponseHandler(stanza, timeout: timeout, onSuccess: onSuccess, onError: onError, onTimeout: onTimeout);
             self.write(stanza);
         }
