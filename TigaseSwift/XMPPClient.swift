@@ -99,7 +99,7 @@ public class XMPPClient: Logger, EventHandler {
         guard state == .connected else {
             return;
         }
-        sessionLogic?.keepalive();
+        socketConnector?.keepAlive();
     }
     
     public func handleEvent(event: Event) {

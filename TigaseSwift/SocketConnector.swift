@@ -280,6 +280,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             // may happen if cannot connect to server or if connection was broken
             log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
             if (aStream == self.inStream) {
+                self.state = .disconnecting;
                 onStreamTerminate();
             }
         case NSStreamEvent.OpenCompleted:

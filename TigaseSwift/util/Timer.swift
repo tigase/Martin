@@ -23,11 +23,13 @@ import Foundation
 
 public class Timer: NSObject {
     
+    public let timeout: NSTimeInterval;
     private var timer: NSTimer?
-    private var callback: (Void ->Void)?
+    public var callback: (Void ->Void)?
     private var repeats:Bool;
     
     public init(delayInSeconds: NSTimeInterval, repeats: Bool, callback: Void->Void) {
+        self.timeout = delayInSeconds;
         self.callback = callback;
         self.repeats = repeats;
         super.init();

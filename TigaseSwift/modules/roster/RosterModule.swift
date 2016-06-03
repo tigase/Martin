@@ -79,8 +79,11 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             rosterRequest();
-        case is SessionObject.ClearedEvent:
-            rosterStore.cleared();
+        case let ce as SessionObject.ClearedEvent:
+            if ce.scopes.contains(.user) {
+                rosterStore.cleared();
+                context.eventBus.fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: nil, action: .removed, modifiedGroups: nil));
+            }
         default:
             log("received unknown event", event);
         }
@@ -256,9 +259,9 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         public let type = "ItemUpdatedEvent";
         
         public let sessionObject:SessionObject!;
-        public let rosterItem:RosterItem!;
+        public let rosterItem:RosterItem?;
         public let action:Action!;
-        public let modifiedGroups:[String]!;
+        public let modifiedGroups:[String]?;
         
         private init() {
             self.sessionObject = nil;
@@ -267,7 +270,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
             self.modifiedGroups = nil;
         }
         
-        public init(sessionObject:SessionObject, rosterItem: RosterItem, action:Action, modifiedGroups:[String]?) {
+        public init(sessionObject:SessionObject, rosterItem: RosterItem?, action:Action, modifiedGroups:[String]?) {
             self.sessionObject = sessionObject;
             self.rosterItem = rosterItem;
             self.action = action;
