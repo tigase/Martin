@@ -72,6 +72,10 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     public func start(serverToConnect:String? = nil) {
+        guard state == .disconnected else {
+            log("start() - stopping connetion as state is not connecting", state);
+            return;
+        }
         state = .connecting;
         let server:String = serverToConnect ?? sessionLogic.serverToConnect();
         log("connecting to server:", server);
@@ -82,6 +86,10 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     func connect(dnsName:String, dnsRecords:Array<XMPPSrvRecord>) {
+        guard state == .connecting else {
+            log("connect(dns) - stopping connetion as state is not connecting", state);
+            return;
+        }
         log("got dns records:", dnsResolver.srvRecords);
         if (dnsResolver.srvRecords.isEmpty) {
             dnsResolver.srvRecords.append(XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: dnsName));
@@ -95,6 +103,10 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     private func connect(addr:String, port:Int, ssl:Bool) -> Void {
         log("connecting to:", addr, port);
+        guard state == .connecting else {
+            log("connect(addr) - stopping connetion as state is not connecting", state);
+            return;
+        }
         autoreleasepool {
         NSStream.getStreamsToHostWithName(addr, port: port, inputStream: &inStream, outputStream: &outStream)
         }
@@ -227,9 +239,14 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case .disconnecting:
             closeSocket(State.disconnected);
         case .connected:
-            state = State.disconnecting;
-            if !sendSync("</stream:stream>") {
-                closeSocket(State.disconnected);
+            let inStreamState = inStream?.streamStatus;
+            if inStreamState == nil || inStreamState == .Error || inStreamState == .Closed {
+                closeSocket(State.disconnected)
+            } else {
+                state = State.disconnecting;
+                if !sendSync("</stream:stream>") {
+                    closeSocket(State.disconnected);
+                }
             }
         default:
             break;
@@ -238,6 +255,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     public func reconnect(newHost:String) {
         closeSocket(nil);
+        state_ = .disconnected;
         start(newHost);
     }
     
@@ -280,7 +298,6 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             // may happen if cannot connect to server or if connection was broken
             log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
             if (aStream == self.inStream) {
-                self.state = .disconnecting;
                 onStreamTerminate();
             }
         case NSStreamEvent.OpenCompleted:
