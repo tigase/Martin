@@ -88,8 +88,10 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
             } else {
                 log("skipping sending initial presence");
             }
-        case is SessionObject.ClearedEvent:
-            presenceStore.clear();
+        case let ce as SessionObject.ClearedEvent:
+            if ce.scopes.contains(.session) {
+                presenceStore.clear();
+            }
         default:
             log("received unknown event", event);
         }
