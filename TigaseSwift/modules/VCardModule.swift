@@ -226,7 +226,7 @@ public class VCardModule: XmppModule, ContextAware {
 
         public var photoVal: String? {
             get {
-                return getElementValue("PHOTO", "BINVAL");
+                return getElementValue("PHOTO", "BINVAL")?.stringByReplacingOccurrencesOfString("\n", withString: "");
             }
             set {
                 setElementValue("PHOTO", "BINVAL", value: newValue?.stringByReplacingOccurrencesOfString("\n", withString: ""));
