@@ -344,6 +344,7 @@ public class VCardModule: XmppModule, ContextAware {
                 if elem != nil && value == nil {
                     tmp.append(elem!);
                 }
+                i = i+1;
             }
             
             if value == nil {
@@ -354,6 +355,8 @@ public class VCardModule: XmppModule, ContextAware {
                     }
                     tmp[i-1].removeChild(tmp[i]);
                 }
+            } else {
+                elem.value = value;
             }
         }
         
@@ -366,22 +369,17 @@ public class VCardModule: XmppModule, ContextAware {
             case WORK
             case HOME
             
-            static let allValues = [ WORK, HOME ];
+            public static let allValues = [ HOME, WORK ];
         }
         
         public class Email: TypeAware {
             
-            public var address: String {
+            public var address: String? {
                 get {
-                    return element.findChild("USERID")?.value ?? "";
+                    return getElementValue("USERID") ;
                 }
                 set  {
-                    var userId = element.findChild("USERID");
-                    if userId == nil {
-                        userId = Element(name: "USERID");
-                        element.addChild(userId!);
-                    }
-                    userId?.value = newValue;
+                    setElementValue("USERID", value: newValue);
                 }
             }
             
@@ -451,6 +449,13 @@ public class VCardModule: XmppModule, ContextAware {
                 super.init(element: element);
             }
             
+            public func isEmpty() -> Bool {
+                var empty = true;
+                element.getChildren().forEach({ (el) in
+                    empty = empty && (el.value == nil);
+                })
+                return empty;
+            }
         }
         
         public class Telephone: TypeAware {
