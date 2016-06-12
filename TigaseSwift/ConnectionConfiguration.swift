@@ -29,12 +29,21 @@ public class ConnectionConfiguration {
         self.sessionObject = sessionObject;
     }
     
+    public func setDomain(domain: String?) {
+        self.sessionObject.setUserProperty(SessionObject.DOMAIN_NAME, value: domain);
+    }
+    
     public func setUserJID(jid:BareJID?) {
-        self.sessionObject.setUserProperty(SessionObject.USER_BARE_JID, value: jid)
+        self.sessionObject.setUserProperty(SessionObject.USER_BARE_JID, value: jid);
+        setDomain(nil);
     }
     
     public func setUserPassword(password:String?) {
         self.sessionObject.setUserProperty(SessionObject.PASSWORD, value: password);
+    }
+
+    public func setServerHost(serverHost: String?) {
+        self.sessionObject.setUserProperty(SocketConnector.SERVER_HOST, value: serverHost);
     }
     
 }

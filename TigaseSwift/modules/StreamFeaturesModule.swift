@@ -31,7 +31,7 @@ public class StreamFeaturesModule: XmppModule, ContextAware {
     
     public var context: Context!;
     
-    public static func getStringFeatures(sessionObject:SessionObject) -> Element? {
+    public static func getStreamFeatures(sessionObject:SessionObject) -> Element? {
         return sessionObject.getProperty(STREAM_FEATURES_KEY);
     }
     

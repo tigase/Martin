@@ -92,6 +92,7 @@
 		FEC5141A1CE9CC2A003AF765 /* Occupant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514191CE9CC2A003AF765 /* Occupant.swift */; };
 		FEC5141C1CE9CD8F003AF765 /* XMucUserElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */; };
 		FEC5141E1CE9E012003AF765 /* DefaultRoomsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */; };
+		FEDE939D1D0C747100CA60A9 /* InBandRegistrationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */; };
 		FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */; };
 /* End PBXBuildFile section */
 
@@ -195,6 +196,7 @@
 		FEC514191CE9CC2A003AF765 /* Occupant.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Occupant.swift; sourceTree = "<group>"; };
 		FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMucUserElement.swift; sourceTree = "<group>"; };
 		FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultRoomsManager.swift; sourceTree = "<group>"; };
+		FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InBandRegistrationModule.swift; sourceTree = "<group>"; };
 		FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVersionModule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -260,6 +262,7 @@
 				FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */,
 				FEA554871CE3A55B00676608 /* MobileModeModule.swift */,
 				FE596F781CF1C35B0079E22B /* PingModule.swift */,
+				FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -630,6 +633,7 @@
 				FEC5141C1CE9CD8F003AF765 /* XMucUserElement.swift in Sources */,
 				FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */,
 				FE2EFD981CB66C0C000D254E /* DefaultCredentialsCallback.swift in Sources */,
+				FEDE939D1D0C747100CA60A9 /* InBandRegistrationModule.swift in Sources */,
 				FE94E5151CCB847200FAE755 /* ChatStore.swift in Sources */,
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,

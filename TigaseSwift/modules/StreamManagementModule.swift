@@ -116,7 +116,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     public func isAvailable() -> Bool {
-        return StreamFeaturesModule.getStringFeatures(context.sessionObject)?.findChild("sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
+        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
     }
     
     public func process(stanza: Stanza) throws {

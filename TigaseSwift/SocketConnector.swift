@@ -175,9 +175,9 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.inStream?.delegate = self
         self.outStream?.delegate = self
 
-        let userJid:BareJID = self.sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
+        let domain = self.sessionObject.domainName!;
         
-        let settings:NSDictionary = NSDictionary(objects: [NSStreamSocketSecurityLevelNegotiatedSSL, userJid.domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
+        let settings:NSDictionary = NSDictionary(objects: [NSStreamSocketSecurityLevelNegotiatedSSL, domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
                 kCFStreamSSLPeerName as NSString,
                 kCFStreamSSLValidatesCertificateChain as NSString])
         let started = CFReadStreamSetProperty(self.inStream! as CFReadStreamRef, kCFStreamPropertySSLSettings, settings as CFTypeRef)
@@ -198,11 +198,12 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.parser = XMLParser(delegate: parserDelegate!);
         self.log("starting new parser", self.parser!);
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-            let userJid:BareJID = self.sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
+            let userJid:BareJID? = self.sessionObject.getProperty(SessionObject.USER_BARE_JID);
             // replace with this first one to enable see-other-host feature
             //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
-            let seeOtherHost = self.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) ? " from='\(userJid)'" : ""
-            self.send("<stream:stream to='\(userJid.domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
+            let domain = self.sessionObject.domainName!;
+            let seeOtherHost = (self.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) && userJid != nil) ? " from='\(userJid!)'" : ""
+            self.send("<stream:stream to='\(domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
         }
     }
     

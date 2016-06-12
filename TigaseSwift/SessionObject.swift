@@ -23,6 +23,8 @@ import Foundation
 
 public class SessionObject: Logger {
     
+    public static let DOMAIN_NAME = "domainName";
+    
     public static let NICKNAME = "nickname";
     
     public static let PASSWORD = "password";
@@ -55,12 +57,18 @@ public class SessionObject: Logger {
         }
     }
     
-    private let eventBus:EventBus;
+    private let eventBus: EventBus;
     private var properties = [String:Entry]();
     
-    public var userBareJid:BareJID? {
+    public var userBareJid: BareJID? {
         get {
             return self.getProperty(SessionObject.USER_BARE_JID);
+        }
+    }
+    
+    public var domainName: String? {
+        get {
+            return userBareJid?.domain ?? getProperty(SessionObject.DOMAIN_NAME);
         }
     }
     

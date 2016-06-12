@@ -129,7 +129,7 @@ public class SaslModule: Logger, XmppModule, ContextAware {
     
     func getSupportedMechanisms() -> [String] {
         var result = [String]();
-        StreamFeaturesModule.getStringFeatures(context.sessionObject)?.findChild("mechanisms")?.forEachChild("mechanism", fn: { (mech:Element) -> Void in
+        StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("mechanisms")?.forEachChild("mechanism", fn: { (mech:Element) -> Void in
             result.append(mech.value!);
         });
         return result;

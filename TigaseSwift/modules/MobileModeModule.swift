@@ -37,7 +37,7 @@ public class MobileModeModule: XmppModule, ContextAware {
     
     public var availableModes:[Mode] {
         get {
-            return (StreamFeaturesModule.getStringFeatures(context.sessionObject)!.mapChildren({(f)-> Mode in
+            return (StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.mapChildren({(f)-> Mode in
                 return Mode(rawValue: f.xmlns!)!
                 }, filter: { (f) -> Bool in
                     return f.name == "mobile" && f.xmlns != nil && Mode(rawValue: f.xmlns!) != nil;

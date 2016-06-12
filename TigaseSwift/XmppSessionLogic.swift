@@ -79,8 +79,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     }
     
     public func serverToConnect() -> String {
-        let userJid:BareJID = context.sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
-        let domain = userJid.domain;
+        let domain = context.sessionObject.domainName!;
         let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
         return streamManagementModule?.resumptionLocation ?? context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
     }
@@ -239,12 +238,12 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     
     func isStartTLSAvailable() -> Bool {
         log("checking TLS");
-        let featuresElement = StreamFeaturesModule.getStringFeatures(context.sessionObject);
+        let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
         return (featuresElement?.findChild("starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) != nil;
     }
     
     func isZlibAvailable() -> Bool {
-        let featuresElement = StreamFeaturesModule.getStringFeatures(context.sessionObject);
+        let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
         return (featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").indexOf({(e) in e.findChild("method")?.value == "zlib" })) != nil;
     }
 

@@ -36,7 +36,7 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
     public let features = [String]();
     
     public static func isSessionEstablishmentRequired(sessionObject:SessionObject) -> Bool {
-        if let featuresElement = StreamFeaturesModule.getStringFeatures(sessionObject) {
+        if let featuresElement = StreamFeaturesModule.getStreamFeatures(sessionObject) {
             if let session = featuresElement.findChild("session", xmlns: SESSION_XMLNS) {
                 return session.findChild("optional") == nil;
             }

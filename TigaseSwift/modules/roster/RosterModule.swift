@@ -232,7 +232,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         if (versionProvider == nil) {
             return false;
         }
-        return StreamFeaturesModule.getStringFeatures(context.sessionObject)?.findChild("ver", xmlns: "urn:xmpp:features:rosterver") != nil;
+        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("ver", xmlns: "urn:xmpp:features:rosterver") != nil;
     }
     
     private func loadFromCache() {

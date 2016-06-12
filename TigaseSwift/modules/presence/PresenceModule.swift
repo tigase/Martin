@@ -118,7 +118,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         setPresence(.online, status: nil, priority: nil);
     }
     
-    public func setPresence(show:Presence.Show, status:String?, priority:Int?) {
+    public func setPresence(show:Presence.Show, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
         var presence = Presence();
         presence.show = show;
         presence.status = status;
@@ -128,6 +128,9 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
             presence.nickname = nick;
         }
         
+        if additionalElements != nil {
+            presence.addChildren(additionalElements!);
+        }
         context.eventBus.fire(BeforePresenceSendEvent(sessionObject: context.sessionObject, presence: presence));
         
         context.writer?.write(presence);
