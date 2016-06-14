@@ -21,6 +21,78 @@
 
 import Foundation
 
+/**
+ This is main class for use as XMPP client.
+ 
+ `login()` and `disconnect()` methods as many other works asynchronously.
+ 
+ Changes of state or informations about receiving XML packets are
+ provided using events.
+ 
+ To create basic client you need to:
+ 1. create instance of this class
+ 2. register used XmppModules in `modulesManager`
+ 3. use `connectionConfiguration` to set credentials for XMPP account.
+ 
+ # Example usage
+ ```
+ let userJid = BareJID("user@domain.com");
+ let password = "Pa$$w0rd";
+ let client = XMPPClient();
+ 
+ // register modules
+ client.modulesManager.register(AuthModule());
+ client.modulesManager.register(StreamFeaturesModule());
+ client.modulesManager.register(SaslModule());
+ client.modulesManager.register(ResourceBinderModule());
+ client.modulesManager.register(SessionEstablishmentModule());
+ client.modulesManager.register(DiscoveryModule());
+ client.modulesManager.register(SoftwareVersionModule());
+ client.modulesManager.register(PingModule());
+ client.modulesManager.register(RosterModule());
+ client.modulesManager.register(PresenceModule());
+ client.modulesManager.register(MessageModule());
+ 
+ // configure connection
+ client.connectionConfiguration.setUserJID(userJid);
+ client.connectionConfiguration.setUserPassword(password);
+ 
+ // create and register event handler
+ class EventBusHandler: EventHandler {
+    init() {
+    }
+ 
+    func handleEvent(event: Event) {
+        print("event bus handler got event = ", event);
+        switch event {
+        case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
+            print("successfully connected to server and authenticated!");
+        case is RosterModule.ItemUpdatedEvent:
+            print("roster item updated");
+        case is PresenceModule.ContactPresenceChanged:
+            print("received presence change event");
+        case is MessageModule.ChatCreatedEvent:
+            print("chat was created");
+        case is MessageModule.MessageReceivedEvent:
+            print("received message");
+        default:
+            // here will enter other events if this handler will be registered for any other events
+            break;
+        }
+    }
+ }
+
+ let eventHandler = EventBusHandler();
+ client.context.eventBus.register(eventHandler, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, RosterModule.ItemUpdatedEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE, MessageModule.MessageReceivedEvent.TYPE, MessageModule.ChatCreatedEvent.TYPE);
+ 
+ // start XMPP connection to server
+ client.login();
+ 
+ // disconnect from server closing XMPP connection
+ client.disconnect();
+ ```
+ 
+ */
 public class XMPPClient: Logger, EventHandler {
     
     public let sessionObject:SessionObject;
@@ -57,6 +129,9 @@ public class XMPPClient: Logger, EventHandler {
         eventBus.unregister(self, events: SocketConnector.DisconnectedEvent.TYPE);
     }
     
+    /**
+     Method initiates modules if needed and starts process of connecting to XMPP server.
+     */
     public func login() -> Void {
         guard state == SocketConnector.State.disconnected else {
             log("XMPP in state:", state, " - not starting connection");
@@ -78,7 +153,14 @@ public class XMPPClient: Logger, EventHandler {
         
         socketConnector?.start()
     }
-    
+
+    /**
+     Method closes connection to server.
+     
+     - parameter force: If passed XMPP connection will be closed by closing only TCP connection which makes it possible to use [XEP-0198: Stream Management - Resumption] if available and was enabled.
+     
+     [XEP-0198: Stream Management - Resumption]: http://xmpp.org/extensions/xep-0198.html#resumption
+     */
     public func disconnect(force: Bool = false) -> Void {
         guard state == SocketConnector.State.connected || state == SocketConnector.State.connecting else {
             log("XMPP in state:", state, " - not stopping connection");
@@ -95,6 +177,9 @@ public class XMPPClient: Logger, EventHandler {
         log("connection stopped......");
     }
     
+    /**
+     Sends whitespace to XMPP server to keep connection alive
+     */
     public func keepalive() {
         guard state == .connected else {
             return;
@@ -102,6 +187,9 @@ public class XMPPClient: Logger, EventHandler {
         socketConnector?.keepAlive();
     }
     
+    /**
+     Handles events fired by other classes used by this connection.
+     */
     public func handleEvent(event: Event) {
         switch event {
         case let de as SocketConnector.DisconnectedEvent:
@@ -117,6 +205,9 @@ public class XMPPClient: Logger, EventHandler {
         }
     }
     
+    /**
+     Implementation of `PacketWriter` protocol passed to `Context` instance
+     */
     private class SocketPacketWriter: PacketWriter {
         
         let connector:SocketConnector;

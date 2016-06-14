@@ -21,20 +21,32 @@
 
 import Foundation
 
-
+/**
+ Class implements mechanism of events bus which is used by TigaseSwift
+ to notify about events.
+ */
 public class EventBus: Logger {
     
-    //    private var handlersByEvent:[String:[(event:Event)->Void]];
     private var handlersByEvent:[String:[EventHandler]];
     
     public override init() {
         handlersByEvent = [:];
     }
     
+    /**
+     Registeres handler to be notified when events of particular types are fired
+     - parameter handler: handler to register
+     - parameter events: events on which handler should be notified
+     */
     public func register(handler:EventHandler, events:Event...) {
         register(handler, events: events);
     }
     
+    /**
+     Registeres handler to be notified when events of particular types are fired
+     - parameter handler: handler to register
+     - parameter events: events on which handler should be notified
+     */
     public func register(handler:EventHandler, events:[Event]) {
         for event in events {
             let type = event.type;
@@ -49,10 +61,20 @@ public class EventBus: Logger {
         }
     }
     
+    /**
+     Unregisteres handler, so it will not be notified when events of particular types are fired
+     - parameter handler: handler to unregister
+     - parameter events: events on which handler should not be notified
+     */
     public func unregister(handler:EventHandler, events:Event...) {
         unregister(handler, events: events);
     }
     
+    /**
+     Unregisteres handler, so it will not be notified when events of particular types are fired
+     - parameter handler: handler to unregister
+     - parameter events: events on which handler should not be notified
+     */
     public func unregister(handler:EventHandler, events:[Event]) {
         for event in events {
             let type = event.type;
@@ -65,6 +87,10 @@ public class EventBus: Logger {
         }
     }
     
+    /**
+     Fire event on this event bus
+     - parameter event: event to fire
+     */
     public func fire(event:Event) {
         let type = event.type;
         if let handlers = handlersByEvent[type] {

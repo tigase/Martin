@@ -21,12 +21,17 @@
 
 import Foundation
 
+/**
+ Base class used to represent parsed XML.
+ */
 public class Node:Equatable, StringValue {
     
+    /// returns serialized value
     public var stringValue:String {
         return "Node";
     }
     
+    /// returns serialized value in form easier to read
     public func toPrettyString() -> String {
         return "Node";
     }

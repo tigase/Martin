@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Default implementation of in-memory presence store
+ */
 public class PresenceStore {
     
     private var handler:PresenceStoreHandler?;
@@ -29,6 +32,7 @@ public class PresenceStore {
     private var presenceByJid = [JID:Presence]();
     private var presencesMapByBareJid = [BareJID:[String:Presence]]();
     
+    /// Clear presence store
     public func clear() {
         presenceByJid.removeAll();
         let toNotify = Array(bestPresence.values);
@@ -39,14 +43,29 @@ public class PresenceStore {
         presencesMapByBareJid.removeAll();
     }
     
+    /**
+     Retrieve best presence for jid
+     - parameter jid: jid for which to retrieve presence
+     - returns: `Presence` if available
+     */
     public func getBestPresence(jid:BareJID) -> Presence? {
         return bestPresence[jid];
     }
     
+    /**
+     Retrieve presence for exact full jid
+     - parameter jid: jid for which to retrieve presence
+     - returns: `Presence` if available
+     */
     public func getPresence(jid:JID) -> Presence? {
         return presenceByJid[jid];
     }
     
+    /**
+     Retrieve all presences for bare jid
+     - parameter jid: jid for which to retrieve presences
+     - returns: array of `Presence`s if avaiable
+     */
     public func getPresences(jid:BareJID) -> [String:Presence]? {
         return presencesMapByBareJid[jid];
     }
@@ -61,6 +80,11 @@ public class PresenceStore {
         return result;
     }
     
+    /**
+     Check if any resource for jid is available
+     - parameter jid: jid to check
+     - returns: true if any resource if available
+     */
     public func isAvailable(jid:BareJID) -> Bool {
         return presencesMapByBareJid[jid]?.values.indexOf({ (p) -> Bool in
             return p.type == nil || p.type == StanzaType.available;
@@ -71,6 +95,12 @@ public class PresenceStore {
         self.handler = handler;
     }
     
+    /**
+     Set presence with values
+     - parameter show: presence show
+     - parameter status: additional text description
+     - parameter priority: priority of presence
+     */
     public func setPresence(show:Presence.Show, status:String?, priority:Int?) {
         self.handler?.setPresence(show, status: status, priority: priority);
     }

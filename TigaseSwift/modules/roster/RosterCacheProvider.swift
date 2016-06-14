@@ -21,12 +21,30 @@
 
 import Foundation
 
+/**
+ Protocol for classes which are going to provide caching feature for
+ XMPP roster.
+ */
 public protocol RosterCacheProvider {
-    
+    /**
+     Retrieve cached version
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: cached version
+     */
     func getCachedVersion(sessionObject:SessionObject) -> String?;
     
+    /**
+     Load cached roster items
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: array of loaded `RosterItem`s
+     */
     func loadCachedRoster(sessionObject:SessionObject) -> [RosterItem];
     
+    /**
+     Update cached version
+     - parameter sessionObject: instance of `SessionObject`
+     - paremeter ver: cached version
+     */
     func updateReceivedVersion(sessionObject:SessionObject, ver:String?);
     
 }

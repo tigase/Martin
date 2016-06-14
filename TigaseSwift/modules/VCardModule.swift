@@ -21,10 +21,16 @@
 
 import Foundation
 
+/**
+ Module provides support for [XEP-0054: vcard-temp]
+ 
+ [XEP-0054: vcard-temp]: http://xmpp.org/extensions/xep-0054.html
+ */
 public class VCardModule: XmppModule, ContextAware {
 
+    /// Namespace used by vcard-temp feature
     private static let VCARD_XMLNS = "vcard-temp";
-    
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = VCARD_XMLNS;
     
     public let id = VCARD_XMLNS;
@@ -43,6 +49,11 @@ public class VCardModule: XmppModule, ContextAware {
         throw ErrorCondition.unexpected_request;
     }
     
+    /**
+     Publish vcard
+     - parameter vcard: vcard to publish
+     - parameter callback: called on result or failure
+     */
     public func publishVCard(vcard: VCard, callback: ((Stanza?) -> Void)? = nil) {
         var iq = Iq();
         iq.type = StanzaType.set;
@@ -51,6 +62,12 @@ public class VCardModule: XmppModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
+    /**
+     Publish vcard
+     - parameter vcard: vcard to publish
+     - parameter onSuccess: called after successful publication
+     - parameter onError: called on failure or timeout
+     */
     public func publishVCard(vcard: VCard, onSuccess: (()->Void)?, onError: ((errorCondition: ErrorCondition?)->Void)?) {
         publishVCard(vcard) { (stanza) in
             var type = stanza?.type ?? StanzaType.error;
@@ -64,7 +81,11 @@ public class VCardModule: XmppModule, ContextAware {
         }
     }
     
-    
+    /**
+     Retrieve vcard for JID
+     - parameter jid: JID for which vcard should be retrieved
+     - parameter callback: called with result
+     */
     public func retrieveVCard(jid: JID? = nil, callback: (Stanza?) -> Void) {
         var iq = Iq();
         iq.type = StanzaType.get;
@@ -74,6 +95,12 @@ public class VCardModule: XmppModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
+    /**
+     Retrieve vcard for JID
+     - parameter jid: JID for which vcard should be retrieved
+     - parameter onSuccess: called retrieved vcard
+     - parameter onError: called on failure or timeout
+     */
     public func retrieveVCard(jid: JID? = nil, onSuccess: (vcard: VCard)->Void, onError: (errorCondition: ErrorCondition?)->Void) {
         retrieveVCard(jid) { (stanza) in
             var type = stanza?.type ?? StanzaType.error;
@@ -90,6 +117,10 @@ public class VCardModule: XmppModule, ContextAware {
         }
     }
 
+    /**
+     Wrapper class for vcard element for easier access to
+     values within vcard element.
+     */
     public class VCard: StringValue {
         
         var element: Element!;
@@ -561,6 +592,7 @@ public class VCardModule: XmppModule, ContextAware {
 
 extension Presence {
     
+    /// Hash of photo embedded in vcard-temp
     public var vcardTempPhoto:String? {
         get {
             return self.findChild("x", xmlns: "vcard-temp:x:update")?.findChild("photo")?.value;

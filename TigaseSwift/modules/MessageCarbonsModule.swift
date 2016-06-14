@@ -21,12 +21,17 @@
 
 import Foundation
 
+/**
+ Module provides support for [XEP-0280: Message Carbons]
+ 
+ [XEP-0280: Message Carbons]: http://xmpp.org/extensions/xep-0280.html
+ */
 public class MessageCarbonsModule: XmppModule, ContextAware {
-    
+    /// Namespace used by Message Carbons
     public static let MC_XMLNS = "urn:xmpp:carbons:2";
-
+    /// Namepsace used for forwarding messages
     private static let SF_XMLNS = "urn:xmpp:forward:0";
-    
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = MC_XMLNS;
     
     public let id = MC_XMLNS;
@@ -61,14 +66,26 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
         }
     }
     
+    /**
+     Tries to enable message carbons
+     - parameter callback - called with result
+     */
     public func enable(callback: ((Bool) -> Void )? = nil) {
         setState(true, callback: callback);
     }
     
+    /**
+     Tries to disable message carbons
+     - parameter callback - called with result
+     */
     public func disable(callback: ((Bool) -> Void )? = nil) {
         setState(false, callback: callback);
     }
     
+    /**
+     Tries to enable/disable message carbons
+     - parameter callback - called with result
+     */
     public func setState(state: Bool, callback: ((Bool) -> Void )?) {
         let actionName = state ? "enable" : "disable";
         var iq = Iq();
@@ -79,6 +96,11 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
         });
     }
     
+    /**
+     Processes received message and retrieves messages forwarded inside this message
+     - parameter carb: element to process
+     - returns: array of forwarded Messsages
+     */
     func getEncapsulatedMessages(carb: Element) -> [Message]? {
         return carb.findChild("forwarded", xmlns: MessageCarbonsModule.SF_XMLNS)?.mapChildren({ (messageEl) -> Message in
             return Stanza.fromElement(messageEl) as! Message;
@@ -94,20 +116,29 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
         }
     }
     
+    /**
+     Possible actions due to which message carbon was received
+     - received: message was received by other resource
+     - sent: message was sent by other resource
+     */
     public enum Action: String {
         case received
         case sent
     }
     
+    /// Event fired when Message Carbon is received
     public class CarbonReceivedEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = CarbonReceivedEvent();
         
         public let type = "MessageCarbonReceivedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject: SessionObject!;
+        /// Action due to which this carbon was created
         public let action: Action!;
+        /// Forwarded message
         public let message: Message!;
+        /// Chat for which this forwarded message belongs to
         public let chat: Chat?;
         
         init() {

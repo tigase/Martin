@@ -21,6 +21,10 @@
 
 import Foundation
 
+/**
+ Protocol implemented by `XmppModule` which requires to process and filter 
+ stanzas before other modules will process it.
+ */
 public protocol XmppStanzaFilter: class {
     
     /**

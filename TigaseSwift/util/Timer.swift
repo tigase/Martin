@@ -21,13 +21,25 @@
 
 import Foundation
 
+/**
+ Implementation of timer for easier use. It is based on NSTimer/
+ */
 public class Timer: NSObject {
     
+    /// Interval set for this timer
     public let timeout: NSTimeInterval;
     private var timer: NSTimer?
+    /// Callback execute when timer is fired
     public var callback: (Void ->Void)?
-    private var repeats:Bool;
+    /// True if timer is repeating execution many times
+    public let repeats:Bool;
     
+    /**
+     Creates instance of Timer
+     - parameter delayInSeconds: delay after which callback should be executed
+     - parameter repeats: true if timer should be fired many times
+     - parameter callback: executed when timer is fired
+     */
     public init(delayInSeconds: NSTimeInterval, repeats: Bool, callback: Void->Void) {
         self.timeout = delayInSeconds;
         self.callback = callback;
@@ -36,6 +48,9 @@ public class Timer: NSObject {
         self.timer = NSTimer.scheduledTimerWithTimeInterval(delayInSeconds, target: self, selector: #selector(Timer.execute), userInfo: nil, repeats: repeats);
     }
     
+    /**
+     Method fire by NSTimer internally
+     */
     public func execute() {
         callback?();
         if !repeats {
@@ -43,6 +58,9 @@ public class Timer: NSObject {
         }
     }
     
+    /**
+     Methods cancels timer
+     */
     public func cancel() {
         callback = nil;
         timer?.invalidate()

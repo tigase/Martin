@@ -145,11 +145,18 @@ private var saxHandler = xmlSAXHandler(
     serror: nil
 )
 
+/**
+ Wrapper class for LibXML2 to make it easier to use from Swift
+ */
 public class XMLParser: Logger {
     
     private var ctx:xmlParserCtxtPtr;
     private let delegate:XMLParserDelegate;
     
+    /**
+     Create XMLParser
+     - parameter delegate: delagate which will be called during parsing of data
+     */
     public init(delegate:XMLParserDelegate) {
         ctx = nil;
         self.delegate = delegate;
@@ -162,6 +169,12 @@ public class XMLParser: Logger {
         ctx = nil;
     }
     
+    /**
+     Parses data passed as parameters and returns result by calling proper 
+     delegates functions
+     - parameter buffer: pointer to data
+     - parameter length: number of data to process
+     */
     public func parse(buffer: UnsafeMutablePointer<UInt8>, length: Int) {
         log("parsing data:", length, String(data:NSData(bytes: buffer, length: length), encoding: NSUTF8StringEncoding));
         xmlParseChunk(ctx, UnsafePointer<Int8>(buffer), Int32(length), 0);
@@ -176,16 +189,40 @@ public class XMLParser: Logger {
     }
 }
 
+/**
+ Protocol needs to be implemented by classes responsible for handling 
+ data during parsing of XML by `XMLParser`
+ */
 public protocol XMLParserDelegate: class {
     
+    /// Delegate for parsing XMPP stream
     var delegate:XMPPStreamDelegate? { get set };
     
+    /**
+     Called when start of element is found
+     - parameter name: name of element
+     - parameter prefix: prefix of element
+     - parameter namespaces: declared namespaces
+     - parameter attributes: attributes of element
+     */
     func startElement(name:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]);
     
+    /**
+     Called when element end is found
+     - parameter name: name of element
+     - parameter prefix: prefix of element
+     */
     func endElement(name:String, prefix:String?);
     
+    /**
+     Called when characters are found inside element
+     - parameter value: found characters
+     */
     func charactersFound(value:String);
     
+    /**
+     Called on error during parsing
+     */
     func error(msg:String);
     
 }

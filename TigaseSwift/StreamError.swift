@@ -21,6 +21,11 @@
 
 import Foundation
 
+/**
+ Enum contains value for [stream level errors].
+ 
+ [stream level errors]: http://xmpp.org/rfcs/rfc6120.html#streams-error-conditions
+ */
 public enum StreamError: String {
     case bad_format = "bad-format"
     case bad_namespace_prefix = "bad-namespace-prefix"

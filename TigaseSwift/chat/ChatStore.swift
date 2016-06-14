@@ -21,15 +21,44 @@
 
 import Foundation
 
+/**
+ Protocol which needs to be implemented by classes responsible for storing Chat instances.
+ */
 public protocol ChatStore {
-    
+    /// Number of open chat protocols
     var count:Int { get }
+    /// Array of open chat protocols
     var items:[ChatProtocol] { get }
     
+    /**
+     Find instance of T matching jid and filter
+     - parameter jid: jid to match
+     - parameter filter: filter to match
+     - returns: instance of T if any matches
+     */
     func get<T:ChatProtocol>(jid:BareJID, filter: (T)->Bool) -> T?;
+    /**
+     Find all instances conforming to implementation of T
+     */
     func getAll<T:ChatProtocol>() -> [T];
+    
+    /**
+     Check if there is any chat open with jid
+     - parameter jid: jid to check
+     - returns: true if ChatProtocol is open
+     */
     func isFor(jid:BareJID) -> Bool;
+    /**
+     Register opened chat protocol instance
+     - parameter chat: chat protocol instance to register
+     - returns: registered chat protocol instance (may be new instance)
+     */
     func open<T:ChatProtocol>(chat:ChatProtocol) -> T?;
+    /**
+     Unregister closed chat protocol instance
+     - parameter chat: chat protocol instance to unregister
+     - returns: true if chat protocol instance was unregistered
+     */
     func close(chat:ChatProtocol) -> Bool;
 }
 
@@ -116,9 +145,17 @@ public class DefaultChatStore: ChatStore {
     }
 }
 
+/**
+ Protocol to which all chat classes should conform:
+ - `Chat` for 1-1 messages
+ - `Room` for MUC messages
+ - any custom extensions of above classes
+ */
 public protocol ChatProtocol: class {
     
+    /// jid of participant (particpant or MUC jid)
     var jid:JID { get set };
     
+    /// Is it allowed to open more than one chat protocol per bare JID?
     var allowFullJid:Bool { get }
 }

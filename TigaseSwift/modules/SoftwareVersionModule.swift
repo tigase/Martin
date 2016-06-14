@@ -21,16 +21,29 @@
 
 import Foundation
 
+/**
+ Module provides support for [XEP-0092: Software Version]
+ 
+ [XEP-0092: Software Version]: https://xmpp.org/extensions/xep-0092.html
+ */
 public class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
     public static let DEFAULT_NAME_VAL = "Tigase based software";
     
+    /**
+     Property under which name of software is stored in `SessionObject`
+     */
     public static let NAME_KEY = "softwareVersionName";
-    
+    /**
+     Property under which name of operation system is stored in `SessionObject`
+     */
     public static let OS_KEY = "softwareVersionOS";
-    
+    /**
+     Property under which version of software is stored in `SessionObject`
+     */
     public static let VERSION_KEY = "softwareVersionVersion";
     
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "softwareVersion";
     
     public let id = ID;
@@ -45,6 +58,11 @@ public class SoftwareVersionModule: AbstractIQModule, ContextAware {
         
     }
     
+    /**
+     Retrieve version of software used by recipient
+     - parameter jid: address for which we want to retrieve software version
+     - parameter callback: called on response or failure
+     */
     public func checkSoftwareVersion(jid:JID, callback:(Stanza?)->Void) {
         var iq = Iq();
         iq.to = jid;
@@ -54,6 +72,12 @@ public class SoftwareVersionModule: AbstractIQModule, ContextAware {
         context.writer?.write(iq, callback:callback);
     }
     
+    /**
+     Retrieve version of software used by recipient
+     - parameter jid: address for which we want to retrieve software version
+     - parameter onResult: called on successful response
+     - parameter onError: called failure or request timeout
+     */
     public func checkSoftwareVersion(jid:JID, onResult:(name:String?, version:String?, os:String?)->Void, onError:(errorCondition:ErrorCondition?)->Void) {
         checkSoftwareVersion(jid) { (stanza) in
             var type = stanza?.type ?? StanzaType.error;
@@ -71,6 +95,10 @@ public class SoftwareVersionModule: AbstractIQModule, ContextAware {
         }
     }
     
+    /**
+     Method processes incoming stanzas
+     - parameter stanza: stanza to process
+     */
     public func processGet(stanza: Stanza) throws {
         var result = stanza.makeResult(StanzaType.result);
         

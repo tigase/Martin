@@ -21,6 +21,7 @@
 
 import Foundation
 
+/// Enum contains possible types which may appear as type of XMPP stanza
 public enum StanzaType: String {
     // common
     case error

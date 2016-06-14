@@ -21,6 +21,11 @@
 
 import Foundation
 
+/**
+ Protocol which needs to be supported by `XmppModule`s which needs to be
+ initialized before connection is started - ie. to create other objects
+ which are required.
+ */
 public protocol Initializable: class {
     
     func initialize();

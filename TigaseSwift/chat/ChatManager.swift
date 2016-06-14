@@ -21,24 +21,60 @@
 
 import Foundation
 
+/**
+ Protocol which needs to be implemented by classes responsible for handling Chats
+ */
 public protocol ChatManager {
  
+    /// Number of open chats
     var count:Int { get }
     
+    /**
+     Close chat
+     - parameter chat: chat to close
+     - returns: true - if chat was closed
+     */
     func close(chat:Chat) ->Bool;
+    
+    /**
+     Create chat
+     - parameter jid: jid to exchange messages
+     - parameter thread: id of thread
+     - returns: instance of Chat if opened
+     */
     func createChat(jid:JID, thread:String?) -> Chat?;
+    /**
+     Get instance of already opened chat
+     - parameter jid: jid to exchange messages
+     - parameter thread: id of thread
+     - returns: instance of Chat if any opened and matches
+     */
     func getChat(jid:JID, thread:String?) -> Chat?;
+    /**
+     Get array of opened chats
+     - returns: array of all currently open chats
+     */
     func getChats() -> [Chat];
+    /**
+     Check if there is any chat open with jid
+     - parameter jid: jid to check
+     */
     func isChatOpenFor(jid:BareJID) -> Bool;
 }
 
+/**
+ Implementation of Chat
+ */
 public class Chat: ChatProtocol {
     
     // common variables
+    /// JID with which messages are exchanged
     public var jid:JID;
+    /// Is it possible to open many chats with same bare JID?
     public let allowFullJid = true;
 
     // class specific variables
+    /// Thread ID of message exchange
     public var thread:String?;
     
     public init(jid:JID, thread:String?) {
@@ -46,6 +82,13 @@ public class Chat: ChatProtocol {
         self.thread = thread;
     }
     
+    /**
+     Create message to send to recipient
+     - parameter body: text to send
+     - parameter type: type of message
+     - parameter subject: subject of message
+     - parameter additionalElements: additional elements to add to message
+     */
     public func createMessage(body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
         var msg = Message();
         msg.to = jid;

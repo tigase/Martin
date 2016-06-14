@@ -21,8 +21,12 @@
 
 import Foundation
 
+/**
+ Event protocol needs to be implemented by every event fired using `EventBus`
+ */
 public protocol Event: class {
     
+    /// Unique identifier of event class
     var type:String { get }
     
 }

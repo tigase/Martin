@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Class holds informations about single roster entry
+ */
 public class RosterItem: RosterItemProtocol, CustomStringConvertible {
     
     public let jid:JID;
@@ -39,6 +42,14 @@ public class RosterItem: RosterItemProtocol, CustomStringConvertible {
         self.jid = jid;
     }
     
+    /**
+     Possible subscription values allowed by XMPP specification:
+     - both
+     - from
+     - none
+     - remove
+     - to
+     */
     public enum Subscription: String {
         case both
         case from

@@ -21,23 +21,33 @@
 
 import Foundation
 
+/// Protocol which is used by other class to interact with classes responsible for session logic.
 public protocol XmppSessionLogic:class {
     
+    /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
     var state:SocketConnector.State { get }
     
+    /// Register to listen for events
     func bind();
+    /// Unregister to stop listening for events
     func unbind();
     
+    /// Called when stanza is received
     func receivedIncomingStanza(stanza:Stanza);
+    /// Called when stanza is about to be send
     func sendingOutgoingStanza(stanza:Stanza);
-    
+    /// Called to send data to keep connection open
     func keepalive();
-    
+    /// Called when stream error happens
     func onStreamError(streamError:Element);
-    
+    /// Using properties set decides which name use to connect to XMPP server
     func serverToConnect() -> String;
 }
 
+/** 
+ Implementation of XmppSessionLogic protocol which is resposible for
+ following XMPP session logic for socket connections.
+ */
 public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     
     private let context:Context;
@@ -45,6 +55,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     private let connector:SocketConnector;
     private let responseManager:ResponseManager;
 
+    /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
     public var state:SocketConnector.State {
         let s = connector.state;
         if s == .connected && ResourceBinderModule.getBindedJid(context.sessionObject) == nil {
@@ -139,7 +150,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     
     public func keepalive() {
         if let pingModule: PingModule = modulesManager.getModule(PingModule.ID) {
-            pingModule.ping(JID(context.sessionObject.userBareJid!), stanza: { (stanza) in
+            pingModule.ping(JID(context.sessionObject.userBareJid!), callback: { (stanza) in
                 if stanza == nil {
                     self.log("no response on ping packet - possible that connection is broken, reconnecting...");
                 }
@@ -247,12 +258,16 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         return (featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").indexOf({(e) in e.findChild("method")?.value == "zlib" })) != nil;
     }
 
+    /// Event fired when XMPP stream error happens
     public class ErrorEvent: Event {
         
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ErrorEvent();
         
         public let type = "errorEvent";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Type of stream error which was received - may be nil if it is not known
         public let streamError:StreamError?;
         
         init() {

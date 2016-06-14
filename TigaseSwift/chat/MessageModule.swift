@@ -20,8 +20,11 @@
 //
 import Foundation
 
+/**
+ Module provides features responsible for handling messages
+ */
 public class MessageModule: XmppModule, ContextAware, Initializable {
-    
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "message";
     
     public let id = ID;
@@ -30,6 +33,7 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
     
     public let features = [String]();
     
+    /// Instance of `ChatManager`
     public var chatManager:ChatManager!;
     
     public var context:Context!
@@ -38,6 +42,12 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         
     }
     
+    /**
+     Create chat for message exchange
+     - parameter jid: recipient of messages
+     - parameter thread: thread id of chat
+     - returns: instance of `Chat`
+     */
     public func createChat(jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
         return chatManager.createChat(jid, thread: thread);
     }
@@ -79,6 +89,14 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         return chat;
     }
     
+    /**
+     Send message as part of message exchange
+     - parameter chat: instance of Chat
+     - parameter body: text of message to send
+     - parameter type: type of message
+     - parameter subject: subject of message
+     - parameter additionalElements: array of additional elements to add to message
+     */
     public func sendMessage(chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
         let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
         context.writer?.write(msg);
@@ -89,12 +107,15 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         context.eventBus.fire(event);
     }
     
+    /// Event fired when Chat is created/opened
     public class ChatCreatedEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChatCreatedEvent();
         
         public let type = "ChatCreatedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Instance of opened chat
         public let chat:Chat!;
         
         private init() {
@@ -108,12 +129,15 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         }
     }
 
+    /// Event fired when Chat is closed
     public class ChatClosedEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChatClosedEvent();
         
         public let type = "ChatClosedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Instance of closed chat
         public let chat:Chat!;
         
         private init() {
@@ -127,13 +151,17 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
         }
     }
     
+    /// Event fired when message is received
     public class MessageReceivedEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = MessageReceivedEvent();
         
         public let type = "MessageReceivedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Instance of chat to which this message belongs
         public let chat:Chat?;
+        /// Received message
         public let message:Message!;
         
         private init() {

@@ -21,11 +21,18 @@
 
 import Foundation
 
+/**
+ Module provides support for handling presence on client side
+ as described in [RFC6121]
+ 
+ [RFC6121]: http://xmpp.org/rfcs/rfc6121.html
+ */
 public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initializable {
     
     public static let INITIAL_PRESENCE_ENABLED_KEY = "initalPresenceEnabled";
     public static let PRESENCE_STORE_KEY = "presenceStore";
     
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "presence";
     
     public let id = ID;
@@ -45,6 +52,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         }
     }
     
+    /// Should initial presence be sent automatically
     public var initialPresence:Bool {
         get {
             return context.sessionObject.getProperty(PresenceModule.INITIAL_PRESENCE_ENABLED_KEY, defValue: true);
@@ -54,6 +62,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         }
     }
     
+    /// Presence store with current presence informations
     public var presenceStore:PresenceStore {
         get {
             return PresenceModule.getPresenceStore(context.sessionObject);
@@ -114,10 +123,18 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         }
     }
     
+    /// Send initial presence
     public func sendInitialPresence() {
         setPresence(.online, status: nil, priority: nil);
     }
     
+    /**
+     Send presence with value
+     - parameter show: presence show
+     - parameter status: additional text description
+     - parameter priority: priority of presence
+     - parameter additionalElements: array of additional elements which should be added to presence
+     */
     public func setPresence(show:Presence.Show, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
         var presence = Presence();
         presence.show = show;
@@ -136,6 +153,10 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         context.writer?.write(presence);
     }
     
+    /**
+     Request subscription
+     - parameter jid: jid to request subscription
+     */
     public func subscribe(jid:JID) {
         var presence = Presence();
         presence.to = jid;
@@ -144,6 +165,10 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         context.writer?.write(presence);
     }
 
+    /**
+     Subscribe JID
+     - parameter jid: jid to subscribe
+     */
     public func subscribed(jid:JID) {
         var presence = Presence();
         presence.to = jid;
@@ -152,6 +177,10 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         context.writer?.write(presence);
     }
 
+    /**
+     Unsubscribe from jid
+     - parameter jid: jid to unsubscribe from
+     */
     public func unsubscribe(jid:JID) {
         var presence = Presence();
         presence.to = jid;
@@ -160,6 +189,10 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         context.writer?.write(presence);
     }
     
+    /**
+     Unsubscribed JID
+     - parameter jid: jid which is being unsubscribed
+     */
     public func unsubscribed(jid:JID) {
         var presence = Presence();
         presence.to = jid;
@@ -168,13 +201,21 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         context.writer?.write(presence);
     }
     
+    /**
+     Event fired before presence is being sent.
+     
+     In handlers receiving this event it is possible to change
+     value of presence which will allow to change presence
+     which is going to be sent.
+     */
     public class BeforePresenceSendEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = BeforePresenceSendEvent();
         
         public let type = "BeforePresenceSendEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Presence which will be send
         public let presence:Presence!;
         
         private init() {
@@ -189,14 +230,17 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         
     }
 
+    /// Event fired when contact changes presence
     public class ContactPresenceChanged: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ContactPresenceChanged();
         
         public let type = "ContactPresenceChanged";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Received presence
         public let presence:Presence!;
+        /// Contact become online or offline
         public let availabilityChanged:Bool;
         
         private init() {
@@ -213,13 +257,15 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         
     }
 
+    /// Event fired if we are unsubscribed from someone presence
     public class ContactUnsubscribedEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ContactUnsubscribedEvent();
         
         public let type = "ContactUnsubscribedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Presence received
         public let presence:Presence!;
         
         private init() {
@@ -234,13 +280,15 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         
     }
     
+    /// Event fired if someone wants to subscribe our presence
     public class SubscribeRequestEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SubscribeRequestEvent();
         
         public let type = "SubscribeRequestEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Presence received
         public let presence:Presence!;
         
         private init() {
@@ -254,6 +302,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         }
     }
     
+    /// Implementation of `PresenceStoreHandler` using `PresenceModule`
     public class PresenceStoreHandlerImpl: PresenceStoreHandler {
         
         let presenceModule:PresenceModule;

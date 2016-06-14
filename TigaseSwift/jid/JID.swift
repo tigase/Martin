@@ -21,16 +21,22 @@
 
 import Foundation
 
+/**
+ XMPP entity address form `localpart@domainpart/resourcepart`
+ */
 public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
     
+    /// BareJID part of JID
     public let bareJid:BareJID;
+    /// Resouce part
     public let resource:String?;
+    /// String representation of JID
     public let stringValue:String;
-    
+    /// Local part
     public var localPart:String? {
         return self.bareJid.localPart;
     }
-    
+    // Domain part
     public var domain:String! {
         return self.bareJid.domain;
     }
@@ -41,18 +47,30 @@ public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
         }
     }
     
+    /**
+     Create instance
+     - parameter jid: instance of BareJID
+     - parameter resource: resource for JID
+     */
     public init(_ jid: BareJID, resource: String? = nil) {
         self.bareJid = jid;
         self.resource = resource;
         self.stringValue = JID.toString(bareJid, resource);
     }
     
+    /**
+     Creates new instance with same values
+     - parameter jid: instance of JID
+     */
     public init(_ jid: JID) {
         self.bareJid = jid.bareJid;
         self.resource = jid.resource;
         self.stringValue = JID.toString(bareJid, resource);
     }
     
+    /**
+     Create instance from string representation of `JID`
+     */
     public init(_ jid: String) {
         let idx = jid.characters.indexOf("/");
         self.resource = (idx == nil) ? nil : jid.substringFromIndex(idx!.successor())
@@ -60,6 +78,9 @@ public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
         self.stringValue = JID.toString(bareJid, resource);
     }
     
+    /**
+     Convenience constructor with support for `nil` string representation of `JID`
+     */
     public convenience init?(_ jid: String?) {
         guard jid != nil else {
             return nil;

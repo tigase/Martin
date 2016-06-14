@@ -21,10 +21,15 @@
 
 import Foundation
 
+/**
+ Module provides support for [XEP-0199: XMPP Ping]
+ 
+ [XEP-0199: XMPP Ping]: http://xmpp.org/extensions/xep-0199.html
+ */
 public class PingModule: AbstractIQModule, ContextAware {
-  
+    /// Namespace used by XMPP ping
     private static let PING_XMLNS = "urn:xmpp:ping";
-    
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = PING_XMLNS;
     
     public let id = ID;
@@ -39,7 +44,12 @@ public class PingModule: AbstractIQModule, ContextAware {
         
     }
     
-    public func ping(jid: JID, stanza: (Stanza?)->Void) {
+    /**
+     Send ping request to jid
+     - parameter jid: ping destination
+     - parameter callback: executed when response is received or due to timeout
+     */
+    public func ping(jid: JID, callback: (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid;
@@ -48,6 +58,9 @@ public class PingModule: AbstractIQModule, ContextAware {
         context.writer?.write(iq);
     }
     
+    /**
+     Processes ping requests and responds properly
+     */
     public func processGet(stanza: Stanza) throws {
         let result = stanza.makeResult(StanzaType.result);
         context.writer?.write(result);

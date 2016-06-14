@@ -21,10 +21,22 @@
 
 import Foundation
 
+/**
+ Extension of `XmppModule` with helper methods for implementing
+ modules reacting on `Iq` stanzas
+ */
 public protocol AbstractIQModule: XmppModule {
     
+    /**
+     Will be called on `<iq type=\"get\"/>'
+     - parameter stanza: stanza to process
+     */
     func processGet(stanza:Stanza) throws;
     
+    /**
+     Will be called on `<iq type=\"set\"/>'
+     - parameter stanza: stanza to process
+     */
     func processSet(stanza:Stanza) throws;
     
 }

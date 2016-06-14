@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Stanza class is a wrapper/helper for any root XML element receved from XMPP stream or which will be sent by XMPP stream.
+ */
 public class Stanza: ElementProtocol, CustomStringConvertible {
     
     private let defStanzaType:StanzaType?;
@@ -29,8 +32,10 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         return String("Stanza : \(element.stringValue)")
     }
     
+    /// Keeps instance of root XML element
     public let element:Element;
     
+    /// Returns information about delay in delivery of stanza
     public var delay:Delay? {
         if let delayEl = element.findChild("delay", xmlns: "urn:xmpp:delay") {
             return Delay(element: delayEl);
@@ -38,12 +43,14 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         return nil;
     }
     
+    /// Returns element name
     public var name:String {
         get {
             return element.name;
         }
     }
     
+    /// Sender address of stanza
     public var from:JID? {
         get {
             if let jidStr = element.getAttribute("from") {
@@ -56,6 +63,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
+    /// Recipient address of stanza
     public var to:JID? {
         get {
             if let jidStr = element.getAttribute("to") {
@@ -68,6 +76,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
+    /// Stanza id
     public var id:String? {
         get {
             return element.getAttribute("id");
@@ -77,6 +86,8 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
+    
+    /// Stanza type
     public var type:StanzaType? {
         get {
             if let type = element.getAttribute("type") {
@@ -89,6 +100,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
+    /// Returns error condition due to which this response stanza is marked as an error
     public var errorCondition:ErrorCondition? {
         get {
             if type != StanzaType.error {
@@ -101,6 +113,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
 
+    /// Returns XMLNS of element
     public var xmlns:String? {
         get {
             return element.xmlns;
@@ -145,6 +158,15 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         self.element.setAttribute(key, value: value);
     }
     
+    /**
+     Creates instance of proper class extending `Stanza` class based on element name.
+     
+     - returns:
+        - Message: for elements named 'message'
+        - Presence: for elements named 'presence'
+        - Iq: for elements named 'iq'
+        - Stanza: for any other elements not matching above rules
+     */
     public static func fromElement(elem:Element) -> Stanza {
         switch elem.name {
         case "message":
@@ -158,6 +180,10 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
+    /**
+     Creates stanza of type error with passsed error condition.
+     - returns: response stanza based on this stanza with error condition set
+     */
     public func errorResult(condition:ErrorCondition, text:String? = nil) -> Stanza {
         return errorResult(condition.type, errorCondition: condition.rawValue);
     }
@@ -184,6 +210,10 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         return response;
     }
     
+    /**
+     Creates response stanza with following type set
+     - parameter type: type to set in response stanza
+     */
     public func makeResult(type:StanzaType) -> Stanza {
         let elem = Element(name: element.name, cdata: nil, attributes: element.attributes);
         let response = Stanza.fromElement(elem);
@@ -193,10 +223,12 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         return response;
     }
     
+    /// Returns value of matching element
     func getElementValue(name:String?, xmlns:String? = nil) -> String? {
         return findChild(name, xmlns: xmlns)?.value;
     }
     
+    /// Creates new subelement with following name, xmlns and value. It will replace any other subelement with same name and xmlns
     func setElementValue(name:String, xmlns:String? = nil, value:String?) {
         element.forEachChild(name, xmlns: xmlns) { (e:Element) -> Void in
             self.element.removeChild(e);
@@ -207,8 +239,10 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     }
 }
 
+/// Extenstion of `Stanza` class with specific features existing only in `message' elements.
 public class Message: Stanza {
     
+    /// Message plain text
     public var body:String? {
         get {
             return getElementValue("body");
@@ -218,6 +252,7 @@ public class Message: Stanza {
         }
     }
     
+    /// Message subject
     public var subject:String? {
         get {
             return getElementValue("subject");
@@ -227,6 +262,7 @@ public class Message: Stanza {
         }
     }
     
+    /// Message thread id
     public var thread:String? {
         get {
             return getElementValue("thread");
@@ -250,8 +286,17 @@ public class Message: Stanza {
 
 }
 
+/// Extenstion of `Stanza` class with specific features existing only in `presence' elements.
 public class Presence: Stanza {
 
+    /**
+     Possible values:
+     - chat: sender of stanza is ready to chat
+     - online: sender of stanza is online
+     - away: sender of stanza is away
+     - xa: sender of stanza is away for longer time (eXtender Away)
+     - dnd: sender of stanza wishes not to be disturbed
+     */
     public enum Show: String {
         case chat
         case online
@@ -279,6 +324,7 @@ public class Presence: Stanza {
         return String("Presence : \(element.stringValue)")
     }
 
+    /// Suggested nickname to use
     public var nickname:String? {
         get {
             return getElementValue("nick", xmlns: "http://jabber.org/protocol/nick");
@@ -288,6 +334,7 @@ public class Presence: Stanza {
         }
     }
     
+    /// Priority of presence and resource connection
     public var priority:Int! {
         get {
             let x = findChild("priority")?.value;
@@ -306,6 +353,11 @@ public class Presence: Stanza {
         }
     }
     
+    /**
+     Show value of this presence:
+     - if available then is value from `Show` enum
+     - if unavailable then is nil
+     */
     public var show:Show? {
         get {
             let x = findChild("show")?.value;
@@ -332,6 +384,7 @@ public class Presence: Stanza {
         }
     }
     
+    /// Text with additional description - mainly for human use
     public var status:String? {
         get {
             return findChild("status")?.value;
@@ -356,6 +409,7 @@ public class Presence: Stanza {
 
 }
 
+/// Extenstion of `Stanza` class with specific features existing only in `iq' elements.
 public class Iq: Stanza {
 
     public override var description: String {

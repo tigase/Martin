@@ -21,22 +21,29 @@
 
 import Foundation
 
+/**
+ Class representing parsed XML element
+ */
 public class Element : Node, ElementProtocol {
-    public var name:String
+    /// Element name
+    public let name:String
     var defxmlns:String?
     private var attributes_:[String:String];
     private var nodes = Array<Node>()
     
+    /// Attributes of XML element
     public var attributes:[String:String] {
         get {
             return self.attributes_;
         }
     }
     
+    /// Check if element contains subelements
     public var hasChildren:Bool {
         return !nodes.isEmpty && !getChildren().isEmpty;
     }
     
+    /// Value of cdata of this element
     public var value:String? {
         get {
             var result:String? = nil;
@@ -59,6 +66,12 @@ public class Element : Node, ElementProtocol {
         }
     }
     
+    /**
+     Creates instance of `Element`
+     - parameter name: name of element
+     - parameter cdata: value of element
+     - parameter attributes: attributes of element
+     */
     public init(name: String, cdata: String? = nil, attributes: [String:String]) {
         self.name = name;
         if (cdata != nil) {
@@ -67,6 +80,12 @@ public class Element : Node, ElementProtocol {
         self.attributes_ = attributes;
     }
     
+    /**
+     Creates instance of `Element`
+     - parameter name: name of element
+     - parameter cdata: value of element
+     - parameter xmlns: xmlns of element
+     */
     public init(name: String, cdata:String? = nil, xmlns: String? = nil) {
         self.name = name;
         self.attributes_ =  [String:String]();
@@ -77,10 +96,18 @@ public class Element : Node, ElementProtocol {
         }
     }
     
+    /**
+     Add subelement
+     - parameter child: element to add as subelement
+     */
     public func addChild(child: Element) {
         self.addNode(child)
     }
     
+    /**
+     Add subelements
+     - parameter children: array of elements to add as subelements
+     */
     public func addChildren(children: [Element]) {
         children.forEach { (c) in
             self.addChild(c);
@@ -91,8 +118,13 @@ public class Element : Node, ElementProtocol {
         self.nodes.append(child)
     }
     
-    public func
-        findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+    /**
+     In subelements finds element with matching name and/or xmlns and returns it
+     - parameter name: name of element to find
+     - parameter xmlns: xmlns of element to find
+     - returns: first element which name and xmlns matches
+     */
+    public func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
         for node in nodes {
             if (node is Element) {
                 let elem = node as! Element;
@@ -112,7 +144,11 @@ public class Element : Node, ElementProtocol {
         return nil;
     }
     
-    func firstChild() -> Element? {
+    /**
+     Find first child element
+     returns: first child element
+     */
+    public func firstChild() -> Element? {
         for node in nodes {
             if (node is Element) {
                 return node as? Element;
@@ -121,6 +157,12 @@ public class Element : Node, ElementProtocol {
         return nil;
     }
     
+    /**
+     For every child element matching name and xmlns executes closure
+     - parameter name: name of child element
+     - parameter xmlns: xmlns of child element
+     - parameter fn: closure to execute
+     */
     public func forEachChild(name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
         for node in nodes {
             if (node is Element) {
@@ -140,6 +182,16 @@ public class Element : Node, ElementProtocol {
         }
     }
     
+    /**
+     Filters subelements array using provided filter and for matching elements executes
+     transformation closure converting this array into array of objects returned by 
+     transformation closure.
+     
+     If transformation will return nil - result will not be added to returned array
+     - parameter transformation: closure used for transformation
+     - parameter filter: closure used for filtering child elements
+     - returns: array of objects returned by transformation closure
+     */
     public func mapChildren<U>(transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
         var tmp = getChildren();
         if filter != nil {
@@ -156,6 +208,12 @@ public class Element : Node, ElementProtocol {
         return result;
     }
     
+    /**
+     Finds every child element with matching name and xmlns
+     - parameter name: name of child element
+     - parameter xmlns: xmlns of child element
+     - returns: array of matching elements
+     */
     public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         var result = Array<Element>();
         for node in nodes {
@@ -177,20 +235,33 @@ public class Element : Node, ElementProtocol {
         return result;
     }
     
+    /**
+     Returns value of attribute
+     - parameter key: attribute name
+     - returns: value for attribute
+     */
     public func getAttribute(key:String) -> String? {
         return attributes_[key];
     }
     
+    /**
+     Removes element from children
+     - parameter child: element to remove
+     */
     public func removeChild(child: Element) {
         self.removeNode(child);
     }
     
+    /**
+     Removes node from children
+     */
     public func removeNode(child: Node) {
         if let idx = self.nodes.indexOf(child) {
             self.nodes.removeAtIndex(idx);
         }
     }
     
+    /// XMLNS of element
     public var xmlns:String? {
         get {
             let xmlns = attributes_["xmlns"]
@@ -205,6 +276,11 @@ public class Element : Node, ElementProtocol {
         }
     }
     
+    /**
+     Set value for attribute
+     - parameter key: attribute to set
+     - parameter value: value to set
+     */
     public func setAttribute(key:String, value:String?) {
         if (value == nil) {
             attributes_.removeValueForKey(key);
@@ -217,6 +293,7 @@ public class Element : Node, ElementProtocol {
         self.defxmlns = defxmlns;
     }
     
+    /// String representation of element
     override public var stringValue: String {
         var result = "<\(self.name)"
         for (k,v) in attributes_ {
@@ -255,6 +332,11 @@ public class Element : Node, ElementProtocol {
         return result;
     }
     
+    /**
+     Convenience function for parsing string with XML to create elements
+     - parameter toParse: string with XML to parse
+     - returns: parsed Element if any
+     */
     public static func fromString(toParse: String) -> Element? {
         class Holder: XMPPStreamDelegate {
             var parsed:Element?;

@@ -21,21 +21,30 @@
 
 import Foundation
 
+/**
+ Class responsible for storing instances of `XmppModule` and returning
+ instances of `XmppModule` which are registered for processing particular
+ stanza.
+ */
 public class XmppModulesManager : ContextAware {
     
     public var context:Context!;
     
+    /// List of registered instances of `XmppStanzaFilter` which needs to process packets
     public var filters = [XmppStanzaFilter]();
     
+    /// List of instances `Initializable` which require initialization
     private var initializationRequired = [Initializable]();
     
+    /// List of registered modules
     private var modules = [XmppModule]();
-    
+    /// Map of registered modules where module id is key - used for fast retrieval of module instances
     private var modulesById = [String:XmppModule]();
     
     init() {
     }
     
+    /// Returns list of features provided by registered `XmppModule` instances
     public var availableFeatures:Set<String> {
         var result = Set<String>();
         for module in self.modules {
@@ -44,10 +53,18 @@ public class XmppModulesManager : ContextAware {
         return result;
     }
     
+    /**
+     Processes passed stanza and return list of `XmppModule` instances which should process this stanza.
+     Instances of `XmppModule` are selected by checking if it's `criteria` field matches stanza.
+     */
     public func findModules(stanza:Stanza) -> [XmppModule] {
         return findModules(stanza.element);
     }
     
+    /**
+     Processes passed element and return list of `XmppModule` instances which should process this element.
+     Instances of `XmppModule` are selected by checking if it's `criteria` field matches element.
+     */
     public func findModules(elem:Element) -> [XmppModule] {
         var results = [XmppModule]();
         for module in modules {
@@ -58,6 +75,7 @@ public class XmppModulesManager : ContextAware {
         return results;
     }
     
+    /// Returns instance of `XmppModule` registered under passed id
     public func getModule<T:XmppModule>(id:String) -> T? {
         return modulesById[id] as? T;
     }
@@ -68,6 +86,11 @@ public class XmppModulesManager : ContextAware {
         }
     }
     
+    /**
+     Register passed instance of module and return it.
+     - parameter module: instance of `XmppModule` to register
+     - returns: same instace as passed in parameter `module`
+     */
     public func register<T:XmppModule>(module:T) -> T {
         if var contextAware = module as? ContextAware {
             contextAware.context = context;
@@ -84,6 +107,11 @@ public class XmppModulesManager : ContextAware {
         return module;
     }
     
+    /**
+     Unregister passed instance of module and return it.
+     - parameter module: instance of `XmppModule` to unregister
+     - returns: same instace as passed in parameter `module`
+     */
     public func unregister<T:XmppModule>(module:T) -> T {
         modulesById.removeValueForKey(module.id)
         if let idx = self.modules.indexOf({ $0 === module}) {

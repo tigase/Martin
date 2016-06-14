@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Class represents MUC room locally and supports `ChatProtocol`
+ */
 public class Room: ChatProtocol, ContextAware {
 
     private static let stampFormatter = ({()-> NSDateFormatter in
@@ -32,6 +35,7 @@ public class Room: ChatProtocol, ContextAware {
     })();
     
     // common variables
+    /// JID of MUC room
     public var jid: JID;
     public let allowFullJid: Bool = false;
     
@@ -39,6 +43,7 @@ public class Room: ChatProtocol, ContextAware {
     public var context: Context!;
     
     private var _lastMessageDate: NSDate? = nil;
+    /// Timestamp of last received message
     public var lastMessageDate: NSDate? {
         get {
             return _lastMessageDate;
@@ -54,17 +59,20 @@ public class Room: ChatProtocol, ContextAware {
     }
     
     private var _nickname: String;
+    /// Nickname in room
     public var nickname: String {
         return _nickname;
     }
     
+    /// Room password
     public var password: String?;
     
     private var _presences = [String:Occupant]();
+    /// Room occupants
     public var presences: [String:Occupant] {
         return _presences;
     }
-    
+    /// BareJID of MUC room
     public var roomJid: BareJID {
         get {
             return jid.bareJid;
@@ -75,11 +83,13 @@ public class Room: ChatProtocol, ContextAware {
     }
     
     var _state: State = .not_joined;
+    /// State of room
     public var state: State {
         return _state;
     }
     
     private var _tempOccupants = [String:Occupant]();
+    /// Temporary occupants
     public var tempOccupants: [String:Occupant] {
         return _tempOccupants;
     }
@@ -90,6 +100,7 @@ public class Room: ChatProtocol, ContextAware {
         self._nickname = nickname;
     }
     
+    /// Rejoin this room
     public func rejoin() -> Presence {
         let presence = Presence();
         presence.to = JID(roomJid, resource: nickname);
@@ -110,6 +121,11 @@ public class Room: ChatProtocol, ContextAware {
         return presence;
     }
     
+    /**
+     Send message to room
+     - parameter body: text to send
+     - parameter additionalElement: additional elements to add to message
+     */
     public func sendMessage(body: String?, additionalElements: [Element]? = nil) {
         let msg = createMessage(body);
         if additionalElements != nil {
@@ -120,6 +136,11 @@ public class Room: ChatProtocol, ContextAware {
         context.writer?.write(msg);
     }
     
+    /**
+     Prepare message for sending to room
+     - parameter body: text to send
+     - returns: newly create message
+     */
     public func createMessage(body: String?) -> Message {
         var msg = Message();
         msg.to = jid;
@@ -128,12 +149,23 @@ public class Room: ChatProtocol, ContextAware {
         return msg;
     }
     
+    /**
+     Send invitation
+     - parameter invitee: user to invite
+     - parameter reason: invitation reason
+     */
     public func invite(invitee: JID, reason: String?) {
         let message = self.createInvitation(invitee, reason: reason);
         
         context.writer?.write(message);
     }
     
+    /**
+     Create invitation
+     - parameter invitee: user to invite
+     - parameter reason: invitation reason
+     - returns: newly create message
+     */
     public func createInvitation(invitee: JID, reason: String?) -> Message {
         let message = Message();
         message.to = JID(self.roomJid);
@@ -150,11 +182,24 @@ public class Room: ChatProtocol, ContextAware {
         return message;
     }
     
+    /**
+     Send direct invitation
+     - parameter invitee: user to invite
+     - parameter reason: invitation reason
+     - parameter threadId: thread id to use in invitation message
+     */
     public func inviteDirectly(invitee: JID, reason: String?, threadId: String?) {
         let message = createDirectInvitation(invitee, reason: reason, threadId: threadId);
         context.writer?.write(message);
     }
     
+    /**
+     Create direct invitation
+     - parameter invitee: user to invite
+     - parameter reason: invitation reason
+     - parameter threadId: thread id to use in invitation message
+     - returns: newly created invitation message
+     */
     public func createDirectInvitation(invitee: JID, reason: String?, threadId: String?) -> Message {
         let message = Message();
         message.to = invitee;
@@ -191,6 +236,12 @@ public class Room: ChatProtocol, ContextAware {
         return _tempOccupants.removeValueForKey(nickname);
     }
     
+    /**
+     Possible states of room:
+     - joined: you are joined to room
+     - not_joined: you are not joined and join is not it progress
+     - requested: you are not joined but already requested join
+     */
     public enum State {
         case joined
         case not_joined

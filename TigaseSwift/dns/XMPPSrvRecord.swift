@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Class holds informations for single SRV record of DNS entries
+ */
 public class XMPPSrvRecord: CustomStringConvertible {
     
     let port:Int!;

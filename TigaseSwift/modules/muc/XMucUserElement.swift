@@ -21,6 +21,7 @@
 
 import Foundation
 
+/// Class holds additional information about occupant which are sent in presence from MUC room
 public class XMucUserElement {
     
     public static func extract(presence: Presence?) -> XMucUserElement? {

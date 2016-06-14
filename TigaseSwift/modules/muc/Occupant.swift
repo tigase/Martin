@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Class is representation of MUC room occupant
+ */
 public class Occupant {
     
     private static var counter = 0;
@@ -31,22 +34,23 @@ public class Occupant {
     private var role_: Role = .none;
     private var jid_: JID? = nil;
     
+    /// Affiliation of occupant
     public var affiliation: Affiliation {
         return affiliation_;
     }
-    
+    /// Occupant nickname
     public var nickname: String? {
         return presence?.from?.resource;
     }
-    
+    /// Occupant role
     public var role: Role {
         return role_;
     }
-    
+    /// Occupant jid (in nonanonymous rooms only)
     public var jid: JID? {
         return jid_;
     }
-    
+    /// Occupant presence
     public var presence: Presence? {
         didSet {
             if let xUser = XMucUserElement.extract(presence) {

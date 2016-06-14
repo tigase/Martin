@@ -21,20 +21,43 @@
 
 import Foundation
 
+/**
+ Instance of this class are used to build `Element` matching mechanism which is used 
+ ie. by `XmppModulesManager` to select `XmppModule` instances which should process 
+ particular element.
+ */
 public class Criteria {
     
+    /// Creates empty criteria - will never match
     public static func empty() -> Criteria {
         return Criteria(defValue:false);
     }
     
+    /// Creates criteria which will match if any of passed criterias will match
     public static func or(criteria: Criteria...) -> Criteria {
         return OrImpl(criteria: criteria);
     }
     
+    /**
+     Creates criteria which will match element if every passed attribute matches with 
+     element. If parameter is nil then it will always match.
+     - parameter name: name of element
+     - parameter xmlns: xmlns of element
+     - parameter types: list of allowed values for `type` attribute
+     - parameter containsAttribute: checks if passed attribute is set
+     */
     public static func name(name: String, xmlns: String? = nil, types:[String]? = nil, containsAttribute: String? = nil) -> Criteria {
         return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil, containsAttribute: containsAttribute);
     }
 
+    /**
+     Creates criteria which will match element if every passed attribute matches with
+     element. If parameter is nil then it will always match.
+     - parameter name: name of element
+     - parameter xmlns: xmlns of element
+     - parameter types: list of allowed values for `type` attribute
+     - parameter containsAttribute: checks if passed attribute is set
+     */
     public static func name(name: String, xmlns: String? = nil, types:[StanzaType], containsAttribute: String? = nil) -> Criteria {
         var typesStr = types.map { (type) -> String in
             return type.rawValue;
@@ -42,10 +65,22 @@ public class Criteria {
         return ElementCriteria(name: name, xmlns: xmlns, types: typesStr, attributes: nil, containsAttribute: containsAttribute);
     }
     
+    /**
+     Creates criteria which will match element if every passed attribute matches with
+     element. If parameter is nil then it will always match.
+     - parameter name: name of element
+     - parameter attributes: dictionary of attributes and values which needs to match
+     */
     public static func name(name:String?, attributes:[String:String]) -> Criteria {
         return ElementCriteria(name: name, attributes: attributes);
     }
     
+    /**
+     Creates criteria which will match element if every passed attribute matches with
+     element. If parameter is nil then it will always match.
+     - parameter xmlns: xmlns of element
+     - parameter containsAttribute: checks if passed attribute is set
+     */
     public static func xmlns(xmlns:String, containsAttribute: String? = nil) -> Criteria {
         return ElementCriteria(xmlns: xmlns, attributes: nil, containsAttribute: containsAttribute);
     }
@@ -62,6 +97,9 @@ public class Criteria {
         self.defValue = defValue;
     }
     
+    /**
+     Added additional criterial to check on subelements
+     */
     public func add(crit:Criteria) -> Criteria {
         if (nextCriteria == nil) {
             nextCriteria = crit;
@@ -71,6 +109,10 @@ public class Criteria {
         return self;
     }
     
+    /**
+     Checks if element matches (checks subelements if additional criteria are added)
+     - returns: true - if element matches
+     */
     public func match(elem:Element) -> Bool {
         if (nextCriteria == nil) {
             return defValue;
@@ -85,6 +127,7 @@ public class Criteria {
         return result;
     }
     
+    /// Internal implementation used to match elements
     class ElementCriteria: Criteria {
         
         let name:String?;
@@ -130,6 +173,7 @@ public class Criteria {
         
     }
     
+    /// Internal implementation used for 'or' matching
     class OrImpl: Criteria {
         let criteria:Array<Criteria>!;
         

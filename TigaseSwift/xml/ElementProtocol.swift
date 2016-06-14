@@ -21,16 +21,51 @@
 
 import Foundation
 
+/**
+ Common protocol for classes representing `Element`
+ */
 public protocol ElementProtocol {
     
+    /// Name of element
     var name:String { get }
+    /// XMLNS of element
     var xmlns:String? { get }
     
+    /**
+     Add child element
+     - parameter child: element to add as subelement
+     */
     func addChild(child: Element);
+    /**
+     Find child element with matching name and xmlns
+     - parameter name: name of element to find
+     - parameter xmlns: xmlns of element to find
+     - returns: first found element if any
+     */
     func findChild(name:String?, xmlns:String?) -> Element?;
+    /**
+     Find child elements matching name and xmlns
+     - parameter name: name of element
+     - parameter xmlns: xmlns of element
+     - returns: array of matching child elements
+     */
     func getChildren(name:String?, xmlns:String?) -> Array<Element>;
+    /**
+     Get value for attribute
+     - parameter key: attribute
+     - returns: value for attibutes
+     */
     func getAttribute(key:String) -> String?;
+    /**
+     Remove element from child elements
+     - parameter child: element to remove
+     */
     func removeChild(child: Element);
+    /**
+     Set value for attribute
+     - parameter key: attribute
+     - parameter value: value to set
+     */
     func setAttribute(key:String, value:String?);
     
 }

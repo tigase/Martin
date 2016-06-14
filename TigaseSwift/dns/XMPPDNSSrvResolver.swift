@@ -21,12 +21,25 @@
 
 import Foundation
 
+/**
+ Class used to resolve DNS XMPP SRV records.
+ 
+ Returns resolved IP address if there is no SRV entries for domain
+ */
 public class XMPPDNSSrvResolver : Logger {
     
+    /// Domain name being checked
     var domain:String!;
+    /// List of found records
     var srvRecords = [XMPPSrvRecord]();
+    /// Intance of SocketConnector for callback when DNS resolution is finished
     weak var connector:SocketConnector!;
 
+    /**
+     Resolve XMPP SRV records for domain
+     - parameter domain: domain name to resolve
+     - parameter connector: instance of `SocketConnector` to call when DNS resolution is finished
+     */
     func resolve(domain:String, connector:SocketConnector) -> Void {
         self.domain = domain;
         self.srvRecords.removeAll();
@@ -48,6 +61,9 @@ public class XMPPDNSSrvResolver : Logger {
         log("dns returned code: ", err);
     }
     
+    /**
+     Function called from `DNSSrv` notifying that DNS resolution done in `C` completed
+     */
     func resolved() {
         srvRecords.sortInPlace { (a,b) -> Bool in
             if (a.priority < b.priority) {

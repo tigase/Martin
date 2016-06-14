@@ -21,10 +21,15 @@
 
 import Foundation
 
+/**
+ Module provides roster manipulation features as described in [RFC6121]
+ 
+ [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
+ */
 public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, Initializable {
     
     public static let ROSTER_STORE_KEY = "rosterStore";
-    
+    /// ID of module for looup in `XmppModulesManager`
     public static let ID = "roster";
     
     public let id = ID;
@@ -43,9 +48,9 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
     public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:roster"));
     
     public let features = [String]();
-    
+    /// Roster cache versio provider
     public var versionProvider:RosterCacheProvider?;
-    
+    /// Roster store
     public var rosterStore:RosterStore {
         get {
             return RosterModule.getRosterStore(context.sessionObject);
@@ -172,6 +177,9 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
     }
     
+    /**
+     Send roster retrieval request to server
+     */
     public func rosterRequest() {
         var iq = Iq();
         iq.type = .get;
@@ -244,6 +252,15 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         }
     }
     
+    /**
+     Actions which could happen to roster items:
+     - added: item was added
+     - askCanceled: item was pending subscription request
+     - removed: item was removed
+     - subscribed: item got subscribed
+     - unsubscribed: item got unsubscribed
+     - other: other actions not defined above
+     */
     public enum Action {
         case added
         case askCancelled
@@ -253,14 +270,19 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         case other
     }
 
+    /// Event fired when roster item is updated
     public class ItemUpdatedEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ItemUpdatedEvent();
         
         public let type = "ItemUpdatedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Changed roster item
         public let rosterItem:RosterItem?;
+        /// Action done to roster item
         public let action:Action!;
+        /// Groups which were modified
         public let modifiedGroups:[String]?;
         
         private init() {
@@ -278,6 +300,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         }
     }
 
+    /// Implementation of `RosterStoreHandler` protocol using `RosterModule`
     class RosterStoreHandlerImpl: RosterStoreHandler {
         let rosterModule:RosterModule;
         

@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Common protocol for classes aware of `Context`
+ */
 public protocol ContextAware {
     
     var context:Context! { get set }

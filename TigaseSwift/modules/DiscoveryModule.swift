@@ -21,13 +21,28 @@
 
 import Foundation
 
+/**
+ Module responsible for [XEP-0030: Service Discovery] feature.
+ 
+ [XEP-0030: Service Discovery]: http://xmpp.org/extensions/xep-0030.html
+ */
 public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
 
+    /**
+     Property name under which category of XMPP entity is hold for returning
+     to remote clients on query
+     */
     public static let IDENTITY_CATEGORY_KEY = "discoveryIdentityCategory";
+    /** 
+     Property name under which type of XMPP entity is hold for returning 
+     to remote clients on query
+     */
     public static let IDENTITY_TYPE_KEY = "discoveryIdentityType";
+    /// Namespace used by service discovery
     public static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
+    /// Namespace used by service discovery
     public static let INFO_XMLNS = "http://jabber.org/protocol/disco#info";
-    
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "discovery";
     
     public let id = ID;
@@ -63,6 +78,11 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         ));
     }
     
+    /**
+     Method sends query to server to discover server features
+     - parameter onInfoReceived: called when info will be available
+     - parameter onError: called when received error or request timed out
+     */
     public func discoverServerFeatures(onInfoReceived:((node: String?, identities: [Identity], features: [String]) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
             getInfo(JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
@@ -72,6 +92,12 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         }
     }
     
+    /**
+     Method retieves informations about particular XMPP recipient and it's node
+     - parameter jid: recipient to query
+     - parameter node: node to query for informations
+     - parameter callback: called on result or failure
+     */
     public func getInfo(jid: JID, node: String?, callback: (Stanza?) -> Void) {
         var iq = Iq();
         iq.to  = jid;
@@ -85,6 +111,13 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
+    /**
+     Method retieves informations about particular XMPP recipient and it's node
+     - parameter jid: recipient to query
+     - parameter node: node to query for informations
+     - parameter onInfoReceived: called where response with result is received
+     - parameter onError: called when received error or request timed out
+     */
     public func getInfo(jid:JID, node:String? = nil, onInfoReceived:(node: String?, identities: [Identity], features: [String]) -> Void, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
         getInfo(jid, node:node, callback: {(stanza: Stanza?) -> Void in
             var type = stanza?.type ?? StanzaType.error;
@@ -109,6 +142,12 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         })
     }
     
+    /**
+     Method retieves items available at particular XMPP recipient and it's node
+     - parameter jid: recipient to query
+     - parameter node: node to query for items
+     - parameter callback: called on result or failure
+     */
     public func getItems(jid:JID, node:String? = nil, callback: (Stanza?) -> Void) {
         var iq = Iq();
         iq.to  = jid;
@@ -123,6 +162,13 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     }
 
 
+    /**
+     Method retieves items available at particular XMPP recipient and it's node
+     - parameter jid: recipient to query
+     - parameter node: node to query for items
+     - parameter onItemsReceived: called where response with result is received
+     - parameter onError: called when received error or request timed out
+     */
     public func getItems(jid:JID, node:String? = nil, onItemsReceived:(node:String?, items:[Item]) -> Void, onError:(errorCondition:ErrorCondition?) -> Void) {
         getItems(jid, node: node, callback: {(stanza:Stanza?) -> Void in
             var type = stanza?.type ?? StanzaType.error;
@@ -141,6 +187,13 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             }
         });
     }
+    
+    /**
+     Set custom callback for execution when remote entity will query for
+     items or info of local node
+     - parameter node: node name for which to execute
+     - parameter entry: object with data
+     */
     public func setNodeCallback(node_: String?, entry: NodeDetailsEntry?) {
         var node = node_ ?? "";
         if entry == nil {
@@ -150,6 +203,9 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         }
     }
     
+    /**
+     Processes stanzas with type equal `get`
+     */
     public func processGet(stanza:Stanza) throws {
         let query = stanza.findChild("query")!;
         let node = query.getAttribute("node") ?? "";
@@ -168,6 +224,10 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             throw ErrorCondition.bad_request;
         }
     }
+
+    /**
+     Processes stanzas with type equal `set`
+     */
     public func processSet(stanza:Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
@@ -215,6 +275,10 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         context.writer?.write(result);
     }
  
+    /**
+     Container class which holds informations to return on service 
+     discovery for particular node
+     */
     public class NodeDetailsEntry {
         public let identity: (sessionObject: SessionObject, stanza: Stanza, node: String) -> Identity?
         public let features: (sessionObject: SessionObject, stanza: Stanza, node: String) -> [String]?
@@ -265,13 +329,15 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         }
     }
     
+    /// Event fired when server features are retrieved
     public class ServerFeaturesReceivedEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ServerFeaturesReceivedEvent();
         
         public let type = "ServerFeaturesReceivedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject: SessionObject!;
+        /// Array of available server features
         public let features: [String]!;
         
         init() {

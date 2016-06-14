@@ -21,28 +21,49 @@
 
 import Foundation
 
+/**
+ XMPP entity address for `localpart@domainpart`
+ */
 public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     
+    /// Local part
     public let localPart:String?;
+    /// Domain part
     public let domain:String;
+    /// String representation
     public let stringValue:String;
     
     public var hashValue: Int {
         return stringValue.hashValue;
     }
     
+    /**
+     Create instance
+     - parameter localPart: local part of JID
+     - parameter domain: domain part of JID
+     */
     public init(localPart: String? = nil, domain: String) {
         self.localPart = localPart;
         self.domain = domain;
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
+    /**
+     Create instance
+     
+     Useful for copying/cloning of `BareJID`
+     - parameter jid: instance of `BareJID`
+     */
     public init(_ jid: BareJID) {
         self.localPart = jid.localPart
         self.domain = jid.domain
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
+    /**
+     Create instance
+     - parameter jid: string representation of bare JID
+     */
     public init(_ jid: String) {
         var idx = jid.characters.indexOf("/");
         let bareJid = (idx == nil) ? jid : jid.substringToIndex(idx!);
@@ -52,6 +73,10 @@ public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue 
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
+    /**
+     Convenience constructor which allows nil as parameter
+     - parameter jid: string representation of bare JID
+     */
     public convenience init?(_ jid: String?) {
         guard jid != nil else {
             return nil;
@@ -59,6 +84,10 @@ public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue 
         self.init(jid!);
     }
     
+    /**
+     Create new instance of `BareJID` from instance of `JID`
+     - parameter jid: JID to copy from
+     */
     public init(_ jid: JID) {
         self.domain = jid.domain
         self.localPart = jid.localPart

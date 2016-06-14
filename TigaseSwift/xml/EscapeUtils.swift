@@ -21,10 +21,18 @@
 
 import Foundation
 
+/**
+ Helper class for escaping/unescaping XML entries
+ */
 public class EscapeUtils {
     
     private static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"] ];
     
+    /**
+     Unescape string
+     - parameter value: string to unescape
+     - returns: unescaped string
+     */
     public static func unescape(value:String) -> String {
         if !value.containsString("&") {
             return value;
@@ -41,7 +49,11 @@ public class EscapeUtils {
         return result;
     }
     
-    
+    /**
+     Escape string
+     - parameter value: string to escape
+     - returns: escaped string
+     */
     public static func escape(value:String) -> String {
         var result = value;
         var i=0;

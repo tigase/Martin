@@ -20,8 +20,20 @@
 //
 import Foundation
 
+/** 
+ Protocol which is receiving data from `EventBus`
+ 
+ To receive particular events instance of class supporting this protocol
+ needs to be registered in instance of `EventBus`
+ */
 public protocol EventHandler: class {
     
+    /**
+     Method will be called when `Event` will be fired on `EventBus` instance
+     to which this instance of `EventBus` is registered to handle particular
+     types of events.
+     - parameter event: instace of `Event` which was fired on `EventBus`
+     */
     func handleEvent(event:Event);
     
 }

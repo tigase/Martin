@@ -21,20 +21,53 @@
 
 import Foundation
 
+/**
+ This is abstract class which as a base class for roster stores.
+ It provides methods for modification of roster items.
+ Modifications should be done using methods:
+ ```
+ add(..);
+ remove(..);
+ update(..);
+ ```
+ It will call `RosterModule` to execute change on server and 
+ later will update local roster store.
+ 
+ Do not use following methods directly - they will be called by
+ `RosterModule` when confirmation will be received from server:
+ ```
+ addItem(..);
+ removeAll(..);
+ removeItem(..);
+ ```
+ */
 public class RosterStore {
     
+    /// Number of items in roster
     public var count:Int {
         get {
             return -1;
         }
     }
     
+    /**
+     Holds instace responsible for modification of roster
+     on server side
+     */
     public var handler:RosterStoreHandler?;
     
     public init() {
         
     }
     
+    /**
+     Add item to roster
+     - parameter jid: jid
+     - parameter name: name for item
+     - parameter groups: groups to which item should belong
+     - parameter onSuccess: called after item is added
+     - parameter onError: called on failure
+     */
     public func add(jid:JID, name:String?, groups:[String] = [String](), onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
         handler?.add(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
     }
@@ -44,17 +77,34 @@ public class RosterStore {
         handler?.cleared();
     }
 
+    /**
+     Remove item from roster
+     - parameter jid: jid
+     - parameter onSuccess: called after item is added
+     - parameter onError: called on failure
+     */
     public func remove(jid:JID, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
         handler?.remove(jid, onSuccess: onSuccess, onError: onError);
     }
 
+    /**
+     Update item in roster
+     - parameter rosterItem: roster item to update
+     - parameter onSuccess: called after item is added
+     - parameter onError: called on failure
+     */
     public func update(rosterItem:RosterItem, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
         handler?.update(rosterItem, onSuccess: onSuccess, onError: onError);
     }
     
     public func addItem(item:RosterItem) {
     }
-    
+
+    /**
+     Retrieve roster item for JID
+     - parameter jid: jid
+     - returns: `RosterItem` for JID if exists
+     */
     public func get(jid:JID) -> RosterItem? {
         return nil;
     }
@@ -67,6 +117,10 @@ public class RosterStore {
     
 }
 
+/**
+ Protocol implemented by classes responsible for making changes 
+ to roster on server side
+ */
 public protocol RosterStoreHandler {
 
     func add(jid:JID, name:String?, groups:[String], onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);

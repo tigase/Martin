@@ -21,10 +21,14 @@
 
 import Foundation
 
+/**
+ Module provides support for Tigase Mobile Optimizations feature
+ */
 public class MobileModeModule: XmppModule, ContextAware {
     
+    /// Base part of namespace used by Mobile Optimizations
     public static let MM_XMLNS = "http://tigase.org/protocol/mobile";
-    
+    /// ID of module to lookup for in `XmppModulesManager`
     public static let ID = MM_XMLNS;
     
     public let id = MM_XMLNS;
@@ -35,6 +39,7 @@ public class MobileModeModule: XmppModule, ContextAware {
     
     public var context:Context!;
     
+    /// Available optimization modes on server
     public var availableModes:[Mode] {
         get {
             return (StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.mapChildren({(f)-> Mode in
@@ -52,14 +57,26 @@ public class MobileModeModule: XmppModule, ContextAware {
         throw ErrorCondition.feature_not_implemented;
     }
     
+    /**
+     Enable optimization mode
+     - paramater mode: mode to use
+     */
     public func enable(mode: Mode? = nil) {
         setState(true, mode: mode);
     }
     
+    /**
+     Disable optimization mode
+     - paramater mode: mode to disable
+     */
     public func disable(mode: Mode? = nil) {
         setState(false, mode: mode);
     }
     
+    /**
+     Enable/disable optimization mode
+     - paramater mode: mode to use
+     */
     public func setState(state: Bool, mode: Mode? = nil) -> Bool {
         if mode == nil {
             let possibleModes = availableModes;
@@ -82,6 +99,9 @@ public class MobileModeModule: XmppModule, ContextAware {
         return false;
     }
     
+    /**
+     Supported modes/versions
+     */
     public enum Mode: String {
         case V1 = "http://tigase.org/protocol/mobile#v1";
         case V2 = "http://tigase.org/protocol/mobile#v2";

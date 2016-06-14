@@ -21,6 +21,11 @@
 
 import Foundation
 
+/**
+ Class implements in-memory roster store
+ 
+ For more informations see `RosterStore`
+ */
 public class DefaultRosterStore: RosterStore {
  
     private var roster = [JID:RosterItem]();

@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Default MUC room manager for local handling of rooms
+ */
 public class DefaultRoomsManager: ContextAware {
     
     public var context: Context! {
@@ -37,20 +40,39 @@ public class DefaultRoomsManager: ContextAware {
         
     }
     
+    /**
+     Check if room is open
+     - parameter roomJid: jid of room
+     */
     public func contains(roomJid: BareJID) -> Bool {
         return rooms[roomJid] != nil;
     }
     
+    /**
+     Create instance of room
+     - parameter roomJid: jid of room
+     - parameter nickname: nickname
+     - parameter password: password for room
+     */
     public func createRoomInstance(roomJid: BareJID, nickname: String, password: String?) -> Room {
         let room = Room(context: context, roomJid: roomJid, nickname: nickname);
         room.password = password;
         return room;
     }
     
+    /**
+     Get room instance for room jid
+     - parameter roomJid: jid of room
+     - returns: instance of Room if created
+     */
     public func get(roomJid: BareJID) -> Room? {
         return rooms[roomJid];
     }
     
+    /**
+     Get array of all open rooms
+     - returns: array of rooms
+     */
     public func getRooms() -> [Room] {
         return Array(rooms.values);
     }
@@ -59,10 +81,18 @@ public class DefaultRoomsManager: ContextAware {
         
     }
     
+    /**
+     Register room instance in RoomManager
+     - parameter room: room instance to register
+     */
     public func register(room: Room) {
         rooms[room.roomJid]  = room;
     }
     
+    /**
+     Remove room instance
+     - parameter room: room instance to remove
+     */
     public func remove(room: Room) {
         rooms.removeValueForKey(room.roomJid);
     }

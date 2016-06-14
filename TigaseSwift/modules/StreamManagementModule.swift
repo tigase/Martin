@@ -21,10 +21,17 @@
 
 import Foundation
 
+/**
+ Module implements support for [XEP-0198: Stream Management]
+ 
+ [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
+ */
 public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaFilter, EventHandler {
     
+    /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
     
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = SM_XMLNS;
     
     public let id = SM_XMLNS;
@@ -44,12 +51,14 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         }
     }
     
+    /// Holds queue with stanzas sent but not acked
     private var outgoingQueue = Queue<Stanza>();
     
     // TODO: should this stay here or be moved to sessionObject as in Jaxmpp?
     private var ackH = AckHolder();
-    
+
     private var _ackEnabled: Bool = false;
+    /// Is ACK enabled?
     public var ackEnabled: Bool {
         return _ackEnabled;
     }
@@ -57,6 +66,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     private var lastRequestTimestamp = NSDate();
     private var lastSentH = UInt32(0);
     
+    /// Is stream resumption enabled?
     public var resumptionEnabled: Bool {
         return resumptionId != nil
     }
@@ -64,13 +74,15 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     private var resumptionId: String? = nil;
     
     private var _resumptionLocation: String? = nil;
+    /// Address to use when resuming stream
     public var resumptionLocation: String? {
         return _resumptionLocation;
     }
-    
+    /// Maximal resumption timeout to use
     public var maxResumptionTimeout: Int?;
     
     private var _resumptionTime: NSTimeInterval?;
+    /// Negotiated resumption timeout
     public var resumptionTime: NSTimeInterval? {
         return _resumptionTime;
     }
@@ -79,6 +91,11 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         super.init();
     }
     
+    /**
+     Method tries to enable Stream Management
+     - parameter resumption: should resumption be enabled
+     - parameter maxResumptionTimeout: maximal resumption timeout to use
+     */
     public func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) {
         guard !(ackEnabled || resumptionEnabled) else {
             return;
@@ -97,6 +114,9 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         context.writer?.write(enable);
     }
     
+    /**
+     Method hadles events received from `EventBus`
+     */
     public func handleEvent(event: Event) {
         switch event {
         case let e as SessionObject.ClearedEvent:
@@ -115,6 +135,10 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         }
     }
     
+    /**
+     Check if Stream Management is supported on server
+     - returns: true - if is supported
+     */
     public func isAvailable() -> Bool {
         return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
     }
@@ -124,6 +148,10 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         throw ErrorCondition.undefined_condition;
     }
     
+    /**
+     Method filters incoming stanza to process StreamManagement stanzas.
+     - parameter stanza: stanza to process
+     */
     public func processIncomingStanza(stanza: Stanza) -> Bool {
         guard ackEnabled else {
             guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
@@ -161,6 +189,11 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         return false;
     }
     
+    /**
+     Method processes every outgoing stanza to queue sent
+     stanza until they will be acked.
+     - parameter stanza: stanza to process
+     */
     public func processOutgoingStanza(stanza: Stanza) {
         guard ackEnabled else {
             return;
@@ -182,6 +215,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         }
     }
     
+    /// Send ACK request to server
     public func request() {
         if lastRequestTimestamp.timeIntervalSinceNow < 1 {
             return;
@@ -192,6 +226,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         lastRequestTimestamp = NSDate();
     }
     
+    /// Reset all internal variables
     public func reset() {
         _ackEnabled = false;
         resumptionId = nil
@@ -201,6 +236,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         outgoingQueue.clear();
     }
     
+    /// Start stream resumption
     public func resume() {
         log("starting stream resumption");
         var resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
@@ -210,6 +246,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         context.writer?.write(resume);
     }
     
+    /// Send ACK to server
     public func sendAck() {
         guard lastSentH != ackH.incomingCounter else {
             return;
@@ -223,6 +260,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         context.writer?.write(a);
     }
     
+    /// Process ACK from server
     func processAckAnswer(stanza: Stanza) {
         let newH = UInt32(stanza.getAttribute("h")!) ?? 0;
         _ackEnabled = true;
@@ -233,6 +271,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         }
     }
     
+    /// Process ACK request from server
     func processAckRequest(stanza: Stanza) {
         let value = ackH.incomingCounter;
         lastSentH = value;
@@ -287,6 +326,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         context.eventBus.fire(EnabledEvent(sessionObject: context.sessionObject, resume: resume, resumeId: id));
     }
     
+    /// Internal class for holding incoming and outgoing counters
     class AckHolder {
         
         var incomingCounter:UInt32 = 0;
@@ -307,14 +347,17 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         
     }
     
+    /// Event fired when Stream Management is enabled
     public class EnabledEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = EnabledEvent();
         
         public let type = "StreamManagementEnabledEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Is resumption enabled?
         public let resume: Bool;
+        /// ID of stream for resumption
         public let resumeId:String?;
         
         init() {
@@ -330,14 +373,16 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         }
         
     }
-
+    
+    /// Event fired when Stream Management fails
     public class FailedEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = FailedEvent();
         
         public let type = "StreamManagementFailedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Received error condition
         public let errorCondition:ErrorCondition!;
         
         init() {
@@ -353,13 +398,15 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     public class ResumedEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ResumedEvent();
         
         public let type = "StreamManagementResumedEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Value of H attribute
         public let newH: UInt32?;
+        /// ID of resumed stream
         public let resumeId:String?;
         
         init() {
@@ -378,6 +425,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
 
 }
 
+/// Internal implementation of class for holding items in queue
 class QueueNode<T> {
     
     let value: T;
@@ -390,6 +438,7 @@ class QueueNode<T> {
     
 }
 
+/// Internal implementation of queue for holding items
 class Queue<T> {
 
     private var _count: Int = 0;

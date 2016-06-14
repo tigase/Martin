@@ -21,12 +21,21 @@
 
 import Foundation
 
+/** This is protocol which needs to be supported by every class which needs
+ to be registered in `XmppModulesManager` and process incoming `Stanza`s
+ */
 public protocol XmppModule: class {
-    
+    /// id used to register in `XmppModulesManager`
     var id: String { get };
+    /// criteria used to match if this module should process particular stanza
     var criteria: Criteria { get };
+    /// list of features supported by this module
     var features: [String] { get };
     
+    /**
+     This method is responsible for actual processing of `Stanza` instance.
+     - throws: ErrorCondition - if processing resulted in an error
+     */
     func process(stanza: Stanza) throws
     
 }

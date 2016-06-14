@@ -21,8 +21,10 @@
 
 import Foundation
 
+/// Class generates unique id value as string
 public class UIDGenerator {
     
+    /// Returns next valid unique id to use
     public static var nextUid:String {
         get {
             return NSUUID().UUIDString;

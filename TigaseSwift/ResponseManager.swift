@@ -20,8 +20,14 @@
 //
 import Foundation
 
+/**
+ Class implements manager for registering requests sent to stream
+ and their callbacks, and to retieve them when response appears
+ in the stream.
+ */
 public class ResponseManager: Logger {
     
+    /// Internal class holding information about request and callbacks
     private class Entry {
         let jid:JID?;
         let timestamp:NSDate;
@@ -48,6 +54,11 @@ public class ResponseManager: Logger {
         self.context = context;
     }
 
+    /**
+     Method processes passed stanza and looks for callback
+     - paramater stanza: stanza to process
+     - returns: callback handler if any
+     */
     public func getResponseHandler(stanza:Stanza)-> ((Stanza?)->Void)? {
         let type = stanza.type;
         if (stanza.id == nil || (type != StanzaType.error && type !=  StanzaType.result)) {
@@ -65,6 +76,12 @@ public class ResponseManager: Logger {
         return nil;
     }
     
+    /**
+     Method registers callback for stanza for time
+     - parameter stanza: stanza for which to wait for response
+     - parameter timeout: maximal time for which should wait for response
+     - parameter callback: callback to execute on response or timeout
+     */
     public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:((Stanza?)->Void)?) {
         guard callback != nil else {
             return;
@@ -78,6 +95,13 @@ public class ResponseManager: Logger {
         handlers[id!] = Entry(jid: stanza.to, callback: callback!, timeout: timeout);
     }
     
+    /**
+     Method registers callback for stanza for time
+     - parameter stanza: stanza for which to wait for response
+     - parameter timeout: maximal time for which should wait for response
+     - parameter onSuccess: callback to execute on successful response
+     - parameter onError: callback to execute on failure or timeout
+     */
     public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, onSuccess:((Stanza)->Void)?, onError:((Stanza,ErrorCondition?)->Void)?, onTimeout:(()->Void)?) {
         guard (onSuccess != nil) || (onError != nil) || (onTimeout != nil) else {
             return;
@@ -96,6 +120,12 @@ public class ResponseManager: Logger {
         }
     }
     
+    /**
+     Method registers callback for stanza for time
+     - parameter stanza: stanza for which to wait for response
+     - parameter timeout: maximal time for which should wait for response
+     - parameter callback: callback with methods to execute on response or timeout
+     */
     public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:AsyncCallback) {
         self.registerResponseHandler(stanza, timeout: timeout) { (response:Stanza?)->Void in
             if response == nil {
@@ -110,12 +140,14 @@ public class ResponseManager: Logger {
         }
     }
     
+    /// Activate response manager
     public func start() {
         timer = Timer(delayInSeconds: 30, repeats: true) {
             self.checkTimeouts();
         }
     }
     
+    /// Deactivates response manager
     public func stop() {
         timer?.cancel();
         timer = nil;
@@ -125,10 +157,12 @@ public class ResponseManager: Logger {
         }
     }
     
+    /// Returns next unique id
     func nextUid() -> String {
         return UIDGenerator.nextUid;
     }
     
+    /// Check if any callback should be called due to timeout
     func checkTimeouts() {
         for (id,handler) in self.handlers {
             if handler.checkTimeout() {
@@ -139,6 +173,9 @@ public class ResponseManager: Logger {
     }
 }
 
+/**
+ Protocol for classes which may be used as callbacks for `ResponseManager`
+ */
 public protocol AsyncCallback {
     
     func onError(response:Stanza, error:ErrorCondition?);

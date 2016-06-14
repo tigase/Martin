@@ -20,11 +20,21 @@
 //
 import Foundation
 
+/**
+ Class responsible for connecting to XMPP server, sending and receiving data.
+ */
 public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     public static let SEE_OTHER_HOST_KEY = "seeOtherHost";
     public static let SERVER_HOST = "serverHost";
     
+    /**
+     Possible states of connection:
+     - connecting: Trying to establish connection to XMPP server
+     - connected: Connection to XMPP server is established
+     - disconnecting: Connection to XMPP server is being closed
+     - disconnected: Connection to XMPP server is closed
+     */
     public enum State {
         case connecting
         case connected
@@ -71,6 +81,11 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.context = context;
     }
     
+    /**
+     Method used by `XMPPClient` to start process of establishing connection to XMPP server.
+     
+     - parameter serverToConnect: used internally to force connection to particular XMPP server (ie. one of many in cluster)
+     */
     public func start(serverToConnect:String? = nil) {
         guard state == .disconnected else {
             log("start() - stopping connetion as state is not connecting", state);
@@ -254,16 +269,28 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
+    /**
+     Method used to close existing connection and reconnect to specific host.
+     Used mainly to support [see-other-host] feature.
+     
+     [see-other-host]: http://xmpp.org/rfcs/rfc6120.html#streams-error-conditions-see-other-host
+     */
     public func reconnect(newHost:String) {
         closeSocket(nil);
         state_ = .disconnected;
         start(newHost);
     }
     
+    /**
+     This method will process any stanza received from XMPP server.
+     */
     func processStanza(stanza: Stanza) {
         sessionLogic.receivedIncomingStanza(stanza);
     }
     
+    /**
+     This method will process any stanza before it will be sent to XMPP server.
+     */
     func send(stanza:Stanza) {
         sessionLogic.sendingOutgoingStanza(stanza);
         self.send(stanza.element.stringValue)
@@ -273,12 +300,18 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.send(" ");
     }
     
+    /**
+     Methods prepares data to be sent using `dispatch_async()` to send data using other thread.
+     */
     private func send(data:String) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
             self.sendSync(data);
         }
     }
     
+    /**
+     Method responsible for actual process of sending data.
+     */
     private func sendSync(data:String) -> Bool {
         self.log("sending stanza:", data);
         let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!;
@@ -364,6 +397,9 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
+    /**
+     Internal method used to properly close TCP connection and set state if needed
+     */
     private func closeSocket(newState: State?) {
         inStream?.close();
         outStream?.close();
@@ -379,11 +415,14 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         closeTimer = nil;
     }
 
+    /// Event fired when client establishes TCP connection to XMPP server.
     public class ConnectedEvent: Event {
         
+        /// identified of event which should be used during registration of `EventHandler`
         public static let TYPE = ConnectedEvent();
         
         public let type = "connectorConnected";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
         
         init() {
@@ -396,12 +435,16 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         
     }
     
+    /// Event fired when TCP connection to XMPP server is closed or is broken.
     public class DisconnectedEvent: Event {
         
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = DisconnectedEvent();
         
         public let type = "connectorDisconnected";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// If is `true` then XMPP client was properly closed, in other case it may be broken
         public let clean:Bool;
         
         init() {

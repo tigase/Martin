@@ -21,13 +21,16 @@
 
 import Foundation
 
-public enum SaslError {
+/**
+ Contains possible SASL errors.
+ */
+public enum SaslError: String {
     case aborted
-    case incorrect_encoding
-    case invalid_authzid
-    case invalid_mechanism
-    case mechanism_too_weak
-    case not_authorized
-    case server_not_trusted
-    case temporary_auth_failure
+    case incorrect_encoding = "incorrect-encoding"
+    case invalid_authzid = "invalid-authzid"
+    case invalid_mechanism = "invalid-mechanism"
+    case mechanism_too_weak = "mechanism-too-weak"
+    case not_authorized = "not-authorized"
+    case server_not_trusted = "server-not-trusted"
+    case temporary_auth_failure = "temporary-auth-failure"
 }

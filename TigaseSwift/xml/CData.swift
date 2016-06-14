@@ -21,8 +21,12 @@
 
 import Foundation
 
+/**
+ Class responsible for holding cdata values found in parsed XML in element
+ */
 public class CData : Node {
     
+    /// cdata
     public var value:String;
     
     init(value:String) {

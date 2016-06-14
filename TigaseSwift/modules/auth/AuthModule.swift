@@ -21,8 +21,13 @@
 
 import Foundation
 
+/**
+ Common authentication module provides generic support for authentication.
+ Other authentication module (like ie. `SaslModule`) may require this
+ module to work properly.
+ */
 public class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
-    
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
     public static let AUTHORIZED = "authorized";
     public static let CREDENTIALS_CALLBACK = "credentialsCallback";
@@ -57,6 +62,10 @@ public class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         
     }
     
+    /**
+     Starts authentication process using other module providing 
+     mechanisms for authentication
+     */
     public func login() {
         let saslModule:SaslModule? = _context.modulesManager.getModule(SaslModule.ID);
         if saslModule != nil {
@@ -64,6 +73,11 @@ public class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         }
     }
     
+    /**
+     Method handles events which needs to be processed by module
+     for proper workflow.
+     - parameter event: event to process
+     */
     public func handleEvent(event: Event) {
         switch event {
         case is SaslModule.SaslAuthSuccessEvent:
@@ -82,12 +96,15 @@ public class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         }
     }
     
+    /// Event fired on authentication failure
     public class AuthFailedEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthFailedEvent();
         
         public let type = "AuthFailedEvent";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Error returned by server during authentication
         public let error:SaslError!;
         
         init() {
@@ -101,10 +118,13 @@ public class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         }
     }
     
+    /// Event fired on start of authentication process
     public class AuthStartEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthStartEvent();
         
         public let type = "AuthStartEvent";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
         
         init() {
@@ -116,12 +136,13 @@ public class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         }
     }
     
-    
+    /// Event fired when after sucessful authentication
     public class AuthSuccessEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthSuccessEvent();
         
         public let type = "AuthSuccessEvent";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
         
         init() {

@@ -21,6 +21,16 @@
 
 import Foundation
 
+/**
+ Possible roles in MUC room:
+ - moderator
+ - participant
+ - visitor
+ - none
+ 
+ Every role contains properties which describes what user 
+ in particular role can and cannot do.
+ */
 public enum Role: String {
     
     case moderator

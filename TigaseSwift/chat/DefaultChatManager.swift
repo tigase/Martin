@@ -21,6 +21,11 @@
 
 import Foundation
 
+/**
+ Default implementation of `ChatManager` protocol.
+ 
+ It is only responsible for opening, closing and retrieving chats from chat store.
+ */
 public class DefaultChatManager: ChatManager {
     
     public let chatStore:ChatStore;

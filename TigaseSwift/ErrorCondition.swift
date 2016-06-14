@@ -21,6 +21,11 @@
 
 import Foundation
 
+/**
+ Enum contains list of [error conditions].
+ 
+ [error conditions]: http://xmpp.org/rfcs/rfc6120.html#stanzas-error-conditions
+ */
 public enum ErrorCondition: String, ErrorType {
     case bad_request = "bad-request"
     case conflict

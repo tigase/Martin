@@ -21,6 +21,10 @@
 
 import Foundation
 
+/**
+ Implementation of XMLParserDelegate to properly parse XMPP stream
+ and notify about stream start and end.
+ */
 public class XMPPParserDelegate: Logger, XMLParserDelegate {
     
     var xmlnss = [String:String]();

@@ -21,6 +21,11 @@
 
 import Foundation
 
+/**
+ Holds information about stanza delayed delivery as described in [XEP-0203: Delayed Delivery]
+ 
+ [XEP-0203: Delayed Delivery]: http://xmpp.org/extensions/xep-0203.html
+ */
 public class Delay {
     
     private static let stampFormatter = ({()-> NSDateFormatter in
@@ -39,7 +44,9 @@ public class Delay {
         return f;
     })();
     
+    /// Holds timestamp when delay started. In most cases it is very close to time when stanza was sent.
     public let stamp:NSDate?;
+    /// JID of entity responsible for delay
     public let from:JID?;
     
     public init(element:Element) {

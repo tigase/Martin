@@ -21,10 +21,17 @@
 
 import Foundation
 
+/**
+ Module responsible for [session establishment] process.
+ 
+ [session establishment]: http://xmpp.org/rfcs/rfc3921.html#session
+ */
 public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
 
+    /// Namespace used in session establishment process
     static let SESSION_XMLNS = "urn:ietf:params:xml:ns:xmpp-session";
     
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "session";
     
     public let id = ID;
@@ -35,6 +42,11 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
     
     public let features = [String]();
     
+    /**
+     Method checks if session establishment is required
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: true - if is required
+     */
     public static func isSessionEstablishmentRequired(sessionObject:SessionObject) -> Bool {
         if let featuresElement = StreamFeaturesModule.getStreamFeatures(sessionObject) {
             if let session = featuresElement.findChild("session", xmlns: SESSION_XMLNS) {
@@ -48,10 +60,12 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
         
     }
     
+    /// Method should not be called due to empty `criteria`
     public func process(elem: Stanza) throws {
-        
+        throw ErrorCondition.bad_request;
     }
     
+    /// Method called to start session establishemnt
     public func establish() {
         let iq = Iq();
         iq.type = StanzaType.set;
@@ -77,13 +91,15 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
         }
     }
     
+    /// Event fired when session establishment process fails
     public class SessionEstablishmentErrorEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SessionEstablishmentErrorEvent();
         
         public let type = "SessionEstablishmentErrorEvent";
-        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        /// Error condition returned by server
         public let errorCondition:ErrorCondition?;
         
         private init() {
@@ -97,12 +113,13 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
         }
     }
     
+    /// Event fired when session is established
     public class SessionEstablishmentSuccessEvent: Event {
-        
+        /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SessionEstablishmentSuccessEvent();
         
-        public let type = "SessionEstablishmentSuccessEvent";
-        
+        public let type = "SessionEstablishmentSuccessEvent";        
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
         
         private init() {

@@ -21,6 +21,7 @@
 
 import Foundation
 
+/// Helper class to make it possible to set connection properties in easy way
 public class ConnectionConfiguration {
     
     var sessionObject:SessionObject!;
@@ -29,19 +30,23 @@ public class ConnectionConfiguration {
         self.sessionObject = sessionObject;
     }
     
+    /// Set domain as domain to which we should connect - will be used if `userJid` is not set
     public func setDomain(domain: String?) {
         self.sessionObject.setUserProperty(SessionObject.DOMAIN_NAME, value: domain);
     }
     
+    /// Set jid of user as which we should connect
     public func setUserJID(jid:BareJID?) {
         self.sessionObject.setUserProperty(SessionObject.USER_BARE_JID, value: jid);
         setDomain(nil);
     }
     
+    /// Set password for authentication as user
     public func setUserPassword(password:String?) {
         self.sessionObject.setUserProperty(SessionObject.PASSWORD, value: password);
     }
 
+    /// Set server host to which we should connection (ie. to select particular node of a server cluster)
     public func setServerHost(serverHost: String?) {
         self.sessionObject.setUserProperty(SocketConnector.SERVER_HOST, value: serverHost);
     }

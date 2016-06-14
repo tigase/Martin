@@ -21,22 +21,48 @@
 
 import Foundation
 
+/**
+ Protocol which must be implemented by every mechanism for SASL based 
+ authentication.
+ */
 public protocol SaslMechanism {
 
+    /// Mechanism name
     var name: String { get }
     
+    /**
+     Process input data and prepare response
+     - parameter input: input data
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: response to send to server
+     */
     func evaluateChallenge(intput:String?, sessionObject:SessionObject) -> String?
     
+    /** 
+     Check if mechanism may be used (ie. if needed data are available)
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: true if possible
+     */
     func isAllowedToUse(sessionObject:SessionObject) -> Bool;
     
 }
 
 extension SaslMechanism {
-    
+
+    /**
+     Check if SASL authentication is completed
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: true if completed
+     */
     public func isComplete(sessionObject:SessionObject) -> Bool {
         return sessionObject.getProperty("SASL_COMPLETE_KEY", defValue: false);
     }
     
+    /**
+     Mark SASL authentication as completed
+     - parameter sessionObject: instance of `SessionObject`
+     - parameter completed: true if authentication is completed
+     */
     func setComplete(sessionObject:SessionObject, completed:Bool) {
         sessionObject.setProperty("SASL_COMPLETE_KEY", value: completed, scope: SessionObject.Scope.stream);
     }

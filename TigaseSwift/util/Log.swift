@@ -21,21 +21,42 @@
 
 import Foundation
 
+/**
+ Custom structure used as logging utility to log entries with timestamps
+ and other additional data for easier analysis of logs.
+ 
+ It is required to initialize this utility class before it is used
+ by calling:
+ ```
+    Log.initialize();
+ ```
+ */
 public struct Log {
     
     private static let dateFormatter = NSDateFormatter();
     
+    /// Method to initialize this mechanism
     public static func initialize() {
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS";
         
     }
     
+    /**
+     Methods logs items passed.
+     - parameter items: items to log
+     - parameter from: source of this entry
+     */
     public static func log(items: Any..., from: Any? = nil) {
         #if !DISABLE_LOG
             logInternal(items, from: from)
         #endif
     }
     
+    /**
+     Methods logs items passed.
+     - parameter items: items to log
+     - parameter from: source of this entry
+     */
     static func logInternal<T>(items: [T], from: Any? = nil) {
         #if !DISABLE_LOG
             let prefix = dateFormatter.stringFromDate(NSDate());
@@ -50,12 +71,22 @@ public struct Log {
     
 }
 
+/**
+ Class which is used by many TigaseSwift classes for easier logging.
+ When other classes extends it, it adds a `log(items: Any..)` method
+ which provides this extending class as source of this log entry.
+ */
 public class Logger {
     
     public init() {
         
     }
     
+    /**
+     Method logs entry with providing `self.dynamicType` as source
+     of this entry log.
+     - parameter items: items to add to log
+     */
     public func log(items: Any...) {
         #if !DISABLE_LOG
             Log.logInternal(items, from: self.dynamicType)
@@ -63,8 +94,14 @@ public class Logger {
     }
 }
 
+/// Extension of NSObject to provide support for TigaseSwift logging feature
 extension NSObject {
 
+    /**
+     Method logs entry with providing `self.dynamicType` as source
+     of this entry log.
+     - parameter items: items to add to log
+     */
     public func log(items: Any...) {
         #if !DISABLE_LOG
             Log.logInternal(items, from: self.dynamicType)

@@ -21,6 +21,9 @@
 
 import Foundation
 
+/**
+ Protocol for providing credential data for authentication
+ */
 public protocol CredentialsCallback {
     
     func getCredential() -> String;

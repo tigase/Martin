@@ -21,8 +21,15 @@
 
 import Foundation
 
+/**
+ Module provides support for [XEP-0077: In-Band Registration]
+ 
+ For easier usage we suggest to use convenience function `connectAndRegister(..)`
+ 
+ [XEP-0077: In-Band Registration]: http://xmpp.org/extensions/xep-0077.html
+ */
 public class InBandRegistrationModule: AbstractIQModule, ContextAware {
-    
+    /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "InBandRegistrationModule";
     
     public let id = ID;
@@ -43,6 +50,14 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
         throw ErrorCondition.not_allowed;
     }
     
+    /** 
+     Sends registration request
+     - parameter jid: destination JID for registration - useful for registration in transports
+     - parameter username: username to register
+     - parameter password: password for username
+     - parameter email: email for registration
+     - parameter callback: called on registration response
+     */
     public func register(jid: JID? = nil, username: String?, password: String?, email: String?, callback: (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
@@ -63,6 +78,10 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
+    /**
+     Unregisters currently connected and authenticated user
+     - parameter callback: called when user is unregistrated
+     */
     public func unregister(callback: (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
@@ -75,6 +94,10 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
+    /**
+     Check if server supports in-band registration
+     - returns: true - if in-band registration is supported
+     */
     public func isRegistrationAvailable() -> Bool {
         let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
         return InBandRegistrationModule.isRegistrationAvailable(featuresElement);
@@ -84,6 +107,22 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
         return featuresElement?.findChild("register", xmlns: "http://jabber.org/features/iq-register") != nil;
     }
     
+    /**
+     Convenience function for registration process.
+     
+     This function may use passed not authorized instance of `XMPPClient` 
+     or will create new one if nil is passed.
+     
+     Function will return immediately, however registration process will 
+     finish when one of callbacks is called.
+     
+     - parameter client: instance of XMPPClient to use
+     - parameter userJid: user jid to register
+     - parameter password: password
+     - parameter email: email
+     - parameter onSuccess: called after sucessful registration
+     - parameter onError: called on error or due to timeout
+     */
     public static func connectAndRegister(var client: XMPPClient! = nil, userJid: BareJID, password: String?, email: String?, onSuccess: ()->Void, onError: (ErrorCondition?)->Void) -> XMPPClient {
         if client == nil {
             client = XMPPClient();

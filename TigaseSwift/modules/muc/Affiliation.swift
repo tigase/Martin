@@ -21,6 +21,17 @@
 
 import Foundation
 
+/**
+ Possible affiliations of occupants to MUC room:
+ - owner
+ - admin
+ - member
+ - none
+ - outcast
+ 
+ Every affiliation contains properties which will tell 
+ if action is allowed or not in this affiliation.
+ */
 public enum Affiliation: String {
     case owner
     case admin

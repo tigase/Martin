@@ -21,11 +21,20 @@
 
 import Foundation
 
+/**
+ Mechanism implements SASL PLAIN mechanism
+ */
 public class PlainMechanism: SaslMechanism {
-    
+    /// Name of mechanism
     public let name = "PLAIN";
 
-    public func evaluateChallenge(intput: String?, sessionObject: SessionObject) -> String? {
+    /**
+     Process input data to generate response
+     - parameter input: input data
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: reponse to send to server
+     */
+    public func evaluateChallenge(input: String?, sessionObject: SessionObject) -> String? {
         if (isComplete(sessionObject)) {
             return nil;
         }
@@ -46,6 +55,11 @@ public class PlainMechanism: SaslMechanism {
         return base64;
     }
     
+    /**
+     Check if it is allowed to use SASL PLAIN mechanism
+     - parameter sessionObject: instance of `SessionObject`
+     - returns: true if usage is allowed
+     */
     public func isAllowedToUse(sessionObject: SessionObject) -> Bool {
         return sessionObject.hasProperty(SessionObject.PASSWORD)
             && sessionObject.hasProperty(SessionObject.USER_BARE_JID);

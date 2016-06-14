@@ -26,12 +26,25 @@ protocol DigestProtocol {
     func digest(bytes: UnsafePointer<Void>, length: Int) -> [UInt8];
 }
 
+/**
+ This enum is in fact a wrapper/helper for hashing functions from `CommonCrypto` library.
+ For now it supports following hashing functions:
+ - MD5
+ - SHA1
+ - SHA256
+ */
 public enum Digest: DigestProtocol {
     
     case MD5
     case SHA1
     case SHA256
     
+    /**
+     Function processes bytes from unsafe buffer and calculates hash
+     - parameter bytes: bytes to process
+     - parameter length: number of bytes to process
+     - returns: hash in form of array of bytes
+     */
     public func digest(bytes: UnsafePointer<Void>, length inLength: Int) -> [UInt8] {
         let length = UInt32(inLength);
         switch self {
@@ -50,6 +63,11 @@ public enum Digest: DigestProtocol {
         }
     }
     
+    /**
+     Convenience function to calculate hash of data provided in NSData
+     - parameter data: data to process
+     - returns: hash in form of array of bytes
+     */
     public func digest(data: NSData?) -> [UInt8]? {
         guard data != nil else {
             return nil;
@@ -57,6 +75,12 @@ public enum Digest: DigestProtocol {
         return self.digest(data!.bytes, length: data!.length);
     }
     
+    /**
+     Convenience function to calculate hash of data provided in NSData
+     and return it as NSData
+     - parameter data: data to process
+     - returns: hash as NSData
+     */
     public func digest(data: NSData?) -> NSData? {
         if var hash:[UInt8] = self.digest(data) {
             let ptr = Digest.convert(&hash);
@@ -65,11 +89,23 @@ public enum Digest: DigestProtocol {
         return nil;
     }
     
+    /**
+     Convenience function to calculate hash of data provided in NSData
+     which returns Base64 encoded representation of hash value
+     - parameter data: data to process
+     - returns: Base64 encoded representation of hash
+     */
     public func digestToBase64(data: NSData?) -> String? {
         let result:NSData? = digest(data);
         return result?.base64EncodedStringWithOptions(NSDataBase64EncodingOptions(rawValue: 0));
     }
     
+    /**
+     Convenience function to calculate hash of data provided in NSData
+     which returns hex encoded representation of hash value
+     - parameter data: data to process
+     - returns: hex encoded hash value
+     */
     public func digestToHex(data: NSData?) -> String? {
         if let result:[UInt8] = digest(data) {
             return result.map() { String(format: "%02x", $0) }.reduce("", combine: +);
