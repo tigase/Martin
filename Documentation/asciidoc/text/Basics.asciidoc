@@ -1,0 +1,129 @@
+[[starting_up]]
+
+:author: Andrzej Wójcik
+:date: 2016-06-15 13:03
+
+:toc:
+
+= Basics
+
+== Create XMPP client instance
+To use TigaseSwift library you need to create instance of `XMPPClient` class which is implementation of XMPP client.
+[source,swift]
+----
+var client = XMPPClient();
+----
+
+== Register required modules
+Next step is to register modules providing support for features you would like to use.
+Almost in any case you will need at least following modules:
+
+- `StreamFeaturesModule`
++
+Responsible for handling XMPP stream features
+
+- `AuthModule` and `SaslModule`
++
+`AuthModule` add common authentication features, while `SaslModule` add support for SASL based authentication.
+
+- `ResourceBinderModule`
++
+Module responsible for resource binding which is part of stream negotiation process.
+
+- `SessionEstablishmentModule`
++
+Module handles session establishment which is last step of stream negotiation, however it is not needed according to http://xmpp.org/rfcs/rfc6120.html[RFC 6120].
+We recommend to register this module for compatibility reasons - if it will be not needed then it will not be used.
+
+To register, ie. `StreamFeaturesModule` you need to use following code:
+[source,swift]
+----
+client.modulesManager.register(StreamFeaturesModule());
+----
+
+== Register additional modules you need
+You can add any additional modules found in TigaseSwift library or you can create your own based by implementing support for `XmppModule` protocol.
+
+Here is list of some modules provided by TigaseSwift library:
+
+- `PresenceModule`
++
+Responsible for handling incoming presences and allows to set client presence.
+
+- `MessageModule`
++
+This module is responsible for processing incoming messages, creating/destroying chats and sending messages.
+
+- `RosterModule`
++
+Provides support for retrieval and manipulation of XMPP roster.
+
+- `MucModule`
++
+Provides support for MUC rooms as described in http://xmpp.org/extensions/xep-0045.html[XEP-0045: Multi-User Chat]
+
+- `DiscoveryModule`
++
+Provides support for service discovery described in http://xmpp.org/extensions/xep-0030.html[XEP-0030: Service Discovery]
+
+- `StreamManagementModule`
++
+Provides support for Stream Management acking and stream resumption as specified in http://xmpp.org/extensions/xep-0198.html[XEP-0198: Stream Management]
+
+- `MessageCarbonsModule`
++
+Adds support for forwarding messages delivered to other resources as described in http://xmpp.org/extensions/xep-0280.html[XEP-0280: Message Carbons]
+
+- `VCardModule`
++
+Implementation of support for http://xmpp.org/extensions/xep-0054.html[XEP-0054: vcard-temp]
+
+- `PingModule`
++
+Allows to check if other XMPP client is available and it is possible to deliver packet to this XMPP client as specified in http://xmpp.org/extensions/xep-0199.html[XEP-0199: XMPP Ping]
+
+- `InBandRegistrationModule`
++
+Adds possibility to register XMPP account using http://xmpp.org/extensions/xep-0077.html[XEP-0077: In-Band Registration]
+
+- `MobileModeModule`
++
+Provides support for using Tigase Optimizations for mobile devices
+
+== Provide credentials needed for authentication
+This should be done using `connectionConfiguration` properties, ie.
+[source,swift]
+----
+let userJID = BareJID("user@domain.com");
+client.connectionConfiguration.setUserJID(userJID);
+client.connectionConfiguration.setUserPassword("Pa$$w0rd");
+----
+
+== Register for connection related events
+There are three event related to connection state which should be handled:
+
+- `SocketConnector.ConnectedEvent`
++
+Fired when client opens TCP connection to server - XMPP stream is not ready at this point.
+
+- `SessionEstablishmentModule.SessionEstablishmentSuccessEvent`
++
+Fired when client finishes session establishment. It will be called even if `SessionEstablishmentModule` is not registered.
+
+- `SocketConnector.DisconnectedEvent`
++
+Fired when TCP connection is closed or when XMPP stream is closed. It will be also called when TCP connection is broken.
+
+== Login
+To start process of DNS resolution, establishing TCP connection and establishing XMPP stream you need to call:
+[source,swift]
+----
+client.login();
+----
+
+== Disconnect
+To disconnect from server properly and close XMPP and TCP connection you need to call:
+[source,swift]
+----
+client.disconnect();
+----
