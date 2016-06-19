@@ -49,7 +49,9 @@ public class XMPPParserDelegate: Logger, XMLParserDelegate {
                     attrs[k] = v;
                 }
             }
-            delegate?.onStreamStart(attrs);
+            dispatch_async(dispatch_get_main_queue()) {
+                self.delegate?.onStreamStart(attrs);
+            }
             return
         }
         
@@ -70,13 +72,17 @@ public class XMPPParserDelegate: Logger, XMLParserDelegate {
     
     public func endElement(elementName: String, prefix: String?) {
         if (elementName == "stream" && prefix == "stream") {
-            delegate?.onStreamTerminate()
+            dispatch_async(dispatch_get_main_queue()) {
+                self.delegate?.onStreamTerminate()
+            }
             return
         }
         let elem = el_stack.removeLast()
         if (el_stack.isEmpty) {
             //all_roots.append(elem)
-            delegate?.processElement(elem)
+            dispatch_async(dispatch_get_main_queue()) {
+                self.delegate?.processElement(elem)
+            }
         } else {
             el_stack.last?.addChild(elem);
         }
@@ -88,7 +94,9 @@ public class XMPPParserDelegate: Logger, XMLParserDelegate {
     
     public func error(msg: String) {
         log("error occurred", msg);
-        delegate?.onError(msg);
+        dispatch_async(dispatch_get_main_queue()) {
+            self.delegate?.onError(msg);
+        }
     }
     
 }

@@ -471,6 +471,13 @@ class Queue<T> {
         self._count++;
     }
     
+    public func peek() -> T? {
+        if tail == nil {
+            return nil
+        }
+        return tail?.value;
+    }
+    
     public func poll() -> T? {
         if tail == nil {
             return nil;

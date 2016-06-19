@@ -42,16 +42,26 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case disconnected
     }
     
-    let context:Context;
-    let sessionObject:SessionObject;
-    var inStream:NSInputStream?
-    var outStream:NSOutputStream?
-    var parserDelegate:XMLParserDelegate?
-    var parser:XMLParser?
+    let context: Context;
+    let sessionObject: SessionObject;
+    var inStream: NSInputStream?
+    var outStream: NSOutputStream? {
+        didSet {
+            if outStream != nil && oldValue == nil {
+                outStreamBuffer = WriteBuffer();
+            }
+        }
+    }
+    var outStreamBuffer: WriteBuffer?;
+    var parserDelegate: XMLParserDelegate?
+    var parser: XMLParser?
     let dnsResolver = XMPPDNSSrvResolver();
-    weak var sessionLogic:XmppSessionLogic!;
-    var closeTimer:Timer?;
-    var zlib:Zlib?;
+    weak var sessionLogic: XmppSessionLogic!;
+    var closeTimer: Timer?;
+    var zlib: Zlib?;
+    
+    /// Internal processing queue
+    private var queue = dispatch_queue_create("xmpp_socket_queue", nil);
     
     private var state_:State = State.disconnected;
     public var state:State {
@@ -254,15 +264,16 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         switch state {
         case .disconnecting:
             closeSocket(State.disconnected);
-        case .connected:
+        // connecting is also set in case of see other host
+        case .connected, .connecting:
+            //-- probably from other socket, ie due to restart!
             let inStreamState = inStream?.streamStatus;
             if inStreamState == nil || inStreamState == .Error || inStreamState == .Closed {
                 closeSocket(State.disconnected)
             } else {
                 state = State.disconnecting;
-                if !sendSync("</stream:stream>") {
-                    closeSocket(State.disconnected);
-                }
+                sendSync("</stream:stream>");
+                closeSocket(State.disconnected);
             }
         default:
             break;
@@ -276,9 +287,12 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
      [see-other-host]: http://xmpp.org/rfcs/rfc6120.html#streams-error-conditions-see-other-host
      */
     public func reconnect(newHost:String) {
+        state_ = .disconnecting;
         closeSocket(nil);
         state_ = .disconnected;
-        start(newHost);
+        dispatch_async(dispatch_get_main_queue()) {
+            self.start(newHost);
+        }
     }
     
     /**
@@ -304,7 +318,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
      Methods prepares data to be sent using `dispatch_async()` to send data using other thread.
      */
     private func send(data:String) {
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
+        dispatch_async(queue) {
             self.sendSync(data);
         }
     }
@@ -312,18 +326,19 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     /**
      Method responsible for actual process of sending data.
      */
-    private func sendSync(data:String) -> Bool {
+    private func sendSync(data:String) {
         self.log("sending stanza:", data);
         let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!;
-        var sent: Int? = 0;
         if zlib != nil {
             var outBuf = zlib!.compress(UnsafePointer<UInt8>(buf.bytes), length: buf.length);
-            sent = self.outStream?.write(&outBuf, maxLength: outBuf.count);
+            outStreamBuffer?.appendData(outBuf);
+            outStreamBuffer?.writeData(self.outStream);
         } else {
-            sent = self.outStream?.write(UnsafePointer<UInt8>(buf.bytes), maxLength: buf.length)
+            var outBuf = [UInt8](count: buf.length, repeatedValue: 0);
+            buf.getBytes(&outBuf, length: buf.length);
+            outStreamBuffer?.appendData(outBuf);
+            outStreamBuffer?.writeData(self.outStream);
         }
-        self.log("sent \(sent) from \(buf.length)")
-        return sent != nil && ((sent!) != -1);
     }
     
     public func stream(aStream: NSStream, handleEvent eventCode: NSStreamEvent) {
@@ -332,7 +347,13 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             // may happen if cannot connect to server or if connection was broken
             log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
             if (aStream == self.inStream) {
-                onStreamTerminate();
+                // this is intentional - we need to execute onStreamTerminate()
+                // on main queue, but after all task are executed by our serial queueła
+                dispatch_async(queue) {
+                    dispatch_async(dispatch_get_main_queue()) {
+                        self.onStreamTerminate();
+                    }
+                }
             }
         case NSStreamEvent.OpenCompleted:
             if (aStream == self.inStream) {
@@ -373,22 +394,31 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case NSStreamEvent.HasBytesAvailable:
             log("stream event: HasBytesAvailable");
             if aStream == self.inStream {
-//                var buffer = [UInt8](count:2048, repeatedValue: 0);
-                let inStream = self.inStream!;
-                while inStream.hasBytesAvailable {
-                    var buffer = [UInt8](count:2048, repeatedValue: 0);
-                    if let read = self.inStream?.read(&buffer, maxLength: buffer.count) {
-                        if zlib != nil {
-                            var data = zlib!.decompress(buffer, length: read);
-                            parser?.parse(&data, length: data.count);
+                dispatch_async(queue) {
+                    guard self.inStream != nil else {
+                        return;
+                    }
+                    let inStream = self.inStream!;
+                    while inStream.hasBytesAvailable {
+                        var buffer = [UInt8](count:2048, repeatedValue: 0);
+                        if let read = self.inStream?.read(&buffer, maxLength: buffer.count) {
+                        if self.zlib != nil {
+                            var data = self.zlib!.decompress(buffer, length: read);
+                            self.parser?.parse(&data, length: data.count);
                         } else {
-                            parser?.parse(&buffer, length: read);
+                                self.parser?.parse(&buffer, length: read);
+                            }
                         }
                     }
                 }
             }
         case NSStreamEvent.HasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
+            if aStream == self.outStream {
+                dispatch_async(queue) {
+                    self.outStreamBuffer?.writeData(self.outStream);
+                }
+            }
         case NSStreamEvent.EndEncountered:
             log("stream event: EndEncountered");
             closeSocket(State.disconnected);
@@ -401,12 +431,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
      Internal method used to properly close TCP connection and set state if needed
      */
     private func closeSocket(newState: State?) {
-        inStream?.close();
-        outStream?.close();
-        inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-        outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-        inStream = nil;
-        outStream = nil;
+        closeStreams();
         zlib = nil;
         if newState != nil {
             state = newState!;
@@ -415,6 +440,18 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         closeTimer = nil;
     }
 
+    private func closeStreams() {
+        let inStream = self.inStream;
+        let outStream = self.outStream;
+        self.inStream = nil;
+        self.outStream = nil;
+        self.outStreamBuffer = nil;
+        inStream?.close();
+        outStream?.close();
+        inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+        outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+    }
+    
     /// Event fired when client establishes TCP connection to XMPP server.
     public class ConnectedEvent: Event {
         
@@ -455,6 +492,38 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         public init(sessionObject: SessionObject, clean: Bool) {
             self.sessionObject = sessionObject;
             self.clean = clean;
+        }
+        
+    }
+    
+    class WriteBuffer: Logger {
+        
+        var queue = Queue<[UInt8]>();
+        var position = 0;
+        
+        func appendData(data: [UInt8]) {
+            queue.offer(data);
+        }
+        
+        func writeData(outputStream: NSOutputStream?) {
+            guard outputStream != nil && outputStream!.hasSpaceAvailable else {
+                return;
+            }
+            var data = queue.peek();
+            guard data != nil else {
+                return;
+            }
+            var remainingLength = data!.count - position;
+            let sent = outputStream!.write(&data! + position, maxLength: remainingLength);
+            if sent < 0 {
+                return;
+            }
+            position += sent;
+            log("sent ", sent, "bytes", position, "of", data!.count);
+            if position == data!.count {
+                position = 0;
+                queue.poll();
+            }
         }
         
     }

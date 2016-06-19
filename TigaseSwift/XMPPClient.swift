@@ -97,7 +97,7 @@ public class XMPPClient: Logger, EventHandler {
     
     public let sessionObject:SessionObject;
     public let connectionConfiguration:ConnectionConfiguration!;
-    private var socketConnector:SocketConnector? {
+    public var socketConnector:SocketConnector? {
         willSet {
             sessionLogic?.unbind();
         }
@@ -166,15 +166,12 @@ public class XMPPClient: Logger, EventHandler {
             log("XMPP in state:", state, " - not stopping connection");
             return;
         }
-        let oldSessionLogic = sessionLogic;
-        sessionLogic = nil;
+        
         if force {
             socketConnector?.forceStop();
         } else {
             socketConnector?.stop();
         }
-        oldSessionLogic?.unbind();
-        log("connection stopped......");
     }
     
     /**
@@ -200,6 +197,9 @@ public class XMPPClient: Logger, EventHandler {
             } else {
                 context.sessionObject.clear(scopes: SessionObject.Scope.stream);
             }
+            sessionLogic?.unbind();
+            sessionLogic = nil;
+            log("connection stopped......");
         default:
             log("received unhandled event:", event);
         }
