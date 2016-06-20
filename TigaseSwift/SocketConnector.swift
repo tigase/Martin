@@ -421,7 +421,11 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             }
         case NSStreamEvent.EndEncountered:
             log("stream event: EndEncountered");
-            closeSocket(State.disconnected);
+            dispatch_async(queue) {
+                dispatch_async(dispatch_get_main_queue()) {
+                    self.closeSocket(State.disconnected);
+                }
+            }
         default:
             log("stream event:", aStream.description);            
         }
