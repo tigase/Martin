@@ -20,3 +20,4 @@ xcuserdata/
 !Podfile.lock
 !Gemfile.lock
 .idea/workspace.xml
+docs

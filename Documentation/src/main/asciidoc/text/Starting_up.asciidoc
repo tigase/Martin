@@ -16,10 +16,10 @@ It is best to download library source code from our Git repository
 . Create workspace in XCode
 . Add library project to newly created workspace using `Add Files to "workspace_name"...` from `File` menu of XCode when workspace is opened in XCode.
 +
-image::images/AddFilesTo.png[]
+image::images/AddFilesTo.png[width="384"]
 . Select `TigaseSwift.xcodeproj` which wil be inside root directory of source code of library and click `Add`
 +
-image::images/SelectTigaseSwiftLibrary.png[]
+image::images/SelectTigaseSwiftLibrary.png[width="640"]
 . Workspace for development using TigaseSwift library is ready
 
 == Creation of project using TigaseSwift library
@@ -27,16 +27,16 @@ image::images/SelectTigaseSwiftLibrary.png[]
 . Create project in XCode
 . Add project to TigaseSwift library workspace created during preparation of environment for development using @Add Files to "workspace_name"...@  from @File@ menu of XCode when workspace is opened in XCode.
 +
-image:images/AddFilesTo.png[]
+image:images/AddFilesTo.png[width="384"]
 . Select XCode project file of your newly created project and click `Add`
 +
 This file name will end with `.xcodeproj`
 +
-image:images/SelectNewProject.png[]
+image:images/SelectNewProject.png[width="640"]
 . In XCode open `Build Settings` tab of imported project
 . In section `Embedded Binaries` click on `+` sign
 . Select `TigaseSwift.framework` and add it to project
 +
 It will be located in `Products` folder of `TigaseSwift` project
-image:images/AddTigaseSwiftAsEmbeddedFramework.png[]
+image:images/AddTigaseSwiftAsEmbeddedFramework.png[width="640"]
 . Your project contains embedded `TigaseSwift` framework
