@@ -21,3 +21,4 @@ xcuserdata/
 !Gemfile.lock
 .idea/workspace.xml
 docs
+Documentation/target

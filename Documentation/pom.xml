@@ -55,7 +55,7 @@
 							<goal>process-asciidoc</goal>
 						</goals>
 						<configuration>
-							<sourceHighlighter>coderay</sourceHighlighter>
+							<sourceHighlighter>prettify</sourceHighlighter>
 							<backend>html5</backend>
 							<preserveDirectories>true</preserveDirectories>
 							<outputDirectory>${guide_path}/html</outputDirectory>
