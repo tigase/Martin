@@ -77,6 +77,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         context.eventBus.register(self, events: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE);
         context.eventBus.register(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentErrorEvent.TYPE);
         context.eventBus.register(self, events: ResourceBinderModule.ResourceBindSuccessEvent.TYPE, ResourceBinderModule.ResourceBindErrorEvent.TYPE);
+        context.eventBus.register(self, events: StreamManagementModule.FailedEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE);
         responseManager.start();
     }
     
@@ -85,6 +86,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         context.eventBus.unregister(self, events: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE);
         context.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentErrorEvent.TYPE);
         context.eventBus.unregister(self, events: ResourceBinderModule.ResourceBindSuccessEvent.TYPE, ResourceBinderModule.ResourceBindErrorEvent.TYPE);
+        context.eventBus.unregister(self, events: StreamManagementModule.FailedEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE);
         responseManager.stop();
         connector.sessionLogic = nil;
     }
@@ -175,7 +177,10 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         case let re as StreamManagementModule.ResumedEvent:
             processSessionBindedAndEstablished(re.sessionObject);
         case let rfe as StreamManagementModule.FailedEvent:
-            if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
+            if let presenceModule: PresenceModule = modulesManager.getModule(PresenceModule.ID) {
+                presenceModule.presenceStore.clear();
+            }
+            if let bindModule: ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
                 bindModule.bind();
             }
         default:

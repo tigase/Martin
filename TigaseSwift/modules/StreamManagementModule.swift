@@ -282,10 +282,9 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     func processFailed(stanza: Stanza) {
-        _ackEnabled = false;
-        ackH.reset();
+        reset();
+        
         let errorCondition = stanza.errorCondition ?? ErrorCondition.unexpected_request;
-        outgoingQueue.clear();
         
         log("stream resumption failed");
         context.eventBus.fire(FailedEvent(sessionObject: context.sessionObject, errorCondition: errorCondition));
