@@ -71,6 +71,7 @@ public class SaslModule: Logger, XmppModule, ContextAware {
     
     public override init() {
         super.init();
+        self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
     }
     
@@ -89,15 +90,29 @@ public class SaslModule: Logger, XmppModule, ContextAware {
     }
     
     public func process(elem: Stanza) throws {
+        do {
         switch elem.name {
-        case "success":
-            processSuccess(elem);
-        case "failure":
-            processFailure(elem);
-        case "challenge":
-            try processChallenge(elem);
-        default:
-            break;
+            case "success":
+                try processSuccess(elem);
+            case "failure":
+                try processFailure(elem);
+            case "challenge":
+                try processChallenge(elem);
+            default:
+                break;
+            }
+        } catch ClientSaslException.BadChallenge(let msg) {
+            log("Received bad challenge from server: \(msg)");
+            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
+        } catch ClientSaslException.GenericError(let msg) {
+            log("Generic error happened: \(msg)");
+            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
+        } catch ClientSaslException.InvalidServerSignature {
+            log("Received answer from server with invalid server signature!");
+            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
+        } catch ClientSaslException.WrongNonce {
+            log("Received answer from server with wrong nonce!");
+            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
         }
     }
     
@@ -112,19 +127,23 @@ public class SaslModule: Logger, XmppModule, ContextAware {
         }
         context.sessionObject.setProperty(SaslModule.SASL_MECHANISM, value: mechanism, scope: SessionObject.Scope.stream);
         
-        let auth = Stanza(name: "auth");
-        auth.element.xmlns = SaslModule.SASL_XMLNS;
-        auth.element.setAttribute("mechanism", value: mechanism!.name);
-        auth.element.value = mechanism?.evaluateChallenge(nil, sessionObject: context.sessionObject);
+        do {
+            let auth = Stanza(name: "auth");
+            auth.element.xmlns = SaslModule.SASL_XMLNS;
+            auth.element.setAttribute("mechanism", value: mechanism!.name);
+            auth.element.value = try mechanism?.evaluateChallenge(nil, sessionObject: context.sessionObject);
         
-        context.eventBus.fire(SaslAuthStartEvent(sessionObject:context.sessionObject, mechanism: mechanism!.name))
+            context.eventBus.fire(SaslAuthStartEvent(sessionObject:context.sessionObject, mechanism: mechanism!.name))
         
-        context.writer!.write(auth);
+            context.writer!.write(auth);
+        } catch _ {
+            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.aborted));
+        }
     }
     
-    func processSuccess(stanza: Stanza) {
+    func processSuccess(stanza: Stanza) throws {
         let mechanism: SaslMechanism? = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM);
-        mechanism!.evaluateChallenge(stanza.element.value, sessionObject: context.sessionObject);
+        try mechanism!.evaluateChallenge(stanza.element.value, sessionObject: context.sessionObject);
         
         if mechanism!.isComplete(context.sessionObject) {
             log("Authenticated");
@@ -150,7 +169,7 @@ public class SaslModule: Logger, XmppModule, ContextAware {
             throw ErrorCondition.bad_request;
         }
         let challenge = stanza.element.value;
-        let response = mechanism.evaluateChallenge(challenge, sessionObject: context.sessionObject);
+        let response = try mechanism.evaluateChallenge(challenge, sessionObject: context.sessionObject);
         let responseEl = Stanza(name: "response");
         responseEl.element.xmlns = SaslModule.SASL_XMLNS;
         responseEl.element.value = response;

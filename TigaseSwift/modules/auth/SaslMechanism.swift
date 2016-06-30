@@ -36,7 +36,7 @@ public protocol SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: response to send to server
      */
-    func evaluateChallenge(intput:String?, sessionObject:SessionObject) -> String?
+    func evaluateChallenge(input:String?, sessionObject:SessionObject) throws -> String?
     
     /** 
      Check if mechanism may be used (ie. if needed data are available)
@@ -45,6 +45,13 @@ public protocol SaslMechanism {
      */
     func isAllowedToUse(sessionObject:SessionObject) -> Bool;
     
+}
+
+public enum ClientSaslException: ErrorType {
+    case BadChallenge(msg: String?)
+    case WrongNonce
+    case InvalidServerSignature
+    case GenericError(msg: String?)
 }
 
 extension SaslMechanism {

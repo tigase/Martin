@@ -64,6 +64,7 @@
 		FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */; };
 		FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE596F781CF1C35B0079E22B /* PingModule.swift */; };
 		FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */; };
+		FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
 		FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */; };
@@ -169,6 +170,7 @@
 		FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketConnector.swift; sourceTree = "<group>"; };
 		FE596F781CF1C35B0079E22B /* PingModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PingModule.swift; sourceTree = "<group>"; };
 		FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClientStateIndicationModule.swift; sourceTree = "<group>"; };
+		FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScramMechanism.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
 		FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterStore.swift; sourceTree = "<group>"; };
@@ -302,6 +304,7 @@
 			isa = PBXGroup;
 			children = (
 				FE2EFD8F1CB59D3A000D254E /* PlainMechanism.swift */,
+				FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */,
 			);
 			path = saslmechanisms;
 			sourceTree = "<group>";
@@ -598,6 +601,7 @@
 				FE2EFD831CB57D25000D254E /* Node.swift in Sources */,
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
+				FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */,
 				FEC5141E1CE9E012003AF765 /* DefaultRoomsManager.swift in Sources */,
 				FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */,
 				FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */,

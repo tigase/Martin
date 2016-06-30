@@ -113,6 +113,42 @@ public enum Digest: DigestProtocol {
         return nil;
     }
     
+    public func hmac(keyBytes: UnsafePointer<Void>, keyLength: Int, bytes: UnsafePointer<Void>, length: Int) -> [UInt8] {
+        let ctx = UnsafeMutablePointer<CCHmacContext>.alloc(1);
+        var algorithm: Int;
+        var hmacLength: Int;
+        switch (self) {
+        case .MD5:
+            algorithm = kCCHmacAlgMD5;
+            hmacLength = Int(CC_MD5_DIGEST_LENGTH);
+        case .SHA1:
+            algorithm = kCCHmacAlgSHA1;
+            hmacLength = Int(CC_SHA1_DIGEST_LENGTH);
+        case .SHA256:
+            algorithm = kCCHmacAlgSHA256;
+            hmacLength = Int(CC_SHA256_DIGEST_LENGTH);
+        }
+        CCHmacInit(ctx, CCHmacAlgorithm(algorithm), keyBytes, keyLength);
+        CCHmacUpdate(ctx, bytes, length);
+        
+        var digest = Array<UInt8>(count: hmacLength, repeatedValue: 0);
+        CCHmacFinal(ctx, &digest);
+        
+        return digest;
+    }
+    
+    public func hmac(inout key: [UInt8], inout data: [UInt8]) -> [UInt8] {
+        return hmac(Digest.convert(&key), keyLength: key.count, bytes: &data, length: data.count);
+    }
+
+    public func hmac(keyData: NSData, inout data: [UInt8]) -> [UInt8] {
+        return hmac(keyData.bytes, keyLength: keyData.length, bytes: &data, length: data.count);
+    }
+    
+    public func hmac(inout key: [UInt8], data: NSData) -> [UInt8] {
+        return hmac(Digest.convert(&key), keyLength: key.count, bytes: data.bytes, length: data.length);
+    }
+    
     private static func convert(ptr: UnsafePointer<UInt8>) -> UnsafePointer<Void> {
         return UnsafePointer<Void>(ptr);
     }
