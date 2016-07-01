@@ -127,3 +127,59 @@ To disconnect from server properly and close XMPP and TCP connection you need to
 ----
 client.disconnect();
 ----
+
+== Sending custom stanza
+Usually class which supports `XmppModule` protocol is being implemented to add new feature to `TigaseSwift` library.
+However in some cases in which we want to send simple stanza or send stanza and react on received response there is no need to implement class supporting `XmppModule` protocol.
+Instead of that following methods may be used.
+
+=== Sending stanza without waiting for response
+To send custom stanza you need to construct this stanza and execute following code
+[source,swift]
+----
+client.context.writer?.write(stanza);
+----
+`writer` is instance of `PacketWriter` class responsible for sending stanzas from client to server.
+Property can be nil if connection is not established.
+
+=== Sending stanza and waiting for response (closures)
+It possible to wait for response stanza, but only in case of `Iq` stanzas.
+To do so, you need to pass callback which will be called when result will be received, ie.
+[source,swift]
+----
+client.context.writer?.write(stanza, timeout: 45, onSuccess: {(response) in
+    // response received with type equal `result`
+  }, onError: {(response, errorCondition) in
+    // received response with type equal `error`
+  }, onTimeout: {
+    // no response was received in specified time
+  });
+----
+You can omit `timeout` parameter. Default value of 30 seconds will be used as a timeout.
+
+You can pass nil as any of closures. In this case particular response will not trigger any reaction.
+
+=== Sending stanza and waiting for response (closure)
+It possible to wait for response stanza, but only in case of `Iq` stanzas.
+To do so, you need to pass callback which will be called when result will be received, ie.
+[source,swift]
+----
+client.context.writer?.write(stanza, timeout: 45, callback: {(response) in
+  // will be called on `result`, `error` or in case of timeout
+  });
+----
+You can omit `timeout` parameter, which will use 30 seconds as default timeout.
+
+As callback is called always as it will be called in case of received `result`, `error` or in case of timeout it is required to be able to distinguish what caused execution of this closure.
+In case of `result` or `error` packet being received, received stanza will be passed to closure for processing. However in case of timeout `nil` will be passed instead of stanza - as no stanza was received.
+
+=== Sending stanza and waiting for response (AsyncCallback)
+It possible to wait for response stanza, but only in case of `Iq` stanzas.
+To do so, you need to pass callback which will be called when result will be received, ie.
+[source,swift]
+----
+client.context.writer?.write(stanza, timeout: 45, callback: callback);
+----
+where callback is implementation of `AsyncCallback` protocol.
+
+You can omit `timeout` parameter, which will use 30 seconds as default timeout.
