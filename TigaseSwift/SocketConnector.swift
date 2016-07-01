@@ -25,7 +25,20 @@ import Foundation
  */
 public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
+    /**
+     Key in `SessionObject` to store custom validator for SSL certificates 
+     provided by servers
+     */
+    public static let SSL_CERTIFICATE_VALIDATOR = "sslCertificateValidator";
+    /**
+     Key in `SessionObject` to store host to which we should reconnect
+     after receiving see-other-host error.
+     */
     public static let SEE_OTHER_HOST_KEY = "seeOtherHost";
+    /**
+     Key in `SessionObject` to store host to which XMPP client should
+     try to connect to.
+     */
     public static let SERVER_HOST = "serverHost";
     
     /**
@@ -59,6 +72,14 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     weak var sessionLogic: XmppSessionLogic!;
     var closeTimer: Timer?;
     var zlib: Zlib?;
+    /**
+     Stores information about SSL certificate validation and can
+     have following values:
+     - false - when validation failed or SSL layer was not established
+     - true - when certificate passed validation
+     - nil - awaiting for SSL certificate validation
+     */
+    var sslCertificateValidated: Bool? = false;
     
     /// Internal processing queue
     private var queue = dispatch_queue_create("xmpp_socket_queue", nil);
@@ -202,6 +223,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
 
         let domain = self.sessionObject.domainName!;
         
+        sslCertificateValidated = nil;
         let settings:NSDictionary = NSDictionary(objects: [NSStreamSocketSecurityLevelNegotiatedSSL, domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
                 kCFStreamSSLPeerName as NSString,
                 kCFStreamSSLValidatesCertificateChain as NSString])
@@ -414,6 +436,27 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             }
         case NSStreamEvent.HasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
+            if sslCertificateValidated == nil {
+                let trust = self.inStream?.propertyForKey(kCFStreamPropertySSLPeerTrust as String) as! SecTrustRef;
+                
+                let sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = context.sessionObject.getProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR);
+                if sslCertificateValidator != nil {
+                    sslCertificateValidated = sslCertificateValidator!(sessionObject, trust);
+                } else {
+                    let policy = SecPolicyCreateSSL(false, sessionObject.userBareJid?.domain);
+                    var secTrustResultType = SecTrustResultType();
+                    SecTrustSetPolicies(trust, [policy]);
+                    SecTrustEvaluate(trust, &secTrustResultType);
+                                        
+                    sslCertificateValidated = (Int(secTrustResultType) == kSecTrustResultProceed || Int(secTrustResultType) == kSecTrustResultUnspecified);
+                }
+                if !sslCertificateValidated! {
+                    log("SSL certificate validation failed");
+                    self.context.eventBus.fire(CertificateErrorEvent(sessionObject: context.sessionObject, trust: trust));
+                    self.closeSocket(.disconnected);
+                    return;
+                }
+            }
             if aStream == self.outStream {
                 dispatch_async(queue) {
                     self.outStreamBuffer?.writeData(self.outStream);
@@ -454,6 +497,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         outStream?.close();
         inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
         outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+        sslCertificateValidated = false;
     }
     
     /// Event fired when client establishes TCP connection to XMPP server.
@@ -498,6 +542,29 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             self.clean = clean;
         }
         
+    }
+    
+    /// Event fired if SSL certificate validation fails
+    public class CertificateErrorEvent: Event {
+        
+        /// Identifier of event which should be used during registration of `EventHandler`
+        public static let TYPE = CertificateErrorEvent();
+        
+        public let type = "certificateError";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
+        public let sessionObject:SessionObject!;
+        /// Instance of SecTrust - contains data related to certificate
+        public let trust: SecTrust!;
+        
+        init() {
+            sessionObject = nil;
+            trust = nil;
+        }
+        
+        init(sessionObject: SessionObject, trust: SecTrust) {
+            self.sessionObject = sessionObject;
+            self.trust = trust;
+        }
     }
     
     class WriteBuffer: Logger {
