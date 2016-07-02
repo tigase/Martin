@@ -90,6 +90,10 @@ Adds possibility to register XMPP account using http://xmpp.org/extensions/xep-0
 +
 Provides support for using Tigase Optimizations for mobile devices
 
+- `CapabilitiesModule`
++
+Provides support for http://xmpp.org/extensions/xep-0115.html[XEP-0115: Entity Capabilities] which allows for advertisement and automatic discovery of features supported by other clients.
+
 == Provide credentials needed for authentication
 This should be done using `connectionConfiguration` properties, ie.
 [source,swift]
