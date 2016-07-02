@@ -63,16 +63,16 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     public override init() {
         super.init()
         setNodeCallback(nil, entry: NodeDetailsEntry(
-            identity: { (sessionObject: SessionObject, stanza: Stanza, node: String) -> Identity? in
+            identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity? in
                 return Identity(category: sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client"),
                     type: sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc"),
                     name: sessionObject.getProperty(SoftwareVersionModule.NAME_KEY, defValue: SoftwareVersionModule.DEFAULT_NAME_VAL)
                 );
             },
-            features: { (sessionObject: SessionObject, stanza: Stanza, node: String) -> [String]? in
+            features: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]? in
                 return Array(self.context.modulesManager.availableFeatures);
             },
-            items: { (sessionObject: SessionObject, stanza: Stanza, node: String) -> [Item]? in
+            items: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [Item]? in
                 return nil;
             }
         ));
@@ -118,8 +118,8 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter onInfoReceived: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    public func getInfo(jid:JID, node:String? = nil, onInfoReceived:(node: String?, identities: [Identity], features: [String]) -> Void, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
-        getInfo(jid, node:node, callback: {(stanza: Stanza?) -> Void in
+    public func getInfo(jid:JID, node requestedNode:String? = nil, onInfoReceived:(node: String?, identities: [Identity], features: [String]) -> Void, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+        getInfo(jid, node: requestedNode, callback: {(stanza: Stanza?) -> Void in
             var type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
@@ -134,7 +134,7 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
                     }, filter: { (e:Element) -> Bool in
                         return e.name == "feature" && e.getAttribute("var") != nil;
                 })
-                onInfoReceived(node: query?.getAttribute("node"), identities: identities, features: features);
+                onInfoReceived(node: query?.getAttribute("node") ?? requestedNode, identities: identities, features: features);
             default:
                 var errorCondition = stanza?.errorCondition;
                 onError?(errorCondition: errorCondition);
@@ -169,8 +169,8 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter onItemsReceived: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    public func getItems(jid:JID, node:String? = nil, onItemsReceived:(node:String?, items:[Item]) -> Void, onError:(errorCondition:ErrorCondition?) -> Void) {
-        getItems(jid, node: node, callback: {(stanza:Stanza?) -> Void in
+    public func getItems(jid: JID, node requestedNode: String? = nil, onItemsReceived: (node:String?, items:[Item]) -> Void, onError: (errorCondition:ErrorCondition?) -> Void) {
+        getItems(jid, node: requestedNode, callback: {(stanza:Stanza?) -> Void in
             var type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
@@ -180,7 +180,7 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
                     }, filter: { (e) -> Bool in
                         return e.name == "item";
                 })
-                onItemsReceived(node: query?.getAttribute("node"), items: items);
+                onItemsReceived(node: query?.getAttribute("node") ?? requestedNode, items: items);
             default:
                 var errorCondition = stanza?.errorCondition;
                 onError(errorCondition: errorCondition);
@@ -208,9 +208,9 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      */
     public func processGet(stanza:Stanza) throws {
         let query = stanza.findChild("query")!;
-        let node = query.getAttribute("node") ?? "";
+        let node = query.getAttribute("node");
         if let xmlns = query.xmlns {
-            if let callback = callbacks[node] {
+            if let callback = callbacks[node ?? ""] {
                 switch xmlns {
                 case DiscoveryModule.INFO_XMLNS:
                     processGetInfo(stanza, node, callback);
@@ -232,10 +232,13 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         throw ErrorCondition.not_allowed;
     }
     
-    func processGetInfo(stanza:Stanza, _ node:String, _ nodeDetailsEntry:NodeDetailsEntry) {
+    func processGetInfo(stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
         var result = stanza.makeResult(StanzaType.result);
         
         var queryResult = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
+        if node != nil {
+            queryResult.setAttribute("node", value: node);
+        }
         result.addChild(queryResult);
         
         if let identity = nodeDetailsEntry.identity(sessionObject: context.sessionObject, stanza: stanza, node: node) {
@@ -256,10 +259,13 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         context.writer?.write(result);
     }
     
-    func processGetItems(stanza:Stanza, _ node:String, _ nodeDetailsEntry:NodeDetailsEntry) {
+    func processGetItems(stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
         var result = stanza.makeResult(StanzaType.result);
         
         var queryResult = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
+        if node != nil {
+            queryResult.setAttribute("node", value: node);
+        }
         result.addChild(queryResult);
         
         if let items = nodeDetailsEntry.items(sessionObject: context.sessionObject, stanza: stanza, node: node) {
@@ -280,11 +286,11 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      discovery for particular node
      */
     public class NodeDetailsEntry {
-        public let identity: (sessionObject: SessionObject, stanza: Stanza, node: String) -> Identity?
-        public let features: (sessionObject: SessionObject, stanza: Stanza, node: String) -> [String]?
-        public let items: (sessionObject: SessionObject, stanza: Stanza, node: String) -> [Item]?
+        public let identity: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity?
+        public let features: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]?
+        public let items: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [Item]?
         
-        public init(identity: (sessionObject: SessionObject, stanza: Stanza, node: String) -> Identity?, features: (sessionObject: SessionObject, stanza: Stanza, node: String) -> [String]?, items: (sessionObject: SessionObject, stanza: Stanza, node: String) -> [Item]?) {
+        public init(identity: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity?, features: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]?, items: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [Item]?) {
             self.identity = identity;
             self.features = features;
             self.items = items;

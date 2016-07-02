@@ -65,6 +65,8 @@
 		FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE596F781CF1C35B0079E22B /* PingModule.swift */; };
 		FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */; };
 		FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */; };
+		FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */; };
+		FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
 		FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */; };
@@ -171,6 +173,8 @@
 		FE596F781CF1C35B0079E22B /* PingModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PingModule.swift; sourceTree = "<group>"; };
 		FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClientStateIndicationModule.swift; sourceTree = "<group>"; };
 		FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScramMechanism.swift; sourceTree = "<group>"; };
+		FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapabilitiesModule.swift; sourceTree = "<group>"; };
+		FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultCapabilitiesCache.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
 		FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterStore.swift; sourceTree = "<group>"; };
@@ -249,6 +253,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FE7F64551D28173600B9DF56 /* caps */,
 				FEC514101CE9C3EC003AF765 /* muc */,
 				FE94E50D1CCA303900FAE755 /* chat */,
 				FE94E5081CC90C4A00FAE755 /* presence */,
@@ -394,6 +399,15 @@
 				FE3024251CDD1F6500466497 /* DelayTests.swift */,
 			);
 			path = TigaseSwiftTests;
+			sourceTree = "<group>";
+		};
+		FE7F64551D28173600B9DF56 /* caps */ = {
+			isa = PBXGroup;
+			children = (
+				FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */,
+				FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */,
+			);
+			path = caps;
 			sourceTree = "<group>";
 		};
 		FE94E4FB1CC7AFF900FAE755 /* roster */ = {
@@ -631,6 +645,7 @@
 				FE94E50A1CC90C5800FAE755 /* PresenceModule.swift in Sources */,
 				FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */,
 				FE2EFD791CB57C70000D254E /* XMPPSrvRecord.swift in Sources */,
+				FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */,
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
@@ -647,6 +662,7 @@
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,
 				FE2EFD761CB57C70000D254E /* DNSSrv.c in Sources */,
 				FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */,
+				FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */,
 				FE2EFDAD1CB80E7A000D254E /* EventHandler.swift in Sources */,
 				FE2EFDB91CBD231B000D254E /* ResponseManager.swift in Sources */,
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
