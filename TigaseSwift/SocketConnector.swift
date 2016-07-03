@@ -40,6 +40,11 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
      try to connect to.
      */
     public static let SERVER_HOST = "serverHost";
+    /**
+     Key in `SessionObject` to store server port to which XMPP client
+     should try to connect to.
+     */
+    public static let SERVER_PORT = "serverPort";
     
     /**
      Possible states of connection:
@@ -124,10 +129,18 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
         state = .connecting;
         let server:String = serverToConnect ?? sessionLogic.serverToConnect();
-        log("connecting to server:", server);
-        let dnsResolver = self.dnsResolver;
-        dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
-            dnsResolver.resolve(server, connector:self);
+        
+        if let port: Int = context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
+            log("connecting to server:", server, "on port:", port);
+            dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
+                self.connect(server, port: port, ssl: false);
+            }
+        } else {
+            log("connecting to server:", server);
+            let dnsResolver = self.dnsResolver;
+            dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
+                dnsResolver.resolve(server, connector:self);
+            }
         }
     }
     
