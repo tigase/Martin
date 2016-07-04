@@ -73,6 +73,7 @@ public class SaslModule: Logger, XmppModule, ContextAware {
         super.init();
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
+        self.addMechanism(AnonymousMechanism());
     }
     
     /**

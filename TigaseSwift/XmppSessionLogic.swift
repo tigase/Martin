@@ -241,7 +241,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                 authModule.login();
             }
         } else if authorized {
-            if resumption {
+            if resumption && context.sessionObject.userBareJid != nil {
                 streamManagementModule!.resume();
             } else {
                 if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {

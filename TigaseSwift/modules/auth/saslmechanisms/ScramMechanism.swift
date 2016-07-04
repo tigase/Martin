@@ -20,6 +20,9 @@
 //
 import Foundation
 
+/**
+ Mechanism implements SASL SCRAM authentication mechanism
+ */
 public class ScramMechanism: Logger, SaslMechanism {
 
     public static let SCRAM_SASL_DATA_KEY = "SCRAM_SASL_DATA_KEY";

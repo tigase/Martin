@@ -103,6 +103,12 @@ client.connectionConfiguration.setUserJID(userJID);
 client.connectionConfiguration.setUserPassword("Pa$$w0rd");
 ----
 
+To use ANONYMOUS authentication mechanism, do not set user jid and password. Instead just set server domain:
+[source,swift]
+----
+client.connectionConfiguration.setDomain(domain);
+----
+
 == Register for connection related events
 There are three event related to connection state which should be handled:
 

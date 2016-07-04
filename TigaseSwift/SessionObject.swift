@@ -69,7 +69,7 @@ public class SessionObject: Logger {
     private let eventBus: EventBus;
     private var properties = [String:Entry]();
     
-    /// Returns BareJID of user for connection
+    /// Returns BareJID of user for connection - will be nil if user jid is not set (ie. during ANONYMOUS connection)
     public var userBareJid: BareJID? {
         get {
             return self.getProperty(SessionObject.USER_BARE_JID);

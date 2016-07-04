@@ -22,7 +22,7 @@
 import Foundation
 
 /**
- Mechanism implements SASL PLAIN mechanism
+ Mechanism implements SASL PLAIN authentication mechanism
  */
 public class PlainMechanism: SaslMechanism {
     /// Name of mechanism
