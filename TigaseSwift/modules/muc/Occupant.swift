@@ -26,49 +26,24 @@ import Foundation
  */
 public class Occupant {
     
-    private static var counter = 0;
+    public let affiliation: Affiliation;
+    public let role: Role;
+    public let jid: JID?;
+    public let presence: Presence;
+    public let nickname: String;
     
-    private var id = ++counter;
-    
-    private var affiliation_: Affiliation = .none;
-    private var role_: Role = .none;
-    private var jid_: JID? = nil;
-    
-    /// Affiliation of occupant
-    public var affiliation: Affiliation {
-        return affiliation_;
-    }
-    /// Occupant nickname
-    public var nickname: String? {
-        return presence?.from?.resource;
-    }
-    /// Occupant role
-    public var role: Role {
-        return role_;
-    }
-    /// Occupant jid (in nonanonymous rooms only)
-    public var jid: JID? {
-        return jid_;
-    }
-    /// Occupant presence
-    public var presence: Presence? {
-        didSet {
-            if let xUser = XMucUserElement.extract(presence) {
-                affiliation_ = xUser.affiliation;
-                role_ = xUser.role;
-                jid_ = xUser.jid;
-            } else {
-                affiliation_ = .none;
-                role_ = .none;
-                jid_ = nil;
-            }
+    public init(occupant: Occupant? = nil, presence: Presence) {
+        nickname = presence.from!.resource!;
+        self.presence = presence;
+        if let xUser = XMucUserElement.extract(presence) {
+            affiliation = xUser.affiliation;
+            role = xUser.role;
+            jid = xUser.jid;
+        } else {
+            affiliation = .none;
+            role = .none;
+            jid = nil;
         }
     }
-    
-    public init() {
-        
-    }
-    
-    
     
 }

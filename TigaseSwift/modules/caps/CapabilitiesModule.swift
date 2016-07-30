@@ -82,7 +82,9 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
         case let e as PresenceModule.BeforePresenceSendEvent:
             onBeforePresenceSend(e);
         case let e as PresenceModule.ContactPresenceChanged:
-            onReceivedPresence(e);
+            dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
+                self.onReceivedPresence(e);
+            }
         default:
             break;
         }
@@ -116,7 +118,7 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
      - parameter e: event fired when `Presence` is received
      */
     func onReceivedPresence(e: PresenceModule.ContactPresenceChanged) {
-        guard cache != nil && e.presence != nil && e.presence.from != nil else {
+        guard cache != nil && e.presence != nil, let from = e.presence.from else {
             return;
         }
         
@@ -134,7 +136,7 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
         guard let discoveryModule: DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) else {
             return;
         }
-        discoveryModule.getInfo(e.presence.from!, node: nodeName, onInfoReceived: { (node, identities, features) in
+        discoveryModule.getInfo(from, node: nodeName, onInfoReceived: { (node, identities, features) in
             let identity = identities.first;
             self.cache?.store(node!, identity: identity, features: features);
             }, onError: nil);

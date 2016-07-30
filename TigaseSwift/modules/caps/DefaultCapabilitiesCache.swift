@@ -34,12 +34,22 @@ public class DefaultCapabilitiesCache: CapabilitiesCache {
     /// Holds identity for each node
     private var identities: [String: DiscoveryModule.Identity] = [:];
     
+    private var queue = dispatch_queue_create("capabilities_cache_queue", DISPATCH_QUEUE_CONCURRENT);
+    
     public func getFeatures(node: String) -> [String]? {
-        return features[node];
+        var result: [String]?;
+        dispatch_sync(queue) {
+            result = self.features[node];
+        }
+        return result;
     }
     
     public func getIdentity(node: String) -> DiscoveryModule.Identity? {
-        return identities[node];
+        var result: DiscoveryModule.Identity?;
+        dispatch_sync(queue) {
+            result = self.identities[node];
+        }
+        return result;
     }
     
     public func getNodesWithFeature(feature: String) -> [String] {
@@ -53,11 +63,17 @@ public class DefaultCapabilitiesCache: CapabilitiesCache {
     }
     
     public func isCached(node: String) -> Bool {
-        return features.indexForKey(node) != nil;
+        var result = false;
+        dispatch_sync(queue) {
+            result = self.features.indexForKey(node) != nil;
+        }
+        return result;
     }
     
     public func store(node: String, identity: DiscoveryModule.Identity?, features: [String]) {
-        self.identities[node] = identity;
-        self.features[node] = features;
+        dispatch_barrier_async(queue) {
+            self.identities[node] = identity;
+            self.features[node] = features;
+        }
     }
 }

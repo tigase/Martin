@@ -26,11 +26,11 @@ import Foundation
  */
 public class RosterItem: RosterItemProtocol, CustomStringConvertible {
     
-    public let jid:JID;
-    public var name:String?;
-    public var subscription = Subscription.none;
-    public var ask:Bool = false;
-    public var groups = [String]();
+    public let jid: JID;
+    public let name: String?;
+    public let subscription: Subscription;
+    public let ask: Bool;
+    public let groups: [String];
     
     public var description: String {
         get {
@@ -38,9 +38,19 @@ public class RosterItem: RosterItemProtocol, CustomStringConvertible {
         }
     }
     
-    public init(jid:JID) {
+    public init(jid:JID, name: String?, subscription: Subscription, groups: [String] = [String](), ask: Bool = false) {
         self.jid = jid;
+        self.name = name;
+        self.subscription = subscription;
+        self.groups = groups;
+        self.ask = ask;
     }
+    
+    
+    public func update(name: String?, subscription: Subscription, groups: [String], ask: Bool) -> RosterItem {
+        return RosterItem(jid: self.jid, name: name, subscription: subscription, groups: groups, ask: ask);
+    }
+//    public func updateName(name: String?, )
     
     /**
      Possible subscription values allowed by XMPP specification:

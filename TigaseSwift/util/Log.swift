@@ -59,7 +59,8 @@ public struct Log {
      */
     static func logInternal<T>(items: [T], from: Any? = nil) {
         #if !DISABLE_LOG
-            let prefix = dateFormatter.stringFromDate(NSDate());
+            let date = NSDate();
+            let prefix = dateFormatter.stringFromDate(date);
             var entry = prefix + " ";
             if (from != nil) {
                 entry +=  "\(from!) ";

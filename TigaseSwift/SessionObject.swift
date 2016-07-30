@@ -66,6 +66,7 @@ public class SessionObject: Logger {
         }
     }
     
+    private let queue = dispatch_queue_create("session_object_queue", DISPATCH_QUEUE_CONCURRENT);
     private let eventBus: EventBus;
     private var properties = [String:Entry]();
     
@@ -98,9 +99,11 @@ public class SessionObject: Logger {
             scopes.append(Scope.stream);
         }
         log("removing properties for scopes", scopes);
-        for (k,v) in properties {
-            if (scopes.indexOf({ $0 == v.scope }) != nil) {
-                properties.removeValueForKey(k);
+        dispatch_barrier_sync(queue) {
+            for (k,v) in self.properties {
+                if (scopes.indexOf({ $0 == v.scope }) != nil) {
+                    self.properties.removeValueForKey(k);
+                }
             }
         }
         
@@ -114,8 +117,12 @@ public class SessionObject: Logger {
      - returns: true - if property is set
      */
     public func hasProperty(prop:String, scope:Scope? = nil) -> Bool {
-        let e = self.properties[prop];
-        return e != nil && (scope == nil || e?.scope == scope);
+        var result = false;
+        dispatch_sync(queue) {
+            let e = self.properties[prop];
+            result = e != nil && (scope == nil || e?.scope == scope);
+        }
+        return result;
     }
     
     /**
@@ -136,14 +143,17 @@ public class SessionObject: Logger {
      - returns: value set for property
      */
     public func getProperty<T>(prop:String, scope:Scope? = nil) -> T? {
-        let e = self.properties[prop];
-        if (e == nil) {
-            return nil;
+        var result: T? = nil;
+        dispatch_sync(queue) {
+            let e = self.properties[prop];
+            if (e == nil) {
+                return;
+            }
+            if (scope == nil || e!.scope == scope!) {
+                result = e!.value as? T;
+            }
         }
-        if (scope == nil || e!.scope == scope!) {
-            return e!.value as? T;
-        }
-        return nil;
+        return result;
     }
     
     /**
@@ -153,11 +163,13 @@ public class SessionObject: Logger {
      - parameter scope: scope for which to set value
      */
     public func setProperty(prop:String, value:Any?, scope:Scope = Scope.session) {
-        if (value == nil) {
-            self.properties.removeValueForKey(prop);
-            return;
+        dispatch_barrier_sync(queue) {
+            if (value == nil) {
+                self.properties.removeValueForKey(prop);
+                return;
+            }
+            self.properties[prop] = Entry(scope:scope, value: value!)
         }
-        self.properties[prop] = Entry(scope:scope, value: value!)
     }
     
     /**

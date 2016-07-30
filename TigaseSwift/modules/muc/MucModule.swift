@@ -238,10 +238,7 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
         
         var occupant = room.presences[nickname!];
         let presenceOld = occupant?.presence;
-        if occupant == nil {
-            occupant = Occupant();
-        }
-        occupant!.presence = presence;
+        occupant = Occupant(occupant: occupant, presence: presence);
         
         if (presenceOld != nil && presenceOld!.type == nil) && type == StanzaType.unavailable && xUser?.statuses.indexOf(303) != nil {
             let newNickName = xUser?.nick;
@@ -249,27 +246,21 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
             room.addTemp(newNickName!, occupant: occupant!);
         } else if room.state != .joined && xUser?.statuses.indexOf(110) != nil {
             room._state = .joined;
-            occupant!.presence = presence;
             room.add(occupant!);
             context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname));
         } else if (presenceOld == nil || presenceOld?.type == StanzaType.unavailable) && type == nil {
             if let tmp = room.removeTemp(nickname!) {
                 let oldNickname = tmp.nickname;
-                occupant = tmp;
-                occupant!.presence = presence;
                 room.add(occupant!);
                 context.eventBus.fire(OccupantChangedNickEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: oldNickname));
             } else {
-                occupant!.presence = presence;
                 room.add(occupant!);
                 context.eventBus.fire(OccupantComesEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
             }
         } else if (presenceOld != nil && presenceOld!.type == nil && type == StanzaType.unavailable) {
-            occupant!.presence = presence;
             room.remove(occupant!);
             context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         } else {
-            occupant!.presence = presence;
             context.eventBus.fire(OccupantChangedPresenceEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         }
         

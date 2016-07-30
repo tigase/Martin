@@ -22,7 +22,7 @@
 import Foundation
 
 /// Protocol which is used by other class to interact with classes responsible for session logic.
-public protocol XmppSessionLogic:class {
+public protocol XmppSessionLogic: class {
     
     /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
     var state:SocketConnector.State { get }
@@ -48,7 +48,7 @@ public protocol XmppSessionLogic:class {
  Implementation of XmppSessionLogic protocol which is resposible for
  following XMPP session logic for socket connections.
  */
-public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
+public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueueDispatcher {
     
     private let context:Context;
     private let modulesManager:XmppModulesManager;
@@ -64,7 +64,12 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         return s;
     }
     
-    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context) {
+    public let queueTag: UnsafeMutablePointer<Void>;
+    public let queue: dispatch_queue_t;
+    
+    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queue: dispatch_queue_t, queueTag: UnsafeMutablePointer<Void>) {
+        self.queue = queue;
+        self.queueTag = queueTag;
         self.connector = connector;
         self.context = context;
         self.modulesManager = modulesManager;
@@ -108,45 +113,49 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     }
     
     public func receivedIncomingStanza(stanza:Stanza) {
-        do {
-            for filter in modulesManager.filters {
-                if filter.processIncomingStanza(stanza) {
+        dispatch_async(queue) {
+            do {
+                for filter in self.modulesManager.filters {
+                    if filter.processIncomingStanza(stanza) {
+                        return;
+                    }
+                }
+            
+                if let handler = self.responseManager.getResponseHandler(stanza) {
+                    handler(stanza);
                     return;
                 }
-            }
             
-            if let handler = responseManager.getResponseHandler(stanza) {
-                handler(stanza);
-                return;
-            }
-            
-            guard stanza.name != "iq" || (stanza.type != StanzaType.result && stanza.type != StanzaType.error) else {
-                return;
-            }
-            
-            let modules = modulesManager.findModules(stanza);
-            log("stanza:", stanza, "will be processed by", modules);
-            if !modules.isEmpty {
-                for module in modules {
-                    try module.process(stanza);
+                guard stanza.name != "iq" || (stanza.type != StanzaType.result && stanza.type != StanzaType.error) else {
+                    return;
                 }
-            } else {
-                log("feature-not-implemented", stanza);
-                throw ErrorCondition.feature_not_implemented;
+            
+                let modules = self.modulesManager.findModules(stanza);
+                self.log("stanza:", stanza, "will be processed by", modules);
+                if !modules.isEmpty {
+                    for module in modules {
+                        try module.process(stanza);
+                    }
+                } else {
+                    self.log("feature-not-implemented", stanza);
+                    throw ErrorCondition.feature_not_implemented;
+                }
+            } catch let error as ErrorCondition {
+                let errorStanza = error.createResponse(stanza);
+                self.context.writer?.write(errorStanza);
+            } catch {
+                let errorStanza = ErrorCondition.undefined_condition.createResponse(stanza);
+                self.context.writer?.write(errorStanza);
+                self.log("unknown unhandled exception", error)
             }
-        } catch let error as ErrorCondition {
-            let errorStanza = error.createResponse(stanza);
-            context.writer?.write(errorStanza);
-        } catch {
-            let errorStanza = ErrorCondition.undefined_condition.createResponse(stanza);
-            context.writer?.write(errorStanza);
-            log("unknown unhandled exception", error)
         }
     }
     
     public func sendingOutgoingStanza(stanza: Stanza) {
-        for filter in modulesManager.filters {
-            filter.processOutgoingStanza(stanza);
+        dispatch_sync_local_queue() {
+            for filter in self.modulesManager.filters {
+                filter.processOutgoingStanza(stanza);
+            }
         }
     }
     

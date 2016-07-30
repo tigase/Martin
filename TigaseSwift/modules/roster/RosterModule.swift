@@ -145,7 +145,6 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
             modifiedGroups = currentItem!.groups;
         } else {
             if (currentItem == nil) {
-                currentItem = RosterItem(jid: jid);
                 action = .added;
             } else {
                 if (currentItem!.ask == ask && (subscription == .from || subscription == .none)) {
@@ -157,19 +156,16 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
                 }
             }
             
-            currentItem?.name  = name;
-            currentItem?.subscription = subscription;
-            currentItem?.ask = ask;
             var modifiedGroups:[String]? = nil;
-            if action == .other || action == .added {
+            if currentItem != nil && (action == .other || action == .added) {
                 modifiedGroups = currentItem!.groups.filter({(gname:String)->Bool in
                     return !groups.contains(gname);
                 });
                 modifiedGroups?.appendContentsOf(groups.filter({(gname:String)->Bool in
                     return !currentItem!.groups.contains(gname);
                 }));
-                currentItem?.groups = groups;
             }
+            currentItem = currentItem != nil ? currentItem!.update(name, subscription: subscription, groups: groups, ask: ask) : RosterItem(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask);
             
             rosterStore.addItem(currentItem!);
             
@@ -316,8 +312,12 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
             self.rosterModule.updateItem(jid, name: nil, groups: [String](), subscription: RosterItem.Subscription.remove, onSuccess: onSuccess, onError: onError);
         }
         
-        func update(item: RosterItem, onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
-            self.rosterModule.updateItem(item.jid, name: item.name, groups: item.groups, onSuccess: onSuccess, onError: onError);
+        func update(item: RosterItem, name: String?, groups: [String]? = nil, onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+            self.rosterModule.updateItem(item.jid, name: name, groups: groups ?? item.groups, onSuccess: onSuccess, onError: onError);
+        }
+
+        func update(item: RosterItem, groups: [String], onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+            self.rosterModule.updateItem(item.jid, name: item.name, groups: groups, onSuccess: onSuccess, onError: onError);
         }
         
         func cleared() {

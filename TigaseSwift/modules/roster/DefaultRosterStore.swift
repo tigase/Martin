@@ -28,24 +28,38 @@ import Foundation
  */
 public class DefaultRosterStore: RosterStore {
  
-    private var roster = [JID:RosterItem]();
+    private var roster = [JID: RosterItem]();
+    
+    private var queue = dispatch_queue_create("roster_store_queue", DISPATCH_QUEUE_CONCURRENT);
     
     public override var count:Int {
         get {
-            return roster.count;
+            var result = 0;
+            dispatch_sync(queue) {
+                result = self.roster.count;
+            }
+            return result;
         }
     }
             
     public override func addItem(item:RosterItem) {
-        roster[item.jid] = item;
+        dispatch_barrier_async(queue) {
+            self.roster[item.jid] = item;
+        }
     }
     
     public override func get(jid:JID) -> RosterItem? {
-        return roster[jid];
+        var item: RosterItem?;
+        dispatch_sync(queue) {
+            item = self.roster[jid];
+        }
+        return item;
     }
     
     public override func removeItem(jid:JID) {
-        roster.removeValueForKey(jid);
+        dispatch_barrier_async(queue) {
+            self.roster.removeValueForKey(jid);
+        }
     }
     
     

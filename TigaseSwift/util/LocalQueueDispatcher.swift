@@ -1,5 +1,5 @@
 //
-// Event.swift
+// LocalQueueDispatcher.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -22,39 +22,35 @@
 import Foundation
 
 /**
- Event protocol needs to be implemented by every event fired using `EventBus`
+ Helper protocol for classes using internal dispatch queues
  */
-public protocol Event: class {
+public protocol LocalQueueDispatcher {
     
-    /// Unique identifier of event class
-    var type:String { get }
-    
+    var queueTag: UnsafeMutablePointer<Void> { get}
+    var queue: dispatch_queue_t { get }
+
 }
 
-/**
- Protocol to mark events for which handlers must be called only one at the time
- */
-public protocol SerialEvent {
-    
-}
+extension LocalQueueDispatcher {
 
-public func ==(lhs:Event, rhs:Event) -> Bool {
-    return lhs === rhs || lhs.type == rhs.type;
-}
-
-public func ==(lhs:[Event], rhs:[Event]) -> Bool {
-    guard lhs.count == rhs.count else {
-        return false;
-    }
-    
-    for le in lhs {
-        if let idx = rhs.indexOf({(re) -> Bool in
-            return le == re;
-        }) {
-            // this is ok
+    public func dispatch_sync_local_queue(block: dispatch_block_t) {
+        if (dispatch_get_specific(queueTag) != nil) {
+            block();
         } else {
-            return false;
+            dispatch_sync(queue, block);
         }
     }
-    return true;
+
+    public func dispatch_sync_with_result_local_queue<T>(block: ()-> T) -> T {
+        if (dispatch_get_specific(queueTag) != nil) {
+            return block();
+        } else {
+            var result: T!;
+            dispatch_sync(queue) {
+                result = block();
+            }
+            return result;
+        }
+    }
+
 }

@@ -25,12 +25,23 @@ import Foundation
  Class implements mechanism of events bus which is used by TigaseSwift
  to notify about events.
  */
-public class EventBus: Logger {
+public class EventBus: Logger, LocalQueueDispatcher {
     
     private var handlersByEvent:[String:[EventHandler]];
     
-    public override init() {
+    public let queueTag: UnsafeMutablePointer<Void>
+    public let queue: dispatch_queue_t;
+    
+    public convenience override init() {
+        self.init(dispatchQueue: nil);
+    }
+    
+    public init(dispatchQueue: dispatch_queue_t?) {
         handlersByEvent = [:];
+        self.queue = dispatchQueue ?? dispatch_queue_create("eventbus_queue", DISPATCH_QUEUE_SERIAL);
+        self.queueTag = UnsafeMutablePointer<Void>(Unmanaged.passUnretained(self.queue).toOpaque());
+        dispatch_queue_set_specific(queue, queueTag, queueTag, nil);
+        super.init();
     }
     
     /**
@@ -48,16 +59,18 @@ public class EventBus: Logger {
      - parameter events: events on which handler should be notified
      */
     public func register(handler:EventHandler, events:[Event]) {
-        for event in events {
-            let type = event.type;
-            var handlers = handlersByEvent[type];
-            if handlers == nil {
-                handlers = [EventHandler]();
+        dispatch_async(queue) {
+            for event in events {
+                let type = event.type;
+                var handlers = self.handlersByEvent[type];
+                if handlers == nil {
+                    handlers = [EventHandler]();
+                }
+                if (handlers!.indexOf({ $0 === handler }) == nil) {
+                    handlers!.append(handler);
+                }
+                self.handlersByEvent[type] = handlers;
             }
-            if (handlers!.indexOf({ $0 === handler }) == nil) {
-                handlers!.append(handler);
-            }
-            handlersByEvent[type] = handlers;
         }
     }
     
@@ -67,7 +80,7 @@ public class EventBus: Logger {
      - parameter events: events on which handler should not be notified
      */
     public func unregister(handler:EventHandler, events:Event...) {
-        unregister(handler, events: events);
+        self.unregister(handler, events: events);
     }
     
     /**
@@ -76,13 +89,15 @@ public class EventBus: Logger {
      - parameter events: events on which handler should not be notified
      */
     public func unregister(handler:EventHandler, events:[Event]) {
-        for event in events {
-            let type = event.type;
-            if var handlers = handlersByEvent[type] {
-                if let idx = handlers.indexOf({ $0 === handler }) {
-                    handlers.removeAtIndex(idx);
+        dispatch_async(queue) {
+            for event in events {
+                let type = event.type;
+                if var handlers = self.handlersByEvent[type] {
+                    if let idx = handlers.indexOf({ $0 === handler }) {
+                        handlers.removeAtIndex(idx);
+                    }
+                    self.handlersByEvent[type] = handlers;
                 }
-                handlersByEvent[type] = handlers;
             }
         }
     }
@@ -92,10 +107,23 @@ public class EventBus: Logger {
      - parameter event: event to fire
      */
     public func fire(event:Event) {
-        let type = event.type;
-        if let handlers = handlersByEvent[type] {
-            for handler in handlers {
-                handler.handleEvent(event);
+        if event is SerialEvent {
+            dispatch_sync_local_queue() {
+                let type = event.type;
+                if let handlers = self.handlersByEvent[type] {
+                    for handler in handlers {
+                        handler.handleEvent(event);
+                    }
+                }
+            }
+        } else {
+            dispatch_async(queue) {
+                let type = event.type;
+                if let handlers = self.handlersByEvent[type] {
+                    for handler in handlers {
+                        handler.handleEvent(event);
+                    }
+                }
             }
         }
     }

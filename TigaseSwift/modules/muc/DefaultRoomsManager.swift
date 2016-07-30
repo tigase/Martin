@@ -36,6 +36,8 @@ public class DefaultRoomsManager: ContextAware {
     
     private var rooms = [BareJID:Room]();
     
+    private let queue = dispatch_queue_create("room_manager_queue", DISPATCH_QUEUE_CONCURRENT);
+    
     public init() {
         
     }
@@ -45,7 +47,11 @@ public class DefaultRoomsManager: ContextAware {
      - parameter roomJid: jid of room
      */
     public func contains(roomJid: BareJID) -> Bool {
-        return rooms[roomJid] != nil;
+        var result = false;
+        dispatch_sync(queue) {
+            result = self.rooms[roomJid] != nil;
+        }
+        return result;
     }
     
     /**
@@ -66,7 +72,11 @@ public class DefaultRoomsManager: ContextAware {
      - returns: instance of Room if created
      */
     public func get(roomJid: BareJID) -> Room? {
-        return rooms[roomJid];
+        var result: Room?;
+        dispatch_sync(queue) {
+            result = self.rooms[roomJid];
+        }
+        return result;
     }
     
     /**
@@ -74,7 +84,11 @@ public class DefaultRoomsManager: ContextAware {
      - returns: array of rooms
      */
     public func getRooms() -> [Room] {
-        return Array(rooms.values);
+        var rooms: [Room]!;
+        dispatch_sync(queue) {
+            rooms = Array(self.rooms.values);
+        }
+        return rooms;
     }
     
     public func initialize() {
@@ -86,7 +100,9 @@ public class DefaultRoomsManager: ContextAware {
      - parameter room: room instance to register
      */
     public func register(room: Room) {
-        rooms[room.roomJid]  = room;
+        dispatch_barrier_async(queue) {
+            self.rooms[room.roomJid]  = room;
+        }
     }
     
     /**
@@ -94,6 +110,8 @@ public class DefaultRoomsManager: ContextAware {
      - parameter room: room instance to remove
      */
     public func remove(room: Room) {
-        rooms.removeValueForKey(room.roomJid);
+        dispatch_barrier_async(queue) {
+            self.rooms.removeValueForKey(room.roomJid);
+        }
     }
 }

@@ -26,21 +26,31 @@ import Foundation
  */
 public class PresenceStore {
     
+    private let queue = dispatch_queue_create("presence_store_queue", DISPATCH_QUEUE_CONCURRENT);
+    private let queueTag: UnsafeMutablePointer<Void>;
+    
     private var handler:PresenceStoreHandler?;
     
     private var bestPresence = [BareJID:Presence]();
     private var presenceByJid = [JID:Presence]();
     private var presencesMapByBareJid = [BareJID:[String:Presence]]();
     
+    public init() {
+        queueTag = UnsafeMutablePointer<Void>(Unmanaged.passUnretained(self.queue).toOpaque());
+        dispatch_queue_set_specific(queue, queueTag, queueTag, nil);
+    }
+    
     /// Clear presence store
     public func clear() {
-        presenceByJid.removeAll();
-        let toNotify = Array(bestPresence.values);
-        bestPresence.removeAll();
-        toNotify.forEach { (p) in
-            handler?.onOffline(p);
+        dispatch_barrier_async(queue) {
+            self.presenceByJid.removeAll();
+            let toNotify = Array(self.bestPresence.values);
+            self.bestPresence.removeAll();
+            toNotify.forEach { (p) in
+                self.handler?.onOffline(p);
+            }
+            self.presencesMapByBareJid.removeAll();
         }
-        presencesMapByBareJid.removeAll();
     }
     
     /**
@@ -49,7 +59,11 @@ public class PresenceStore {
      - returns: `Presence` if available
      */
     public func getBestPresence(jid:BareJID) -> Presence? {
-        return bestPresence[jid];
+        var result: Presence?;
+        dispatch_sync_local_queue() {
+            result = self.bestPresence[jid];
+        }
+        return result;
     }
     
     /**
@@ -58,7 +72,11 @@ public class PresenceStore {
      - returns: `Presence` if available
      */
     public func getPresence(jid:JID) -> Presence? {
-        return presenceByJid[jid];
+        var result: Presence?;
+        dispatch_sync_local_queue() {
+            result = self.presenceByJid[jid];
+        }
+        return result;
     }
     
     /**
@@ -67,16 +85,20 @@ public class PresenceStore {
      - returns: array of `Presence`s if avaiable
      */
     public func getPresences(jid:BareJID) -> [String:Presence]? {
-        return presencesMapByBareJid[jid];
+        var result: [String:Presence]?;
+        dispatch_sync_local_queue() {
+            result = self.presencesMapByBareJid[jid];
+        }
+        return result;
     }
     
     private func findBestPresence(jid:BareJID) -> Presence? {
         var result:Presence? = nil;
-        presencesMapByBareJid[jid]?.values.forEach({ (p) in
+        self.presencesMapByBareJid[jid]?.values.forEach({ (p) in
             if (result == nil || (p.priority >= result!.priority && p.type == nil)) {
                 result = p;
             }
-        })
+        });
         return result;
     }
     
@@ -86,9 +108,13 @@ public class PresenceStore {
      - returns: true if any resource if available
      */
     public func isAvailable(jid:BareJID) -> Bool {
-        return presencesMapByBareJid[jid]?.values.indexOf({ (p) -> Bool in
-            return p.type == nil || p.type == StanzaType.available;
-        }) != nil;
+        var result = false;
+        dispatch_sync_local_queue() {
+            result = self.presencesMapByBareJid[jid]?.values.indexOf({ (p) -> Bool in
+                return p.type == nil || p.type == StanzaType.available;
+            }) != nil;
+        }
+        return result;
     }
     
     public func setHandler(handler:PresenceStoreHandler) {
@@ -106,22 +132,33 @@ public class PresenceStore {
     }
     
     func update(presence:Presence) -> Bool {
+        var result = false;
         if let from = presence.from {
-            var wasAwailable = self.isAvailable(from.bareJid);
-            presenceByJid[from] = presence;
-            var byResource = presencesMapByBareJid[from.bareJid] ?? [String:Presence]();
-            byResource[from.resource ?? ""] = presence;
-            presencesMapByBareJid[from.bareJid] = byResource;
-            updateBestPresence(from.bareJid);
-            var isAvailable = self.isAvailable(from.bareJid);
-            return wasAwailable != isAvailable;
+            dispatch_barrier_sync(queue) {
+                var wasAwailable = self.isAvailable(from.bareJid);
+                self.presenceByJid[from] = presence;
+                var byResource = self.presencesMapByBareJid[from.bareJid] ?? [String:Presence]();
+                byResource[from.resource ?? ""] = presence;
+                self.presencesMapByBareJid[from.bareJid] = byResource;
+                self.updateBestPresence(from.bareJid);
+                var isAvailable = self.isAvailable(from.bareJid);
+                result = true;
+            }
         }
-        return false;
+        return result;
     }
     
-    func updateBestPresence(from:BareJID) {
+    private func updateBestPresence(from:BareJID) {
         if let best = findBestPresence(from) {
             bestPresence[from] = best;
+        }
+    }
+    
+    private func dispatch_sync_local_queue(block: dispatch_block_t) {
+        if (dispatch_get_specific(queueTag) != nil) {
+            block();
+        } else {
+            dispatch_sync(queue, block);
         }
     }
 }

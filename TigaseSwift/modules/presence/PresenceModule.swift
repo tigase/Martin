@@ -208,7 +208,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
      value of presence which will allow to change presence
      which is going to be sent.
      */
-    public class BeforePresenceSendEvent: Event {
+    public class BeforePresenceSendEvent: Event, SerialEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = BeforePresenceSendEvent();
         

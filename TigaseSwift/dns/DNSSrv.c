@@ -73,6 +73,8 @@ void DNSQuerySRVRecordProcessReply(DNSServiceRef       sdRef,
     
     dns_resource_record_t *rr = dns_parse_resource_record(rrData, rrDataLen);
     
+    free(rrData);
+    
     struct DNSSrvRecord data;
     if (rr != NULL) {
         data.priority = rr->data.SRV->priority;

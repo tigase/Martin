@@ -66,79 +66,105 @@ public class DefaultChatStore: ChatStore {
     
     private var chatsByBareJid = [BareJID:[ChatProtocol]]();
     
+    private let queue = dispatch_queue_create("chat_store_queue", DISPATCH_QUEUE_CONCURRENT);
+    
     public var count:Int {
         get {
-            return chatsByBareJid.count;
+            var result = 0;
+            dispatch_sync(queue) {
+                result = self.chatsByBareJid.count;
+            }
+            return result;
         }
     }
     
     public var items:[ChatProtocol] {
         get {
             var result = [ChatProtocol]();
-            chatsByBareJid.values.forEach { (chats) in
-                result.appendContentsOf(chats);
+            dispatch_sync(queue) {
+                self.chatsByBareJid.values.forEach { (chats) in
+                    result.appendContentsOf(chats);
+                }
             }
             return result;
         }
     }
 
     public func get<T>(jid:BareJID, filter: (T)->Bool) -> T? {
-        if let chats = chatsByBareJid[jid] {
-            if let idx = chats.indexOf({
-                if let item:T = $0 as? T {
-                    return filter(item);
+        var result: T?;
+        dispatch_sync(queue) {
+            if let chats = self.chatsByBareJid[jid] {
+                if let idx = chats.indexOf({
+                    if let item:T = $0 as? T {
+                        return filter(item);
+                    }
+                    return false;
+                }) {
+                    result = chats[idx] as? T;
                 }
-                return false;
-            }) {
-                return chats[idx] as? T;
             }
         }
-        return nil;
+        return result;
     }
     
     public func getAll<T>() -> [T] {
         var result = [T]();
-        chatsByBareJid.values.forEach { (chats) in
-            chats.forEach { (chat) in
-                if let ch = chat as? T {
-                    result.append(ch);
-                }
-            };
+        dispatch_sync(queue) {
+            self.chatsByBareJid.values.forEach { (chats) in
+                chats.forEach { (chat) in
+                    if let ch = chat as? T {
+                        result.append(ch);
+                    }
+                };
+            }
         }
         return result;
     }
     
     
     public func isFor(jid:BareJID) -> Bool {
-        let chats = chatsByBareJid[jid];
-        return chats != nil && !chats!.isEmpty;
+        var result = false;
+        dispatch_sync(queue) {
+            let chats = self.chatsByBareJid[jid];
+            result = chats != nil && !chats!.isEmpty;
+        }
+        return result;
     }
 
     public func open<T>(chat:ChatProtocol) -> T? {
         let jid = chat.jid;
-        var chats = chatsByBareJid[jid.bareJid] ?? [ChatProtocol]();
-        let fchat = chats.first;
-        if fchat != nil && fchat?.allowFullJid == false {
-            return fchat as? T;
+        var result: T?;
+        dispatch_barrier_sync(queue) {
+            var chats = self.chatsByBareJid[jid.bareJid] ?? [ChatProtocol]();
+            let fchat = chats.first;
+            if fchat != nil && fchat?.allowFullJid == false {
+                result = fchat as? T;
+                return;
+            }
+            result = chat as? T;
+            
+            chats.append(chat);
+            self.chatsByBareJid[jid.bareJid] = chats;
         }
-        chats.append(chat);
-        chatsByBareJid[jid.bareJid] = chats;
-        return chat as? T;
+        return result;
     }
     
     public func close(chat:ChatProtocol) -> Bool {
         let bareJid = chat.jid.bareJid;
-        if var chats = chatsByBareJid[bareJid] {
-            if let idx = chats.indexOf({ (c) -> Bool in
-                c === chat;
-            }) {
-                chats.removeAtIndex(idx);
-                if chats.isEmpty {
-                    chatsByBareJid.removeValueForKey(bareJid)
-                } else {
-                    chatsByBareJid[bareJid] = chats;
+        var result = false;
+        dispatch_barrier_sync(queue) {
+            if var chats = self.chatsByBareJid[bareJid] {
+                if let idx = chats.indexOf({ (c) -> Bool in
+                    c === chat;
+                }) {
+                    chats.removeAtIndex(idx);
+                    if chats.isEmpty {
+                        self.chatsByBareJid.removeValueForKey(bareJid)
+                    } else {
+                        self.chatsByBareJid[bareJid] = chats;
+                    }
+                    result = true;
                 }
-                return true;
             }
         }
         return false;

@@ -29,9 +29,9 @@ public class ResponseManager: Logger {
     
     /// Internal class holding information about request and callbacks
     private class Entry {
-        let jid:JID?;
-        let timestamp:NSDate;
-        let callback:(Stanza?)->Void;
+        let jid: JID?;
+        let timestamp: NSDate;
+        let callback: (Stanza?)->Void;
         
         init(jid:JID?, callback:(Stanza?)->Void, timeout:NSTimeInterval) {
             self.jid = jid;
@@ -43,6 +43,8 @@ public class ResponseManager: Logger {
             return timestamp.timeIntervalSinceNow < 0;
         }
     }
+    
+    private let queue = dispatch_queue_create("response_manager_queue", DISPATCH_QUEUE_SERIAL);
     
     private var timer:Timer?;
     
@@ -65,15 +67,18 @@ public class ResponseManager: Logger {
             return nil;
         }
         let id = stanza.id!;
-        if let entry = handlers[id] {
-            let userJid = ResourceBinderModule.getBindedJid(context.sessionObject);
-            let from = stanza.from;
-            if (entry.jid == from) || (entry.jid == nil && from?.bareJid == userJid?.bareJid) {
-                handlers.removeValueForKey(id)
-                return entry.callback;
+        var callback: ((Stanza?)->Void)? = nil;
+        dispatch_sync(queue) {
+            if let entry = self.handlers[id] {
+                let userJid = ResourceBinderModule.getBindedJid(self.context.sessionObject);
+                let from = stanza.from;
+                if (entry.jid == from) || (entry.jid == nil && from?.bareJid == userJid?.bareJid) {
+                    self.handlers.removeValueForKey(id)
+                    callback = entry.callback;
+                }
             }
         }
-        return nil;
+        return callback;
     }
     
     /**
@@ -92,7 +97,10 @@ public class ResponseManager: Logger {
             id = nextUid();
             stanza.id = id;
         }
-        handlers[id!] = Entry(jid: stanza.to, callback: callback!, timeout: timeout);
+        
+        dispatch_async(queue) {
+            self.handlers[id!] = Entry(jid: stanza.to, callback: callback!, timeout: timeout);
+        }
     }
     
     /**
@@ -164,10 +172,12 @@ public class ResponseManager: Logger {
     
     /// Check if any callback should be called due to timeout
     func checkTimeouts() {
-        for (id,handler) in self.handlers {
-            if handler.checkTimeout() {
-                self.handlers.removeValueForKey(id);
-                handler.callback(nil);
+        dispatch_sync(queue) {
+            for (id,handler) in self.handlers {
+                if handler.checkTimeout() {
+                    self.handlers.removeValueForKey(id);
+                    handler.callback(nil);
+                }
             }
         }
     }

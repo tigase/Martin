@@ -36,7 +36,21 @@ public class Room: ChatProtocol, ContextAware {
     
     // common variables
     /// JID of MUC room
-    public var jid: JID;
+    private var _jid: JID;
+    public var jid: JID {
+        get {
+            var result: JID! = nil;
+            dispatch_sync(Room.queue) {
+                result = self._jid;
+            }
+            return result;
+        }
+        set {
+            dispatch_barrier_async(Room.queue) {
+                self._jid = newValue;
+            }
+        }
+    }
     public let allowFullJid: Bool = false;
     
     // specific variables
@@ -46,39 +60,60 @@ public class Room: ChatProtocol, ContextAware {
     /// Timestamp of last received message
     public var lastMessageDate: NSDate? {
         get {
-            return _lastMessageDate;
+            var result: NSDate? = nil;
+            dispatch_sync(Room.queue) {
+                result = self._lastMessageDate;
+            }
+            return result;
         }
         set {
             guard newValue != nil else {
                 return;
             }
-            if _lastMessageDate == nil || _lastMessageDate!.compare(newValue!) == NSComparisonResult.OrderedAscending {
-                _lastMessageDate = newValue;
+            dispatch_barrier_async(Room.queue) {
+                if self._lastMessageDate == nil || self._lastMessageDate!.compare(newValue!) == NSComparisonResult.OrderedAscending {
+                    self._lastMessageDate = newValue;
+                }
             }
         }
     }
     
-    private var _nickname: String;
+    private let _nickname: String;
     /// Nickname in room
     public var nickname: String {
         return _nickname;
     }
     
+    private var _password: String?;
     /// Room password
-    public var password: String?;
+    public var password: String? {
+        get {
+            var result: String? = nil;
+            dispatch_sync(Room.queue) {
+                result = self._password;
+            }
+            return result;
+        }
+        set {
+            dispatch_barrier_async(Room.queue) {
+                self._password = newValue;
+            }
+        }
+    }
     
-    private var _presences = [String:Occupant]();
+    private var _presences = [String: Occupant]();
     /// Room occupants
-    public var presences: [String:Occupant] {
-        return _presences;
+    public var presences: [String: Occupant] {
+        var result: [String: Occupant]!;
+        dispatch_sync(Room.queue) {
+            result = self._presences;
+        }
+        return result;
     }
     /// BareJID of MUC room
     public var roomJid: BareJID {
         get {
             return jid.bareJid;
-        }
-        set {
-            jid = JID(newValue);
         }
     }
     
@@ -88,16 +123,22 @@ public class Room: ChatProtocol, ContextAware {
         return _state;
     }
     
+    private static let queue = dispatch_queue_create("room_queue", DISPATCH_QUEUE_CONCURRENT);
+    
     private var _tempOccupants = [String:Occupant]();
     /// Temporary occupants
     public var tempOccupants: [String:Occupant] {
-        return _tempOccupants;
+        var result: [String: Occupant]!;
+        dispatch_sync(Room.queue) {
+            result = self._tempOccupants;
+        }
+        return result;
     }
     
     public init(context: Context, roomJid: BareJID, nickname: String) {
         self.context = context;
-        self.jid = JID(roomJid);
         self._nickname = nickname;
+        self._jid = JID(roomJid);
     }
     
     /// Rejoin this room
@@ -219,21 +260,29 @@ public class Room: ChatProtocol, ContextAware {
     }
     
     public func add(occupant: Occupant) {
-        _presences[occupant.nickname!] = occupant;
+        dispatch_barrier_async(Room.queue) {
+            self._presences[occupant.nickname] = occupant;
+        }
     }
     
     public func remove(occupant: Occupant) {
-        if let nickname = occupant.nickname {
-            _presences.removeValueForKey(nickname);
+        dispatch_barrier_async(Room.queue) {
+            self._presences.removeValueForKey(occupant.nickname);
         }
     }
     
     public func addTemp(nickname: String, occupant: Occupant) {
-        _tempOccupants[nickname] = occupant;
+        dispatch_barrier_async(Room.queue) {
+            self._tempOccupants[nickname] = occupant;
+        }
     }
     
     public func removeTemp(nickname: String) -> Occupant? {
-        return _tempOccupants.removeValueForKey(nickname);
+        var result: Occupant?;
+        dispatch_barrier_sync(Room.queue) {
+            result = self._tempOccupants.removeValueForKey(nickname);
+        }
+        return result;
     }
     
     /**

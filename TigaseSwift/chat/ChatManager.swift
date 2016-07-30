@@ -67,19 +67,49 @@ public protocol ChatManager {
  */
 public class Chat: ChatProtocol {
     
+    private static let queue = dispatch_queue_create("chat_queue", DISPATCH_QUEUE_CONCURRENT);
+    
     // common variables
+    private var _jid: JID;
     /// JID with which messages are exchanged
-    public var jid:JID;
+    public var jid: JID {
+        get {
+            var r: JID!;
+            dispatch_sync(Chat.queue) {
+                r = self._jid;
+            }
+            return r;
+        }
+        set {
+            dispatch_barrier_async(Chat.queue) {
+                self._jid = newValue;
+            }
+        }
+    }
     /// Is it possible to open many chats with same bare JID?
     public let allowFullJid = true;
 
     // class specific variables
     /// Thread ID of message exchange
-    public var thread:String?;
+    private var _thread: String?;
+    public var thread:String? {
+        get {
+            var r: String?;
+            dispatch_sync(Chat.queue) {
+                r = self._thread;
+            }
+            return r;
+        }
+        set {
+            dispatch_barrier_async(Chat.queue) {
+                self._thread = newValue;
+            }
+        }
+    }
     
     public init(jid:JID, thread:String?) {
-        self.jid = jid;
-        self.thread = thread;
+        self._jid = jid;
+        self._thread = thread;
     }
     
     /**

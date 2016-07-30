@@ -68,6 +68,7 @@
 		FE7361D01D2A4F8B00EFEA64 /* AnonymousMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */; };
 		FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */; };
 		FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */; };
+		FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
 		FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */; };
@@ -177,6 +178,7 @@
 		FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnonymousMechanism.swift; sourceTree = "<group>"; };
 		FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapabilitiesModule.swift; sourceTree = "<group>"; };
 		FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultCapabilitiesCache.swift; sourceTree = "<group>"; };
+		FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalQueueDispatcher.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
 		FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterStore.swift; sourceTree = "<group>"; };
@@ -453,6 +455,7 @@
 				FE9A1ED11CC5387700D0509D /* Timer.swift */,
 				FE94E5161CCB961000FAE755 /* UIDGenerator.swift */,
 				FE3A45D21CE7289600C36264 /* Zlib.swift */,
+				FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */,
 			);
 			path = util;
 			sourceTree = "<group>";
@@ -535,6 +538,7 @@
 				TargetAttributes = {
 					FE3F33D21CA1CBB9001A5CD6 = {
 						CreatedOnToolsVersion = 7.3;
+						DevelopmentTeam = 336G7QK5SR;
 					};
 					FE3F33DC1CA1CBB9001A5CD6 = {
 						CreatedOnToolsVersion = 7.3;
@@ -640,6 +644,7 @@
 				FE2EFD9A1CB66DA9000D254E /* StreamFeaturesModule.swift in Sources */,
 				FE2EFD7A1CB57C70000D254E /* BareJID.swift in Sources */,
 				FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */,
+				FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */,
 				FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */,
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
 				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,
@@ -796,7 +801,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer: andrzej@hi-low.eu (6X33GBJ8KU)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Developer: andrzej@hi-low.eu (6X33GBJ8KU)";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -818,7 +826,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = tigase.TigaseSwift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
+				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				STRIP_INSTALLED_PRODUCT = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2 $(SRCROOT)/CommonCrypto";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
@@ -831,6 +841,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer: andrzej@hi-low.eu (6X33GBJ8KU)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Mac Developer";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -853,7 +865,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = tigase.TigaseSwift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
+				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				STRIP_INSTALLED_PRODUCT = YES;
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/LibXML2 $(SRCROOT)/CommonCrypto";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
@@ -869,6 +883,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = tigase.TigaseSwiftTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "macosx iphonesimulator iphoneos";
 			};
 			name = Debug;
 		};
