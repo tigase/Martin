@@ -23,6 +23,9 @@ import Foundation
 
 /**
  Stanza class is a wrapper/helper for any root XML element receved from XMPP stream or which will be sent by XMPP stream.
+ 
+ Value of `to`/`from` attributes is cached on instance level. After `Stanza` is created from element do not modify element
+ `to`/`from` attributes directly - instead use `to`/`from` properties of `Stanza` class.
  */
 public class Stanza: ElementProtocol, CustomStringConvertible {
     
@@ -50,28 +53,42 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
-    /// Sender address of stanza
+    private var from_: JID?;
+    /**
+     Sender address of stanza
+     
+     Value is cached after first time it is retrieved. Use this property 
+     instead of direct modification of element `from` attribute.
+     */
     public var from:JID? {
         get {
             if let jidStr = element.getAttribute("from") {
-                return JID(jidStr);
+                from_ = JID(jidStr);
             }
-            return nil;
+            return from_;
         }
         set {
+            from_ = newValue;
             element.setAttribute("from", value: newValue?.stringValue);
         }
     }
     
-    /// Recipient address of stanza
+    private var to_: JID?;
+    /**
+     Recipient address of stanza
+     
+     Value is cached after first time it is retrieved. Use this property
+     instead of direct modification of element `to` attribute.
+     */
     public var to:JID? {
         get {
             if let jidStr = element.getAttribute("to") {
-                return JID(jidStr);
+                to_ = JID(jidStr);
             }
-            return nil;
+            return to_;
         }
         set {
+            to_ = newValue;
             element.setAttribute("to", value:newValue?.stringValue);
         }
     }
@@ -409,7 +426,7 @@ public class Presence: Stanza {
 
 }
 
-/// Extenstion of `Stanza` class with specific features existing only in `iq' elements.
+/// Extenstion of `Stanza` class with specific features existing only in `iq` elements.
 public class Iq: Stanza {
 
     public override var description: String {
