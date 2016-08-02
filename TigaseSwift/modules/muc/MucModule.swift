@@ -93,6 +93,8 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
                         // should we fire this event?
                         // context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, ))
                     }
+                    
+                    context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
                 }
             }
         default:
@@ -184,7 +186,7 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
         
         roomsManager.remove(room);
         
-        context.eventBus.fire(RoomClosedEvent());
+        context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
     }
     
     public func process(stanza: Stanza) throws {
@@ -604,7 +606,7 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
         /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject: SessionObject!;
         /// Received presence
-        public let presence: Presence!;
+        public let presence: Presence?;
         /// Closed room
         public let room: Room!;
         
@@ -614,7 +616,7 @@ public class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHa
             self.room = nil;
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room) {
+        public init(sessionObject: SessionObject, presence: Presence?, room: Room) {
             self.sessionObject = sessionObject;
             self.presence = presence;
             self.room = room;

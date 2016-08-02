@@ -293,7 +293,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     func processResumed(stanza: Stanza) {
         let newH = UInt32(stanza.getAttribute("h")!) ?? 0;
         _ackEnabled = true;
-        let left = Int(ackH.outgoingCounter) - Int(newH);
+        let left = min(Int(ackH.outgoingCounter) - Int(newH), 0);
         while left < outgoingQueue.count {
             outgoingQueue.poll();
         }
