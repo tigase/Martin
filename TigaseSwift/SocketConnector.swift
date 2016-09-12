@@ -463,19 +463,23 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             log("stream event: HasBytesAvailable");
             if aStream == self.inStream {
                 dispatch_async(queue) {
-                    guard self.inStream != nil else {
+                    guard let inStream = self.inStream else {
                         return;
                     }
-                    let inStream = self.inStream!;
+                    
                     while inStream.hasBytesAvailable {
                         var buffer = [UInt8](count:2048, repeatedValue: 0);
-                        if let read = self.inStream?.read(&buffer, maxLength: buffer.count) {
+                        
+                        let read = inStream.read(&buffer, maxLength: buffer.count)
+                        guard read > 0 else {
+                            return;
+                        }
+                        
                         if self.zlib != nil {
                             var data = self.zlib!.decompress(buffer, length: read);
                             self.parser?.parse(&data, length: data.count);
                         } else {
-                                self.parser?.parse(&buffer, length: read);
-                            }
+                            self.parser?.parse(&buffer, length: read);
                         }
                     }
                 }
