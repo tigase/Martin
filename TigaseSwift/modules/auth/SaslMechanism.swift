@@ -36,22 +36,22 @@ public protocol SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: response to send to server
      */
-    func evaluateChallenge(input:String?, sessionObject:SessionObject) throws -> String?
+    func evaluateChallenge(_ input:String?, sessionObject:SessionObject) throws -> String?
     
     /** 
      Check if mechanism may be used (ie. if needed data are available)
      - parameter sessionObject: instance of `SessionObject`
      - returns: true if possible
      */
-    func isAllowedToUse(sessionObject:SessionObject) -> Bool;
+    func isAllowedToUse(_ sessionObject:SessionObject) -> Bool;
     
 }
 
-public enum ClientSaslException: ErrorType {
-    case BadChallenge(msg: String?)
-    case WrongNonce
-    case InvalidServerSignature
-    case GenericError(msg: String?)
+public enum ClientSaslException: Error {
+    case badChallenge(msg: String?)
+    case wrongNonce
+    case invalidServerSignature
+    case genericError(msg: String?)
 }
 
 extension SaslMechanism {
@@ -61,7 +61,7 @@ extension SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: true if completed
      */
-    public func isComplete(sessionObject:SessionObject) -> Bool {
+    public func isComplete(_ sessionObject:SessionObject) -> Bool {
         return sessionObject.getProperty("SASL_COMPLETE_KEY", defValue: false);
     }
     
@@ -70,7 +70,7 @@ extension SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - parameter completed: true if authentication is completed
      */
-    func setComplete(sessionObject:SessionObject, completed:Bool) {
+    func setComplete(_ sessionObject:SessionObject, completed:Bool) {
         sessionObject.setProperty("SASL_COMPLETE_KEY", value: completed, scope: SessionObject.Scope.stream);
     }
 }

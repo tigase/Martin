@@ -25,9 +25,9 @@ import Foundation
  Class provides implementation of `CredentialCallback` protocol using password 
  provided in `SessionObject` instance.
  */
-public class DefaultCredentialsCallback: CredentialsCallback {
+open class DefaultCredentialsCallback: CredentialsCallback {
     
-    private let sessionObject:SessionObject!;
+    fileprivate let sessionObject:SessionObject!;
     
     public init(sessionObject: SessionObject) {
         self.sessionObject = sessionObject;
@@ -37,7 +37,7 @@ public class DefaultCredentialsCallback: CredentialsCallback {
      Retrive credential
      - returns: password for authentication
      */
-    public func getCredential() -> String {
+    open func getCredential() -> String {
         return sessionObject.getProperty(SessionObject.PASSWORD)!;
     }
     

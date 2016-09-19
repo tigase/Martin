@@ -23,30 +23,30 @@ import Foundation
 /**
  Class responsible for connecting to XMPP server, sending and receiving data.
  */
-public class SocketConnector : XMPPDelegate, NSStreamDelegate {
+open class SocketConnector : XMPPDelegate, StreamDelegate {
     
     /**
      Key in `SessionObject` to store custom validator for SSL certificates 
      provided by servers
      */
-    public static let SSL_CERTIFICATE_VALIDATOR = "sslCertificateValidator";
+    open static let SSL_CERTIFICATE_VALIDATOR = "sslCertificateValidator";
     /**
      Key in `SessionObject` to store host to which we should reconnect
      after receiving see-other-host error.
      */
-    public static let SEE_OTHER_HOST_KEY = "seeOtherHost";
+    open static let SEE_OTHER_HOST_KEY = "seeOtherHost";
     /**
      Key in `SessionObject` to store host to which XMPP client should
      try to connect to.
      */
-    public static let SERVER_HOST = "serverHost";
+    open static let SERVER_HOST = "serverHost";
     /**
      Key in `SessionObject` to store server port to which XMPP client
      should try to connect to.
      */
-    public static let SERVER_PORT = "serverPort";
+    open static let SERVER_PORT = "serverPort";
     
-    private static var QUEUE_TAG = "xmpp_socket_queue";
+    fileprivate static var QUEUE_TAG = "xmpp_socket_queue";
     
     /**
      Possible states of connection:
@@ -64,8 +64,8 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     
     let context: Context;
     let sessionObject: SessionObject;
-    var inStream: NSInputStream?
-    var outStream: NSOutputStream? {
+    var inStream: InputStream?
+    var outStream: OutputStream? {
         didSet {
             if outStream != nil && oldValue == nil {
                 outStreamBuffer = WriteBuffer();
@@ -89,14 +89,14 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     var sslCertificateValidated: Bool? = false;
     
     /// Internal processing queue
-    private let queue: dispatch_queue_t;
-    private var queueTag: UnsafeMutablePointer<Void> ;
+    fileprivate let queue: DispatchQueue;
+    fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
     
-    private var state_:State = State.disconnected;
-    public var state:State {
+    fileprivate var state_:State = State.disconnected;
+    open var state:State {
         get {
             return self.dispatch_sync_with_result_local_queue() {
-                if self.state_ != State.disconnected && (self.inStream?.streamStatus == NSStreamStatus.Closed || self.outStream?.streamStatus == NSStreamStatus.Closed) {
+                if self.state_ != State.disconnected && (self.inStream?.streamStatus == Stream.Status.closed || self.outStream?.streamStatus == Stream.Status.closed) {
                     return State.disconnected;
                 }
                 return self.state_;
@@ -119,20 +119,20 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
-    private func dispatch_sync_local_queue(block: dispatch_block_t) {
-        if (dispatch_get_specific(queueTag) != nil) {
+    fileprivate func dispatch_sync_local_queue(_ block: ()->()) {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
             block();
         } else {
-            dispatch_sync(queue, block);
+            queue.sync(execute: block);
         }
     }
     
-    private func dispatch_sync_with_result_local_queue<T>(block: ()-> T) -> T {
-        if (dispatch_get_specific(queueTag) != nil) {
+    fileprivate func dispatch_sync_with_result_local_queue<T>(_ block: ()-> T) -> T {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
             return block();
         } else {
             var result: T!;
-            dispatch_sync(queue) {
+            queue.sync {
                 result = block();
             }
             return result;
@@ -140,11 +140,15 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     init(context:Context) {
-        self.queue = dispatch_queue_create("xmpp_socket_queue", DISPATCH_QUEUE_SERIAL);
-        self.queueTag = UnsafeMutablePointer<Void>(Unmanaged.passUnretained(self.queue).toOpaque());
-        dispatch_queue_set_specific(queue, queueTag, queueTag, nil);
+        self.queue = DispatchQueue(label: "xmpp_socket_queue", attributes: []);
+        self.queueTag = DispatchSpecificKey<DispatchQueue?>();
+        queue.setSpecific(key: queueTag, value: queue);
         self.sessionObject = context.sessionObject;
         self.context = context;
+    }
+    
+    deinit {
+        queue.setSpecific(key: queueTag, value: nil);
     }
     
     /**
@@ -152,12 +156,12 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
      
      - parameter serverToConnect: used internally to force connection to particular XMPP server (ie. one of many in cluster)
      */
-    public func start(serverToConnect:String? = nil) {
+    open func start(_ serverToConnect:String? = nil) {
         guard state == .disconnected else {
             log("start() - stopping connetion as state is not connecting", state);
             return;
         }
-        dispatch_async(queue) {
+        queue.async {
             self.state = .connecting;
             let server:String = serverToConnect ?? self.sessionLogic.serverToConnect();
         
@@ -172,13 +176,13 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
-    func connect(dnsName:String, dnsRecords:Array<XMPPSrvRecord>) {
+    func connect(_ dnsName:String, dnsRecords:Array<XMPPSrvRecord>) {
         guard state == .connecting else {
             log("connect(dns) - stopping connetion as state is not connecting", state);
             return;
         }
         log("got dns records:", dnsResolver.srvRecords);
-        dispatch_async(queue) {
+        queue.async {
             if (self.dnsResolver.srvRecords.isEmpty) {
                 self.dnsResolver.srvRecords.append(XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: dnsName));
             }
@@ -188,28 +192,28 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
-    private func connect(addr:String, port:Int, ssl:Bool) -> Void {
+    fileprivate func connect(_ addr:String, port:Int, ssl:Bool) -> Void {
         log("connecting to:", addr, port);
         guard state == .connecting else {
             log("connect(addr) - stopping connetion as state is not connecting", state);
             return;
         }
         autoreleasepool {
-        NSStream.getStreamsToHostWithName(addr, port: port, inputStream: &inStream, outputStream: &outStream)
+        Stream.getStreamsToHost(withName: addr, port: port, inputStream: &inStream, outputStream: &outStream)
         }
         
         self.inStream!.delegate = self
         self.outStream!.delegate = self
         
-        let r1 = CFReadStreamSetProperty(self.inStream! as CFReadStreamRef, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeVoIP)
-        let r2 = CFWriteStreamSetProperty(self.outStream! as CFWriteStreamRef, kCFStreamNetworkServiceType, kCFStreamNetworkServiceTypeVoIP)
+//        let r1 = CFReadStreamSetProperty(self.inStream! as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamNetworkServiceType), kCFStreamNetworkServiceTypeVoIP)
+//        let r2 = CFWriteStreamSetProperty(self.outStream! as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamNetworkServiceType), kCFStreamNetworkServiceTypeVoIP)
+//
+//        if !r1 || !r2 {
+//            log("failed to enabled background connection feature", r1, r2);
+//        }
         
-        if !r1 || !r2 {
-            log("failed to enabled background connection feature", r1, r2);
-        }
-        
-        self.inStream!.scheduleInRunLoop(.mainRunLoop(), forMode: NSDefaultRunLoopMode)
-        self.outStream!.scheduleInRunLoop(.mainRunLoop(), forMode: NSDefaultRunLoopMode)
+        self.inStream!.schedule(in: RunLoop.main, forMode: RunLoopMode.defaultRunLoopMode)
+        self.outStream!.schedule(in: RunLoop.main, forMode: RunLoopMode.defaultRunLoopMode)
         
         self.inStream!.open();
         self.outStream!.open();
@@ -234,7 +238,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     func stop() {
-        dispatch_async(queue) {
+        queue.async {
         switch self.state {
         case .disconnected, .disconnecting:
             self.log("not connected or already disconnecting");
@@ -267,25 +271,25 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         let domain = self.sessionObject.domainName!;
         
         sslCertificateValidated = nil;
-        let settings:NSDictionary = NSDictionary(objects: [NSStreamSocketSecurityLevelNegotiatedSSL, domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
+        let settings:NSDictionary = NSDictionary(objects: [StreamSocketSecurityLevel.negotiatedSSL, domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
                 kCFStreamSSLPeerName as NSString,
                 kCFStreamSSLValidatesCertificateChain as NSString])
-        let started = CFReadStreamSetProperty(self.inStream! as CFReadStreamRef, kCFStreamPropertySSLSettings, settings as CFTypeRef)
+        let started = CFReadStreamSetProperty(self.inStream! as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef)
         if (!started) {
             self.log("could not start STARTTLS");
         }
-        CFWriteStreamSetProperty(self.outStream! as CFWriteStreamRef, kCFStreamPropertySSLSettings, settings as CFTypeRef)
-        self.inStream?.open()
+        CFWriteStreamSetProperty(self.outStream! as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef);
+        self.inStream?.open();
         self.outStream?.open();
         
-        self.inStream?.scheduleInRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-        self.outStream?.scheduleInRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+        self.inStream?.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
+        self.outStream?.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
             
         self.context.sessionObject.setProperty(SessionObject.STARTTLS_ACTIVE, value: true, scope: SessionObject.Scope.stream);
     }
     
-    public func restartStream() {
-        dispatch_async(queue) {
+    open func restartStream() {
+        queue.async {
             self.parser = XMLParser(delegate: self.parserDelegate!);
             self.log("starting new parser", self.parser!);
             let userJid:BareJID? = self.sessionObject.getProperty(SessionObject.USER_BARE_JID);
@@ -303,12 +307,12 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     func proceedZlib() {
-        zlib = Zlib(compressionLevel: .Default, flush: .Sync);
+        zlib = Zlib(compressionLevel: .default, flush: .sync);
         self.context.sessionObject.setProperty(SessionObject.COMPRESSION_ACTIVE, value: true, scope: SessionObject.Scope.stream);
         restartStream();
     }
     
-    override public func processElement(packet: Element) {
+    override open func processElement(_ packet: Element) {
         super.processElement(packet);
         if packet.name == "error" && packet.xmlns == "http://etherx.jabber.org/streams" {
             sessionLogic.onStreamError(packet);
@@ -321,11 +325,11 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         }
     }
     
-    override public func onError(msg: String?) {
+    override open func onError(_ msg: String?) {
         closeSocket(State.disconnected);
     }
     
-    override public func onStreamTerminate() {
+    override open func onStreamTerminate() {
         log("onStreamTerminate called... state:", state);
         switch state {
         case .disconnecting:
@@ -334,7 +338,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         case .connected, .connecting:
             //-- probably from other socket, ie due to restart!
             let inStreamState = inStream?.streamStatus;
-            if inStreamState == nil || inStreamState == .Error || inStreamState == .Closed {
+            if inStreamState == nil || inStreamState == .error || inStreamState == .closed {
                 closeSocket(State.disconnected)
             } else {
                 state = State.disconnecting;
@@ -352,14 +356,14 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
      
      [see-other-host]: http://xmpp.org/rfcs/rfc6120.html#streams-error-conditions-see-other-host
      */
-    public func reconnect(newHost:String) {
+    open func reconnect(_ newHost:String) {
         dispatch_sync_local_queue() {
             self.log("closing socket before reconnecting using see-other-host!")
             self.state_ = .disconnecting;
             self.closeSocket(nil);
             self.state_ = .disconnected;
         }
-        dispatch_async(queue) {
+        queue.async {
             self.log("reconnecting to new host:", newHost);
             self.start(newHost);
         }
@@ -368,27 +372,27 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     /**
      This method will process any stanza received from XMPP server.
      */
-    func processStanza(stanza: Stanza) {
+    func processStanza(_ stanza: Stanza) {
         sessionLogic.receivedIncomingStanza(stanza);
     }
     
     /**
      This method will process any stanza before it will be sent to XMPP server.
      */
-    func send(stanza:Stanza) {
+    func send(_ stanza:Stanza) {
         sessionLogic.sendingOutgoingStanza(stanza);
         self.send(stanza.element.stringValue)
     }
     
-    public func keepAlive() {
+    open func keepAlive() {
         self.send(" ");
     }
     
     /**
      Methods prepares data to be sent using `dispatch_async()` to send data using other thread.
      */
-    private func send(data:String) {
-        dispatch_async(queue) {
+    fileprivate func send(_ data:String) {
+        queue.async {
             self.sendSync(data);
         }
     }
@@ -396,42 +400,42 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     /**
      Method responsible for actual process of sending data.
      */
-    private func sendSync(data:String) {
+    fileprivate func sendSync(_ data:String) {
         self.log("sending stanza:", data);
-        let buf = data.dataUsingEncoding(NSUTF8StringEncoding)!;
+        let buf = data.data(using: String.Encoding.utf8)!;
         if zlib != nil {
-            var outBuf = zlib!.compress(UnsafePointer<UInt8>(buf.bytes), length: buf.length);
+            let outBuf = zlib!.compress((buf as NSData).bytes.bindMemory(to: UInt8.self, capacity: buf.count), length: buf.count);
             outStreamBuffer?.appendData(outBuf);
             outStreamBuffer?.writeData(self.outStream);
         } else {
-            var outBuf = [UInt8](count: buf.length, repeatedValue: 0);
-            buf.getBytes(&outBuf, length: buf.length);
+            var outBuf = [UInt8](repeating: 0, count: buf.count);
+            (buf as NSData).getBytes(&outBuf, length: buf.count);
             outStreamBuffer?.appendData(outBuf);
             outStreamBuffer?.writeData(self.outStream);
         }
     }
     
-    public func stream(aStream: NSStream, handleEvent eventCode: NSStreamEvent) {
+    open func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
         switch eventCode {
-        case NSStreamEvent.ErrorOccurred:
+        case Stream.Event.errorOccurred:
             // may happen if cannot connect to server or if connection was broken
-            log("stream event: ErrorOccurred: \(aStream.streamError?.description)");
+            log("stream event: ErrorOccurred: \(aStream.streamError)");
             if (aStream == self.inStream) {
                 // this is intentional - we need to execute onStreamTerminate()
                 // on main queue, but after all task are executed by our serial queueła
-                dispatch_async(queue) {
+                queue.async {
                     self.onStreamTerminate();
                 }
             }
-        case NSStreamEvent.OpenCompleted:
+        case Stream.Event.openCompleted:
             if (aStream == self.inStream) {
                 state = State.connected;
                 log("setsockopt!");
-                let socketData:NSData = CFReadStreamCopyProperty(self.inStream! as CFReadStream, kCFStreamPropertySocketNativeHandle) as! NSData;
+                let socketData:Data = CFReadStreamCopyProperty(self.inStream! as CFReadStream, CFStreamPropertyKey.socketNativeHandle) as! Data;
                 var socket:CFSocketNativeHandle = 0;
-                socketData.getBytes(&socket, length: sizeofValue(socket));
+                (socketData as NSData).getBytes(&socket, length: MemoryLayout.size(ofValue: socket));
                 var value:Int = 0;
-                let size = UInt32(sizeofValue(value));
+                let size = UInt32(MemoryLayout.size(ofValue: value));
             
 //                if setsockopt(socket, SOL_SOCKET, 0x1006, &value, size) != 0 {
 //                    log("failed to set SO_TIMEOUT");
@@ -448,7 +452,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
                 var tv = timeval();
                 tv.tv_sec = 0;
                 tv.tv_usec = 0;
-                if setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(strideof(timeval))) != 0 {
+                if setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.stride)) != 0 {
                     log("failed to set SO_RCVTIMEO");
                 }
                 log("setsockopt done");
@@ -459,16 +463,16 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
                 log("inStream.hasBytesAvailable", inStream?.hasBytesAvailable);
             }
             log("stream event: OpenCompleted");
-        case NSStreamEvent.HasBytesAvailable:
+        case Stream.Event.hasBytesAvailable:
             log("stream event: HasBytesAvailable");
             if aStream == self.inStream {
-                dispatch_async(queue) {
+                queue.async {
                     guard let inStream = self.inStream else {
                         return;
                     }
                     
                     while inStream.hasBytesAvailable {
-                        var buffer = [UInt8](count:2048, repeatedValue: 0);
+                        var buffer = [UInt8](repeating: 0, count: 2048);
                         
                         let read = inStream.read(&buffer, maxLength: buffer.count)
                         guard read > 0 else {
@@ -484,21 +488,21 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
                     }
                 }
             }
-        case NSStreamEvent.HasSpaceAvailable:
+        case Stream.Event.hasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
             if sslCertificateValidated == nil {
-                let trust = self.inStream?.propertyForKey(kCFStreamPropertySSLPeerTrust as String) as! SecTrustRef;
+                let trust = self.inStream?.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLPeerTrust as String as String)) as! SecTrust;
                 
                 let sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = context.sessionObject.getProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR);
                 if sslCertificateValidator != nil {
                     sslCertificateValidated = sslCertificateValidator!(sessionObject, trust);
                 } else {
-                    let policy = SecPolicyCreateSSL(false, sessionObject.userBareJid?.domain);
-                    var secTrustResultType = SecTrustResultType();
-                    SecTrustSetPolicies(trust, [policy]);
+                    let policy = SecPolicyCreateSSL(false, sessionObject.userBareJid?.domain as CFString?);
+                    var secTrustResultType = SecTrustResultType.invalid;
+                    SecTrustSetPolicies(trust, policy);
                     SecTrustEvaluate(trust, &secTrustResultType);
                                         
-                    sslCertificateValidated = (Int(secTrustResultType) == kSecTrustResultProceed || Int(secTrustResultType) == kSecTrustResultUnspecified);
+                    sslCertificateValidated = (secTrustResultType == SecTrustResultType.proceed || secTrustResultType == SecTrustResultType.unspecified);
                 }
                 if !sslCertificateValidated! {
                     log("SSL certificate validation failed");
@@ -508,13 +512,13 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
                 }
             }
             if aStream == self.outStream {
-                dispatch_async(queue) {
+                queue.async {
                     self.outStreamBuffer?.writeData(self.outStream);
                 }
             }
-        case NSStreamEvent.EndEncountered:
+        case Stream.Event.endEncountered:
             log("stream event: EndEncountered");
-            dispatch_async(queue) {
+            queue.async {
                 self.closeSocket(State.disconnected);
             }
         default:
@@ -525,7 +529,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     /**
      Internal method used to properly close TCP connection and set state if needed
      */
-    private func closeSocket(newState: State?) {
+    fileprivate func closeSocket(_ newState: State?) {
         closeStreams();
         zlib = nil;
         if newState != nil {
@@ -535,7 +539,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         closeTimer = nil;
     }
 
-    private func closeStreams() {
+    fileprivate func closeStreams() {
         let inStream = self.inStream;
         let outStream = self.outStream;
         self.inStream = nil;
@@ -543,20 +547,20 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         self.outStreamBuffer = nil;
         inStream?.close();
         outStream?.close();
-        inStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
-        outStream?.removeFromRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode);
+        inStream?.remove(from: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
+        outStream?.remove(from: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
         sslCertificateValidated = false;
     }
     
     /// Event fired when client establishes TCP connection to XMPP server.
-    public class ConnectedEvent: Event {
+    open class ConnectedEvent: Event {
         
         /// identified of event which should be used during registration of `EventHandler`
-        public static let TYPE = ConnectedEvent();
+        open static let TYPE = ConnectedEvent();
         
-        public let type = "connectorConnected";
+        open let type = "connectorConnected";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         
         init() {
             sessionObject = nil;
@@ -569,16 +573,16 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     /// Event fired when TCP connection to XMPP server is closed or is broken.
-    public class DisconnectedEvent: Event {
+    open class DisconnectedEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = DisconnectedEvent();
+        open static let TYPE = DisconnectedEvent();
         
-        public let type = "connectorDisconnected";
+        open let type = "connectorDisconnected";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// If is `true` then XMPP client was properly closed, in other case it may be broken
-        public let clean:Bool;
+        open let clean:Bool;
         
         init() {
             sessionObject = nil;
@@ -593,16 +597,16 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
     }
     
     /// Event fired if SSL certificate validation fails
-    public class CertificateErrorEvent: Event {
+    open class CertificateErrorEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = CertificateErrorEvent();
+        open static let TYPE = CertificateErrorEvent();
         
-        public let type = "certificateError";
+        open let type = "certificateError";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Instance of SecTrust - contains data related to certificate
-        public let trust: SecTrust!;
+        open let trust: SecTrust!;
         
         init() {
             sessionObject = nil;
@@ -620,11 +624,11 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
         var queue = Queue<[UInt8]>();
         var position = 0;
         
-        func appendData(data: [UInt8]) {
+        func appendData(_ data: [UInt8]) {
             queue.offer(data);
         }
         
-        func writeData(outputStream: NSOutputStream?) {
+        func writeData(_ outputStream: OutputStream?) {
             guard outputStream != nil && outputStream!.hasSpaceAvailable else {
                 return;
             }
@@ -632,7 +636,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             guard data != nil else {
                 return;
             }
-            var remainingLength = data!.count - position;
+            let  remainingLength = data!.count - position;
             let sent = outputStream!.write(&data! + position, maxLength: remainingLength);
             if sent < 0 {
                 return;
@@ -641,7 +645,7 @@ public class SocketConnector : XMPPDelegate, NSStreamDelegate {
             log("sent ", sent, "bytes", position, "of", data!.count);
             if position == data!.count {
                 position = 0;
-                queue.poll();
+                _ = queue.poll();
             }
         }
         

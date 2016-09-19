@@ -36,53 +36,59 @@ struct ns {
     var uri:UnsafePointer<UInt8>;
 }
 
-private func strFromCUtf8(ptr:UnsafePointer<Void>) -> String? {
+private func strFromCUtf8(_ ptr:UnsafePointer<UInt8>?) -> String? {
     if ptr == nil {
         return nil;
     }
-    return String(CString: UnsafePointer<CChar>(ptr), encoding: NSUTF8StringEncoding);
+    return String(cString: ptr!);
 }
 
 private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix_, URI, nb_namespaces, namespaces_, nb_attributes, nb_defaulted, attributes_ in
     
-    let parser = unsafeBitCast(ctx_, XMLParser.self);
+    let parser = unsafeBitCast(ctx_, to: XMLParser.self);
     let name = strFromCUtf8(localname);
     let prefix = strFromCUtf8(prefix_);
     var attributes = [String:String]();
     var i=0;
-    var attrsPtr = UnsafePointer<attr>(attributes_);
-    while i < Int(nb_attributes) {
-        var name = strFromCUtf8(attrsPtr.memory.name);
-        var prefix = strFromCUtf8(attrsPtr.memory.prefix);
-        var value = String(data: NSData(bytes: attrsPtr.memory.valueBegin, length: attrsPtr.memory.valueEnd-attrsPtr.memory.valueBegin), encoding: NSUTF8StringEncoding);
-        if (value != nil) {
-            value = EscapeUtils.unescape(value!);
+    if attributes_ != nil {
+        attributes_!.withMemoryRebound(to: attr.self, capacity: Int(nb_attributes)) {
+            var attrsPtr = $0;
+            while i < Int(nb_attributes) {
+                var name = strFromCUtf8(attrsPtr.pointee.name);
+                var prefix = strFromCUtf8(attrsPtr.pointee.prefix);
+                var value = String(data: Data(bytes: UnsafePointer<UInt8>((attrsPtr.pointee.valueBegin)), count: (attrsPtr.pointee.valueEnd)-(attrsPtr.pointee.valueBegin)), encoding: String.Encoding.utf8);
+                if (value != nil) {
+                    value = EscapeUtils.unescape(value!);
+                }
+                if prefix == nil {
+                    attributes[name!] = value;
+                } else {
+                    attributes[prefix! + ":" + name!] = value;
+                }
+                attrsPtr = attrsPtr.successor();
+                i = i + 1;
+            }
         }
-        if prefix == nil {
-            attributes[name!] = value;
-        } else {
-            attributes[prefix! + ":" + name!] = value;
-        }
-        attrsPtr = attrsPtr.successor();
-        i = i + 1;
     }
     var namespaces:[String:String]? = nil;
-    if nb_namespaces > 0 {
+    if nb_namespaces > 0 && nb_attributes != nil {
         namespaces = [String:String]();
-        var nsPtr = UnsafePointer<ns>(namespaces_);
-        i = 0;
-        while i < Int(nb_namespaces) {
-            var prefix = strFromCUtf8(nsPtr.memory.prefix);
-            var uri = strFromCUtf8(nsPtr.memory.uri);
-            if prefix == nil {
-                prefix = "";
+        namespaces_!.withMemoryRebound(to: ns.self, capacity: Int(nb_namespaces)) {
+            var nsPtr = $0;
+            i = 0;
+            while i < Int(nb_namespaces) {
+                var prefix = strFromCUtf8(nsPtr.pointee.prefix);
+                var uri = strFromCUtf8(nsPtr.pointee.uri);
+                if prefix == nil {
+                    prefix = "";
+                }
+                if (uri != nil) {
+                    uri = EscapeUtils.unescape(uri!);
+                }
+                namespaces![prefix!] = uri;
+                nsPtr = nsPtr.successor();
+                i = i + 1;
             }
-            if (uri != nil) {
-                uri = EscapeUtils.unescape(uri!);
-            }
-            namespaces![prefix!] = uri;
-            nsPtr = nsPtr.successor();
-            i = i + 1;
         }
     }
     parser.delegate.startElement(name!, prefix: prefix, namespaces: namespaces, attributes: attributes);
@@ -90,23 +96,23 @@ private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix
 }
 
 private let SAX_endElement: endElementNsSAX2Func = { ctx_, localname, prefix_, URI in
-    let parser = unsafeBitCast(ctx_, XMLParser.self);
+    let parser = unsafeBitCast(ctx_, to: XMLParser.self);
     let name = strFromCUtf8(localname);
     let prefix = strFromCUtf8(prefix_);
     parser.delegate.endElement(name!, prefix: prefix);
 }
 
 private let SAX_charactersFound: charactersSAXFunc = { ctx_, chars_, len_ in
-    let parser = unsafeBitCast(ctx_, XMLParser.self);
-    let chars = String(data: NSData(bytes: chars_, length: Int(len_)), encoding: NSUTF8StringEncoding);
+    let parser = unsafeBitCast(ctx_, to: XMLParser.self);
+    let chars = String(data: Data(bytes: UnsafePointer<UInt8>(chars_!), count: Int(len_)), encoding: String.Encoding.utf8);
     parser.delegate.charactersFound(chars!);
 }
 
-typealias errorSAXFunc_ = @convention(c) (parsingContext: UnsafeMutablePointer<Void>, errorMessage: UnsafePointer<CChar>) -> Void;
+typealias errorSAXFunc_ = @convention(c) (_ parsingContext: UnsafeMutableRawPointer, _ errorMessage: UnsafePointer<CChar>) -> Void;
 
 private let SAX_error: errorSAXFunc_ = { ctx_, msg_ in
-    let parser = unsafeBitCast(ctx_, XMLParser.self);
-    let msg = strFromCUtf8(msg_);
+    let parser = unsafeBitCast(ctx_, to: XMLParser.self);
+    let msg = String(cString: msg_, encoding: String.Encoding.utf8);
     parser.delegate.error(msg!);
 }
 
@@ -133,7 +139,7 @@ private var saxHandler = xmlSAXHandler(
     processingInstruction: nil,
     comment: nil,
     warning: nil,
-    error: unsafeBitCast(SAX_error, errorSAXFunc.self),
+    error: unsafeBitCast(SAX_error, to: errorSAXFunc.self),
     fatalError: nil,
     getParameterEntity: nil,
     cdataBlock: nil,
@@ -148,10 +154,10 @@ private var saxHandler = xmlSAXHandler(
 /**
  Wrapper class for LibXML2 to make it easier to use from Swift
  */
-public class XMLParser: Logger {
+open class XMLParser: Logger {
     
-    private var ctx:xmlParserCtxtPtr;
-    private let delegate:XMLParserDelegate;
+    fileprivate var ctx:xmlParserCtxtPtr?;
+    fileprivate let delegate:XMLParserDelegate;
     
     /**
      Create XMLParser
@@ -175,17 +181,19 @@ public class XMLParser: Logger {
      - parameter buffer: pointer to data
      - parameter length: number of data to process
      */
-    public func parse(buffer: UnsafeMutablePointer<UInt8>, length: Int) {
-        log("parsing data:", length, String(data:NSData(bytes: buffer, length: length), encoding: NSUTF8StringEncoding));
-        xmlParseChunk(ctx, UnsafePointer<Int8>(buffer), Int32(length), 0);
+    open func parse(_ buffer: UnsafeMutablePointer<UInt8>, length: Int) {
+        log("parsing data:", length, String(data:Data(bytes: UnsafePointer<UInt8>(buffer), count: length), encoding: String.Encoding.utf8));
+        _ = buffer.withMemoryRebound(to: CChar.self, capacity: length) {
+            xmlParseChunk(ctx, $0, Int32(length), 0);
+        }
     }
     
-    static func bridge<T : AnyObject>(obj : T) -> UnsafeMutablePointer<Void> {
-        return UnsafeMutablePointer(Unmanaged.passUnretained(obj).toOpaque());
+    static func bridge<T : AnyObject>(_ obj : T) -> UnsafeMutableRawPointer {
+        return Unmanaged.passUnretained(obj).toOpaque();
     }
     
-    static func bridge<T : AnyObject>(ptr : UnsafeMutablePointer<Void>) -> T {
-        return Unmanaged<T>.fromOpaque(COpaquePointer(ptr)).takeUnretainedValue();
+    static func bridge<T : AnyObject>(_ ptr : UnsafeMutableRawPointer) -> T {
+        return Unmanaged<T>.fromOpaque(ptr).takeUnretainedValue();
     }
 }
 
@@ -205,24 +213,24 @@ public protocol XMLParserDelegate: class {
      - parameter namespaces: declared namespaces
      - parameter attributes: attributes of element
      */
-    func startElement(name:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]);
+    func startElement(_ name:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]);
     
     /**
      Called when element end is found
      - parameter name: name of element
      - parameter prefix: prefix of element
      */
-    func endElement(name:String, prefix:String?);
+    func endElement(_ name:String, prefix:String?);
     
     /**
      Called when characters are found inside element
      - parameter value: found characters
      */
-    func charactersFound(value:String);
+    func charactersFound(_ value:String);
     
     /**
      Called on error during parsing
      */
-    func error(msg:String);
+    func error(_ msg:String);
     
 }

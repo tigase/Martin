@@ -27,21 +27,21 @@ import Foundation
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html
  */
-public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initializable {
+open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initializable {
     
-    public static let INITIAL_PRESENCE_ENABLED_KEY = "initalPresenceEnabled";
-    public static let PRESENCE_STORE_KEY = "presenceStore";
+    open static let INITIAL_PRESENCE_ENABLED_KEY = "initalPresenceEnabled";
+    open static let PRESENCE_STORE_KEY = "presenceStore";
     
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = "presence";
+    open static let ID = "presence";
     
-    public let id = ID;
+    open let id = ID;
     
-    public let criteria = Criteria.name("presence");
+    open let criteria = Criteria.name("presence");
     
-    public let features = [String]();
+    open let features = [String]();
     
-    public var context:Context! {
+    open var context:Context! {
         didSet {
             if oldValue != nil {
                 oldValue.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
@@ -53,7 +53,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
     
     /// Should initial presence be sent automatically
-    public var initialPresence:Bool {
+    open var initialPresence:Bool {
         get {
             return context.sessionObject.getProperty(PresenceModule.INITIAL_PRESENCE_ENABLED_KEY, defValue: true);
         }
@@ -63,13 +63,13 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
     
     /// Presence store with current presence informations
-    public var presenceStore:PresenceStore {
+    open var presenceStore:PresenceStore {
         get {
             return PresenceModule.getPresenceStore(context.sessionObject);
         }
     }
     
-    public static func getPresenceStore(sessionObject:SessionObject) -> PresenceStore {
+    open static func getPresenceStore(_ sessionObject:SessionObject) -> PresenceStore {
         let presenceStore:PresenceStore = sessionObject.getProperty(PRESENCE_STORE_KEY)!;
         return presenceStore;
     }
@@ -79,7 +79,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         
     }
     
-    public func initialize() {
+    open func initialize() {
         var presenceStoreTmp:PresenceStore? = context.sessionObject.getProperty(PresenceModule.PRESENCE_STORE_KEY);
         if presenceStoreTmp == nil {
             presenceStoreTmp = PresenceStore();
@@ -89,7 +89,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         presenceStore.setHandler(PresenceStoreHandlerImpl(presenceModule:self));
     }
     
-    public func handleEvent(event: Event) {
+    open func handleEvent(_ event: Event) {
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             if initialPresence {
@@ -106,7 +106,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
         }
     }
     
-    public func process(stanza: Stanza) throws {
+    open func process(_ stanza: Stanza) throws {
         if let presence = stanza as? Presence {
             let type = presence.type ?? StanzaType.available;
             switch type {
@@ -124,7 +124,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
     
     /// Send initial presence
-    public func sendInitialPresence() {
+    open func sendInitialPresence() {
         setPresence(.online, status: nil, priority: nil);
     }
     
@@ -135,8 +135,8 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
      - parameter priority: priority of presence
      - parameter additionalElements: array of additional elements which should be added to presence
      */
-    public func setPresence(show:Presence.Show, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
-        var presence = Presence();
+    open func setPresence(_ show:Presence.Show, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
+        let presence = Presence();
         presence.show = show;
         presence.status = status;
         presence.priority = priority;
@@ -157,8 +157,8 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
      Request subscription
      - parameter jid: jid to request subscription
      */
-    public func subscribe(jid:JID) {
-        var presence = Presence();
+    open func subscribe(_ jid:JID) {
+        let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribe;
         
@@ -169,8 +169,8 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
      Subscribe JID
      - parameter jid: jid to subscribe
      */
-    public func subscribed(jid:JID) {
-        var presence = Presence();
+    open func subscribed(_ jid:JID) {
+        let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribed;
         
@@ -181,8 +181,8 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
      Unsubscribe from jid
      - parameter jid: jid to unsubscribe from
      */
-    public func unsubscribe(jid:JID) {
-        var presence = Presence();
+    open func unsubscribe(_ jid:JID) {
+        let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.unsubscribe;
         
@@ -193,8 +193,8 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
      Unsubscribed JID
      - parameter jid: jid which is being unsubscribed
      */
-    public func unsubscribed(jid:JID) {
-        var presence = Presence();
+    open func unsubscribed(_ jid:JID) {
+        let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.unsubscribed;
         
@@ -208,17 +208,17 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
      value of presence which will allow to change presence
      which is going to be sent.
      */
-    public class BeforePresenceSendEvent: Event, SerialEvent {
+    open class BeforePresenceSendEvent: Event, SerialEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = BeforePresenceSendEvent();
+        open static let TYPE = BeforePresenceSendEvent();
         
-        public let type = "BeforePresenceSendEvent";
+        open let type = "BeforePresenceSendEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Presence which will be send
-        public let presence:Presence!;
+        open let presence:Presence!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.presence = nil;
         }
@@ -231,19 +231,19 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
 
     /// Event fired when contact changes presence
-    public class ContactPresenceChanged: Event {
+    open class ContactPresenceChanged: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ContactPresenceChanged();
+        open static let TYPE = ContactPresenceChanged();
         
-        public let type = "ContactPresenceChanged";
+        open let type = "ContactPresenceChanged";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Received presence
-        public let presence:Presence!;
+        open let presence:Presence!;
         /// Contact become online or offline
-        public let availabilityChanged:Bool;
+        open let availabilityChanged:Bool;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.presence = nil;
             self.availabilityChanged = false;
@@ -258,17 +258,17 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
 
     /// Event fired if we are unsubscribed from someone presence
-    public class ContactUnsubscribedEvent: Event {
+    open class ContactUnsubscribedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ContactUnsubscribedEvent();
+        open static let TYPE = ContactUnsubscribedEvent();
         
-        public let type = "ContactUnsubscribedEvent";
+        open let type = "ContactUnsubscribedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Presence received
-        public let presence:Presence!;
+        open let presence:Presence!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.presence = nil;
         }
@@ -281,17 +281,17 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
     
     /// Event fired if someone wants to subscribe our presence
-    public class SubscribeRequestEvent: Event {
+    open class SubscribeRequestEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SubscribeRequestEvent();
+        open static let TYPE = SubscribeRequestEvent();
         
-        public let type = "SubscribeRequestEvent";
+        open let type = "SubscribeRequestEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Presence received
-        public let presence:Presence!;
+        open let presence:Presence!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.presence = nil;
         }
@@ -303,7 +303,7 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
     }
     
     /// Implementation of `PresenceStoreHandler` using `PresenceModule`
-    public class PresenceStoreHandlerImpl: PresenceStoreHandler {
+    open class PresenceStoreHandlerImpl: PresenceStoreHandler {
         
         let presenceModule:PresenceModule;
         
@@ -311,14 +311,14 @@ public class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Ini
             self.presenceModule = presenceModule;
         }
         
-        public func onOffline(presence: Presence) {
-            var offlinePresence = Presence();
+        open func onOffline(_ presence: Presence) {
+            let offlinePresence = Presence();
             offlinePresence.type = StanzaType.unavailable;
             offlinePresence.from = JID(presence.from!.bareJid);
             presenceModule.context.eventBus.fire(ContactPresenceChanged(sessionObject: presenceModule.context.sessionObject, presence: offlinePresence, availabilityChanged: true));
         }
         
-        public func setPresence(show: Presence.Show, status: String?, priority: Int?) {
+        open func setPresence(_ show: Presence.Show, status: String?, priority: Int?) {
             presenceModule.setPresence(show, status: status, priority: priority);
         }
     }

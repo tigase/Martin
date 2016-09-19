@@ -22,41 +22,41 @@
 import Foundation
 
 /// Class holds additional information about occupant which are sent in presence from MUC room
-public class XMucUserElement {
+open class XMucUserElement {
     
-    public static func extract(presence: Presence?) -> XMucUserElement? {
+    open static func extract(_ presence: Presence?) -> XMucUserElement? {
         let elem = presence?.findChild("x", xmlns: "http://jabber.org/protocol/muc#user");
         return elem == nil ? nil : XMucUserElement(element: elem!);
     }
     
     var element: Element;
 
-    public var affiliation: Affiliation {
+    open var affiliation: Affiliation {
         if let affiliationVal = element.findChild("item")?.getAttribute("affiliation") {
             return Affiliation(rawValue: affiliationVal) ?? .none;
         }
         return .none;
     }
     
-    public var jid: JID? {
+    open var jid: JID? {
         if let jidVal = element.findChild("item")?.getAttribute("jid") {
             return JID(jidVal);
         }
         return nil;
     }
     
-    public var nick: String? {
+    open var nick: String? {
         return element.findChild("item")?.getAttribute("nick");
     }
     
-    public var role: Role {
+    open var role: Role {
         if let roleVal = element.findChild("item")?.getAttribute("role") {
             return Role(rawValue: roleVal) ?? .none;
         }
         return .none;
     }
     
-    public var statuses: [Int] {
+    open var statuses: [Int] {
         return element.mapChildren({ (el) -> Int? in
             return Int(el.getAttribute("code")!);
             }, filter: {(el) -> Bool in

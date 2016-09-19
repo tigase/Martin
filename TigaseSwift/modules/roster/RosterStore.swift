@@ -41,10 +41,10 @@ import Foundation
  removeItem(..);
  ```
  */
-public class RosterStore {
+open class RosterStore {
     
     /// Number of items in roster
-    public var count:Int {
+    open var count:Int {
         get {
             return -1;
         }
@@ -54,7 +54,7 @@ public class RosterStore {
      Holds instace responsible for modification of roster
      on server side
      */
-    public var handler:RosterStoreHandler?;
+    open var handler:RosterStoreHandler?;
     
     public init() {
         
@@ -68,11 +68,11 @@ public class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    public func add(jid:JID, name:String?, groups:[String] = [String](), onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
+    open func add(_ jid:JID, name:String?, groups:[String] = [String](), onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
         handler?.add(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
     }
     
-    public func cleared() {
+    open func cleared() {
         removeAll();
         handler?.cleared();
     }
@@ -83,7 +83,7 @@ public class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    public func remove(jid:JID, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
+    open func remove(_ jid:JID, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
         handler?.remove(jid, onSuccess: onSuccess, onError: onError);
     }
 
@@ -95,7 +95,7 @@ public class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    public func update(rosterItem:RosterItem, name: String?, groups:[String]? = nil, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
+    open func update(_ rosterItem:RosterItem, name: String?, groups:[String]? = nil, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
         handler?.update(rosterItem, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
     }
 
@@ -106,11 +106,11 @@ public class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    public func update(rosterItem:RosterItem, groups:[String], onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?) {
+    open func update(_ rosterItem:RosterItem, groups:[String], onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
         handler?.update(rosterItem, groups: groups, onSuccess: onSuccess, onError: onError);
     }
     
-    public func addItem(item:RosterItem) {
+    open func addItem(_ item:RosterItem) {
     }
 
     /**
@@ -118,14 +118,14 @@ public class RosterStore {
      - parameter jid: jid
      - returns: `RosterItem` for JID if exists
      */
-    public func get(jid:JID) -> RosterItem? {
+    open func get(_ jid:JID) -> RosterItem? {
         return nil;
     }
     
-    public func removeAll() {
+    open func removeAll() {
     }
     
-    public func removeItem(jid:JID) {
+    open func removeItem(_ jid:JID) {
     }
     
 }
@@ -136,10 +136,10 @@ public class RosterStore {
  */
 public protocol RosterStoreHandler {
 
-    func add(jid:JID, name:String?, groups:[String], onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);
+    func add(_ jid:JID, name:String?, groups:[String], onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
     func cleared();
-    func remove(jid:JID, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);
-    func update(rosterItem:RosterItem, name:String?, groups:[String]?, onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);
-    func update(rosterItem:RosterItem, groups:[String], onSuccess:((stanza:Stanza) -> Void)?, onError:((errorCondition:ErrorCondition?) -> Void)?);
+    func remove(_ jid:JID, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
+    func update(_ rosterItem:RosterItem, name:String?, groups:[String]?, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
+    func update(_ rosterItem:RosterItem, groups:[String], onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
     
 }

@@ -24,7 +24,7 @@ import Foundation
 /**
  Class holds informations for single SRV record of DNS entries
  */
-public class XMPPSrvRecord: CustomStringConvertible {
+open class XMPPSrvRecord: CustomStringConvertible {
     
     let port:Int!;
     let weight:Int!;
@@ -38,7 +38,7 @@ public class XMPPSrvRecord: CustomStringConvertible {
         self.target = target;
     }
     
-    public var description: String {
+    open var description: String {
         return "port: \(port), weight: \(weight), priority: \(priority), target: \(target!)";
     }
     

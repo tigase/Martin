@@ -27,13 +27,13 @@ import Foundation
  Needs to be a class due to default values for parameters.
  */
 
-public class PacketWriter {
+open class PacketWriter {
     
     /**
      Write packet to stream
      - parameter stanza: stanza to write
      */
-    public func write(stanza: Stanza) {
+    open func write(_ stanza: Stanza) {
         
     }
     
@@ -43,7 +43,7 @@ public class PacketWriter {
      - parameter timeout: timeout to wait for response
      - parameter callback: called when response is received or request timed out
      */
-    public func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback: ((Stanza?)->Void)?) {
+    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: ((Stanza?)->Void)?) {
     }
     
     /**
@@ -53,7 +53,7 @@ public class PacketWriter {
      - parameter onSuccess: called when successful response is received
      - parameter onError: called when failure response is received or request timed out
      */
-    public func write(stanza: Stanza, timeout: NSTimeInterval = 30, onSuccess: ((Stanza)->Void)?, onError: ((Stanza,ErrorCondition?)->Void)?, onTimeout: (()->Void)?) {
+    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, onSuccess: ((Stanza)->Void)?, onError: ((Stanza,ErrorCondition?)->Void)?, onTimeout: (()->Void)?) {
     }
     
     /**
@@ -62,7 +62,7 @@ public class PacketWriter {
      - parameter timeout: timeout to wait for response
      - parameter callback: methods of this class are called when response is received or request timed out
      */
-    public func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback:AsyncCallback) {
+    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback:AsyncCallback) {
     
     }
 }

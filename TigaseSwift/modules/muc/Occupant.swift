@@ -24,13 +24,13 @@ import Foundation
 /**
  Class is representation of MUC room occupant
  */
-public class Occupant {
+open class Occupant {
     
-    public let affiliation: Affiliation;
-    public let role: Role;
-    public let jid: JID?;
-    public let presence: Presence;
-    public let nickname: String;
+    open let affiliation: Affiliation;
+    open let role: Role;
+    open let jid: JID?;
+    open let presence: Presence;
+    open let nickname: String;
     
     public init(occupant: Occupant? = nil, presence: Presence) {
         nickname = presence.from!.resource!;

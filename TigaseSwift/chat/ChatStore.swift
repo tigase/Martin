@@ -36,7 +36,7 @@ public protocol ChatStore {
      - parameter filter: filter to match
      - returns: instance of T if any matches
      */
-    func get<T:ChatProtocol>(jid:BareJID, filter: (T)->Bool) -> T?;
+    func get<T:ChatProtocol>(_ jid:BareJID, filter: @escaping (T)->Bool) -> T?;
     /**
      Find all instances conforming to implementation of T
      */
@@ -47,54 +47,54 @@ public protocol ChatStore {
      - parameter jid: jid to check
      - returns: true if ChatProtocol is open
      */
-    func isFor(jid:BareJID) -> Bool;
+    func isFor(_ jid:BareJID) -> Bool;
     /**
      Register opened chat protocol instance
      - parameter chat: chat protocol instance to register
      - returns: registered chat protocol instance (may be new instance)
      */
-    func open<T:ChatProtocol>(chat:ChatProtocol) -> T?;
+    func open<T:ChatProtocol>(_ chat:ChatProtocol) -> T?;
     /**
      Unregister closed chat protocol instance
      - parameter chat: chat protocol instance to unregister
      - returns: true if chat protocol instance was unregistered
      */
-    func close(chat:ChatProtocol) -> Bool;
+    func close(_ chat:ChatProtocol) -> Bool;
 }
 
-public class DefaultChatStore: ChatStore {
+open class DefaultChatStore: ChatStore {
     
-    private var chatsByBareJid = [BareJID:[ChatProtocol]]();
+    fileprivate var chatsByBareJid = [BareJID:[ChatProtocol]]();
     
-    private let queue = dispatch_queue_create("chat_store_queue", DISPATCH_QUEUE_CONCURRENT);
+    fileprivate let queue = DispatchQueue(label: "chat_store_queue", attributes: DispatchQueue.Attributes.concurrent);
     
-    public var count:Int {
+    open var count:Int {
         get {
             var result = 0;
-            dispatch_sync(queue) {
+            queue.sync {
                 result = self.chatsByBareJid.count;
             }
             return result;
         }
     }
     
-    public var items:[ChatProtocol] {
+    open var items:[ChatProtocol] {
         get {
             var result = [ChatProtocol]();
-            dispatch_sync(queue) {
+            queue.sync {
                 self.chatsByBareJid.values.forEach { (chats) in
-                    result.appendContentsOf(chats);
+                    result.append(contentsOf: chats);
                 }
             }
             return result;
         }
     }
 
-    public func get<T>(jid:BareJID, filter: (T)->Bool) -> T? {
+    open func get<T>(_ jid:BareJID, filter: @escaping (T)->Bool) -> T? {
         var result: T?;
-        dispatch_sync(queue) {
+        queue.sync {
             if let chats = self.chatsByBareJid[jid] {
-                if let idx = chats.indexOf({
+                if let idx = chats.index(where: {
                     if let item:T = $0 as? T {
                         return filter(item);
                     }
@@ -107,9 +107,9 @@ public class DefaultChatStore: ChatStore {
         return result;
     }
     
-    public func getAll<T>() -> [T] {
+    open func getAll<T>() -> [T] {
         var result = [T]();
-        dispatch_sync(queue) {
+        queue.sync {
             self.chatsByBareJid.values.forEach { (chats) in
                 chats.forEach { (chat) in
                     if let ch = chat as? T {
@@ -122,19 +122,19 @@ public class DefaultChatStore: ChatStore {
     }
     
     
-    public func isFor(jid:BareJID) -> Bool {
+    open func isFor(_ jid:BareJID) -> Bool {
         var result = false;
-        dispatch_sync(queue) {
+        queue.sync {
             let chats = self.chatsByBareJid[jid];
             result = chats != nil && !chats!.isEmpty;
         }
         return result;
     }
 
-    public func open<T>(chat:ChatProtocol) -> T? {
+    open func open<T>(_ chat:ChatProtocol) -> T? {
         let jid = chat.jid;
         var result: T?;
-        dispatch_barrier_sync(queue) {
+        queue.sync(flags: .barrier, execute: {
             var chats = self.chatsByBareJid[jid.bareJid] ?? [ChatProtocol]();
             let fchat = chats.first;
             if fchat != nil && fchat?.allowFullJid == false {
@@ -145,29 +145,29 @@ public class DefaultChatStore: ChatStore {
             
             chats.append(chat);
             self.chatsByBareJid[jid.bareJid] = chats;
-        }
+        }) 
         return result;
     }
     
-    public func close(chat:ChatProtocol) -> Bool {
+    open func close(_ chat:ChatProtocol) -> Bool {
         let bareJid = chat.jid.bareJid;
         var result = false;
-        dispatch_barrier_sync(queue) {
+        queue.sync(flags: .barrier, execute: {
             if var chats = self.chatsByBareJid[bareJid] {
-                if let idx = chats.indexOf({ (c) -> Bool in
+                if let idx = chats.index(where: { (c) -> Bool in
                     c === chat;
                 }) {
-                    chats.removeAtIndex(idx);
+                    chats.remove(at: idx);
                     if chats.isEmpty {
-                        self.chatsByBareJid.removeValueForKey(bareJid)
+                        self.chatsByBareJid.removeValue(forKey: bareJid)
                     } else {
                         self.chatsByBareJid[bareJid] = chats;
                     }
                     result = true;
                 }
             }
-        }
-        return false;
+        }) 
+        return result;
     }
 }
 

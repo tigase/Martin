@@ -24,44 +24,44 @@ import Foundation
 /**
  Class represents MUC room locally and supports `ChatProtocol`
  */
-public class Room: ChatProtocol, ContextAware {
+open class Room: ChatProtocol, ContextAware {
 
-    private static let stampFormatter = ({()-> NSDateFormatter in
-        var f = NSDateFormatter();
-        f.locale = NSLocale(localeIdentifier: "en_US_POSIX");
+    fileprivate static let stampFormatter = ({()-> DateFormatter in
+        var f = DateFormatter();
+        f.locale = Locale(identifier: "en_US_POSIX");
         f.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ";
-        f.timeZone = NSTimeZone(forSecondsFromGMT: 0);
+        f.timeZone = TimeZone(secondsFromGMT: 0);
         return f;
     })();
     
     // common variables
     /// JID of MUC room
-    private var _jid: JID;
-    public var jid: JID {
+    fileprivate var _jid: JID;
+    open var jid: JID {
         get {
             var result: JID! = nil;
-            dispatch_sync(Room.queue) {
+            Room.queue.sync {
                 result = self._jid;
             }
             return result;
         }
         set {
-            dispatch_barrier_async(Room.queue) {
+            Room.queue.async(flags: .barrier, execute: {
                 self._jid = newValue;
-            }
+            }) 
         }
     }
-    public let allowFullJid: Bool = false;
+    open let allowFullJid: Bool = false;
     
     // specific variables
-    public var context: Context!;
+    open var context: Context!;
     
-    private var _lastMessageDate: NSDate? = nil;
+    fileprivate var _lastMessageDate: Date? = nil;
     /// Timestamp of last received message
-    public var lastMessageDate: NSDate? {
+    open var lastMessageDate: Date? {
         get {
-            var result: NSDate? = nil;
-            dispatch_sync(Room.queue) {
+            var result: Date? = nil;
+            Room.queue.sync {
                 result = self._lastMessageDate;
             }
             return result;
@@ -70,48 +70,48 @@ public class Room: ChatProtocol, ContextAware {
             guard newValue != nil else {
                 return;
             }
-            dispatch_barrier_async(Room.queue) {
-                if self._lastMessageDate == nil || self._lastMessageDate!.compare(newValue!) == NSComparisonResult.OrderedAscending {
+            Room.queue.async(flags: .barrier, execute: {
+                if self._lastMessageDate == nil || self._lastMessageDate!.compare(newValue!) == ComparisonResult.orderedAscending {
                     self._lastMessageDate = newValue;
                 }
-            }
+            }) 
         }
     }
     
-    private let _nickname: String;
+    fileprivate let _nickname: String;
     /// Nickname in room
-    public var nickname: String {
+    open var nickname: String {
         return _nickname;
     }
     
-    private var _password: String?;
+    fileprivate var _password: String?;
     /// Room password
-    public var password: String? {
+    open var password: String? {
         get {
             var result: String? = nil;
-            dispatch_sync(Room.queue) {
+            Room.queue.sync {
                 result = self._password;
             }
             return result;
         }
         set {
-            dispatch_barrier_async(Room.queue) {
+            Room.queue.async(flags: .barrier, execute: {
                 self._password = newValue;
-            }
+            }) 
         }
     }
     
-    private var _presences = [String: Occupant]();
+    fileprivate var _presences = [String: Occupant]();
     /// Room occupants
-    public var presences: [String: Occupant] {
+    open var presences: [String: Occupant] {
         var result: [String: Occupant]!;
-        dispatch_sync(Room.queue) {
+        Room.queue.sync {
             result = self._presences;
         }
         return result;
     }
     /// BareJID of MUC room
-    public var roomJid: BareJID {
+    open var roomJid: BareJID {
         get {
             return jid.bareJid;
         }
@@ -119,17 +119,17 @@ public class Room: ChatProtocol, ContextAware {
     
     var _state: State = .not_joined;
     /// State of room
-    public var state: State {
+    open var state: State {
         return _state;
     }
     
-    private static let queue = dispatch_queue_create("room_queue", DISPATCH_QUEUE_CONCURRENT);
+    fileprivate static let queue = DispatchQueue(label: "room_queue", attributes: DispatchQueue.Attributes.concurrent);
     
-    private var _tempOccupants = [String:Occupant]();
+    fileprivate var _tempOccupants = [String:Occupant]();
     /// Temporary occupants
-    public var tempOccupants: [String:Occupant] {
+    open var tempOccupants: [String:Occupant] {
         var result: [String: Occupant]!;
-        dispatch_sync(Room.queue) {
+        Room.queue.sync {
             result = self._tempOccupants;
         }
         return result;
@@ -142,7 +142,7 @@ public class Room: ChatProtocol, ContextAware {
     }
     
     /// Rejoin this room
-    public func rejoin() -> Presence {
+    open func rejoin() -> Presence {
         let presence = Presence();
         presence.to = JID(roomJid, resource: nickname);
         let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc");
@@ -153,7 +153,7 @@ public class Room: ChatProtocol, ContextAware {
         
         if lastMessageDate != nil {
             let history = Element(name: "history");
-            history.setAttribute("since", value: Room.stampFormatter.stringFromDate(lastMessageDate!));
+            history.setAttribute("since", value: Room.stampFormatter.string(from: lastMessageDate!));
             x.addChild(history);
         }
         
@@ -167,7 +167,7 @@ public class Room: ChatProtocol, ContextAware {
      - parameter body: text to send
      - parameter additionalElement: additional elements to add to message
      */
-    public func sendMessage(body: String?, additionalElements: [Element]? = nil) {
+    open func sendMessage(_ body: String?, additionalElements: [Element]? = nil) {
         let msg = createMessage(body);
         if additionalElements != nil {
             for elem in additionalElements! {
@@ -182,8 +182,8 @@ public class Room: ChatProtocol, ContextAware {
      - parameter body: text to send
      - returns: newly create message
      */
-    public func createMessage(body: String?) -> Message {
-        var msg = Message();
+    open func createMessage(_ body: String?) -> Message {
+        let msg = Message();
         msg.to = jid;
         msg.type = StanzaType.groupchat;
         msg.body = body;
@@ -195,7 +195,7 @@ public class Room: ChatProtocol, ContextAware {
      - parameter invitee: user to invite
      - parameter reason: invitation reason
      */
-    public func invite(invitee: JID, reason: String?) {
+    open func invite(_ invitee: JID, reason: String?) {
         let message = self.createInvitation(invitee, reason: reason);
         
         context.writer?.write(message);
@@ -207,7 +207,7 @@ public class Room: ChatProtocol, ContextAware {
      - parameter reason: invitation reason
      - returns: newly create message
      */
-    public func createInvitation(invitee: JID, reason: String?) -> Message {
+    open func createInvitation(_ invitee: JID, reason: String?) -> Message {
         let message = Message();
         message.to = JID(self.roomJid);
         
@@ -229,7 +229,7 @@ public class Room: ChatProtocol, ContextAware {
      - parameter reason: invitation reason
      - parameter threadId: thread id to use in invitation message
      */
-    public func inviteDirectly(invitee: JID, reason: String?, threadId: String?) {
+    open func inviteDirectly(_ invitee: JID, reason: String?, threadId: String?) {
         let message = createDirectInvitation(invitee, reason: reason, threadId: threadId);
         context.writer?.write(message);
     }
@@ -241,7 +241,7 @@ public class Room: ChatProtocol, ContextAware {
      - parameter threadId: thread id to use in invitation message
      - returns: newly created invitation message
      */
-    public func createDirectInvitation(invitee: JID, reason: String?, threadId: String?) -> Message {
+    open func createDirectInvitation(_ invitee: JID, reason: String?, threadId: String?) -> Message {
         let message = Message();
         message.to = invitee;
         
@@ -259,29 +259,29 @@ public class Room: ChatProtocol, ContextAware {
         return message;
     }
     
-    public func add(occupant: Occupant) {
-        dispatch_barrier_async(Room.queue) {
+    open func add(_ occupant: Occupant) {
+        Room.queue.async(flags: .barrier, execute: {
             self._presences[occupant.nickname] = occupant;
-        }
+        }) 
     }
     
-    public func remove(occupant: Occupant) {
-        dispatch_barrier_async(Room.queue) {
-            self._presences.removeValueForKey(occupant.nickname);
-        }
+    open func remove(_ occupant: Occupant) {
+        Room.queue.async(flags: .barrier, execute: {
+            self._presences.removeValue(forKey: occupant.nickname);
+        }) 
     }
     
-    public func addTemp(nickname: String, occupant: Occupant) {
-        dispatch_barrier_async(Room.queue) {
+    open func addTemp(_ nickname: String, occupant: Occupant) {
+        Room.queue.async(flags: .barrier, execute: {
             self._tempOccupants[nickname] = occupant;
-        }
+        }) 
     }
     
-    public func removeTemp(nickname: String) -> Occupant? {
+    open func removeTemp(_ nickname: String) -> Occupant? {
         var result: Occupant?;
-        dispatch_barrier_sync(Room.queue) {
-            result = self._tempOccupants.removeValueForKey(nickname);
-        }
+        Room.queue.sync(flags: .barrier, execute: {
+            result = self._tempOccupants.removeValue(forKey: nickname);
+        }) 
         return result;
     }
     

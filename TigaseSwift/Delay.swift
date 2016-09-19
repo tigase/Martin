@@ -26,32 +26,32 @@ import Foundation
  
  [XEP-0203: Delayed Delivery]: http://xmpp.org/extensions/xep-0203.html
  */
-public class Delay {
+open class Delay {
     
-    private static let stampFormatter = ({()-> NSDateFormatter in
-        var f = NSDateFormatter();
-        f.locale = NSLocale(localeIdentifier: "en_US_POSIX");
+    fileprivate static let stampFormatter = ({()-> DateFormatter in
+        var f = DateFormatter();
+        f.locale = Locale(identifier: "en_US_POSIX");
         f.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ";
-        f.timeZone = NSTimeZone(forSecondsFromGMT: 0);
+        f.timeZone = TimeZone(secondsFromGMT: 0);
         return f;
     })();
     
-    private static let stampWithMilisFormatter = ({()-> NSDateFormatter in
-        var f = NSDateFormatter();
-        f.locale = NSLocale(localeIdentifier: "en_US_POSIX");
+    fileprivate static let stampWithMilisFormatter = ({()-> DateFormatter in
+        var f = DateFormatter();
+        f.locale = Locale(identifier: "en_US_POSIX");
         f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ";
-        f.timeZone = NSTimeZone(forSecondsFromGMT: 0);
+        f.timeZone = TimeZone(secondsFromGMT: 0);
         return f;
     })();
     
     /// Holds timestamp when delay started. In most cases it is very close to time when stanza was sent.
-    public let stamp:NSDate?;
+    open let stamp:Date?;
     /// JID of entity responsible for delay
-    public let from:JID?;
+    open let from:JID?;
     
     public init(element:Element) {
         if let stampStr = element.getAttribute("stamp") {
-            stamp = Delay.stampFormatter.dateFromString(stampStr) ?? Delay.stampWithMilisFormatter.dateFromString(stampStr);
+            stamp = Delay.stampFormatter.date(from: stampStr) ?? Delay.stampWithMilisFormatter.date(from: stampStr);
         } else {
             stamp = nil;
         }

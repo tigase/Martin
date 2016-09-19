@@ -26,21 +26,21 @@ import Foundation
  
  [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
  */
-public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaFilter, EventHandler {
+open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaFilter, EventHandler {
     
     /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
     
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = SM_XMLNS;
+    open static let ID = SM_XMLNS;
     
-    public let id = SM_XMLNS;
+    open let id = SM_XMLNS;
     
-    public let criteria = Criteria.xmlns(SM_XMLNS);
+    open let criteria = Criteria.xmlns(SM_XMLNS);
     
-    public let features = [String]();
+    open let features = [String]();
     
-    public var context: Context! {
+    open var context: Context! {
         didSet {
             if oldValue != nil {
                 oldValue.eventBus.unregister(self, events: SessionObject.ClearedEvent.TYPE);
@@ -52,38 +52,38 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     /// Holds queue with stanzas sent but not acked
-    private var outgoingQueue = Queue<Stanza>();
+    fileprivate var outgoingQueue = Queue<Stanza>();
     
     // TODO: should this stay here or be moved to sessionObject as in Jaxmpp?
-    private var ackH = AckHolder();
+    fileprivate var ackH = AckHolder();
 
-    private var _ackEnabled: Bool = false;
+    fileprivate var _ackEnabled: Bool = false;
     /// Is ACK enabled?
-    public var ackEnabled: Bool {
+    open var ackEnabled: Bool {
         return _ackEnabled;
     }
     
-    private var lastRequestTimestamp = NSDate();
-    private var lastSentH = UInt32(0);
+    fileprivate var lastRequestTimestamp = Date();
+    fileprivate var lastSentH = UInt32(0);
     
     /// Is stream resumption enabled?
-    public var resumptionEnabled: Bool {
+    open var resumptionEnabled: Bool {
         return resumptionId != nil
     }
     
-    private var resumptionId: String? = nil;
+    fileprivate var resumptionId: String? = nil;
     
-    private var _resumptionLocation: String? = nil;
+    fileprivate var _resumptionLocation: String? = nil;
     /// Address to use when resuming stream
-    public var resumptionLocation: String? {
+    open var resumptionLocation: String? {
         return _resumptionLocation;
     }
     /// Maximal resumption timeout to use
-    public var maxResumptionTimeout: Int?;
+    open var maxResumptionTimeout: Int?;
     
-    private var _resumptionTime: NSTimeInterval?;
+    fileprivate var _resumptionTime: TimeInterval?;
     /// Negotiated resumption timeout
-    public var resumptionTime: NSTimeInterval? {
+    open var resumptionTime: TimeInterval? {
         return _resumptionTime;
     }
     
@@ -96,13 +96,13 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
      - parameter resumption: should resumption be enabled
      - parameter maxResumptionTimeout: maximal resumption timeout to use
      */
-    public func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) {
+    open func enable(_ resumption: Bool = true, maxResumptionTimeout: Int? = nil) {
         guard !(ackEnabled || resumptionEnabled) else {
             return;
         }
         
         log("enabling StreamManagament with resume=", resumption);
-        var enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS);
+        let enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS);
         if resumption {
             enable.setAttribute("resume", value: "true");
             let timeout = maxResumptionTimeout ?? self.maxResumptionTimeout;
@@ -117,7 +117,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     /**
      Method hadles events received from `EventBus`
      */
-    public func handleEvent(event: Event) {
+    open func handleEvent(_ event: Event) {
         switch event {
         case let e as SessionObject.ClearedEvent:
             for scope in e.scopes {
@@ -139,11 +139,11 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
      Check if Stream Management is supported on server
      - returns: true - if is supported
      */
-    public func isAvailable() -> Bool {
+    open func isAvailable() -> Bool {
         return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
     }
     
-    public func process(stanza: Stanza) throws {
+    open func process(_ stanza: Stanza) throws {
         // all requests should be processed already
         throw ErrorCondition.undefined_condition;
     }
@@ -152,7 +152,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
      Method filters incoming stanza to process StreamManagement stanzas.
      - parameter stanza: stanza to process
      */
-    public func processIncomingStanza(stanza: Stanza) -> Bool {
+    open func processIncomingStanza(_ stanza: Stanza) -> Bool {
         guard ackEnabled else {
             guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
                 return false;
@@ -186,7 +186,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         default:
             return false;
         }
-        return false;
+        //return false;
     }
     
     /**
@@ -194,7 +194,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
      stanza until they will be acked.
      - parameter stanza: stanza to process
      */
-    public func processOutgoingStanza(stanza: Stanza) {
+    open func processOutgoingStanza(_ stanza: Stanza) {
         guard ackEnabled else {
             return;
         }
@@ -216,18 +216,18 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     /// Send ACK request to server
-    public func request() {
+    open func request() {
         if lastRequestTimestamp.timeIntervalSinceNow < 1 {
             return;
         }
         
         let r = Stanza(name: "r", xmlns: StreamManagementModule.SM_XMLNS);
         context.writer?.write(r);
-        lastRequestTimestamp = NSDate();
+        lastRequestTimestamp = Date();
     }
     
     /// Reset all internal variables
-    public func reset() {
+    open func reset() {
         _ackEnabled = false;
         resumptionId = nil
         _resumptionTime = nil;
@@ -237,9 +237,9 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     /// Start stream resumption
-    public func resume() {
+    open func resume() {
         log("starting stream resumption");
-        var resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
+        let resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
         resume.setAttribute("h", value: String(ackH.incomingCounter));
         resume.setAttribute("previd", value: resumptionId);
         
@@ -247,7 +247,7 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     /// Send ACK to server
-    public func sendAck() {
+    open func sendAck() {
         guard lastSentH != ackH.incomingCounter else {
             return;
         }
@@ -255,33 +255,33 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         let value = ackH.incomingCounter;
         lastSentH = value;
         
-        var a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
+        let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
         a.setAttribute("h", value: String(value));
         context.writer?.write(a);
     }
     
     /// Process ACK from server
-    func processAckAnswer(stanza: Stanza) {
+    func processAckAnswer(_ stanza: Stanza) {
         let newH = UInt32(stanza.getAttribute("h")!) ?? 0;
         _ackEnabled = true;
         let left = Int(ackH.outgoingCounter - newH);
         ackH.outgoingCounter = newH;
         while left < outgoingQueue.count {
-            outgoingQueue.poll();
+            _ = outgoingQueue.poll();
         }
     }
     
     /// Process ACK request from server
-    func processAckRequest(stanza: Stanza) {
+    func processAckRequest(_ stanza: Stanza) {
         let value = ackH.incomingCounter;
         lastSentH = value;
 
-        var a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
+        let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
         a.setAttribute("h", value: String(value));
         context.writer?.write(a);
     }
     
-    func processFailed(stanza: Stanza) {
+    func processFailed(_ stanza: Stanza) {
         reset();
         
         let errorCondition = stanza.errorCondition ?? ErrorCondition.unexpected_request;
@@ -290,25 +290,25 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         context.eventBus.fire(FailedEvent(sessionObject: context.sessionObject, errorCondition: errorCondition));
     }
     
-    func processResumed(stanza: Stanza) {
+    func processResumed(_ stanza: Stanza) {
         let newH = UInt32(stanza.getAttribute("h")!) ?? 0;
         _ackEnabled = true;
         let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
         while left < outgoingQueue.count {
-            outgoingQueue.poll();
+            _ = outgoingQueue.poll();
         }
         ackH.outgoingCounter = newH;
-        var oldOutgoingQueue = outgoingQueue;
+        let oldOutgoingQueue = outgoingQueue;
         outgoingQueue = Queue<Stanza>();
         while let s = oldOutgoingQueue.poll() {
-            context.writer?.write(stanza);
+            context.writer?.write(s);
         }
         
         log("stream resumed");
         context.eventBus.fire(ResumedEvent(sessionObject: context.sessionObject, newH: newH, resumeId: stanza.getAttribute("previd")));
     }
     
-    func processEnabled(stanza: Stanza) {
+    func processEnabled(_ stanza: Stanza) {
         let id = stanza.getAttribute("id");
         let r = stanza.getAttribute("resume");
         let mx = stanza.getAttribute("max");
@@ -347,17 +347,17 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     /// Event fired when Stream Management is enabled
-    public class EnabledEvent: Event {
+    open class EnabledEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = EnabledEvent();
+        open static let TYPE = EnabledEvent();
         
-        public let type = "StreamManagementEnabledEvent";
+        open let type = "StreamManagementEnabledEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Is resumption enabled?
-        public let resume: Bool;
+        open let resume: Bool;
         /// ID of stream for resumption
-        public let resumeId:String?;
+        open let resumeId:String?;
         
         init() {
             sessionObject = nil;
@@ -374,15 +374,15 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
     }
     
     /// Event fired when Stream Management fails
-    public class FailedEvent: Event {
+    open class FailedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = FailedEvent();
+        open static let TYPE = FailedEvent();
         
-        public let type = "StreamManagementFailedEvent";
+        open let type = "StreamManagementFailedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Received error condition
-        public let errorCondition:ErrorCondition!;
+        open let errorCondition:ErrorCondition!;
         
         init() {
             sessionObject = nil;
@@ -396,17 +396,17 @@ public class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanz
         
     }
     
-    public class ResumedEvent: Event {
+    open class ResumedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ResumedEvent();
+        open static let TYPE = ResumedEvent();
         
-        public let type = "StreamManagementResumedEvent";
+        open let type = "StreamManagementResumedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Value of H attribute
-        public let newH: UInt32?;
+        open let newH: UInt32?;
         /// ID of resumed stream
-        public let resumeId:String?;
+        open let resumeId:String?;
         
         init() {
             sessionObject = nil;
@@ -440,25 +440,25 @@ class QueueNode<T> {
 /// Internal implementation of queue for holding items
 class Queue<T> {
 
-    private var _count: Int = 0;
-    private var head: QueueNode<T>? = nil;
-    private var tail: QueueNode<T>? = nil;
+    fileprivate var _count: Int = 0;
+    fileprivate var head: QueueNode<T>? = nil;
+    fileprivate var tail: QueueNode<T>? = nil;
     
-    public var count: Int {
+    open var count: Int {
         return _count;
     }
     
     public init() {
     }
     
-    public func clear() {
+    open func clear() {
         head = nil;
         tail = nil;
         _count = 0;
     }
     
-    public func offer(value: T) {
-        var node = QueueNode<T>(value: value);
+    open func offer(_ value: T) {
+        let node = QueueNode<T>(value: value);
         if head == nil {
             self.head = node;
             self.tail = node;
@@ -467,26 +467,26 @@ class Queue<T> {
             self.head!.prev = node;
             self.head = node;
         }
-        self._count++;
+        self._count += 1;
     }
     
-    public func peek() -> T? {
+    open func peek() -> T? {
         if tail == nil {
             return nil
         }
         return tail?.value;
     }
     
-    public func poll() -> T? {
+    open func poll() -> T? {
         if tail == nil {
             return nil;
         } else {
-            var temp = tail!;
+            let temp = tail!;
             tail = temp.prev;
             if tail == nil {
                 head = nil;
             }
-            self._count--;
+            self._count -= 1;
             return temp.value;
         }
     }

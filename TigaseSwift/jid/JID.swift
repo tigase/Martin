@@ -24,24 +24,24 @@ import Foundation
 /**
  XMPP entity address form `localpart@domainpart/resourcepart`
  */
-public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
+open class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
     
     /// BareJID part of JID
-    public let bareJid:BareJID;
+    open let bareJid:BareJID;
     /// Resouce part
-    public let resource:String?;
+    open let resource:String?;
     /// String representation of JID
-    public let stringValue:String;
+    open let stringValue:String;
     /// Local part
-    public var localPart:String? {
+    open var localPart:String? {
         return self.bareJid.localPart;
     }
     // Domain part
-    public var domain:String! {
+    open var domain:String! {
         return self.bareJid.domain;
     }
     
-    public var hashValue: Int {
+    open var hashValue: Int {
         get {
             return stringValue.hashValue;
         }
@@ -72,8 +72,8 @@ public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
      Create instance from string representation of `JID`
      */
     public init(_ jid: String) {
-        let idx = jid.characters.indexOf("/");
-        self.resource = (idx == nil) ? nil : jid.substringFromIndex(idx!.successor())
+        let idx = jid.characters.index(of: "/");
+        self.resource = (idx == nil) ? nil : jid.substring(from: jid.characters.index(after: idx!));
         self.bareJid = BareJID(jid);
         self.stringValue = JID.toString(bareJid, resource);
     }
@@ -88,11 +88,11 @@ public class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
         self.init(jid!);
     }
     
-    public var description : String {
+    open var description : String {
         return self.stringValue;
     }
     
-    private static func toString(bareJid:BareJID, _ resource:String?) -> String {
+    fileprivate static func toString(_ bareJid:BareJID, _ resource:String?) -> String {
         if (resource != nil) {
             return "\(bareJid)/\(resource!)"
         } else {

@@ -23,20 +23,20 @@ import Foundation
 /**
  Module provides features responsible for handling messages
  */
-public class MessageModule: XmppModule, ContextAware, Initializable {
+open class MessageModule: XmppModule, ContextAware, Initializable {
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = "message";
+    open static let ID = "message";
     
-    public let id = ID;
+    open let id = ID;
     
-    public let criteria = Criteria.name("message", types:[StanzaType.chat, StanzaType.normal, StanzaType.headline, StanzaType.error]);
+    open let criteria = Criteria.name("message", types:[StanzaType.chat, StanzaType.normal, StanzaType.headline, StanzaType.error]);
     
-    public let features = [String]();
+    open let features = [String]();
     
     /// Instance of `ChatManager`
-    public var chatManager:ChatManager!;
+    open var chatManager:ChatManager!;
     
-    public var context:Context!
+    open var context:Context!
     
     public init() {
         
@@ -48,22 +48,22 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
      - parameter thread: thread id of chat
      - returns: instance of `Chat`
      */
-    public func createChat(jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
+    open func createChat(_ jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
         return chatManager.createChat(jid, thread: thread);
     }
     
-    public func initialize() {
+    open func initialize() {
         if chatManager == nil {
             chatManager = DefaultChatManager(context: context);
         }
     }
     
-    public func process(stanza: Stanza) throws {
+    open func process(_ stanza: Stanza) {
         let message = stanza as! Message;
-        try processMessage(message, interlocutorJid: message.from);
+        _ = processMessage(message, interlocutorJid: message.from);
     }
     
-    func processMessage(message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
+    func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
         var chat = chatManager.getChat(interlocutorJid!, thread: message.thread);
         
         if chat == nil && message.body == nil {
@@ -97,28 +97,28 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
      - parameter subject: subject of message
      - parameter additionalElements: array of additional elements to add to message
      */
-    public func sendMessage(chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
+    open func sendMessage(_ chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
         let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
         context.writer?.write(msg);
         return msg;
     }
     
-    func fire(event:Event) {
+    func fire(_ event:Event) {
         context.eventBus.fire(event);
     }
     
     /// Event fired when Chat is created/opened
-    public class ChatCreatedEvent: Event {
+    open class ChatCreatedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ChatCreatedEvent();
+        open static let TYPE = ChatCreatedEvent();
         
-        public let type = "ChatCreatedEvent";
+        open let type = "ChatCreatedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Instance of opened chat
-        public let chat:Chat!;
+        open let chat:Chat!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.chat = nil;
         }
@@ -130,17 +130,17 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
     }
 
     /// Event fired when Chat is closed
-    public class ChatClosedEvent: Event {
+    open class ChatClosedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ChatClosedEvent();
+        open static let TYPE = ChatClosedEvent();
         
-        public let type = "ChatClosedEvent";
+        open let type = "ChatClosedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Instance of closed chat
-        public let chat:Chat!;
+        open let chat:Chat!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.chat = nil;
         }
@@ -152,19 +152,19 @@ public class MessageModule: XmppModule, ContextAware, Initializable {
     }
     
     /// Event fired when message is received
-    public class MessageReceivedEvent: Event {
+    open class MessageReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = MessageReceivedEvent();
+        open static let TYPE = MessageReceivedEvent();
         
-        public let type = "MessageReceivedEvent";
+        open let type = "MessageReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Instance of chat to which this message belongs
-        public let chat:Chat?;
+        open let chat:Chat?;
         /// Received message
-        public let message:Message!;
+        open let message:Message!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.chat = nil;
             self.message = nil;

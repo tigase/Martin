@@ -24,20 +24,20 @@ import Foundation
 /**
  Class responsible for holding cdata values found in parsed XML in element
  */
-public class CData : Node {
+open class CData : Node {
     
     /// cdata
-    public var value:String;
+    open var value:String;
     
     init(value:String) {
         self.value = value
     }
     
-    override public var stringValue: String {
+    override open var stringValue: String {
         return EscapeUtils.escape(value);
     }
     
-    override public func toPrettyString() -> String {
+    override open func toPrettyString() -> String {
         return EscapeUtils.escape(value);
     }
     

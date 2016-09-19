@@ -33,7 +33,7 @@ import Foundation
  */
 public struct Log {
     
-    private static let dateFormatter = NSDateFormatter();
+    fileprivate static let dateFormatter = DateFormatter();
     
     /// Method to initialize this mechanism
     public static func initialize() {
@@ -46,7 +46,7 @@ public struct Log {
      - parameter items: items to log
      - parameter from: source of this entry
      */
-    public static func log(items: Any..., from: Any? = nil) {
+    public static func log(_ items: Any..., from: Any? = nil) {
         #if !DISABLE_LOG
             logInternal(items, from: from)
         #endif
@@ -57,15 +57,15 @@ public struct Log {
      - parameter items: items to log
      - parameter from: source of this entry
      */
-    static func logInternal<T>(items: [T], from: Any? = nil) {
+    static func logInternal<T>(_ items: [T], from: Any? = nil) {
         #if !DISABLE_LOG
-            let date = NSDate();
-            let prefix = dateFormatter.stringFromDate(date);
+            let date = Date();
+            let prefix = dateFormatter.string(from: date);
             var entry = prefix + " ";
             if (from != nil) {
                 entry +=  "\(from!) ";
             }
-            entry += (items.map({ it in "\(it)"}).joinWithSeparator(" "));
+            entry += (items.map({ it in "\(it)"}).joined(separator: " "));
             print(entry)
         #endif
     }
@@ -77,7 +77,7 @@ public struct Log {
  When other classes extends it, it adds a `log(items: Any..)` method
  which provides this extending class as source of this log entry.
  */
-public class Logger {
+open class Logger {
     
     public init() {
         
@@ -88,9 +88,9 @@ public class Logger {
      of this entry log.
      - parameter items: items to add to log
      */
-    public func log(items: Any...) {
+    open func log(_ items: Any...) {
         #if !DISABLE_LOG
-            Log.logInternal(items, from: self.dynamicType)
+            Log.logInternal(items, from: type(of: self))
         #endif
     }
 }
@@ -103,9 +103,9 @@ extension NSObject {
      of this entry log.
      - parameter items: items to add to log
      */
-    public func log(items: Any...) {
+    public func log(_ items: Any...) {
         #if !DISABLE_LOG
-            Log.logInternal(items, from: self.dynamicType)
+            Log.logInternal(items, from: type(of: self))
         #endif
     }
     

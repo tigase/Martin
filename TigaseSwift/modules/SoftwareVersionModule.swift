@@ -26,33 +26,33 @@ import Foundation
  
  [XEP-0092: Software Version]: https://xmpp.org/extensions/xep-0092.html
  */
-public class SoftwareVersionModule: AbstractIQModule, ContextAware {
+open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
-    public static let DEFAULT_NAME_VAL = "Tigase based software";
+    open static let DEFAULT_NAME_VAL = "Tigase based software";
     
     /**
      Property under which name of software is stored in `SessionObject`
      */
-    public static let NAME_KEY = "softwareVersionName";
+    open static let NAME_KEY = "softwareVersionName";
     /**
      Property under which name of operation system is stored in `SessionObject`
      */
-    public static let OS_KEY = "softwareVersionOS";
+    open static let OS_KEY = "softwareVersionOS";
     /**
      Property under which version of software is stored in `SessionObject`
      */
-    public static let VERSION_KEY = "softwareVersionVersion";
+    open static let VERSION_KEY = "softwareVersionVersion";
     
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = "softwareVersion";
+    open static let ID = "softwareVersion";
     
-    public let id = ID;
+    open let id = ID;
     
-    public var context:Context!;
+    open var context:Context!;
     
-    public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:version"));
+    open let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:version"));
     
-    public let features = [ "jabber:iq:version" ];
+    open let features = [ "jabber:iq:version" ];
 
     public init() {
         
@@ -63,13 +63,13 @@ public class SoftwareVersionModule: AbstractIQModule, ContextAware {
      - parameter jid: address for which we want to retrieve software version
      - parameter callback: called on response or failure
      */
-    public func checkSoftwareVersion(jid:JID, callback:(Stanza?)->Void) {
-        var iq = Iq();
+    open func checkSoftwareVersion(_ jid:JID, callback: @escaping (Stanza?)->Void) {
+        let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.get;
         iq.addChild(Element(name:"query", xmlns:"jabber:iq:version"));
 
-        context.writer?.write(iq, callback:callback);
+        context.writer?.write(iq, callback: callback);
     }
     
     /**
@@ -78,19 +78,19 @@ public class SoftwareVersionModule: AbstractIQModule, ContextAware {
      - parameter onResult: called on successful response
      - parameter onError: called failure or request timeout
      */
-    public func checkSoftwareVersion(jid:JID, onResult:(name:String?, version:String?, os:String?)->Void, onError:(errorCondition:ErrorCondition?)->Void) {
+    open func checkSoftwareVersion(_ jid:JID, onResult: @escaping (_ name:String?, _ version:String?, _ os:String?)->Void, onError: @escaping (_ errorCondition:ErrorCondition?)->Void) {
         checkSoftwareVersion(jid) { (stanza) in
-            var type = stanza?.type ?? StanzaType.error;
+            let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
                 let query = stanza?.findChild("query", xmlns: "jabber:iq:version");
                 let name = query?.findChild("name")?.value;
                 let version = query?.findChild("version")?.value;
                 let os = query?.findChild("os")?.value;
-                onResult(name: name, version: version, os: os);
+                onResult(name, version, os);
             default:
-                var errorCondition = stanza?.errorCondition;
-                onError(errorCondition: errorCondition);
+                let errorCondition = stanza?.errorCondition;
+                onError(errorCondition);
             }
         }
     }
@@ -99,10 +99,10 @@ public class SoftwareVersionModule: AbstractIQModule, ContextAware {
      Method processes incoming stanzas
      - parameter stanza: stanza to process
      */
-    public func processGet(stanza: Stanza) throws {
-        var result = stanza.makeResult(StanzaType.result);
+    open func processGet(_ stanza: Stanza) throws {
+        let result = stanza.makeResult(StanzaType.result);
         
-        var query = Element(name: "query", xmlns: "jabber:iq:version");
+        let query = Element(name: "query", xmlns: "jabber:iq:version");
         result.addChild(query);
         
         let name = context.sessionObject.getProperty(SoftwareVersionModule.NAME_KEY, defValue: SoftwareVersionModule.DEFAULT_NAME_VAL);
@@ -116,7 +116,7 @@ public class SoftwareVersionModule: AbstractIQModule, ContextAware {
         context.writer?.write(result);
     }
     
-    public func processSet(stanza: Stanza) throws {
+    open func processSet(_ stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
 }

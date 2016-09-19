@@ -26,12 +26,12 @@ import Foundation
  
  It is only responsible for opening, closing and retrieving chats from chat store.
  */
-public class DefaultChatManager: ChatManager {
+open class DefaultChatManager: ChatManager {
     
-    public let chatStore:ChatStore;
-    public let context:Context;
+    open let chatStore:ChatStore;
+    open let context:Context;
     
-    public var count:Int {
+    open var count:Int {
         get {
             return chatStore.count;
         }
@@ -42,7 +42,7 @@ public class DefaultChatManager: ChatManager {
         self.chatStore = chatStore;
     }
     
-    public func close(chat: Chat) -> Bool {
+    open func close(_ chat: Chat) -> Bool {
         let result = chatStore.close(chat);
         if result {
             context.eventBus.fire(MessageModule.ChatClosedEvent(sessionObject: context.sessionObject, chat: chat));
@@ -50,7 +50,7 @@ public class DefaultChatManager: ChatManager {
         return result;
     }
     
-    public func createChat(jid: JID, thread: String? = nil) -> Chat? {
+    open func createChat(_ jid: JID, thread: String? = nil) -> Chat? {
         let chat:Chat? = chatStore.open(Chat(jid: jid, thread: thread));
         if chat != nil {
             context.eventBus.fire(MessageModule.ChatCreatedEvent(sessionObject: context.sessionObject, chat:chat!));
@@ -58,7 +58,7 @@ public class DefaultChatManager: ChatManager {
         return chat;
     }
     
-    public func getChat(jid:JID, thread:String? = nil) -> Chat? {
+    open func getChat(_ jid:JID, thread:String? = nil) -> Chat? {
         var chat:Chat? = nil;
         
         if thread != nil {
@@ -82,11 +82,11 @@ public class DefaultChatManager: ChatManager {
         return chat;
     }
     
-    public func getChats() -> [Chat] {
+    open func getChats() -> [Chat] {
         return chatStore.getAll();
     }
     
-    public func isChatOpenFor(jid: BareJID) -> Bool {
+    open func isChatOpenFor(_ jid: BareJID) -> Bool {
         return chatStore.isFor(jid);
     }
 }

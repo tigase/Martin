@@ -24,7 +24,7 @@ import Foundation
 /**
  Wrapper/Helper class for easier usage of ZLib for compression/decompression
  */
-public class Zlib {
+open class Zlib {
 
     /**
      Compression levels:
@@ -34,25 +34,25 @@ public class Zlib {
      - Default: default value provided by ZLib
      */
     public enum Compression: Int {
-        case No = 0;
-        case BestSpeed = 1;
-        case BestCompression = 9;
-        case Default = -1;
+        case no = 0;
+        case bestSpeed = 1;
+        case bestCompression = 9;
+        case `default` = -1;
     }
     
     /**
      Codes returned by ZLib
      */
     public enum ReturnCode: Int {
-        case Ok = 0;
-        case StreamEnd = 1;
-        case NeedDict = 2;
-        case ErrNo = -1;
-        case StreamError = -2;
-        case DataError = -3;
-        case MemError = -4;
-        case BufError = -5;
-        case VersionError = -6;
+        case ok = 0;
+        case streamEnd = 1;
+        case needDict = 2;
+        case errNo = -1;
+        case streamError = -2;
+        case dataError = -3;
+        case memError = -4;
+        case bufError = -5;
+        case versionError = -6;
     }
     
     /**
@@ -66,13 +66,13 @@ public class Zlib {
      - Trees
      */
     public enum Flush: Int {
-        case No = 0;
-        case Partial = 1;
-        case Sync = 2;
-        case Full = 3;
-        case Finish = 4;
-        case Block = 5;
-        case Trees = 6;
+        case no = 0;
+        case partial = 1;
+        case sync = 2;
+        case full = 3;
+        case finish = 4;
+        case block = 5;
+        case trees = 6;
     }
     
     /**
@@ -81,38 +81,38 @@ public class Zlib {
      
      Class for internal use.
      */
-    public class Base {
+    open class Base {
     
         /// returns version of ZLib library
-        @_silgen_name("zlibVersion") private static func zlibVersion() -> COpaquePointer;
+        @_silgen_name("zlibVersion") fileprivate static func zlibVersion() -> OpaquePointer;
         
         /// version of ZLib library
-        private static var version = Base.zlibVersion();
+        fileprivate static var version = Base.zlibVersion();
         /// instance of `z_stream` structure
-        private var stream = z_stream();
+        fileprivate var stream = z_stream();
         
         /**
          Structure which defines z_stream structure used by ZLib library
          */
         struct z_stream {
-            private var next_in: UnsafePointer<UInt8> = nil;    /* next input byte */
-            private var avail_in: CUnsignedInt = 0;             /* number of bytes available at next_in */
-            private var total_in: CUnsignedLong = 0;            /* total number of input bytes read so far */
+            fileprivate var next_in: UnsafePointer<UInt8>? = nil;    /* next input byte */
+            fileprivate var avail_in: CUnsignedInt = 0;             /* number of bytes available at next_in */
+            fileprivate var total_in: CUnsignedLong = 0;            /* total number of input bytes read so far */
             
-            private var next_out: UnsafePointer<UInt8> = nil;   /* next output byte should be put there */
-            private var avail_out: CUnsignedInt = 0;            /* remaining free space at next_out */
-            private var total_out: CUnsignedLong = 0;           /* total number of bytes output so far */
+            fileprivate var next_out: UnsafePointer<UInt8>? = nil;   /* next output byte should be put there */
+            fileprivate var avail_out: CUnsignedInt = 0;            /* remaining free space at next_out */
+            fileprivate var total_out: CUnsignedLong = 0;           /* total number of bytes output so far */
             
-            private var msg: UnsafePointer<UInt8> = nil;        /* last error message, NULL if no error */
-            private var state: COpaquePointer = nil;            /* not visible by applications */
+            fileprivate var msg: UnsafePointer<UInt8>? = nil;        /* last error message, NULL if no error */
+            fileprivate var state: OpaquePointer? = nil;            /* not visible by applications */
             
-            private var zalloc: COpaquePointer = nil;           /* used to allocate the internal state */
-            private var zfree: COpaquePointer = nil;            /* used to free the internal state */
-            private var opaque: COpaquePointer = nil;           /* private data object passed to zalloc and zfree */
+            fileprivate var zalloc: OpaquePointer? = nil;           /* used to allocate the internal state */
+            fileprivate var zfree: OpaquePointer? = nil;            /* used to free the internal state */
+            fileprivate var opaque: OpaquePointer? = nil;           /* private data object passed to zalloc and zfree */
             
-            private var data_type: CInt = 0;                    /* best guess about the data type: binary or text */
-            private var adler: CUnsignedLong = 0;               /* adler32 value of the uncompressed data */
-            private var reserved: CUnsignedLong = 0;            /* reserved for future use */
+            fileprivate var data_type: CInt = 0;                    /* best guess about the data type: binary or text */
+            fileprivate var adler: CUnsignedLong = 0;               /* adler32 value of the uncompressed data */
+            fileprivate var reserved: CUnsignedLong = 0;            /* reserved for future use */
         }
         
     }
@@ -122,23 +122,23 @@ public class Zlib {
      
      Result may be later decompress by `Inflater`
      */
-    public class Deflater: Base {
+    open class Deflater: Base {
         
-        @_silgen_name("deflateInit_") private func deflateInit_(stream : UnsafeMutablePointer<Void>, level : CInt, version : COpaquePointer, stream_size : CInt) -> CInt
-        @_silgen_name("deflate") private func deflate(stream : UnsafeMutablePointer<Void>, flush : CInt) -> CInt
-        @_silgen_name("deflateEnd") private func deflateEnd(strean : UnsafeMutablePointer<Void>) -> CInt
+        @_silgen_name("deflateInit_") fileprivate func deflateInit_(_ stream : UnsafeMutableRawPointer, level : CInt, version : OpaquePointer, stream_size : CInt) -> CInt
+        @_silgen_name("deflate") fileprivate func deflate(_ stream : UnsafeMutableRawPointer, flush : CInt) -> CInt
+        @_silgen_name("deflateEnd") fileprivate func deflateEnd(_ strean : UnsafeMutableRawPointer) -> CInt
         
         /**
          Creates instance of `Deflater`
          - paramter level: sets compression level
          */
-        public init(level: Compression = .Default) {
+        public init(level: Compression = .default) {
             super.init();
-            deflateInit_(&stream, level: CInt(level.rawValue), version: Base.version, stream_size: CInt(sizeof(z_stream)));
+            _ = deflateInit_(&stream, level: CInt(level.rawValue), version: Base.version, stream_size: CInt(MemoryLayout<z_stream>.size));
         }
         
         deinit {
-            deflateEnd(&stream);
+            _ = deflateEnd(&stream);
         }
 
         /**
@@ -148,17 +148,18 @@ public class Zlib {
          - parameter flush: type of flush
          - returns: compressed data as array of bytes (may not contain all data depending on `flush` parameter)
          */
-        public func compress(var bytes: UnsafePointer<UInt8>, length: Int, flush: Flush = .Partial) -> [UInt8] {
+        public func compress(_ bytes: UnsafePointer<UInt8>, length: Int, flush: Flush = .partial) -> [UInt8] {
+            let bytes = bytes
             var result = [UInt8]();
             stream.avail_in = CUnsignedInt(length);
             stream.next_in = bytes;
             
-            var out = [UInt8](count: length + (length / 100) + 13, repeatedValue: 0);
+            var out = [UInt8](repeating: 0, count: length + (length / 100) + 13);
             repeat {
                 stream.avail_out = CUnsignedInt(out.count);
                 stream.next_out = &out + 0;
                 
-                deflate(&stream, flush: CInt(flush.rawValue));
+                _ = deflate(&stream, flush: CInt(flush.rawValue));
                 let outCount = out.count - Int(stream.avail_out);
                 if outCount > 0 {
                     result += Array(out[0...outCount-1]);
@@ -174,16 +175,16 @@ public class Zlib {
      
      Data could be compressed using `Deflater`
      */
-    public class Inflater: Base {
+    open class Inflater: Base {
         
-        @_silgen_name("inflateInit_") private func inflateInit_(stream : UnsafeMutablePointer<Void>, version : COpaquePointer, stream_size : CInt) -> CInt
-        @_silgen_name("inflate") private func inflate(stream : UnsafeMutablePointer<Void>, flush : CInt) -> CInt
-        @_silgen_name("inflateEnd") private func inflateEnd(stream : UnsafeMutablePointer<Void>) -> CInt
+        @_silgen_name("inflateInit_") fileprivate func inflateInit_(_ stream : UnsafeMutableRawPointer, version : OpaquePointer, stream_size : CInt) -> CInt
+        @_silgen_name("inflate") fileprivate func inflate(_ stream : UnsafeMutableRawPointer, flush : CInt) -> CInt
+        @_silgen_name("inflateEnd") fileprivate func inflateEnd(_ stream : UnsafeMutableRawPointer) -> CInt
         
         /// Creates instance of `Inflater`
         public override init() {
             super.init();
-            inflateInit_(&stream, version: Base.version, stream_size: CInt(sizeof(z_stream)));
+            _ = inflateInit_(&stream, version: Base.version, stream_size: CInt(MemoryLayout<z_stream>.size));
         }
         
         /**
@@ -193,17 +194,18 @@ public class Zlib {
          - parameter flush: type of flush
          - returns: decompressed data as array of bytes
          */
-        public func decompress(var bytes:UnsafePointer<UInt8>, length: Int, flush: Flush = .Partial) -> [UInt8] {
+        public func decompress(_ bytes:UnsafePointer<UInt8>, length: Int, flush: Flush = .partial) -> [UInt8] {
+            let bytes = bytes
             var result = [UInt8]();
             stream.avail_in = CUnsignedInt(length);
             stream.next_in = bytes;
             
-            var out = [UInt8](count: 50, repeatedValue: 0);
+            var out = [UInt8](repeating: 0, count: 50);
             repeat {
                 stream.avail_out = CUnsignedInt(out.count);
                 stream.next_out = &out + 0;
                 
-                inflate(&stream, flush: CInt(flush.rawValue));
+                _ = inflate(&stream, flush: CInt(flush.rawValue));
                 let outCount = out.count - Int(stream.avail_out);
                 if outCount > 0 {
                     result += Array(out[0...outCount-1]);
@@ -215,16 +217,16 @@ public class Zlib {
         
     }
     
-    private let inflater: Inflater;
-    private let deflater: Deflater;
-    private let flush: Flush;
+    fileprivate let inflater: Inflater;
+    fileprivate let deflater: Deflater;
+    fileprivate let flush: Flush;
     
     /**
      Creates instance of ZLib which allows for compression and decompression
      - parameter compressionLevel: level of compression
      - parameter flush: type of flush used during compression and decompression
      */
-    public init(compressionLevel level: Compression, flush: Flush = .Partial) {
+    public init(compressionLevel level: Compression, flush: Flush = .partial) {
         self.deflater = Deflater(level: level);
         self.inflater = Inflater();
         self.flush = flush;
@@ -236,7 +238,7 @@ public class Zlib {
      - parameter length: number of data to process
      - returns: compressed data as array of bytes
      */
-    public func compress(bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
+    open func compress(_ bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
         return deflater.compress(bytes, length: length, flush: flush);
     }
     
@@ -246,7 +248,7 @@ public class Zlib {
      - parameter length: number of data to process
      - returns: decompressed data as array of bytes
      */
-    public func decompress(bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
+    open func decompress(_ bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
         return inflater.decompress(bytes, length: length, flush: flush);
     }
 

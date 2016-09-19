@@ -24,27 +24,27 @@ import Foundation
 /**
  Helper class for escaping/unescaping XML entries
  */
-public class EscapeUtils {
+open class EscapeUtils {
     
-    private static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"] ];
+    fileprivate static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"] ];
     
     /**
      Unescape string
      - parameter value: string to unescape
      - returns: unescaped string
      */
-    public static func unescape(value:String) -> String {
-        if !value.containsString("&") {
+    open static func unescape(_ value:String) -> String {
+        if !value.contains("&") {
             return value;
         }
         var result = value;
         var i=ENTITIES.count-1;
         while i >= 0 {
             // this is for libxml2 as it replaces every &amp; with &#38; which in XML both replaces &
-            result = result.stringByReplacingOccurrencesOfString(ENTITIES[i][2], withString: ENTITIES[i][0]);
+            result = result.replacingOccurrences(of: ENTITIES[i][2], with: ENTITIES[i][0]);
             // this is for normal replacement (may not be needed but let's keep it for compatibility
-            result = result.stringByReplacingOccurrencesOfString(ENTITIES[i][1], withString: ENTITIES[i][0]);
-            i--;
+            result = result.replacingOccurrences(of: ENTITIES[i][1], with: ENTITIES[i][0]);
+            i -= 1;
         }
         return result;
     }
@@ -54,12 +54,12 @@ public class EscapeUtils {
      - parameter value: string to escape
      - returns: escaped string
      */
-    public static func escape(value:String) -> String {
+    open static func escape(_ value:String) -> String {
         var result = value;
         var i=0;
         while i < ENTITIES.count {
-            result = result.stringByReplacingOccurrencesOfString(ENTITIES[i][0], withString: ENTITIES[i][1]);
-            i++;
+            result = result.replacingOccurrences(of: ENTITIES[i][0], with: ENTITIES[i][1]);
+            i += 1;
         }
         return result;
     }

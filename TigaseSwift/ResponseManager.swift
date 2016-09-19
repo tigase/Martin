@@ -25,18 +25,18 @@ import Foundation
  and their callbacks, and to retieve them when response appears
  in the stream.
  */
-public class ResponseManager: Logger {
+open class ResponseManager: Logger {
     
     /// Internal class holding information about request and callbacks
-    private class Entry {
+    fileprivate class Entry {
         let jid: JID?;
-        let timestamp: NSDate;
+        let timestamp: Date;
         let callback: (Stanza?)->Void;
         
-        init(jid:JID?, callback:(Stanza?)->Void, timeout:NSTimeInterval) {
+        init(jid:JID?, callback:@escaping (Stanza?)->Void, timeout:TimeInterval) {
             self.jid = jid;
             self.callback = callback;
-            self.timestamp = NSDate(timeIntervalSinceNow: timeout);
+            self.timestamp = Date(timeIntervalSinceNow: timeout);
         }
         
         func checkTimeout() -> Bool {
@@ -44,13 +44,13 @@ public class ResponseManager: Logger {
         }
     }
     
-    private let queue = dispatch_queue_create("response_manager_queue", DISPATCH_QUEUE_SERIAL);
+    fileprivate let queue = DispatchQueue(label: "response_manager_queue", attributes: []);
     
-    private var timer:Timer?;
+    fileprivate var timer:Timer?;
     
-    private var handlers = [String:Entry]();
+    fileprivate var handlers = [String:Entry]();
     
-    private let context:Context;
+    fileprivate let context:Context;
     
     public init(context:Context) {
         self.context = context;
@@ -61,19 +61,19 @@ public class ResponseManager: Logger {
      - paramater stanza: stanza to process
      - returns: callback handler if any
      */
-    public func getResponseHandler(stanza:Stanza)-> ((Stanza?)->Void)? {
+    open func getResponseHandler(_ stanza:Stanza)-> ((Stanza?)->Void)? {
         let type = stanza.type;
         if (stanza.id == nil || (type != StanzaType.error && type !=  StanzaType.result)) {
             return nil;
         }
         let id = stanza.id!;
         var callback: ((Stanza?)->Void)? = nil;
-        dispatch_sync(queue) {
+        queue.sync {
             if let entry = self.handlers[id] {
                 let userJid = ResourceBinderModule.getBindedJid(self.context.sessionObject);
                 let from = stanza.from;
                 if (entry.jid == from) || (entry.jid == nil && from?.bareJid == userJid?.bareJid) {
-                    self.handlers.removeValueForKey(id)
+                    self.handlers.removeValue(forKey: id)
                     callback = entry.callback;
                 }
             }
@@ -87,7 +87,7 @@ public class ResponseManager: Logger {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback to execute on response or timeout
      */
-    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:((Stanza?)->Void)?) {
+    open func registerResponseHandler(_ stanza:Stanza, timeout:TimeInterval, callback:((Stanza?)->Void)?) {
         guard callback != nil else {
             return;
         }
@@ -98,7 +98,7 @@ public class ResponseManager: Logger {
             stanza.id = id;
         }
         
-        dispatch_async(queue) {
+        queue.async {
             self.handlers[id!] = Entry(jid: stanza.to, callback: callback!, timeout: timeout);
         }
     }
@@ -110,7 +110,7 @@ public class ResponseManager: Logger {
      - parameter onSuccess: callback to execute on successful response
      - parameter onError: callback to execute on failure or timeout
      */
-    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, onSuccess:((Stanza)->Void)?, onError:((Stanza,ErrorCondition?)->Void)?, onTimeout:(()->Void)?) {
+    open func registerResponseHandler(_ stanza:Stanza, timeout:TimeInterval, onSuccess:((Stanza)->Void)?, onError:((Stanza,ErrorCondition?)->Void)?, onTimeout:(()->Void)?) {
         guard (onSuccess != nil) || (onError != nil) || (onTimeout != nil) else {
             return;
         }
@@ -134,7 +134,7 @@ public class ResponseManager: Logger {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback with methods to execute on response or timeout
      */
-    public func registerResponseHandler(stanza:Stanza, timeout:NSTimeInterval, callback:AsyncCallback) {
+    open func registerResponseHandler(_ stanza:Stanza, timeout:TimeInterval, callback:AsyncCallback) {
         self.registerResponseHandler(stanza, timeout: timeout) { (response:Stanza?)->Void in
             if response == nil {
                 callback.onTimeout();
@@ -149,18 +149,18 @@ public class ResponseManager: Logger {
     }
     
     /// Activate response manager
-    public func start() {
+    open func start() {
         timer = Timer(delayInSeconds: 30, repeats: true) {
             self.checkTimeouts();
         }
     }
     
     /// Deactivates response manager
-    public func stop() {
+    open func stop() {
         timer?.cancel();
         timer = nil;
         for (id,handler) in handlers {
-            handlers.removeValueForKey(id);
+            handlers.removeValue(forKey: id);
             handler.callback(nil);
         }
     }
@@ -172,10 +172,10 @@ public class ResponseManager: Logger {
     
     /// Check if any callback should be called due to timeout
     func checkTimeouts() {
-        dispatch_sync(queue) {
+        queue.sync {
             for (id,handler) in self.handlers {
                 if handler.checkTimeout() {
-                    self.handlers.removeValueForKey(id);
+                    self.handlers.removeValue(forKey: id);
                     handler.callback(nil);
                 }
             }
@@ -188,8 +188,8 @@ public class ResponseManager: Logger {
  */
 public protocol AsyncCallback {
     
-    func onError(response:Stanza, error:ErrorCondition?);
-    func onSuccess(responseStanza:Stanza);
+    func onError(_ response:Stanza, error:ErrorCondition?);
+    func onSuccess(_ responseStanza:Stanza);
     func onTimeout();
     
 }

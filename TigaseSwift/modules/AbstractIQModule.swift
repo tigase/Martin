@@ -31,19 +31,19 @@ public protocol AbstractIQModule: XmppModule {
      Will be called on `<iq type=\"get\"/>'
      - parameter stanza: stanza to process
      */
-    func processGet(stanza:Stanza) throws;
+    func processGet(_ stanza:Stanza) throws;
     
     /**
      Will be called on `<iq type=\"set\"/>'
      - parameter stanza: stanza to process
      */
-    func processSet(stanza:Stanza) throws;
+    func processSet(_ stanza:Stanza) throws;
     
 }
 
 extension AbstractIQModule {
     
-    public func process(stanza: Stanza) throws {
+    public func process(_ stanza: Stanza) throws {
         if let type = stanza.type {
             switch type {
             case .set:

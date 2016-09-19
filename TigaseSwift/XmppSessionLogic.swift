@@ -33,13 +33,13 @@ public protocol XmppSessionLogic: class {
     func unbind();
     
     /// Called when stanza is received
-    func receivedIncomingStanza(stanza:Stanza);
+    func receivedIncomingStanza(_ stanza:Stanza);
     /// Called when stanza is about to be send
-    func sendingOutgoingStanza(stanza:Stanza);
+    func sendingOutgoingStanza(_ stanza:Stanza);
     /// Called to send data to keep connection open
     func keepalive();
     /// Called when stream error happens
-    func onStreamError(streamError:Element);
+    func onStreamError(_ streamError:Element);
     /// Using properties set decides which name use to connect to XMPP server
     func serverToConnect() -> String;
 }
@@ -48,15 +48,15 @@ public protocol XmppSessionLogic: class {
  Implementation of XmppSessionLogic protocol which is resposible for
  following XMPP session logic for socket connections.
  */
-public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueueDispatcher {
+open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueueDispatcher {
     
-    private let context:Context;
-    private let modulesManager:XmppModulesManager;
-    private let connector:SocketConnector;
-    private let responseManager:ResponseManager;
+    fileprivate let context:Context;
+    fileprivate let modulesManager:XmppModulesManager;
+    fileprivate let connector:SocketConnector;
+    fileprivate let responseManager:ResponseManager;
 
     /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
-    public var state:SocketConnector.State {
+    open var state:SocketConnector.State {
         let s = connector.state;
         if s == .connected && ResourceBinderModule.getBindedJid(context.sessionObject) == nil {
             return .connecting;
@@ -64,10 +64,10 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         return s;
     }
     
-    public let queueTag: UnsafeMutablePointer<Void>;
-    public let queue: dispatch_queue_t;
+    open let queueTag: DispatchSpecificKey<DispatchQueue?>;
+    open let queue: DispatchQueue;
     
-    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queue: dispatch_queue_t, queueTag: UnsafeMutablePointer<Void>) {
+    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queue: DispatchQueue, queueTag: DispatchSpecificKey<DispatchQueue?>) {
         self.queue = queue;
         self.queueTag = queueTag;
         self.connector = connector;
@@ -76,7 +76,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         self.responseManager = responseManager;
     }
     
-    public func bind() {
+    open func bind() {
         connector.sessionLogic = self;
         context.eventBus.register(self, events: StreamFeaturesReceivedEvent.TYPE);
         context.eventBus.register(self, events: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE);
@@ -86,7 +86,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         responseManager.start();
     }
     
-    public func unbind() {
+    open func unbind() {
         context.eventBus.unregister(self, events: StreamFeaturesReceivedEvent.TYPE);
         context.eventBus.unregister(self, events: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE);
         context.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentErrorEvent.TYPE);
@@ -96,13 +96,13 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         connector.sessionLogic = nil;
     }
     
-    public func serverToConnect() -> String {
+    open func serverToConnect() -> String {
         let domain = context.sessionObject.domainName!;
         let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
         return streamManagementModule?.resumptionLocation ?? context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
     }
     
-    public func onStreamError(streamErrorEl: Element) {
+    open func onStreamError(_ streamErrorEl: Element) {
         if let seeOtherHost = streamErrorEl.findChild("see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams") {
             connector.reconnect(seeOtherHost.value!)
             return;
@@ -112,8 +112,8 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         context.eventBus.fire(ErrorEvent.init(sessionObject: context.sessionObject, streamError: streamError));
     }
     
-    public func receivedIncomingStanza(stanza:Stanza) {
-        dispatch_async(queue) {
+    open func receivedIncomingStanza(_ stanza:Stanza) {
+        queue.async {
             do {
                 for filter in self.modulesManager.filters {
                     if filter.processIncomingStanza(stanza) {
@@ -151,7 +151,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         }
     }
     
-    public func sendingOutgoingStanza(stanza: Stanza) {
+    open func sendingOutgoingStanza(_ stanza: Stanza) {
         dispatch_sync_local_queue() {
             for filter in self.modulesManager.filters {
                 filter.processOutgoingStanza(stanza);
@@ -159,7 +159,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         }
     }
     
-    public func keepalive() {
+    open func keepalive() {
         if let pingModule: PingModule = modulesManager.getModule(PingModule.ID) {
             pingModule.ping(JID(context.sessionObject.userBareJid!), callback: { (stanza) in
                 if stanza == nil {
@@ -171,7 +171,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         }
     }
     
-    public func handleEvent(event: Event) {
+    open func handleEvent(_ event: Event) {
         switch event {
         case is StreamFeaturesReceivedEvent:
             processStreamFeatures((event as! StreamFeaturesReceivedEvent).featuresElement);
@@ -185,7 +185,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
             processSessionBindedAndEstablished((event as! SessionEstablishmentModule.SessionEstablishmentSuccessEvent).sessionObject);
         case let re as StreamManagementModule.ResumedEvent:
             processSessionBindedAndEstablished(re.sessionObject);
-        case let rfe as StreamManagementModule.FailedEvent:
+        case is StreamManagementModule.FailedEvent:
             if let presenceModule: PresenceModule = modulesManager.getModule(PresenceModule.ID) {
                 presenceModule.presenceStore.clear();
             }
@@ -197,15 +197,15 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         }
     }
     
-    func processAuthFailed(event:AuthModule.AuthFailedEvent) {
+    func processAuthFailed(_ event:AuthModule.AuthFailedEvent) {
         log("Authentication failed");
     }
     
-    func processAuthSuccess(event:AuthModule.AuthSuccessEvent) {
+    func processAuthSuccess(_ event:AuthModule.AuthSuccessEvent) {
         connector.restartStream();
     }
     
-    func processResourceBindSuccess(event:ResourceBinderModule.ResourceBindSuccessEvent) {
+    func processResourceBindSuccess(_ event:ResourceBinderModule.ResourceBindSuccessEvent) {
         if (SessionEstablishmentModule.isSessionEstablishmentRequired(context.sessionObject)) {
             if let sessionModule:SessionEstablishmentModule = modulesManager.getModule(SessionEstablishmentModule.ID) {
                 sessionModule.establish();
@@ -218,7 +218,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         }
     }
     
-    func processSessionBindedAndEstablished(sessionObject:SessionObject) {
+    func processSessionBindedAndEstablished(_ sessionObject:SessionObject) {
         log("session binded and established");
         if let discoveryModule:DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) {
             discoveryModule.discoverServerFeatures(nil, onError: nil);
@@ -231,7 +231,7 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
         }
     }
     
-    func processStreamFeatures(featuresElement: Element) {
+    func processStreamFeatures(_ featuresElement: Element) {
         log("processing stream features");
         let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
         let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
@@ -269,20 +269,20 @@ public class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQu
     
     func isZlibAvailable() -> Bool {
         let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
-        return (featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").indexOf({(e) in e.findChild("method")?.value == "zlib" })) != nil;
+        return (featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild("method")?.value == "zlib" })) != nil;
     }
 
     /// Event fired when XMPP stream error happens
-    public class ErrorEvent: Event {
+    open class ErrorEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ErrorEvent();
+        open static let TYPE = ErrorEvent();
         
-        public let type = "errorEvent";
+        open let type = "errorEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Type of stream error which was received - may be nil if it is not known
-        public let streamError:StreamError?;
+        open let streamError:StreamError?;
         
         init() {
             sessionObject = nil;

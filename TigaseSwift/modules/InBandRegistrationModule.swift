@@ -28,25 +28,25 @@ import Foundation
  
  [XEP-0077: In-Band Registration]: http://xmpp.org/extensions/xep-0077.html
  */
-public class InBandRegistrationModule: AbstractIQModule, ContextAware {
+open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = "InBandRegistrationModule";
+    open static let ID = "InBandRegistrationModule";
     
-    public let id = ID;
+    open let id = ID;
     
-    public var context: Context!;
-    public let features = [String]();
-    public let criteria = Criteria.empty();
+    open var context: Context!;
+    open let features = [String]();
+    open let criteria = Criteria.empty();
     
     public init() {
         
     }
     
-    public func processGet(stanza: Stanza) throws {
+    open func processGet(_ stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
-    public func processSet(stanza: Stanza) throws {
+    open func processSet(_ stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
@@ -58,7 +58,7 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
      - parameter email: email for registration
      - parameter callback: called on registration response
      */
-    public func register(jid: JID? = nil, username: String?, password: String?, email: String?, callback: (Stanza?)->Void) {
+    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, callback: @escaping (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
@@ -82,7 +82,7 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
      Unregisters currently connected and authenticated user
      - parameter callback: called when user is unregistrated
      */
-    public func unregister(callback: (Stanza?)->Void) {
+    open func unregister(_ callback: @escaping (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = ResourceBinderModule.getBindedJid(context.sessionObject);
@@ -98,12 +98,12 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
      Check if server supports in-band registration
      - returns: true - if in-band registration is supported
      */
-    public func isRegistrationAvailable() -> Bool {
+    open func isRegistrationAvailable() -> Bool {
         let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
         return InBandRegistrationModule.isRegistrationAvailable(featuresElement);
     }
     
-    public static func isRegistrationAvailable(featuresElement: Element?) -> Bool {
+    open static func isRegistrationAvailable(_ featuresElement: Element?) -> Bool {
         return featuresElement?.findChild("register", xmlns: "http://jabber.org/features/iq-register") != nil;
     }
     
@@ -123,26 +123,27 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
      - parameter onSuccess: called after sucessful registration
      - parameter onError: called on error or due to timeout
      */
-    public static func connectAndRegister(var client: XMPPClient! = nil, userJid: BareJID, password: String?, email: String?, onSuccess: ()->Void, onError: (ErrorCondition?)->Void) -> XMPPClient {
+    public static func connectAndRegister(_ client: XMPPClient! = nil, userJid: BareJID, password: String?, email: String?, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?)->Void) -> XMPPClient {
+        var client = client
         if client == nil {
             client = XMPPClient();
         }
         
-        client.modulesManager.register(StreamFeaturesModule());
-        let registrationModule: InBandRegistrationModule = client.modulesManager.register(InBandRegistrationModule());
+        _ = client?.modulesManager.register(StreamFeaturesModule());
+        _ = client!.modulesManager.register(InBandRegistrationModule());
         
-        client.connectionConfiguration.setDomain(client.sessionObject.domainName ?? userJid.domain);
+        client?.connectionConfiguration.setDomain(client!.sessionObject.domainName ?? userJid.domain);
         
-        let handler = RegistrationEventHandler(client: client);
+        let handler = RegistrationEventHandler(client: client!);
         handler.userJid = userJid;
         handler.password = password;
         handler.email = email;
         handler.onSuccess = onSuccess;
         handler.onError = onError;
         
-        client.login();
+        client?.login();
         
-        return client;
+        return client!;
     }
     
     class RegistrationEventHandler: EventHandler {
@@ -151,9 +152,9 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
             willSet {
                 if newValue == nil {
                     let curr = self.client;
-                    self.unregisterEvents(curr);
-                    dispatch_async(dispatch_get_main_queue()) {
-                        curr.disconnect();
+                    self.unregisterEvents(curr!);
+                    DispatchQueue.main.async {
+                        curr?.disconnect();
                     }
                 }
             }
@@ -172,17 +173,17 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
             registerEvents(client);
         }
         
-        func registerEvents(client: XMPPClient) {
+        func registerEvents(_ client: XMPPClient) {
             client.eventBus.register(self, events: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
         }
         
-        func unregisterEvents(client: XMPPClient) {
+        func unregisterEvents(_ client: XMPPClient) {
             client.eventBus.unregister(self, events: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
         }
         
-        func handleEvent(event: Event) {
+        func handleEvent(_ event: Event) {
             switch event {
-            case let sfe as StreamFeaturesReceivedEvent:
+            case is StreamFeaturesReceivedEvent:
                 // check registration possibility
                 let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
                 let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
@@ -192,7 +193,7 @@ public class InBandRegistrationModule: AbstractIQModule, ContextAware {
                     return;
                 }
                 
-                guard compressionActive || context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").indexOf({(e) in e.findChild("method")?.value == "zlib" })) == nil) else {
+                guard compressionActive || context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild("method")?.value == "zlib" })) == nil) else {
                     return;
                 }
                 

@@ -26,23 +26,23 @@ import Foundation
  
  [XEP-0352: Client State Inidication]:https://xmpp.org/extensions/xep-0352.html
  */
-public class ClientStateIndicationModule: XmppModule, ContextAware {
+open class ClientStateIndicationModule: XmppModule, ContextAware {
     
     /// Client State Indication XMLNS
-    public static let CSI_XMLNS = "urn:xmpp:csi:0";
+    open static let CSI_XMLNS = "urn:xmpp:csi:0";
     /// ID of module to lookup for in `XmppModulesManager`
-    public static let ID = CSI_XMLNS;
+    open static let ID = CSI_XMLNS;
     
-    public let id = CSI_XMLNS;
+    open let id = CSI_XMLNS;
     
-    public let criteria = Criteria.empty();
+    open let criteria = Criteria.empty();
     
-    public let features = [String]();
+    open let features = [String]();
     
-    public var context:Context!;
+    open var context:Context!;
     
     /// Available optimization modes on server
-    public var available: Bool {
+    open var available: Bool {
         get {
             return StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.findChild("csi", xmlns: ClientStateIndicationModule.CSI_XMLNS) != nil;
         }
@@ -51,29 +51,29 @@ public class ClientStateIndicationModule: XmppModule, ContextAware {
     public init() {
     }
     
-    public func process(elem: Stanza) throws {
+    open func process(_ elem: Stanza) throws {
         throw ErrorCondition.feature_not_implemented;
     }
     
     /**
      Informs server that client is in active state
      */
-    public func active() {
-        setState(true);
+    open func active() {
+        _ = setState(true);
     }
     
     /**
      Informs server that client is in inactive state
      */
-    public func inactive() {
-        setState(false);
+    open func inactive() {
+        _ = setState(false);
     }
     
     /**
      Set state of client
      - paramater active: pass true if client is in active state
      */
-    public func setState(state: Bool) -> Bool {
+    open func setState(_ state: Bool) -> Bool {
         if (self.available) {
             let stanza = Stanza(name: state ? "active" : "inactive");
             stanza.element.xmlns = ClientStateIndicationModule.CSI_XMLNS;

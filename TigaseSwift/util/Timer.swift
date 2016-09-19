@@ -24,15 +24,15 @@ import Foundation
 /**
  Implementation of timer for easier use. It is based on NSTimer/
  */
-public class Timer: NSObject {
+open class Timer: NSObject {
     
     /// Interval set for this timer
-    public let timeout: NSTimeInterval;
-    private var timer: NSTimer?
+    open let timeout: TimeInterval;
+    fileprivate var timer: Foundation.Timer?
     /// Callback execute when timer is fired
-    public var callback: (Void ->Void)?
+    open var callback: ((Void) ->Void)?
     /// True if timer is repeating execution many times
-    public let repeats:Bool;
+    open let repeats:Bool;
     
     /**
      Creates instance of Timer
@@ -40,18 +40,18 @@ public class Timer: NSObject {
      - parameter repeats: true if timer should be fired many times
      - parameter callback: executed when timer is fired
      */
-    public init(delayInSeconds: NSTimeInterval, repeats: Bool, callback: Void->Void) {
+    public init(delayInSeconds: TimeInterval, repeats: Bool, callback: @escaping (Void)->Void) {
         self.timeout = delayInSeconds;
         self.callback = callback;
         self.repeats = repeats;
         super.init();
-        self.timer = NSTimer.scheduledTimerWithTimeInterval(delayInSeconds, target: self, selector: #selector(Timer.execute), userInfo: nil, repeats: repeats);
+        self.timer = Foundation.Timer.scheduledTimer(timeInterval: delayInSeconds, target: self, selector: #selector(Timer.execute), userInfo: nil, repeats: repeats);
     }
     
     /**
      Method fire by NSTimer internally
      */
-    public func execute() {
+    open func execute() {
         callback?();
         if !repeats {
             cancel();
@@ -61,7 +61,7 @@ public class Timer: NSObject {
     /**
      Methods cancels timer
      */
-    public func cancel() {
+    open func cancel() {
         callback = nil;
         timer?.invalidate()
         timer = nil;

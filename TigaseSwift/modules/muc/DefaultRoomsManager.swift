@@ -24,9 +24,9 @@ import Foundation
 /**
  Default MUC room manager for local handling of rooms
  */
-public class DefaultRoomsManager: ContextAware {
+open class DefaultRoomsManager: ContextAware {
     
-    public var context: Context! {
+    open var context: Context! {
         didSet {
             for room in rooms.values {
                 room.context = context;
@@ -34,9 +34,9 @@ public class DefaultRoomsManager: ContextAware {
         }
     }
     
-    private var rooms = [BareJID:Room]();
+    fileprivate var rooms = [BareJID:Room]();
     
-    private let queue = dispatch_queue_create("room_manager_queue", DISPATCH_QUEUE_CONCURRENT);
+    fileprivate let queue = DispatchQueue(label: "room_manager_queue", attributes: DispatchQueue.Attributes.concurrent);
     
     public init() {
         
@@ -46,9 +46,9 @@ public class DefaultRoomsManager: ContextAware {
      Check if room is open
      - parameter roomJid: jid of room
      */
-    public func contains(roomJid: BareJID) -> Bool {
+    open func contains(_ roomJid: BareJID) -> Bool {
         var result = false;
-        dispatch_sync(queue) {
+        queue.sync {
             result = self.rooms[roomJid] != nil;
         }
         return result;
@@ -60,7 +60,7 @@ public class DefaultRoomsManager: ContextAware {
      - parameter nickname: nickname
      - parameter password: password for room
      */
-    public func createRoomInstance(roomJid: BareJID, nickname: String, password: String?) -> Room {
+    open func createRoomInstance(_ roomJid: BareJID, nickname: String, password: String?) -> Room {
         let room = Room(context: context, roomJid: roomJid, nickname: nickname);
         room.password = password;
         return room;
@@ -71,9 +71,9 @@ public class DefaultRoomsManager: ContextAware {
      - parameter roomJid: jid of room
      - returns: instance of Room if created
      */
-    public func get(roomJid: BareJID) -> Room? {
+    open func get(_ roomJid: BareJID) -> Room? {
         var result: Room?;
-        dispatch_sync(queue) {
+        queue.sync {
             result = self.rooms[roomJid];
         }
         return result;
@@ -83,15 +83,15 @@ public class DefaultRoomsManager: ContextAware {
      Get array of all open rooms
      - returns: array of rooms
      */
-    public func getRooms() -> [Room] {
+    open func getRooms() -> [Room] {
         var rooms: [Room]!;
-        dispatch_sync(queue) {
+        queue.sync {
             rooms = Array(self.rooms.values);
         }
         return rooms;
     }
     
-    public func initialize() {
+    open func initialize() {
         
     }
     
@@ -99,19 +99,19 @@ public class DefaultRoomsManager: ContextAware {
      Register room instance in RoomManager
      - parameter room: room instance to register
      */
-    public func register(room: Room) {
-        dispatch_barrier_async(queue) {
+    open func register(_ room: Room) {
+        queue.async(flags: .barrier, execute: {
             self.rooms[room.roomJid]  = room;
-        }
+        }) 
     }
     
     /**
      Remove room instance
      - parameter room: room instance to remove
      */
-    public func remove(room: Room) {
-        dispatch_barrier_async(queue) {
-            self.rooms.removeValueForKey(room.roomJid);
-        }
+    open func remove(_ room: Room) {
+        queue.async(flags: .barrier, execute: {
+            self.rooms.removeValue(forKey: room.roomJid);
+        }) 
     }
 }

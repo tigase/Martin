@@ -26,15 +26,15 @@ import Foundation
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
  */
-public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, Initializable {
+open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, Initializable {
     
-    public static let ROSTER_STORE_KEY = "rosterStore";
+    open static let ROSTER_STORE_KEY = "rosterStore";
     /// ID of module for looup in `XmppModulesManager`
-    public static let ID = "roster";
+    open static let ID = "roster";
     
-    public let id = ID;
+    open let id = ID;
     
-    public var context:Context! {
+    open var context:Context! {
         didSet {
             if oldValue != nil {
                 oldValue.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
@@ -45,13 +45,13 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         }
     }
     
-    public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:roster"));
+    open let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:roster"));
     
-    public let features = [String]();
+    open let features = [String]();
     /// Roster cache versio provider
-    public var versionProvider:RosterCacheProvider?;
+    open var versionProvider:RosterCacheProvider?;
     /// Roster store
-    public var rosterStore:RosterStore {
+    open var rosterStore:RosterStore {
         get {
             return RosterModule.getRosterStore(context.sessionObject);
         }
@@ -60,7 +60,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         }
     }
     
-    public static func getRosterStore(sessionObject:SessionObject) -> RosterStore {
+    open static func getRosterStore(_ sessionObject:SessionObject) -> RosterStore {
         let rosterStore:RosterStore? = sessionObject.getProperty(ROSTER_STORE_KEY);
         return rosterStore!;
     }
@@ -69,7 +69,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         
     }
     
-    public func initialize() {
+    open func initialize() {
         var rosterStoreTmp:RosterStore? = context.sessionObject.getProperty(RosterModule.ROSTER_STORE_KEY);
         if rosterStoreTmp == nil {
             rosterStoreTmp = DefaultRosterStore();
@@ -80,7 +80,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         loadFromCache();
     }
     
-    public func handleEvent(event: Event) {
+    open func handleEvent(_ event: Event) {
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             rosterRequest();
@@ -94,11 +94,11 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         }
     }
     
-    public func processGet(stanza: Stanza) throws {
+    open func processGet(_ stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
-    public func processSet(stanza: Stanza) throws {
+    open func processSet(_ stanza: Stanza) throws {
         let bindedJid = ResourceBinderModule.getBindedJid(context.sessionObject);
         if (stanza.from != nil && stanza.from != bindedJid) {
             throw ErrorCondition.not_allowed;
@@ -109,7 +109,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         }
     }
     
-    private func processRosterQuery(query:Element, force:Bool) {
+    fileprivate func processRosterQuery(_ query:Element, force:Bool) {
         if force {
             rosterStore.removeAll();
         }
@@ -125,7 +125,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         
     }
     
-    private func processRosterItem(item:Element) {
+    fileprivate func processRosterItem(_ item:Element) {
         let jid = JID(item.getAttribute("jid")!);
         let name = item.getAttribute("name");
         let subscription:RosterItem.Subscription = item.getAttribute("subscription") == nil ? RosterItem.Subscription.none : RosterItem.Subscription(rawValue: item.getAttribute("subscription")!)!;
@@ -161,7 +161,7 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
                 modifiedGroups = currentItem!.groups.filter({(gname:String)->Bool in
                     return !groups.contains(gname);
                 });
-                modifiedGroups?.appendContentsOf(groups.filter({(gname:String)->Bool in
+                modifiedGroups?.append(contentsOf: groups.filter({(gname:String)->Bool in
                     return !currentItem!.groups.contains(gname);
                 }));
             }
@@ -176,10 +176,10 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
     /**
      Send roster retrieval request to server
      */
-    public func rosterRequest() {
-        var iq = Iq();
+    open func rosterRequest() {
+        let iq = Iq();
         iq.type = .get;
-        var query = Element(name:"query", xmlns:"jabber:iq:roster");
+        let query = Element(name:"query", xmlns:"jabber:iq:roster");
         
         if isRosterVersioningAvailable() {
             var x = versionProvider?.getCachedVersion(context.sessionObject) ?? "";
@@ -200,14 +200,14 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         })
     }
     
-    func updateItem(jid:JID, name:String?, groups:[String], subscription:RosterItem.Subscription? = nil, onSuccess:((stanza:Stanza)->Void)?, onError:((errorCondition:ErrorCondition?)->Void)?) {
-        var iq = Iq();
+    func updateItem(_ jid:JID, name:String?, groups:[String], subscription:RosterItem.Subscription? = nil, onSuccess:((_ stanza:Stanza)->Void)?, onError:((_ errorCondition:ErrorCondition?)->Void)?) {
+        let iq = Iq();
         iq.type = .set;
         
-        var query = Element(name:"query", xmlns:"jabber:iq:roster");
+        let query = Element(name:"query", xmlns:"jabber:iq:roster");
         iq.addChild(query);
         
-        var item = Element(name: "item");
+        let item = Element(name: "item");
         item.setAttribute("jid", value: jid.stringValue);
         item.setAttribute("name", value: name);
         groups.forEach({(group:String)->Void in
@@ -221,25 +221,25 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
         
         context.writer?.write(iq, callback: {(result:Stanza?) -> Void in
             if result?.type == StanzaType.result {
-                onSuccess?(stanza: result!);
+                onSuccess?(result!);
             } else {
-                onError?(errorCondition: result?.errorCondition);
+                onError?(result?.errorCondition);
             }
         });
     }
     
-    private func fire(event:Event) {
+    fileprivate func fire(_ event:Event) {
         context.eventBus.fire(event);
     }
     
-    private func isRosterVersioningAvailable() -> Bool {
+    fileprivate func isRosterVersioningAvailable() -> Bool {
         if (versionProvider == nil) {
             return false;
         }
         return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("ver", xmlns: "urn:xmpp:features:rosterver") != nil;
     }
     
-    private func loadFromCache() {
+    fileprivate func loadFromCache() {
         if versionProvider != nil {
             let store = rosterStore;
             versionProvider?.loadCachedRoster(context.sessionObject).forEach({ (item:RosterItem) in
@@ -267,21 +267,21 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
     }
 
     /// Event fired when roster item is updated
-    public class ItemUpdatedEvent: Event {
+    open class ItemUpdatedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ItemUpdatedEvent();
+        open static let TYPE = ItemUpdatedEvent();
         
-        public let type = "ItemUpdatedEvent";
+        open let type = "ItemUpdatedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Changed roster item
-        public let rosterItem:RosterItem?;
+        open let rosterItem:RosterItem?;
         /// Action done to roster item
-        public let action:Action!;
+        open let action:Action!;
         /// Groups which were modified
-        public let modifiedGroups:[String]?;
+        open let modifiedGroups:[String]?;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.rosterItem = nil;
             self.action = nil;
@@ -304,19 +304,19 @@ public class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler,
             self.rosterModule = module;
         }
         
-        func add(jid: JID, name: String?, groups: [String], onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+        func add(_ jid: JID, name: String?, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
         }
         
-        func remove(jid: JID, onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+        func remove(_ jid: JID, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(jid, name: nil, groups: [String](), subscription: RosterItem.Subscription.remove, onSuccess: onSuccess, onError: onError);
         }
         
-        func update(item: RosterItem, name: String?, groups: [String]? = nil, onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+        func update(_ item: RosterItem, name: String?, groups: [String]? = nil, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(item.jid, name: name, groups: groups ?? item.groups, onSuccess: onSuccess, onError: onError);
         }
 
-        func update(item: RosterItem, groups: [String], onSuccess: ((stanza: Stanza) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+        func update(_ item: RosterItem, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(item.jid, name: item.name, groups: groups, onSuccess: onSuccess, onError: onError);
         }
         

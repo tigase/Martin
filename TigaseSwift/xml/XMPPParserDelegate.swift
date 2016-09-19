@@ -25,14 +25,14 @@ import Foundation
  Implementation of XMLParserDelegate to properly parse XMPP stream
  and notify about stream start and end.
  */
-public class XMPPParserDelegate: Logger, XMLParserDelegate {
+open class XMPPParserDelegate: Logger, XMLParserDelegate {
     
     var xmlnss = [String:String]();
-    public var delegate:XMPPStreamDelegate?;
+    open var delegate:XMPPStreamDelegate?;
     var el_stack = [Element]()
     var all_roots = [Element]()
     
-    public func startElement(elementName:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]) {
+    open func startElement(_ elementName:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]) {
         
         if namespaces != nil {
             for (k,v) in namespaces! {
@@ -68,7 +68,7 @@ public class XMPPParserDelegate: Logger, XMLParserDelegate {
         el_stack.append(elem);
     }
     
-    public func endElement(elementName: String, prefix: String?) {
+    open func endElement(_ elementName: String, prefix: String?) {
         if (elementName == "stream" && prefix == "stream") {
             self.delegate?.onStreamTerminate();
             return
@@ -82,11 +82,11 @@ public class XMPPParserDelegate: Logger, XMLParserDelegate {
         }
     }
     
-    public func charactersFound(value: String) {
+    open func charactersFound(_ value: String) {
         el_stack.last?.addNode(CData(value: value))
     }
     
-    public func error(msg: String) {
+    open func error(_ msg: String) {
         log("error occurred", msg);
         self.delegate?.onError(msg);
     }

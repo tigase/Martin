@@ -21,21 +21,21 @@
 
 import Foundation
 
-public class XMPPDelegate : NSObject, XMPPStreamDelegate {
+open class XMPPDelegate : NSObject, XMPPStreamDelegate {
     
-    public func onError(msg: String?) {
+    open func onError(_ msg: String?) {
         log("error parsing XML", msg);
     }
     
-    public func onStreamTerminate() {
+    open func onStreamTerminate() {
         log("stream closed")
     }
     
-    public func onStreamStart(attributes: [String : String]) {
+    open func onStreamStart(_ attributes: [String : String]) {
         log("stream started: \(attributes)")
     }
     
-    public func processElement(packet: Element) {
+    open func processElement(_ packet: Element) {
         log("got packet:  " + packet.stringValue)
     }
     

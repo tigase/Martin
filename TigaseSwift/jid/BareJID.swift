@@ -24,16 +24,16 @@ import Foundation
 /**
  XMPP entity address for `localpart@domainpart`
  */
-public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
+open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     
     /// Local part
-    public let localPart:String?;
+    open let localPart:String?;
     /// Domain part
-    public let domain:String;
+    open let domain:String;
     /// String representation
-    public let stringValue:String;
+    open let stringValue:String;
     
-    public var hashValue: Int {
+    open var hashValue: Int {
         return stringValue.hashValue;
     }
     
@@ -65,11 +65,11 @@ public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue 
      - parameter jid: string representation of bare JID
      */
     public init(_ jid: String) {
-        var idx = jid.characters.indexOf("/");
-        let bareJid = (idx == nil) ? jid : jid.substringToIndex(idx!);
-        idx = bareJid.characters.indexOf("@");
-        localPart = (idx == nil) ? nil : bareJid.substringToIndex(idx!);
-        domain = (idx == nil) ? bareJid : bareJid.substringFromIndex(idx!.successor());
+        var idx = jid.characters.index(of: "/");
+        let bareJid = (idx == nil) ? jid : jid.substring(to: idx!);
+        idx = bareJid.characters.index(of: "@");
+        localPart = (idx == nil) ? nil : bareJid.substring(to: idx!);
+        domain = (idx == nil) ? bareJid : bareJid.substring(from: bareJid.characters.index(after: idx!));
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
@@ -94,11 +94,11 @@ public class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue 
         self.stringValue = BareJID.toString(localPart, domain);
     }
     
-    public var description : String {
+    open var description : String {
         return stringValue;
     }
     
-    private static func toString(localPart:String?, _ domain:String) -> String {
+    fileprivate static func toString(_ localPart:String?, _ domain:String) -> String {
         if (localPart == nil) {
             return domain;
         }

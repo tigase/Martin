@@ -26,54 +26,54 @@ import Foundation
  
  Data stored in this cache will not be saved.
  */
-public class DefaultCapabilitiesCache: CapabilitiesCache {
+open class DefaultCapabilitiesCache: CapabilitiesCache {
     
     /// Holds array of supported features grouped by node
-    private var features = [String: [String]]();
+    fileprivate var features = [String: [String]]();
     
     /// Holds identity for each node
-    private var identities: [String: DiscoveryModule.Identity] = [:];
+    fileprivate var identities: [String: DiscoveryModule.Identity] = [:];
     
-    private var queue = dispatch_queue_create("capabilities_cache_queue", DISPATCH_QUEUE_CONCURRENT);
+    fileprivate var queue = DispatchQueue(label: "capabilities_cache_queue", attributes: DispatchQueue.Attributes.concurrent);
     
-    public func getFeatures(node: String) -> [String]? {
+    open func getFeatures(_ node: String) -> [String]? {
         var result: [String]?;
-        dispatch_sync(queue) {
+        queue.sync {
             result = self.features[node];
         }
         return result;
     }
     
-    public func getIdentity(node: String) -> DiscoveryModule.Identity? {
+    open func getIdentity(_ node: String) -> DiscoveryModule.Identity? {
         var result: DiscoveryModule.Identity?;
-        dispatch_sync(queue) {
+        queue.sync {
             result = self.identities[node];
         }
         return result;
     }
     
-    public func getNodesWithFeature(feature: String) -> [String] {
+    open func getNodesWithFeature(_ feature: String) -> [String] {
         var result = Set<String>();
         for (node, features) in self.features {
-            if features.indexOf(feature) != nil {
+            if features.index(of: feature) != nil {
                 result.insert(node);
             }
         }
         return Array(result);
     }
     
-    public func isCached(node: String) -> Bool {
+    open func isCached(_ node: String) -> Bool {
         var result = false;
-        dispatch_sync(queue) {
-            result = self.features.indexForKey(node) != nil;
+        queue.sync {
+            result = self.features.index(forKey: node) != nil;
         }
         return result;
     }
     
-    public func store(node: String, identity: DiscoveryModule.Identity?, features: [String]) {
-        dispatch_barrier_async(queue) {
+    open func store(_ node: String, identity: DiscoveryModule.Identity?, features: [String]) {
+        queue.async(flags: .barrier, execute: {
             self.identities[node] = identity;
             self.features[node] = features;
-        }
+        }) 
     }
 }

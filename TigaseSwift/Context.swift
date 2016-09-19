@@ -25,18 +25,18 @@ import Foundation
  Instances of this class holds information passed to classes with support for `ContextAware` 
  protocol - mostly for implementations of `XmppModule` protocol.
  */
-public class Context {
+open class Context {
     
     // Instance of `SessionObject` with properties for particular connection/client
-    public let sessionObject:SessionObject;
+    open let sessionObject: SessionObject;
     // Instance of `EventBus` which processes events for particular connection/client
-    public let eventBus:EventBus;
+    open let eventBus: EventBus;
     // Instance of `XmppModuleManager` which keeps instances of every registered module for this connection/client
-    public let modulesManager:XmppModulesManager;
+    open let modulesManager: XmppModulesManager;
     // Instance of `PacketWriter` to use for sending stanzas
-    public var writer:PacketWriter?;
+    open var writer: PacketWriter?;
     
-    init(sessionObject:SessionObject, eventBus:EventBus, modulesManager:XmppModulesManager) {
+    init(sessionObject: SessionObject, eventBus: EventBus, modulesManager: XmppModulesManager) {
         self.sessionObject = sessionObject;
         self.eventBus = eventBus;
         self.modulesManager = modulesManager;

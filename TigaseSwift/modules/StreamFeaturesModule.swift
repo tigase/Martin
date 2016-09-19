@@ -26,22 +26,22 @@ import Foundation
  
  [stream features]: http://xmpp.org/rfcs/rfc6120.html#streams-negotiation-features
  */
-public class StreamFeaturesModule: XmppModule, ContextAware {
+open class StreamFeaturesModule: XmppModule, ContextAware {
 
-    public static let STREAM_FEATURES_KEY = "stream:features";
+    open static let STREAM_FEATURES_KEY = "stream:features";
     
-    public let id = "stream:features";
-    public let criteria = Criteria.name("features", xmlns: "http://etherx.jabber.org/streams");
-    public let features = [String]();
+    open let id = "stream:features";
+    open let criteria = Criteria.name("features", xmlns: "http://etherx.jabber.org/streams");
+    open let features = [String]();
     
-    public var context: Context!;
+    open var context: Context!;
 
     /**
      Retrieves stream features which were recevied from server
      - parameter sessionObject: instance of `SessionObject` to retrieve cached stream features element
      - returns: element with stream features
      */
-    public static func getStreamFeatures(sessionObject:SessionObject) -> Element? {
+    open static func getStreamFeatures(_ sessionObject:SessionObject) -> Element? {
         return sessionObject.getProperty(STREAM_FEATURES_KEY);
     }
     
@@ -54,7 +54,7 @@ public class StreamFeaturesModule: XmppModule, ContextAware {
      Processes received stream features and fires event
      - parameter stanza: stanza to process
      */
-    public func process(stanza:Stanza) throws {
+    open func process(_ stanza:Stanza) throws {
         context.sessionObject.setProperty("stream:features", value: stanza.element);
         context.eventBus.fire(StreamFeaturesReceivedEvent(context:context, element: stanza.element));
     }
@@ -62,16 +62,16 @@ public class StreamFeaturesModule: XmppModule, ContextAware {
 }
 
 /// Event fired when stream features are received
-public class StreamFeaturesReceivedEvent: Event {
+open class StreamFeaturesReceivedEvent: Event {
     
     /// Identifier of event which should be used during registration of `EventHandler`
-    public static let TYPE = StreamFeaturesReceivedEvent();
+    open static let TYPE = StreamFeaturesReceivedEvent();
     
-    public let type = "StreamFeaturesReceivedEvent";
+    open let type = "StreamFeaturesReceivedEvent";
     /// Context of XMPP connection which received this event
-    public let context:Context!;
+    open let context:Context!;
     /// Element with stream features
-    public let featuresElement:Element!;
+    open let featuresElement:Element!;
     
     init() {
         context = nil;

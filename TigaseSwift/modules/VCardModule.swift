@@ -26,26 +26,26 @@ import Foundation
  
  [XEP-0054: vcard-temp]: http://xmpp.org/extensions/xep-0054.html
  */
-public class VCardModule: XmppModule, ContextAware {
+open class VCardModule: XmppModule, ContextAware {
 
     /// Namespace used by vcard-temp feature
-    private static let VCARD_XMLNS = "vcard-temp";
+    fileprivate static let VCARD_XMLNS = "vcard-temp";
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = VCARD_XMLNS;
+    open static let ID = VCARD_XMLNS;
     
-    public let id = VCARD_XMLNS;
+    open let id = VCARD_XMLNS;
     
-    public let criteria = Criteria.empty();
+    open let criteria = Criteria.empty();
     
-    public let features = [VCARD_XMLNS];
+    open let features = [VCARD_XMLNS];
     
-    public var context: Context!
+    open var context: Context!
     
     public init() {
         
     }
     
-    public func process(elem: Stanza) throws {
+    open func process(_ elem: Stanza) throws {
         throw ErrorCondition.unexpected_request;
     }
     
@@ -54,8 +54,8 @@ public class VCardModule: XmppModule, ContextAware {
      - parameter vcard: vcard to publish
      - parameter callback: called on result or failure
      */
-    public func publishVCard(vcard: VCard, callback: ((Stanza?) -> Void)? = nil) {
-        var iq = Iq();
+    open func publishVCard(_ vcard: VCard, callback: ((Stanza?) -> Void)? = nil) {
+        let iq = Iq();
         iq.type = StanzaType.set;
         iq.addChild(vcard.element);
         
@@ -68,15 +68,15 @@ public class VCardModule: XmppModule, ContextAware {
      - parameter onSuccess: called after successful publication
      - parameter onError: called on failure or timeout
      */
-    public func publishVCard(vcard: VCard, onSuccess: (()->Void)?, onError: ((errorCondition: ErrorCondition?)->Void)?) {
+    open func publishVCard(_ vcard: VCard, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?) {
         publishVCard(vcard) { (stanza) in
-            var type = stanza?.type ?? StanzaType.error;
+            let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
                 onSuccess?();
             default:
-                var errorCondition = stanza?.errorCondition;
-                onError?(errorCondition: errorCondition);
+                let errorCondition = stanza?.errorCondition;
+                onError?(errorCondition);
             }
         }
     }
@@ -86,13 +86,13 @@ public class VCardModule: XmppModule, ContextAware {
      - parameter jid: JID for which vcard should be retrieved
      - parameter callback: called with result
      */
-    public func retrieveVCard(jid: JID? = nil, callback: (Stanza?) -> Void) {
-        var iq = Iq();
+    open func retrieveVCard(_ jid: JID? = nil, callback: @escaping (Stanza?) -> Void) {
+        let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid;
         iq.addChild(Element(name:"vCard", xmlns: VCardModule.VCARD_XMLNS));
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, timeout: 10, callback: callback);
     }
     
     /**
@@ -101,18 +101,18 @@ public class VCardModule: XmppModule, ContextAware {
      - parameter onSuccess: called retrieved vcard
      - parameter onError: called on failure or timeout
      */
-    public func retrieveVCard(jid: JID? = nil, onSuccess: (vcard: VCard)->Void, onError: (errorCondition: ErrorCondition?)->Void) {
+    open func retrieveVCard(_ jid: JID? = nil, onSuccess: @escaping (_ vcard: VCard)->Void, onError: @escaping (_ errorCondition: ErrorCondition?)->Void) {
         retrieveVCard(jid) { (stanza) in
-            var type = stanza?.type ?? StanzaType.error;
+            let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
                 if let vcardEl = stanza?.findChild("vCard", xmlns: VCardModule.VCARD_XMLNS) {
-                    var vcard = VCard(element: vcardEl)!;
-                    onSuccess(vcard: vcard);
+                    let vcard = VCard(element: vcardEl)!;
+                    onSuccess(vcard);
                 }
             default:
-                var errorCondition = stanza?.errorCondition;
-                onError(errorCondition: errorCondition);
+                let errorCondition = stanza?.errorCondition;
+                onError(errorCondition);
             }
         }
     }
@@ -121,15 +121,15 @@ public class VCardModule: XmppModule, ContextAware {
      Wrapper class for vcard element for easier access to
      values within vcard element.
      */
-    public class VCard: StringValue {
+    open class VCard: StringValue {
         
         var element: Element!;
         
-        public var stringValue: String {
+        open var stringValue: String {
             return element.stringValue;
         }
         
-        public var bday: String? {
+        open var bday: String? {
             get {
                 return getElementValue("BDAY")
             }
@@ -138,7 +138,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var fn: String? {
+        open var fn: String? {
             get {
                 return getElementValue("FN");
             }
@@ -147,7 +147,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var familyName: String? {
+        open var familyName: String? {
             get {
                 return getElementValue("N", "FAMILY");
             }
@@ -156,7 +156,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var givenName: String? {
+        open var givenName: String? {
             get {
                 return getElementValue("N", "GIVEN");
             }
@@ -165,7 +165,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var middleName: String? {
+        open var middleName: String? {
             get {
                 return getElementValue("N", "MIDDLE");
             }
@@ -174,7 +174,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var nickname: String? {
+        open var nickname: String? {
             get {
                 return getElementValue("NICKNAME");
             }
@@ -183,7 +183,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var url: String? {
+        open var url: String? {
             get {
                 return getElementValue("URL");
             }
@@ -192,7 +192,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
 
-        public var orgName: String? {
+        open var orgName: String? {
             get {
                 return getElementValue("ORG", "ORGNAME");
             }
@@ -201,7 +201,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var orgUnit: String? {
+        open var orgUnit: String? {
             get {
                 return getElementValue("ORG", "ORGUNIT");
             }
@@ -210,7 +210,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
 
-        public var title: String? {
+        open var title: String? {
             get {
                 return getElementValue("TITLE");
             }
@@ -219,7 +219,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var role: String? {
+        open var role: String? {
             get {
                 return getElementValue("ROLE");
             }
@@ -228,7 +228,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var jabberId: String? {
+        open var jabberId: String? {
             get {
                 return getElementValue("JABBERID");
             }
@@ -237,7 +237,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var desc: String? {
+        open var desc: String? {
             get {
                 return getElementValue("DESC");
             }
@@ -246,7 +246,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var photoType: String? {
+        open var photoType: String? {
             get {
                 return getElementValue("PHOTO", "TYPE");
             }
@@ -255,29 +255,29 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
 
-        public var photoVal: String? {
+        open var photoVal: String? {
             get {
-                return getElementValue("PHOTO", "BINVAL")?.stringByReplacingOccurrencesOfString("\n", withString: "");
+                return getElementValue("PHOTO", "BINVAL")?.replacingOccurrences(of: "\n", with: "");
             }
             set {
-                setElementValue("PHOTO", "BINVAL", value: newValue?.stringByReplacingOccurrencesOfString("\n", withString: ""));
+                setElementValue("PHOTO", "BINVAL", value: newValue?.replacingOccurrences(of: "\n", with: ""));
             }
         }
         
-        public var photoValBinary:NSData? {
+        open var photoValBinary:Data? {
             get {
                 let data = photoVal;
                 guard data != nil else {
                     return nil;
                 }
-                return NSData(base64EncodedString: data!, options: NSDataBase64DecodingOptions(rawValue: 0));
+                return Data(base64Encoded: data!, options: NSData.Base64DecodingOptions(rawValue: 0));
             }
             set {
-                photoVal = newValue?.base64EncodedStringWithOptions(NSDataBase64EncodingOptions(rawValue: 0))
+                photoVal = newValue?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0))
             }
         }
         
-        public var emails: [Email] {
+        open var emails: [Email] {
             get {
                 var result = [Email]();
                 element.forEachChild("EMAIL") { (el) in
@@ -298,7 +298,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
 
-        public var addresses: [Address] {
+        open var addresses: [Address] {
             get {
                 var result = [Address]();
                 element.forEachChild("ADR") { (el) in
@@ -319,7 +319,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public var telephones: [Telephone] {
+        open var telephones: [Telephone] {
             get {
                 var result = [Telephone]();
                 element.forEachChild("TEL") { (el) in
@@ -351,7 +351,7 @@ public class VCardModule: XmppModule, ContextAware {
             self.element = element;
         }
         
-        public func getElementValue(path: String...) -> String? {
+        open func getElementValue(_ path: String...) -> String? {
             var elem = element;
             for name in path {
                 elem = elem?.findChild(name);
@@ -359,13 +359,13 @@ public class VCardModule: XmppModule, ContextAware {
             return elem?.value;
         }
         
-        public func setElementValue(path:String..., value:String?) {
+        open func setElementValue(_ path:String..., value:String?) {
             var tmp:[Element]! = value == nil ? [Element]() : nil;
             var i=0;
             var parent:Element? = nil;
             var elem = element;
             while elem != nil && i<path.count {
-                var name = path[i];
+                let name = path[i];
                 parent = elem;
                 elem = elem?.findChild(name);
                 if elem == nil && value != nil {
@@ -379,7 +379,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
             
             if value == nil {
-                tmp.insert(element, atIndex: 0);
+                tmp.insert(element, at: 0);
                 for i in (tmp.count-1)...1 {
                     guard !tmp[i].hasChildren else {
                         return;
@@ -387,25 +387,25 @@ public class VCardModule: XmppModule, ContextAware {
                     tmp[i-1].removeChild(tmp[i]);
                 }
             } else {
-                elem.value = value;
+                elem?.value = value;
             }
         }
         
-        public func setPhoto(data: NSData?, type: String?) {
+        open func setPhoto(_ data: Data?, type: String?) {
             photoValBinary = data;
             photoType = type;
         }
         
-        public enum Type: String {
+        public enum EntryType: String {
             case WORK
             case HOME
             
             public static let allValues = [ HOME, WORK ];
         }
         
-        public class Email: TypeAware {
+        open class Email: TypeAware {
             
-            public var address: String? {
+            open var address: String? {
                 get {
                     return getElementValue("USERID") ;
                 }
@@ -424,9 +424,9 @@ public class VCardModule: XmppModule, ContextAware {
             
         }
         
-        public class Address: TypeAware {
+        open class Address: TypeAware {
             
-            public var street: String? {
+            open var street: String? {
                 get {
                     return getElementValue("STREET");
                 }
@@ -435,7 +435,7 @@ public class VCardModule: XmppModule, ContextAware {
                 }
             }
 
-            public var locality: String? {
+            open var locality: String? {
                 get {
                     return getElementValue("LOCALITY");
                 }
@@ -444,7 +444,7 @@ public class VCardModule: XmppModule, ContextAware {
                 }
             }
 
-            public var region: String? {
+            open var region: String? {
                 get {
                     return getElementValue("REGION");
                 }
@@ -453,7 +453,7 @@ public class VCardModule: XmppModule, ContextAware {
                 }
             }
 
-            public var postalCode: String? {
+            open var postalCode: String? {
                 get {
                     return getElementValue("PCODE");
                 }
@@ -462,7 +462,7 @@ public class VCardModule: XmppModule, ContextAware {
                 }
             }
 
-            public var country: String? {
+            open var country: String? {
                 get {
                     return getElementValue("CTRY");
                 }
@@ -480,7 +480,7 @@ public class VCardModule: XmppModule, ContextAware {
                 super.init(element: element);
             }
             
-            public func isEmpty() -> Bool {
+            open func isEmpty() -> Bool {
                 var empty = true;
                 element.getChildren().forEach({ (el) in
                     empty = empty && (el.value == nil);
@@ -489,7 +489,7 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public class Telephone: TypeAware {
+        open class Telephone: TypeAware {
             
             public enum Kind: String {
                 case VOICE
@@ -499,7 +499,7 @@ public class VCardModule: XmppModule, ContextAware {
                 public static let allValues = [ VOICE, FAX, MSG ];
             }
             
-            public var kind: [Kind] {
+            open var kind: [Kind] {
                 get {
                     var result = [Kind]();
                     for kind in Kind.allValues {
@@ -521,7 +521,7 @@ public class VCardModule: XmppModule, ContextAware {
                 }
             }
             
-            public var number: String? {
+            open var number: String? {
                 get {
                     return getElementValue("NUMBER");
                 }
@@ -539,17 +539,17 @@ public class VCardModule: XmppModule, ContextAware {
             }
         }
         
-        public class TypeAware {
-            private let element: Element;
+        open class TypeAware {
+            fileprivate let element: Element;
             
             public init?(element: Element) {
                 self.element = element;
             }
             
-            public var types: [Type] {
+            open var types: [EntryType] {
                 get {
-                    var types = [Type]();
-                    for type in Type.allValues {
+                    var types = [EntryType]();
+                    for type in EntryType.allValues {
                         if element.findChild(type.rawValue) != nil {
                             types.append(type);
                         }
@@ -557,7 +557,7 @@ public class VCardModule: XmppModule, ContextAware {
                     return types;
                 }
                 set {
-                    for type in Type.allValues {
+                    for type in EntryType.allValues {
                         if let el = element.findChild(type.rawValue) {
                             element.removeChild(el);
                         }
@@ -568,11 +568,11 @@ public class VCardModule: XmppModule, ContextAware {
                 }
             }
             
-            func getElementValue(name: String) -> String? {
+            func getElementValue(_ name: String) -> String? {
                 return element.findChild(name)?.value;
             }
             
-            func setElementValue(name: String, value: String?) {
+            func setElementValue(_ name: String, value: String?) {
                 var el = element.findChild(name);
                 if  value == nil {
                     if el != nil {

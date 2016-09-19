@@ -24,27 +24,27 @@ import Foundation
 /**
  Class representing parsed XML element
  */
-public class Element : Node, ElementProtocol {
+open class Element : Node, ElementProtocol {
     /// Element name
-    public let name:String
+    open let name:String
     var defxmlns:String?
-    private var attributes_:[String:String];
-    private var nodes = Array<Node>()
+    fileprivate var attributes_:[String:String];
+    fileprivate var nodes = Array<Node>()
     
     /// Attributes of XML element
-    public var attributes:[String:String] {
+    open var attributes:[String:String] {
         get {
             return self.attributes_;
         }
     }
     
     /// Check if element contains subelements
-    public var hasChildren:Bool {
+    open var hasChildren:Bool {
         return !nodes.isEmpty && !getChildren().isEmpty;
     }
     
     /// Value of cdata of this element
-    public var value:String? {
+    open var value:String? {
         get {
             var result:String? = nil;
             for node in nodes {
@@ -100,7 +100,7 @@ public class Element : Node, ElementProtocol {
      Add subelement
      - parameter child: element to add as subelement
      */
-    public func addChild(child: Element) {
+    open func addChild(_ child: Element) {
         self.addNode(child)
     }
     
@@ -108,13 +108,13 @@ public class Element : Node, ElementProtocol {
      Add subelements
      - parameter children: array of elements to add as subelements
      */
-    public func addChildren(children: [Element]) {
+    open func addChildren(_ children: [Element]) {
         children.forEach { (c) in
             self.addChild(c);
         }
     }
     
-    func addNode(child:Node) {
+    func addNode(_ child:Node) {
         self.nodes.append(child)
     }
     
@@ -124,7 +124,7 @@ public class Element : Node, ElementProtocol {
      - parameter xmlns: xmlns of element to find
      - returns: first element which name and xmlns matches
      */
-    public func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+    open func findChild(_ name:String? = nil, xmlns:String? = nil) -> Element? {
         for node in nodes {
             if (node is Element) {
                 let elem = node as! Element;
@@ -148,7 +148,7 @@ public class Element : Node, ElementProtocol {
      Find first child element
      returns: first child element
      */
-    public func firstChild() -> Element? {
+    open func firstChild() -> Element? {
         for node in nodes {
             if (node is Element) {
                 return node as? Element;
@@ -163,7 +163,7 @@ public class Element : Node, ElementProtocol {
      - parameter xmlns: xmlns of child element
      - parameter fn: closure to execute
      */
-    public func forEachChild(name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
+    open func forEachChild(_ name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
         for node in nodes {
             if (node is Element) {
                 let elem = node as! Element;
@@ -192,7 +192,7 @@ public class Element : Node, ElementProtocol {
      - parameter filter: closure used for filtering child elements
      - returns: array of objects returned by transformation closure
      */
-    public func mapChildren<U>(transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
+    open func mapChildren<U>(_ transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
         var tmp = getChildren();
         if filter != nil {
             tmp = tmp.filter({ e -> Bool in
@@ -214,7 +214,7 @@ public class Element : Node, ElementProtocol {
      - parameter xmlns: xmlns of child element
      - returns: array of matching elements
      */
-    public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+    open func getChildren(_ name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         var result = Array<Element>();
         for node in nodes {
             if (node is Element) {
@@ -240,7 +240,7 @@ public class Element : Node, ElementProtocol {
      - parameter key: attribute name
      - returns: value for attribute
      */
-    public func getAttribute(key:String) -> String? {
+    open func getAttribute(_ key:String) -> String? {
         return attributes_[key];
     }
     
@@ -248,28 +248,28 @@ public class Element : Node, ElementProtocol {
      Removes element from children
      - parameter child: element to remove
      */
-    public func removeChild(child: Element) {
+    open func removeChild(_ child: Element) {
         self.removeNode(child);
     }
     
     /**
      Removes node from children
      */
-    public func removeNode(child: Node) {
-        if let idx = self.nodes.indexOf(child) {
-            self.nodes.removeAtIndex(idx);
+    open func removeNode(_ child: Node) {
+        if let idx = self.nodes.index(of: child) {
+            self.nodes.remove(at: idx);
         }
     }
     
     /// XMLNS of element
-    public var xmlns:String? {
+    open var xmlns:String? {
         get {
             let xmlns = attributes_["xmlns"]
             return xmlns != nil ? xmlns : defxmlns;
         }
         set {
             if (newValue == nil || newValue == defxmlns) {
-                attributes_.removeValueForKey("xmlns");
+                attributes_.removeValue(forKey: "xmlns");
             } else {
                 attributes_["xmlns"] = newValue;
             }
@@ -281,20 +281,20 @@ public class Element : Node, ElementProtocol {
      - parameter key: attribute to set
      - parameter value: value to set
      */
-    public func setAttribute(key:String, value:String?) {
+    open func setAttribute(_ key:String, value:String?) {
         if (value == nil) {
-            attributes_.removeValueForKey(key);
+            attributes_.removeValue(forKey: key);
         } else {
             attributes_[key] = value;
         }
     }
     
-    func setDefXMLNS(defxmlns:String?) {
+    func setDefXMLNS(_ defxmlns:String?) {
         self.defxmlns = defxmlns;
     }
     
     /// String representation of element
-    override public var stringValue: String {
+    override open var stringValue: String {
         var result = "<\(self.name)"
         for (k,v) in attributes_ {
             let val = EscapeUtils.escape(v);
@@ -313,7 +313,7 @@ public class Element : Node, ElementProtocol {
         
     }
     
-    override public func toPrettyString() -> String {
+    override open func toPrettyString() -> String {
         var result = "<\(self.name)"
         for (k,v) in attributes_ {
             let val = EscapeUtils.escape(v);
@@ -337,27 +337,27 @@ public class Element : Node, ElementProtocol {
      - parameter toParse: string with XML to parse
      - returns: parsed Element if any
      */
-    public static func fromString(toParse: String) -> Element? {
+    open static func fromString(_ toParse: String) -> Element? {
         class Holder: XMPPStreamDelegate {
             var parsed:Element?;
-            private func onError(msg: String?) {
+            fileprivate func onError(_ msg: String?) {
             }
-            private func onStreamStart(attributes: [String : String]) {
+            fileprivate func onStreamStart(_ attributes: [String : String]) {
             }
-            private func onStreamTerminate() {
+            fileprivate func onStreamTerminate() {
             }
-            private func processElement(packet: Element) {
+            fileprivate func processElement(_ packet: Element) {
                 parsed = packet;
             }
         }
         
-        var holder = Holder();
-        var xmlDelegate = XMPPParserDelegate();
+        let holder = Holder();
+        let xmlDelegate = XMPPParserDelegate();
         xmlDelegate.delegate = holder;
         let parser = XMLParser(delegate: xmlDelegate);
-        var data = toParse.dataUsingEncoding(NSUTF8StringEncoding);
-        var ptr = UnsafeMutablePointer<UInt8>(data!.bytes);
-        parser.parse(ptr, length: data!.length);
+        var data = toParse.data(using: String.Encoding.utf8);
+        let ptr = UnsafeMutablePointer<UInt8>(mutating: (data! as NSData).bytes.bindMemory(to: UInt8.self, capacity: data!.count));
+        parser.parse(ptr, length: data!.count);
         return holder.parsed;
     }
 }

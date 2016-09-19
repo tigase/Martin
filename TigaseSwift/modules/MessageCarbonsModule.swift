@@ -26,27 +26,27 @@ import Foundation
  
  [XEP-0280: Message Carbons]: http://xmpp.org/extensions/xep-0280.html
  */
-public class MessageCarbonsModule: XmppModule, ContextAware {
+open class MessageCarbonsModule: XmppModule, ContextAware {
     /// Namespace used by Message Carbons
-    public static let MC_XMLNS = "urn:xmpp:carbons:2";
+    open static let MC_XMLNS = "urn:xmpp:carbons:2";
     /// Namepsace used for forwarding messages
-    private static let SF_XMLNS = "urn:xmpp:forward:0";
+    fileprivate static let SF_XMLNS = "urn:xmpp:forward:0";
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = MC_XMLNS;
+    open static let ID = MC_XMLNS;
     
-    public let id = MC_XMLNS;
+    open let id = MC_XMLNS;
     
-    public let criteria = Criteria.name("message").add(Criteria.xmlns(MC_XMLNS));
+    open let criteria = Criteria.name("message").add(Criteria.xmlns(MC_XMLNS));
     
-    public let features = [MC_XMLNS];
+    open let features = [MC_XMLNS];
     
-    public var context: Context!
+    open var context: Context!
     
     public init() {
         
     }
     
-    public func process(message: Stanza) throws {
+    open func process(_ message: Stanza) throws {
         var error: ErrorCondition? = nil;
         message.element.forEachChild(xmlns: MessageCarbonsModule.MC_XMLNS) { (carb) in
             let action = Action(rawValue: carb.name);
@@ -70,7 +70,7 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to enable message carbons
      - parameter callback - called with result
      */
-    public func enable(callback: ((Bool) -> Void )? = nil) {
+    open func enable(_ callback: ((Bool) -> Void )? = nil) {
         setState(true, callback: callback);
     }
     
@@ -78,7 +78,7 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to disable message carbons
      - parameter callback - called with result
      */
-    public func disable(callback: ((Bool) -> Void )? = nil) {
+    open func disable(_ callback: ((Bool) -> Void )? = nil) {
         setState(false, callback: callback);
     }
     
@@ -86,9 +86,9 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to enable/disable message carbons
      - parameter callback - called with result
      */
-    public func setState(state: Bool, callback: ((Bool) -> Void )?) {
+    open func setState(_ state: Bool, callback: ((Bool) -> Void )?) {
         let actionName = state ? "enable" : "disable";
-        var iq = Iq();
+        let iq = Iq();
         iq.type = StanzaType.set;
         iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
         context.writer?.write(iq, callback: {(stanza) -> Void in
@@ -101,7 +101,7 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
      - parameter carb: element to process
      - returns: array of forwarded Messsages
      */
-    func getEncapsulatedMessages(carb: Element) -> [Message]? {
+    func getEncapsulatedMessages(_ carb: Element) -> [Message]? {
         return carb.findChild("forwarded", xmlns: MessageCarbonsModule.SF_XMLNS)?.mapChildren({ (messageEl) -> Message in
             return Stanza.fromElement(messageEl) as! Message;
         }, filter: { (el) -> Bool in
@@ -109,7 +109,7 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
         });
     }
     
-    func processForwaredMessage(forwarded: Message, action: Action) {
+    func processForwaredMessage(_ forwarded: Message, action: Action) {
         if let messageModule: MessageModule = context.modulesManager.getModule(MessageModule.ID) {
             let chat = messageModule.processMessage(forwarded, interlocutorJid: action == .received ? forwarded.from : forwarded.to, fireEvents: false);
             context.eventBus.fire(CarbonReceivedEvent(sessionObject: context.sessionObject, action: action, message: forwarded, chat: chat));
@@ -127,19 +127,19 @@ public class MessageCarbonsModule: XmppModule, ContextAware {
     }
     
     /// Event fired when Message Carbon is received
-    public class CarbonReceivedEvent: Event {
+    open class CarbonReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = CarbonReceivedEvent();
+        open static let TYPE = CarbonReceivedEvent();
         
-        public let type = "MessageCarbonReceivedEvent";
+        open let type = "MessageCarbonReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
+        open let sessionObject: SessionObject!;
         /// Action due to which this carbon was created
-        public let action: Action!;
+        open let action: Action!;
         /// Forwarded message
-        public let message: Message!;
+        open let message: Message!;
         /// Chat for which this forwarded message belongs to
-        public let chat: Chat?;
+        open let chat: Chat?;
         
         init() {
             self.sessionObject = nil;

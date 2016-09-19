@@ -26,39 +26,39 @@ import Foundation
  
  [XEP-0030: Service Discovery]: http://xmpp.org/extensions/xep-0030.html
  */
-public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
+open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
 
     /**
      Property name under which category of XMPP entity is hold for returning
      to remote clients on query
      */
-    public static let IDENTITY_CATEGORY_KEY = "discoveryIdentityCategory";
+    open static let IDENTITY_CATEGORY_KEY = "discoveryIdentityCategory";
     /** 
      Property name under which type of XMPP entity is hold for returning 
      to remote clients on query
      */
-    public static let IDENTITY_TYPE_KEY = "discoveryIdentityType";
+    open static let IDENTITY_TYPE_KEY = "discoveryIdentityType";
     /// Namespace used by service discovery
-    public static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
+    open static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
     /// Namespace used by service discovery
-    public static let INFO_XMLNS = "http://jabber.org/protocol/disco#info";
+    open static let INFO_XMLNS = "http://jabber.org/protocol/disco#info";
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = "discovery";
+    open static let ID = "discovery";
     
-    public let id = ID;
+    open let id = ID;
     
-    public var context:Context!;
+    open var context:Context!;
     
-    public let criteria = Criteria.name("iq").add(
+    open let criteria = Criteria.name("iq").add(
         Criteria.or(
             Criteria.name("query", xmlns: DiscoveryModule.ITEMS_XMLNS),
             Criteria.name("query", xmlns: DiscoveryModule.INFO_XMLNS)
         )
     );
     
-    public let features = [ DiscoveryModule.ITEMS_XMLNS, DiscoveryModule.INFO_XMLNS ];
+    open let features = [ DiscoveryModule.ITEMS_XMLNS, DiscoveryModule.INFO_XMLNS ];
     
-    private var callbacks = [String:NodeDetailsEntry]();
+    fileprivate var callbacks = [String:NodeDetailsEntry]();
     
     public override init() {
         super.init()
@@ -83,11 +83,11 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    public func discoverServerFeatures(onInfoReceived:((node: String?, identities: [Identity], features: [String]) -> Void)?, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+    open func discoverServerFeatures(_ onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
             getInfo(JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
                 self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
-                onInfoReceived?(node: node, identities: identities, features: features);
+                onInfoReceived?(node, identities, features);
                 }, onError: onError);
         }
     }
@@ -98,11 +98,11 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter node: node to query for informations
      - parameter callback: called on result or failure
      */
-    public func getInfo(jid: JID, node: String?, callback: (Stanza?) -> Void) {
-        var iq = Iq();
+    open func getInfo(_ jid: JID, node: String?, callback: @escaping (Stanza?) -> Void) {
+        let iq = Iq();
         iq.to  = jid;
         iq.type = StanzaType.get;
-        var query = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
+        let query = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
         if node != nil {
             query.setAttribute("node", value: node);
         }
@@ -118,12 +118,12 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter onInfoReceived: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    public func getInfo(jid:JID, node requestedNode:String? = nil, onInfoReceived:(node: String?, identities: [Identity], features: [String]) -> Void, onError: ((errorCondition: ErrorCondition?) -> Void)?) {
+    open func getInfo(_ jid:JID, node requestedNode:String? = nil, onInfoReceived:@escaping (_ node: String?, _ identities: [Identity], _ features: [String]) -> Void, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
         getInfo(jid, node: requestedNode, callback: {(stanza: Stanza?) -> Void in
-            var type = stanza?.type ?? StanzaType.error;
+            let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                var query = stanza!.findChild("query", xmlns: DiscoveryModule.INFO_XMLNS);
+                let query = stanza!.findChild("query", xmlns: DiscoveryModule.INFO_XMLNS);
                 let identities = query!.mapChildren({ e -> Identity in
                     return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
                     }, filter: { (e:Element) -> Bool in
@@ -134,10 +134,10 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
                     }, filter: { (e:Element) -> Bool in
                         return e.name == "feature" && e.getAttribute("var") != nil;
                 })
-                onInfoReceived(node: query?.getAttribute("node") ?? requestedNode, identities: identities, features: features);
+                onInfoReceived(query?.getAttribute("node") ?? requestedNode, identities, features);
             default:
-                var errorCondition = stanza?.errorCondition;
-                onError?(errorCondition: errorCondition);
+                let errorCondition = stanza?.errorCondition;
+                onError?(errorCondition);
             }
         })
     }
@@ -148,11 +148,11 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter node: node to query for items
      - parameter callback: called on result or failure
      */
-    public func getItems(jid:JID, node:String? = nil, callback: (Stanza?) -> Void) {
-        var iq = Iq();
+    open func getItems(_ jid:JID, node:String? = nil, callback: @escaping (Stanza?) -> Void) {
+        let iq = Iq();
         iq.to  = jid;
         iq.type = StanzaType.get;
-        var query = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
+        let query = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
         if node != nil {
             query.setAttribute("node", value: node);
         }
@@ -169,21 +169,21 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter onItemsReceived: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    public func getItems(jid: JID, node requestedNode: String? = nil, onItemsReceived: (node:String?, items:[Item]) -> Void, onError: (errorCondition:ErrorCondition?) -> Void) {
+    open func getItems(_ jid: JID, node requestedNode: String? = nil, onItemsReceived: @escaping (_ node:String?, _ items:[Item]) -> Void, onError: @escaping (_ errorCondition:ErrorCondition?) -> Void) {
         getItems(jid, node: requestedNode, callback: {(stanza:Stanza?) -> Void in
-            var type = stanza?.type ?? StanzaType.error;
+            let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                var query = stanza!.findChild("query", xmlns: DiscoveryModule.ITEMS_XMLNS);
-                var items = query!.mapChildren({ i -> Item in
+                let query = stanza!.findChild("query", xmlns: DiscoveryModule.ITEMS_XMLNS);
+                let items = query!.mapChildren({ i -> Item in
                         return Item(jid: JID(i.getAttribute("jid")!), node: i.getAttribute("node"), name: i.getAttribute("name"));
                     }, filter: { (e) -> Bool in
                         return e.name == "item";
                 })
-                onItemsReceived(node: query?.getAttribute("node") ?? requestedNode, items: items);
+                onItemsReceived(query?.getAttribute("node") ?? requestedNode, items);
             default:
-                var errorCondition = stanza?.errorCondition;
-                onError(errorCondition: errorCondition);
+                let errorCondition = stanza?.errorCondition;
+                onError(errorCondition);
             }
         });
     }
@@ -194,10 +194,10 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter node: node name for which to execute
      - parameter entry: object with data
      */
-    public func setNodeCallback(node_: String?, entry: NodeDetailsEntry?) {
-        var node = node_ ?? "";
+    open func setNodeCallback(_ node_: String?, entry: NodeDetailsEntry?) {
+        let node = node_ ?? "";
         if entry == nil {
-            callbacks.removeValueForKey(node);
+            callbacks.removeValue(forKey: node);
         } else {
             callbacks[node] = entry;
         }
@@ -206,7 +206,7 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     /**
      Processes stanzas with type equal `get`
      */
-    public func processGet(stanza:Stanza) throws {
+    open func processGet(_ stanza:Stanza) throws {
         let query = stanza.findChild("query")!;
         let node = query.getAttribute("node");
         if let xmlns = query.xmlns {
@@ -228,30 +228,30 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     /**
      Processes stanzas with type equal `set`
      */
-    public func processSet(stanza:Stanza) throws {
+    open func processSet(_ stanza:Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
-    func processGetInfo(stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
-        var result = stanza.makeResult(StanzaType.result);
+    func processGetInfo(_ stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
+        let result = stanza.makeResult(StanzaType.result);
         
-        var queryResult = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
+        let queryResult = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
         if node != nil {
             queryResult.setAttribute("node", value: node);
         }
         result.addChild(queryResult);
         
-        if let identity = nodeDetailsEntry.identity(sessionObject: context.sessionObject, stanza: stanza, node: node) {
-            var identityElement = Element(name: "identity");
+        if let identity = nodeDetailsEntry.identity(context.sessionObject, stanza, node) {
+            let identityElement = Element(name: "identity");
             identityElement.setAttribute("category", value: identity.category);
             identityElement.setAttribute("type", value: identity.type);
             identityElement.setAttribute("name", value: identity.name);
             queryResult.addChild(identityElement);
         }
         
-        if let features = nodeDetailsEntry.features(sessionObject: context.sessionObject, stanza: stanza, node: node) {
+        if let features = nodeDetailsEntry.features(context.sessionObject, stanza, node) {
             for feature in features {
-                var f = Element(name: "feature", attributes: [ "var" : feature ]);
+                let f = Element(name: "feature", attributes: [ "var" : feature ]);
                 queryResult.addChild(f);
             }
         }
@@ -259,18 +259,18 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         context.writer?.write(result);
     }
     
-    func processGetItems(stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
-        var result = stanza.makeResult(StanzaType.result);
+    func processGetItems(_ stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
+        let result = stanza.makeResult(StanzaType.result);
         
-        var queryResult = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
+        let queryResult = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
         if node != nil {
             queryResult.setAttribute("node", value: node);
         }
         result.addChild(queryResult);
         
-        if let items = nodeDetailsEntry.items(sessionObject: context.sessionObject, stanza: stanza, node: node) {
+        if let items = nodeDetailsEntry.items(context.sessionObject, stanza, node) {
             for item in items {
-                var e = Element(name: "item");
+                let e = Element(name: "item");
                 e.setAttribute("jid", value: item.jid.description);
                 e.setAttribute("node", value: item.node);
                 e.setAttribute("name", value: item.name);
@@ -285,23 +285,23 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      Container class which holds informations to return on service 
      discovery for particular node
      */
-    public class NodeDetailsEntry {
-        public let identity: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity?
-        public let features: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]?
-        public let items: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [Item]?
+    open class NodeDetailsEntry {
+        open let identity: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> Identity?
+        open let features: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [String]?
+        open let items: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [Item]?
         
-        public init(identity: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity?, features: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]?, items: (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [Item]?) {
+        public init(identity: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> Identity?, features: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [String]?, items: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [Item]?) {
             self.identity = identity;
             self.features = features;
             self.items = items;
         }
     }
     
-    public class Identity: CustomStringConvertible {
+    open class Identity: CustomStringConvertible {
         
-        public let category: String;
-        public let type: String;
-        public let name: String?;
+        open let category: String;
+        open let type: String;
+        open let name: String?;
         
         public init(category: String, type: String, name: String? = nil) {
             self.category = category;
@@ -309,18 +309,18 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             self.name = name;
         }
         
-        public var description: String {
+        open var description: String {
             get {
                 return "Identity(category=\(category), type=\(type), name=\(name))";
             }
         }
     }
     
-    public class Item: CustomStringConvertible {
+    open class Item: CustomStringConvertible {
         
-        public let jid:JID;
-        public let node:String?;
-        public let name:String?;
+        open let jid:JID;
+        open let node:String?;
+        open let name:String?;
         
         public init(jid: JID, node: String? = nil, name: String? = nil) {
             self.jid = jid;
@@ -328,7 +328,7 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             self.name = name;
         }
         
-        public var description: String {
+        open var description: String {
             get {
                 return "Item(jid=\(jid), node=\(node), name=\(name))";
             }
@@ -336,15 +336,15 @@ public class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     }
     
     /// Event fired when server features are retrieved
-    public class ServerFeaturesReceivedEvent: Event {
+    open class ServerFeaturesReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ServerFeaturesReceivedEvent();
+        open static let TYPE = ServerFeaturesReceivedEvent();
         
-        public let type = "ServerFeaturesReceivedEvent";
+        open let type = "ServerFeaturesReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
+        open let sessionObject: SessionObject!;
         /// Array of available server features
-        public let features: [String]!;
+        open let features: [String]!;
         
         init() {
             self.sessionObject = nil;

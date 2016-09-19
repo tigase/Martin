@@ -24,9 +24,9 @@ import Foundation
 /**
  Mechanism implements SASL PLAIN authentication mechanism
  */
-public class PlainMechanism: SaslMechanism {
+open class PlainMechanism: SaslMechanism {
     /// Name of mechanism
-    public let name = "PLAIN";
+    open let name = "PLAIN";
 
     /**
      Process input data to generate response
@@ -34,7 +34,7 @@ public class PlainMechanism: SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: reponse to send to server
      */
-    public func evaluateChallenge(input: String?, sessionObject: SessionObject) -> String? {
+    open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) -> String? {
         if (isComplete(sessionObject)) {
             return nil;
         }
@@ -47,8 +47,8 @@ public class PlainMechanism: SaslMechanism {
         
         let lreq = "\0\(authcid)\0\(credential)";
         
-        let utf8str = lreq.dataUsingEncoding(NSUTF8StringEncoding);
-        let base64 = utf8str?.base64EncodedStringWithOptions(NSDataBase64EncodingOptions(rawValue: 0));
+        let utf8str = lreq.data(using: String.Encoding.utf8);
+        let base64 = utf8str?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
         if base64 != nil {
             setComplete(sessionObject, completed: true);
         }
@@ -60,7 +60,7 @@ public class PlainMechanism: SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: true if usage is allowed
      */
-    public func isAllowedToUse(sessionObject: SessionObject) -> Bool {
+    open func isAllowedToUse(_ sessionObject: SessionObject) -> Bool {
         return sessionObject.hasProperty(SessionObject.PASSWORD)
             && sessionObject.hasProperty(SessionObject.USER_BARE_JID);
     }

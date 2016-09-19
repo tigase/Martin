@@ -26,7 +26,7 @@ import Foundation
  
  [error conditions]: http://xmpp.org/rfcs/rfc6120.html#stanzas-error-conditions
  */
-public enum ErrorCondition: String, ErrorType {
+public enum ErrorCondition: String, Error {
     case bad_request = "bad-request"
     case conflict
     case feature_not_implemented = "feature-not-implemented"
@@ -102,7 +102,7 @@ public enum ErrorCondition: String, ErrorType {
         }
     }
     
-    public func createResponse(stanza:Stanza) -> Stanza {
+    public func createResponse(_ stanza:Stanza) -> Stanza {
         return stanza.errorResult(self)
     }
 }

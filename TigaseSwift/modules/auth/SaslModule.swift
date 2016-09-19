@@ -26,31 +26,31 @@ import Foundation
  
  [SASL negotiation and authentication]: https://tools.ietf.org/html/rfc6120#section-6
  */
-public class SaslModule: Logger, XmppModule, ContextAware {
+open class SaslModule: Logger, XmppModule, ContextAware {
     /// Namespace used SASL negotiation and authentication
     static let SASL_XMLNS = "urn:ietf:params:xml:ns:xmpp-sasl";
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = SASL_XMLNS;
+    open static let ID = SASL_XMLNS;
     
-    private static let SASL_MECHANISM = "saslMechanism";
+    fileprivate static let SASL_MECHANISM = "saslMechanism";
     
-    public let id = SASL_XMLNS;
+    open let id = SASL_XMLNS;
 
-    public let criteria = Criteria.or(
+    open let criteria = Criteria.or(
         Criteria.name("success", xmlns: SASL_XMLNS),
         Criteria.name("failure", xmlns: SASL_XMLNS),
         Criteria.name("challenge", xmlns: SASL_XMLNS)
     );
     
-    public let features = [String]();
+    open let features = [String]();
     
-    public var context:Context!;
+    open var context:Context!;
     
-    private var mechanisms = [String:SaslMechanism]();
-    private var _mechanismsOrder = [String]();
+    fileprivate var mechanisms = [String:SaslMechanism]();
+    fileprivate var _mechanismsOrder = [String]();
     
     /// Order of mechanisms preference
-    public var mechanismsOrder:[String] {
+    open var mechanismsOrder:[String] {
         get {
             return _mechanismsOrder;
         }
@@ -58,12 +58,12 @@ public class SaslModule: Logger, XmppModule, ContextAware {
             var value = newValue;
             for name in newValue {
                 if mechanisms[name] == nil {
-                    value.removeAtIndex(value.indexOf(name)!);
+                    value.remove(at: value.index(of: name)!);
                 }
             }
             for name in mechanisms.keys {
-                if value.indexOf(name) == nil {
-                    mechanisms.removeValueForKey(name);
+                if value.index(of: name) == nil {
+                    mechanisms.removeValue(forKey: name);
                 }
             }
         }
@@ -81,16 +81,16 @@ public class SaslModule: Logger, XmppModule, ContextAware {
      - parameter mechanism: implementation of mechanism
      - parameter first: add as best mechanism to use
      */
-    public func addMechanism(mechanism:SaslMechanism, first:Bool = false) {
+    open func addMechanism(_ mechanism:SaslMechanism, first:Bool = false) {
         self.mechanisms[mechanism.name] = mechanism;
         if (first) {
-            self._mechanismsOrder.insert(mechanism.name, atIndex: 0);
+            self._mechanismsOrder.insert(mechanism.name, at: 0);
         } else {
             self._mechanismsOrder.append(mechanism.name);
         }
     }
     
-    public func process(elem: Stanza) throws {
+    open func process(_ elem: Stanza) throws {
         do {
         switch elem.name {
             case "success":
@@ -102,16 +102,16 @@ public class SaslModule: Logger, XmppModule, ContextAware {
             default:
                 break;
             }
-        } catch ClientSaslException.BadChallenge(let msg) {
+        } catch ClientSaslException.badChallenge(let msg) {
             log("Received bad challenge from server: \(msg)");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
-        } catch ClientSaslException.GenericError(let msg) {
+        } catch ClientSaslException.genericError(let msg) {
             log("Generic error happened: \(msg)");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
-        } catch ClientSaslException.InvalidServerSignature {
+        } catch ClientSaslException.invalidServerSignature {
             log("Received answer from server with invalid server signature!");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
-        } catch ClientSaslException.WrongNonce {
+        } catch ClientSaslException.wrongNonce {
             log("Received answer from server with wrong nonce!");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
         }
@@ -120,7 +120,7 @@ public class SaslModule: Logger, XmppModule, ContextAware {
     /**
      Begin SASL authentication process
      */
-    public func login() {
+    open func login() {
         let mechanism = guessSaslMechanism();
         if mechanism == nil {
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.invalid_mechanism));
@@ -142,9 +142,9 @@ public class SaslModule: Logger, XmppModule, ContextAware {
         }
     }
     
-    func processSuccess(stanza: Stanza) throws {
+    func processSuccess(_ stanza: Stanza) throws {
         let mechanism: SaslMechanism? = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM);
-        try mechanism!.evaluateChallenge(stanza.element.value, sessionObject: context.sessionObject);
+        _ = try mechanism!.evaluateChallenge(stanza.element.value, sessionObject: context.sessionObject);
         
         if mechanism!.isComplete(context.sessionObject) {
             log("Authenticated");
@@ -155,7 +155,7 @@ public class SaslModule: Logger, XmppModule, ContextAware {
         }
     }
     
-    func processFailure(stanza: Stanza) {
+    func processFailure(_ stanza: Stanza) throws {
         context.sessionObject.setProperty(SaslModule.SASL_MECHANISM, value: nil);
         let errorName = stanza.findChild()?.name;
         let error = errorName == nil ? nil : SaslError(rawValue: errorName!);
@@ -164,7 +164,7 @@ public class SaslModule: Logger, XmppModule, ContextAware {
         context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: error ?? SaslError.not_authorized));
     }
     
-    func processChallenge(stanza: Stanza) throws {
+    func processChallenge(_ stanza: Stanza) throws {
         let mechanism: SaslMechanism = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM)!;
         if mechanism.isComplete(context.sessionObject) {
             throw ErrorCondition.bad_request;
@@ -201,15 +201,15 @@ public class SaslModule: Logger, XmppModule, ContextAware {
     }
     
     /// Event fired when SASL authentication fails
-    public class SaslAuthFailedEvent: Event {
+    open class SaslAuthFailedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SaslAuthFailedEvent();
+        open static let TYPE = SaslAuthFailedEvent();
         
-        public let type = "SaslAuthFailedEvent";
+        open let type = "SaslAuthFailedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Error which occurred
-        public let error:SaslError!;
+        open let error:SaslError!;
         
         init() {
             sessionObject = nil;
@@ -223,15 +223,15 @@ public class SaslModule: Logger, XmppModule, ContextAware {
     }
     
     /// Event fired when SASL authentication begins
-    public class SaslAuthStartEvent: Event {
+    open class SaslAuthStartEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SaslAuthStartEvent();
+        open static let TYPE = SaslAuthStartEvent();
         
-        public let type = "SaslAuthStartEvent";
+        open let type = "SaslAuthStartEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Mechanism used during authentication
-        public let mechanism:String!;
+        open let mechanism:String!;
         
         init() {
             sessionObject = nil;
@@ -245,13 +245,13 @@ public class SaslModule: Logger, XmppModule, ContextAware {
     }
     
     /// Event fired after successful authentication
-    public class SaslAuthSuccessEvent: Event {
+    open class SaslAuthSuccessEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SaslAuthSuccessEvent();
+        open static let TYPE = SaslAuthSuccessEvent();
         
-        public let type = "SaslAuthSuccessEvent";
+        open let type = "SaslAuthSuccessEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         
         init() {
             sessionObject = nil;

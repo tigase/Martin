@@ -23,9 +23,9 @@ import Foundation
 
 public protocol XMPPStreamDelegate {
     
-    func onStreamStart(attributes:[String:String])
+    func onStreamStart(_ attributes:[String:String])
     func onStreamTerminate();
-    func onError(msg: String?);
-    func processElement(packet:Element)
+    func onError(_ msg: String?);
+    func processElement(_ packet:Element)
     
 }

@@ -26,29 +26,29 @@ import Foundation
  instances of `XmppModule` which are registered for processing particular
  stanza.
  */
-public class XmppModulesManager : ContextAware {
+open class XmppModulesManager : ContextAware {
     
-    public var context:Context!;
+    open var context:Context!;
     
     /// List of registered instances of `XmppStanzaFilter` which needs to process packets
-    public var filters = [XmppStanzaFilter]();
+    open var filters = [XmppStanzaFilter]();
     
     /// List of instances `Initializable` which require initialization
-    private var initializationRequired = [Initializable]();
+    fileprivate var initializationRequired = [Initializable]();
     
     /// List of registered modules
-    private var modules = [XmppModule]();
+    fileprivate var modules = [XmppModule]();
     /// Map of registered modules where module id is key - used for fast retrieval of module instances
-    private var modulesById = [String:XmppModule]();
+    fileprivate var modulesById = [String:XmppModule]();
     
     init() {
     }
     
     /// Returns list of features provided by registered `XmppModule` instances
-    public var availableFeatures:Set<String> {
+    open var availableFeatures:Set<String> {
         var result = Set<String>();
         for module in self.modules {
-            result.unionInPlace(module.features);
+            result.formUnion(module.features);
         }
         return result;
     }
@@ -57,7 +57,7 @@ public class XmppModulesManager : ContextAware {
      Processes passed stanza and return list of `XmppModule` instances which should process this stanza.
      Instances of `XmppModule` are selected by checking if it's `criteria` field matches stanza.
      */
-    public func findModules(stanza:Stanza) -> [XmppModule] {
+    open func findModules(_ stanza:Stanza) -> [XmppModule] {
         return findModules(stanza.element);
     }
     
@@ -65,7 +65,7 @@ public class XmppModulesManager : ContextAware {
      Processes passed element and return list of `XmppModule` instances which should process this element.
      Instances of `XmppModule` are selected by checking if it's `criteria` field matches element.
      */
-    public func findModules(elem:Element) -> [XmppModule] {
+    open func findModules(_ elem:Element) -> [XmppModule] {
         var results = [XmppModule]();
         for module in modules {
             if module.criteria.match(elem) {
@@ -76,11 +76,11 @@ public class XmppModulesManager : ContextAware {
     }
     
     /// Returns instance of `XmppModule` registered under passed id
-    public func getModule<T:XmppModule>(id:String) -> T? {
+    open func getModule<T:XmppModule>(_ id:String) -> T? {
         return modulesById[id] as? T;
     }
     
-    public func initIfRequired() {
+    open func initIfRequired() {
         initializationRequired.forEach { (module) in
             module.initialize();
         }
@@ -91,7 +91,7 @@ public class XmppModulesManager : ContextAware {
      - parameter module: instance of `XmppModule` to register
      - returns: same instace as passed in parameter `module`
      */
-    public func register<T:XmppModule>(module:T) -> T {
+    open func register<T:XmppModule>(_ module:T) -> T {
         if var contextAware = module as? ContextAware {
             contextAware.context = context;
         }
@@ -112,19 +112,19 @@ public class XmppModulesManager : ContextAware {
      - parameter module: instance of `XmppModule` to unregister
      - returns: same instace as passed in parameter `module`
      */
-    public func unregister<T:XmppModule>(module:T) -> T {
-        modulesById.removeValueForKey(module.id)
-        if let idx = self.modules.indexOf({ $0 === module}) {
-            self.modules.removeAtIndex(idx);
+    open func unregister<T:XmppModule>(_ module:T) -> T {
+        modulesById.removeValue(forKey: module.id)
+        if let idx = self.modules.index(where: { $0 === module}) {
+            self.modules.remove(at: idx);
         }
         if let initModule = module as? Initializable {
-            if let idx = self.initializationRequired.indexOf({ $0 === initModule }) {
-                self.initializationRequired.removeAtIndex(idx);
+            if let idx = self.initializationRequired.index(where: { $0 === initModule }) {
+                self.initializationRequired.remove(at: idx);
             }
         }
         if let filter = module as? XmppStanzaFilter {
-            if let idx = self.filters.indexOf({ $0 === filter }) {
-                self.filters.removeAtIndex(idx);
+            if let idx = self.filters.index(where: { $0 === filter }) {
+                self.filters.remove(at: idx);
             }
         }
         return module;

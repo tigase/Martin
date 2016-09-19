@@ -25,23 +25,27 @@ import Foundation
  Class implements mechanism of events bus which is used by TigaseSwift
  to notify about events.
  */
-public class EventBus: Logger, LocalQueueDispatcher {
+open class EventBus: Logger, LocalQueueDispatcher {
     
-    private var handlersByEvent:[String:[EventHandler]];
+    fileprivate var handlersByEvent:[String:[EventHandler]];
     
-    public let queueTag: UnsafeMutablePointer<Void>
-    public let queue: dispatch_queue_t;
+    open let queueTag: DispatchSpecificKey<DispatchQueue?>;
+    open let queue: DispatchQueue;
     
     public convenience override init() {
         self.init(dispatchQueue: nil);
     }
     
-    public init(dispatchQueue: dispatch_queue_t?) {
+    public init(dispatchQueue: DispatchQueue?) {
         handlersByEvent = [:];
-        self.queue = dispatchQueue ?? dispatch_queue_create("eventbus_queue", DISPATCH_QUEUE_SERIAL);
-        self.queueTag = UnsafeMutablePointer<Void>(Unmanaged.passUnretained(self.queue).toOpaque());
-        dispatch_queue_set_specific(queue, queueTag, queueTag, nil);
+        self.queue = dispatchQueue ?? DispatchQueue(label: "eventbus_queue", attributes: []);
+        self.queueTag = DispatchSpecificKey<DispatchQueue?>();
+        queue.setSpecific(key: queueTag, value: queue);
         super.init();
+    }
+    
+    deinit {
+        queue.setSpecific(key: queueTag, value: nil);
     }
     
     /**
@@ -49,7 +53,7 @@ public class EventBus: Logger, LocalQueueDispatcher {
      - parameter handler: handler to register
      - parameter events: events on which handler should be notified
      */
-    public func register(handler:EventHandler, events:Event...) {
+    open func register(_ handler:EventHandler, events:Event...) {
         register(handler, events: events);
     }
     
@@ -58,15 +62,15 @@ public class EventBus: Logger, LocalQueueDispatcher {
      - parameter handler: handler to register
      - parameter events: events on which handler should be notified
      */
-    public func register(handler:EventHandler, events:[Event]) {
-        dispatch_async(queue) {
+    open func register(_ handler:EventHandler, events:[Event]) {
+        queue.async {
             for event in events {
                 let type = event.type;
                 var handlers = self.handlersByEvent[type];
                 if handlers == nil {
                     handlers = [EventHandler]();
                 }
-                if (handlers!.indexOf({ $0 === handler }) == nil) {
+                if (handlers!.index(where: { $0 === handler }) == nil) {
                     handlers!.append(handler);
                 }
                 self.handlersByEvent[type] = handlers;
@@ -79,7 +83,7 @@ public class EventBus: Logger, LocalQueueDispatcher {
      - parameter handler: handler to unregister
      - parameter events: events on which handler should not be notified
      */
-    public func unregister(handler:EventHandler, events:Event...) {
+    open func unregister(_ handler:EventHandler, events:Event...) {
         self.unregister(handler, events: events);
     }
     
@@ -88,13 +92,13 @@ public class EventBus: Logger, LocalQueueDispatcher {
      - parameter handler: handler to unregister
      - parameter events: events on which handler should not be notified
      */
-    public func unregister(handler:EventHandler, events:[Event]) {
-        dispatch_async(queue) {
+    open func unregister(_ handler:EventHandler, events:[Event]) {
+        queue.async {
             for event in events {
                 let type = event.type;
                 if var handlers = self.handlersByEvent[type] {
-                    if let idx = handlers.indexOf({ $0 === handler }) {
-                        handlers.removeAtIndex(idx);
+                    if let idx = handlers.index(where: { $0 === handler }) {
+                        handlers.remove(at: idx);
                     }
                     self.handlersByEvent[type] = handlers;
                 }
@@ -106,7 +110,7 @@ public class EventBus: Logger, LocalQueueDispatcher {
      Fire event on this event bus
      - parameter event: event to fire
      */
-    public func fire(event:Event) {
+    open func fire(_ event:Event) {
         if event is SerialEvent {
             dispatch_sync_local_queue() {
                 let type = event.type;
@@ -117,7 +121,7 @@ public class EventBus: Logger, LocalQueueDispatcher {
                 }
             }
         } else {
-            dispatch_async(queue) {
+            queue.async {
                 let type = event.type;
                 if let handlers = self.handlersByEvent[type] {
                     for handler in handlers {

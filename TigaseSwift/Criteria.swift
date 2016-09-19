@@ -26,15 +26,15 @@ import Foundation
  ie. by `XmppModulesManager` to select `XmppModule` instances which should process 
  particular element.
  */
-public class Criteria {
+open class Criteria {
     
     /// Creates empty criteria - will never match
-    public static func empty() -> Criteria {
+    open static func empty() -> Criteria {
         return Criteria(defValue:false);
     }
     
     /// Creates criteria which will match if any of passed criterias will match
-    public static func or(criteria: Criteria...) -> Criteria {
+    open static func or(_ criteria: Criteria...) -> Criteria {
         return OrImpl(criteria: criteria);
     }
     
@@ -46,7 +46,7 @@ public class Criteria {
      - parameter types: list of allowed values for `type` attribute
      - parameter containsAttribute: checks if passed attribute is set
      */
-    public static func name(name: String, xmlns: String? = nil, types:[String]? = nil, containsAttribute: String? = nil) -> Criteria {
+    open static func name(_ name: String, xmlns: String? = nil, types:[String]? = nil, containsAttribute: String? = nil) -> Criteria {
         return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil, containsAttribute: containsAttribute);
     }
 
@@ -58,8 +58,8 @@ public class Criteria {
      - parameter types: list of allowed values for `type` attribute
      - parameter containsAttribute: checks if passed attribute is set
      */
-    public static func name(name: String, xmlns: String? = nil, types:[StanzaType], containsAttribute: String? = nil) -> Criteria {
-        var typesStr = types.map { (type) -> String in
+    open static func name(_ name: String, xmlns: String? = nil, types:[StanzaType], containsAttribute: String? = nil) -> Criteria {
+        let typesStr = types.map { (type) -> String in
             return type.rawValue;
         }
         return ElementCriteria(name: name, xmlns: xmlns, types: typesStr, attributes: nil, containsAttribute: containsAttribute);
@@ -71,7 +71,7 @@ public class Criteria {
      - parameter name: name of element
      - parameter attributes: dictionary of attributes and values which needs to match
      */
-    public static func name(name:String?, attributes:[String:String]) -> Criteria {
+    open static func name(_ name:String?, attributes:[String:String]) -> Criteria {
         return ElementCriteria(name: name, attributes: attributes);
     }
     
@@ -81,30 +81,30 @@ public class Criteria {
      - parameter xmlns: xmlns of element
      - parameter containsAttribute: checks if passed attribute is set
      */
-    public static func xmlns(xmlns:String, containsAttribute: String? = nil) -> Criteria {
+    open static func xmlns(_ xmlns:String, containsAttribute: String? = nil) -> Criteria {
         return ElementCriteria(xmlns: xmlns, attributes: nil, containsAttribute: containsAttribute);
     }
     
-    private var nextCriteria:Criteria?;
+    fileprivate var nextCriteria:Criteria?;
     
-    private let defValue:Bool;
+    fileprivate let defValue:Bool;
     
-    private init() {
+    fileprivate init() {
         defValue = true;
     }
     
-    private init(defValue:Bool) {
+    fileprivate init(defValue:Bool) {
         self.defValue = defValue;
     }
     
     /**
      Added additional criterial to check on subelements
      */
-    public func add(crit:Criteria) -> Criteria {
+    open func add(_ crit:Criteria) -> Criteria {
         if (nextCriteria == nil) {
             nextCriteria = crit;
         } else {
-            nextCriteria?.add(crit);
+            _ = nextCriteria?.add(crit);
         }
         return self;
     }
@@ -113,7 +113,7 @@ public class Criteria {
      Checks if element matches (checks subelements if additional criteria are added)
      - returns: true - if element matches
      */
-    public func match(elem:Element) -> Bool {
+    open func match(_ elem:Element) -> Bool {
         if (nextCriteria == nil) {
             return defValue;
         }
@@ -145,7 +145,7 @@ public class Criteria {
             super.init();
         }
         
-        override func match(elem: Element) -> Bool {
+        override func match(_ elem: Element) -> Bool {
             var match = true;
             if (name != nil) {
                 match = match && (name == elem.name);
@@ -155,7 +155,7 @@ public class Criteria {
             }
             if (types != nil) {
                 let type = elem.getAttribute("type") ?? "";
-                match = match && (types?.indexOf(type) != nil);
+                match = match && (types?.index(of: type) != nil);
             }
             if (attributes != nil) {
                 for (k,v) in self.attributes! {
@@ -182,7 +182,7 @@ public class Criteria {
             super.init(defValue: false);
         }
         
-        override func match(elem: Element) -> Bool {
+        override func match(_ elem: Element) -> Bool {
             for crit in self.criteria {
                 if (crit.match(elem)) {
                     return true;

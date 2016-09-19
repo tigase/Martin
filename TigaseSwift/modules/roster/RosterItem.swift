@@ -24,15 +24,15 @@ import Foundation
 /**
  Class holds informations about single roster entry
  */
-public class RosterItem: RosterItemProtocol, CustomStringConvertible {
+open class RosterItem: RosterItemProtocol, CustomStringConvertible {
     
-    public let jid: JID;
-    public let name: String?;
-    public let subscription: Subscription;
-    public let ask: Bool;
-    public let groups: [String];
+    open let jid: JID;
+    open let name: String?;
+    open let subscription: Subscription;
+    open let ask: Bool;
+    open let groups: [String];
     
-    public var description: String {
+    open var description: String {
         get {
             return "RosterItem{ jid=\(jid), name=\(name), subscription=\(subscription), groups=\(groups)}"
         }
@@ -47,7 +47,7 @@ public class RosterItem: RosterItemProtocol, CustomStringConvertible {
     }
     
     
-    public func update(name: String?, subscription: Subscription, groups: [String], ask: Bool) -> RosterItem {
+    open func update(_ name: String?, subscription: Subscription, groups: [String], ask: Bool) -> RosterItem {
         return RosterItem(jid: self.jid, name: name, subscription: subscription, groups: groups, ask: ask);
     }
 //    public func updateName(name: String?, )
@@ -69,18 +69,18 @@ public class RosterItem: RosterItemProtocol, CustomStringConvertible {
         
         var isFrom: Bool {
             switch self {
-            case from, both:
+            case .from, .both:
                 return true;
-            case none, to, remove:
+            case .none, .to, .remove:
                 return false;
             }
         }
         
         var isTo: Bool {
             switch self {
-            case to, both:
+            case .to, .both:
                 return true;
-            case none, from, remove:
+            case .none, .from, .remove:
                 return false;
             }
         }

@@ -24,23 +24,23 @@ import Foundation
 /**
  Module provides support for Tigase Mobile Optimizations feature
  */
-public class MobileModeModule: XmppModule, ContextAware {
+open class MobileModeModule: XmppModule, ContextAware {
     
     /// Base part of namespace used by Mobile Optimizations
-    public static let MM_XMLNS = "http://tigase.org/protocol/mobile";
+    open static let MM_XMLNS = "http://tigase.org/protocol/mobile";
     /// ID of module to lookup for in `XmppModulesManager`
-    public static let ID = MM_XMLNS;
+    open static let ID = MM_XMLNS;
     
-    public let id = MM_XMLNS;
+    open let id = MM_XMLNS;
     
-    public let criteria = Criteria.empty();
+    open let criteria = Criteria.empty();
     
-    public let features = [String]();
+    open let features = [String]();
     
-    public var context:Context!;
+    open var context:Context!;
     
     /// Available optimization modes on server
-    public var availableModes:[Mode] {
+    open var availableModes:[Mode] {
         get {
             return (StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.mapChildren({(f)-> Mode in
                 return Mode(rawValue: f.xmlns!)!
@@ -53,7 +53,7 @@ public class MobileModeModule: XmppModule, ContextAware {
     public init() {
     }
     
-    public func process(elem: Stanza) throws {
+    open func process(_ elem: Stanza) throws {
         throw ErrorCondition.feature_not_implemented;
     }
     
@@ -61,23 +61,23 @@ public class MobileModeModule: XmppModule, ContextAware {
      Enable optimization mode
      - paramater mode: mode to use
      */
-    public func enable(mode: Mode? = nil) {
-        setState(true, mode: mode);
+    open func enable(_ mode: Mode? = nil) {
+        _ = setState(true, mode: mode);
     }
     
     /**
      Disable optimization mode
      - paramater mode: mode to disable
      */
-    public func disable(mode: Mode? = nil) {
-        setState(false, mode: mode);
+    open func disable(_ mode: Mode? = nil) {
+        _ = setState(false, mode: mode);
     }
     
     /**
      Enable/disable optimization mode
      - paramater mode: mode to use
      */
-    public func setState(state: Bool, mode: Mode? = nil) -> Bool {
+    open func setState(_ state: Bool, mode: Mode? = nil) -> Bool {
         if mode == nil {
             let possibleModes = availableModes;
             for m in Mode.allValues {

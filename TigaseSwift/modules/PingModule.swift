@@ -26,19 +26,19 @@ import Foundation
  
  [XEP-0199: XMPP Ping]: http://xmpp.org/extensions/xep-0199.html
  */
-public class PingModule: AbstractIQModule, ContextAware {
+open class PingModule: AbstractIQModule, ContextAware {
     /// Namespace used by XMPP ping
-    private static let PING_XMLNS = "urn:xmpp:ping";
+    fileprivate static let PING_XMLNS = "urn:xmpp:ping";
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = PING_XMLNS;
+    open static let ID = PING_XMLNS;
     
-    public let id = ID;
+    open let id = ID;
     
-    public var context: Context!;
+    open var context: Context!;
     
-    public let criteria = Criteria.name("iq").add(Criteria.name("ping", xmlns: PING_XMLNS));
+    open let criteria = Criteria.name("iq").add(Criteria.name("ping", xmlns: PING_XMLNS));
     
-    public let features = [PING_XMLNS];
+    open let features = [PING_XMLNS];
     
     public init() {
         
@@ -49,7 +49,7 @@ public class PingModule: AbstractIQModule, ContextAware {
      - parameter jid: ping destination
      - parameter callback: executed when response is received or due to timeout
      */
-    public func ping(jid: JID, callback: (Stanza?)->Void) {
+    open func ping(_ jid: JID, callback: (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid;
@@ -61,12 +61,12 @@ public class PingModule: AbstractIQModule, ContextAware {
     /**
      Processes ping requests and responds properly
      */
-    public func processGet(stanza: Stanza) throws {
+    open func processGet(_ stanza: Stanza) throws {
         let result = stanza.makeResult(StanzaType.result);
         context.writer?.write(result);
     }
     
-    public func processSet(stanza: Stanza) throws {
+    open func processSet(_ stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
 }

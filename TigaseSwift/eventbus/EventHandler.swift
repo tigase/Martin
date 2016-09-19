@@ -34,6 +34,6 @@ public protocol EventHandler: class {
      types of events.
      - parameter event: instace of `Event` which was fired on `EventBus`
      */
-    func handleEvent(event:Event);
+    func handleEvent(_ event:Event);
     
 }

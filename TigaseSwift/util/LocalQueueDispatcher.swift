@@ -26,27 +26,27 @@ import Foundation
  */
 public protocol LocalQueueDispatcher {
     
-    var queueTag: UnsafeMutablePointer<Void> { get}
-    var queue: dispatch_queue_t { get }
+    var queueTag: DispatchSpecificKey<DispatchQueue?> { get}
+    var queue: DispatchQueue { get }
 
 }
 
 extension LocalQueueDispatcher {
 
-    public func dispatch_sync_local_queue(block: dispatch_block_t) {
-        if (dispatch_get_specific(queueTag) != nil) {
+    public func dispatch_sync_local_queue(_ block: ()->()) {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
             block();
         } else {
-            dispatch_sync(queue, block);
+            queue.sync(execute: block);
         }
     }
 
-    public func dispatch_sync_with_result_local_queue<T>(block: ()-> T) -> T {
-        if (dispatch_get_specific(queueTag) != nil) {
+    public func dispatch_sync_with_result_local_queue<T>(_ block: ()-> T) -> T {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
             return block();
         } else {
             var result: T!;
-            dispatch_sync(queue) {
+            queue.sync {
                 result = block();
             }
             return result;

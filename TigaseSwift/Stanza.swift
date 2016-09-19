@@ -27,19 +27,19 @@ import Foundation
  Value of `to`/`from` attributes is cached on instance level. After `Stanza` is created from element do not modify element
  `to`/`from` attributes directly - instead use `to`/`from` properties of `Stanza` class.
  */
-public class Stanza: ElementProtocol, CustomStringConvertible {
+open class Stanza: ElementProtocol, CustomStringConvertible {
     
-    private let defStanzaType:StanzaType?;
+    fileprivate let defStanzaType:StanzaType?;
     
-    public var description: String {
+    open var description: String {
         return String("Stanza : \(element.stringValue)")
     }
     
     /// Keeps instance of root XML element
-    public let element:Element;
+    open let element:Element;
     
     /// Returns information about delay in delivery of stanza
-    public var delay:Delay? {
+    open var delay:Delay? {
         if let delayEl = element.findChild("delay", xmlns: "urn:xmpp:delay") {
             return Delay(element: delayEl);
         }
@@ -47,20 +47,20 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Returns element name
-    public var name:String {
+    open var name:String {
         get {
             return element.name;
         }
     }
     
-    private var from_: JID?;
+    fileprivate var from_: JID?;
     /**
      Sender address of stanza
      
      Value is cached after first time it is retrieved. Use this property 
      instead of direct modification of element `from` attribute.
      */
-    public var from:JID? {
+    open var from:JID? {
         get {
             if let jidStr = element.getAttribute("from") {
                 from_ = JID(jidStr);
@@ -73,14 +73,14 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
-    private var to_: JID?;
+    fileprivate var to_: JID?;
     /**
      Recipient address of stanza
      
      Value is cached after first time it is retrieved. Use this property
      instead of direct modification of element `to` attribute.
      */
-    public var to:JID? {
+    open var to:JID? {
         get {
             if let jidStr = element.getAttribute("to") {
                 to_ = JID(jidStr);
@@ -94,7 +94,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Stanza id
-    public var id:String? {
+    open var id:String? {
         get {
             return element.getAttribute("id");
         }
@@ -105,7 +105,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     
     
     /// Stanza type
-    public var type:StanzaType? {
+    open var type:StanzaType? {
         get {
             if let type = element.getAttribute("type") {
                 return StanzaType(rawValue: type);
@@ -118,7 +118,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Returns error condition due to which this response stanza is marked as an error
-    public var errorCondition:ErrorCondition? {
+    open var errorCondition:ErrorCondition? {
         get {
             if type != StanzaType.error {
                 return nil;
@@ -131,7 +131,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     }
 
     /// Returns XMLNS of element
-    public var xmlns:String? {
+    open var xmlns:String? {
         get {
             return element.xmlns;
         }
@@ -147,31 +147,31 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         self.defStanzaType = defStanzaType;
     }
     
-    public func addChild(child: Element) {
+    open func addChild(_ child: Element) {
         self.element.addNode(child)
     }
     
-    public func addChildren(children: [Element]) {
+    open func addChildren(_ children: [Element]) {
         self.element.addChildren(children);
     }
     
-    public func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+    open func findChild(_ name:String? = nil, xmlns:String? = nil) -> Element? {
         return self.element.findChild(name, xmlns: xmlns);
     }
     
-    public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+    open func getChildren(_ name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         return self.element.getChildren(name, xmlns: xmlns);
     }
     
-    public func getAttribute(key:String) -> String? {
+    open func getAttribute(_ key:String) -> String? {
         return self.element.getAttribute(key);
     }
     
-    public func removeChild(child: Element) {
+    open func removeChild(_ child: Element) {
         self.element.removeChild(child);
     }
     
-    public func setAttribute(key:String, value:String?) {
+    open func setAttribute(_ key:String, value:String?) {
         self.element.setAttribute(key, value: value);
     }
     
@@ -184,7 +184,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
         - Iq: for elements named 'iq'
         - Stanza: for any other elements not matching above rules
      */
-    public static func fromElement(elem:Element) -> Stanza {
+    open static func fromElement(_ elem:Element) -> Stanza {
         switch elem.name {
         case "message":
             return Message(elem:elem);
@@ -201,11 +201,11 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
      Creates stanza of type error with passsed error condition.
      - returns: response stanza based on this stanza with error condition set
      */
-    public func errorResult(condition:ErrorCondition, text:String? = nil) -> Stanza {
+    open func errorResult(_ condition:ErrorCondition, text:String? = nil) -> Stanza {
         return errorResult(condition.type, errorCondition: condition.rawValue);
     }
     
-    public func errorResult(errorType:String?, errorCondition:String, errorText:String? = nil, xmlns:String = "urn:ietf:params:xml:ns:xmpp-stanzas") -> Stanza {
+    open func errorResult(_ errorType:String?, errorCondition:String, errorText:String? = nil, xmlns:String = "urn:ietf:params:xml:ns:xmpp-stanzas") -> Stanza {
         let elem = element;
         let response = Stanza.fromElement(elem);
         response.type = StanzaType.error;
@@ -231,7 +231,7 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
      Creates response stanza with following type set
      - parameter type: type to set in response stanza
      */
-    public func makeResult(type:StanzaType) -> Stanza {
+    open func makeResult(_ type:StanzaType) -> Stanza {
         let elem = Element(name: element.name, cdata: nil, attributes: element.attributes);
         let response = Stanza.fromElement(elem);
         response.to = self.from;
@@ -241,12 +241,12 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Returns value of matching element
-    func getElementValue(name:String?, xmlns:String? = nil) -> String? {
+    func getElementValue(_ name:String?, xmlns:String? = nil) -> String? {
         return findChild(name, xmlns: xmlns)?.value;
     }
     
     /// Creates new subelement with following name, xmlns and value. It will replace any other subelement with same name and xmlns
-    func setElementValue(name:String, xmlns:String? = nil, value:String?) {
+    func setElementValue(_ name:String, xmlns:String? = nil, value:String?) {
         element.forEachChild(name, xmlns: xmlns) { (e:Element) -> Void in
             self.element.removeChild(e);
         };
@@ -257,10 +257,10 @@ public class Stanza: ElementProtocol, CustomStringConvertible {
 }
 
 /// Extenstion of `Stanza` class with specific features existing only in `message' elements.
-public class Message: Stanza {
+open class Message: Stanza {
     
     /// Message plain text
-    public var body:String? {
+    open var body:String? {
         get {
             return getElementValue("body");
         }
@@ -270,7 +270,7 @@ public class Message: Stanza {
     }
     
     /// Message subject
-    public var subject:String? {
+    open var subject:String? {
         get {
             return getElementValue("subject");
         }
@@ -280,7 +280,7 @@ public class Message: Stanza {
     }
     
     /// Message thread id
-    public var thread:String? {
+    open var thread:String? {
         get {
             return getElementValue("thread");
         }
@@ -289,7 +289,7 @@ public class Message: Stanza {
         }
     }
     
-    public override var description: String {
+    open override var description: String {
         return String("Message : \(element.stringValue)")
     }
     
@@ -304,7 +304,7 @@ public class Message: Stanza {
 }
 
 /// Extenstion of `Stanza` class with specific features existing only in `presence' elements.
-public class Presence: Stanza {
+open class Presence: Stanza {
 
     /**
      Possible values:
@@ -323,26 +323,26 @@ public class Presence: Stanza {
         
         var weight:Int {
             switch self {
-            case chat:
+            case .chat:
                 return 5;
-            case online:
+            case .online:
                 return 4;
-            case away:
+            case .away:
                 return 3;
-            case xa:
+            case .xa:
                 return 2;
-            case dnd:
+            case .dnd:
                 return 1;
             }
         }
     }
     
-    public override var description: String {
+    open override var description: String {
         return String("Presence : \(element.stringValue)")
     }
 
     /// Suggested nickname to use
-    public var nickname:String? {
+    open var nickname:String? {
         get {
             return getElementValue("nick", xmlns: "http://jabber.org/protocol/nick");
         }
@@ -352,7 +352,7 @@ public class Presence: Stanza {
     }
     
     /// Priority of presence and resource connection
-    public var priority:Int! {
+    open var priority:Int! {
         get {
             let x = findChild("priority")?.value;
             if x != nil {
@@ -375,7 +375,7 @@ public class Presence: Stanza {
      - if available then is value from `Show` enum
      - if unavailable then is nil
      */
-    public var show:Show? {
+    open var show:Show? {
         get {
             let x = findChild("show")?.value;
             let type = self.type;
@@ -402,7 +402,7 @@ public class Presence: Stanza {
     }
     
     /// Text with additional description - mainly for human use
-    public var status:String? {
+    open var status:String? {
         get {
             return findChild("status")?.value;
         }
@@ -427,9 +427,9 @@ public class Presence: Stanza {
 }
 
 /// Extenstion of `Stanza` class with specific features existing only in `iq` elements.
-public class Iq: Stanza {
+open class Iq: Stanza {
 
-    public override var description: String {
+    open override var description: String {
         return String("Iq : \(element.stringValue)")
     }
     

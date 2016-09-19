@@ -25,20 +25,20 @@ import Foundation
  Mechanism implements SASL ANONYMOUS authentication mechanism
  */
 
-public class AnonymousMechanism: SaslMechanism {
+open class AnonymousMechanism: SaslMechanism {
     
-    public let name = "ANONYMOUS";
+    open let name = "ANONYMOUS";
     
     public init() {
         
     }
     
-    public func evaluateChallenge(input: String?, sessionObject: SessionObject) throws -> String? {
+    open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) throws -> String? {
         setComplete(sessionObject, completed: true);
         return nil;
     }
     
-    public func isAllowedToUse(sessionObject: SessionObject) -> Bool {
+    open func isAllowedToUse(_ sessionObject: SessionObject) -> Bool {
         return sessionObject.userBareJid == nil;
     }
     

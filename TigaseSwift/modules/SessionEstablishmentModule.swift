@@ -26,28 +26,28 @@ import Foundation
  
  [session establishment]: http://xmpp.org/rfcs/rfc3921.html#session
  */
-public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
+open class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
 
     /// Namespace used in session establishment process
     static let SESSION_XMLNS = "urn:ietf:params:xml:ns:xmpp-session";
     
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = "session";
+    open static let ID = "session";
     
-    public let id = ID;
+    open let id = ID;
     
-    public var context:Context!;
+    open var context:Context!;
     
-    public let criteria = Criteria.empty();
+    open let criteria = Criteria.empty();
     
-    public let features = [String]();
+    open let features = [String]();
     
     /**
      Method checks if session establishment is required
      - parameter sessionObject: instance of `SessionObject`
      - returns: true - if is required
      */
-    public static func isSessionEstablishmentRequired(sessionObject:SessionObject) -> Bool {
+    open static func isSessionEstablishmentRequired(_ sessionObject:SessionObject) -> Bool {
         if let featuresElement = StreamFeaturesModule.getStreamFeatures(sessionObject) {
             if let session = featuresElement.findChild("session", xmlns: SESSION_XMLNS) {
                 return session.findChild("optional") == nil;
@@ -61,12 +61,12 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
     }
     
     /// Method should not be called due to empty `criteria`
-    public func process(elem: Stanza) throws {
+    open func process(_ elem: Stanza) throws {
         throw ErrorCondition.bad_request;
     }
     
     /// Method called to start session establishemnt
-    public func establish() {
+    open func establish() {
         let iq = Iq();
         iq.type = StanzaType.set;
         let session = Element(name:"session");
@@ -92,17 +92,17 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
     }
     
     /// Event fired when session establishment process fails
-    public class SessionEstablishmentErrorEvent: Event {
+    open class SessionEstablishmentErrorEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SessionEstablishmentErrorEvent();
+        open static let TYPE = SessionEstablishmentErrorEvent();
         
-        public let type = "SessionEstablishmentErrorEvent";
+        open let type = "SessionEstablishmentErrorEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Error condition returned by server
-        public let errorCondition:ErrorCondition?;
+        open let errorCondition:ErrorCondition?;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.errorCondition = nil;
         }
@@ -114,15 +114,15 @@ public class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
     }
     
     /// Event fired when session is established
-    public class SessionEstablishmentSuccessEvent: Event {
+    open class SessionEstablishmentSuccessEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SessionEstablishmentSuccessEvent();
+        open static let TYPE = SessionEstablishmentSuccessEvent();
         
-        public let type = "SessionEstablishmentSuccessEvent";        
+        open let type = "SessionEstablishmentSuccessEvent";        
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
         }
         

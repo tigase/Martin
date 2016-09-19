@@ -26,40 +26,40 @@ import Foundation
  
  For more informations see `RosterStore`
  */
-public class DefaultRosterStore: RosterStore {
+open class DefaultRosterStore: RosterStore {
  
-    private var roster = [JID: RosterItem]();
+    fileprivate var roster = [JID: RosterItem]();
     
-    private var queue = dispatch_queue_create("roster_store_queue", DISPATCH_QUEUE_CONCURRENT);
+    fileprivate var queue = DispatchQueue(label: "roster_store_queue", attributes: DispatchQueue.Attributes.concurrent);
     
-    public override var count:Int {
+    open override var count:Int {
         get {
             var result = 0;
-            dispatch_sync(queue) {
+            queue.sync {
                 result = self.roster.count;
             }
             return result;
         }
     }
             
-    public override func addItem(item:RosterItem) {
-        dispatch_barrier_async(queue) {
+    open override func addItem(_ item:RosterItem) {
+        queue.async(flags: .barrier, execute: {
             self.roster[item.jid] = item;
-        }
+        }) 
     }
     
-    public override func get(jid:JID) -> RosterItem? {
+    open override func get(_ jid:JID) -> RosterItem? {
         var item: RosterItem?;
-        dispatch_sync(queue) {
+        queue.sync {
             item = self.roster[jid];
         }
         return item;
     }
     
-    public override func removeItem(jid:JID) {
-        dispatch_barrier_async(queue) {
-            self.roster.removeValueForKey(jid);
-        }
+    open override func removeItem(_ jid:JID) {
+        queue.async(flags: .barrier, execute: {
+            self.roster.removeValue(forKey: jid);
+        }) 
     }
     
     

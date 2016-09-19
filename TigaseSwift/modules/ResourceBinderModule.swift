@@ -26,7 +26,7 @@ import Foundation
  
  [resource binding]: http://xmpp.org/rfcs/rfc6120.html#bind
  */
-public class ResourceBinderModule: XmppModule, ContextAware {
+open class ResourceBinderModule: XmppModule, ContextAware {
  
     /// Namespace used by resource binding
     static let BIND_XMLNS = "urn:ietf:params:xml:ns:xmpp-bind";
@@ -35,22 +35,22 @@ public class ResourceBinderModule: XmppModule, ContextAware {
     static let BINDED_RESOURCE_JID = "BINDED_RESOURCE_JID";
     
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = BIND_XMLNS;
+    open static let ID = BIND_XMLNS;
     
-    public let id = BIND_XMLNS;
+    open let id = BIND_XMLNS;
     
-    public let criteria = Criteria.empty();
+    open let criteria = Criteria.empty();
     
-    public let features = [String]();
+    open let features = [String]();
     
-    public var context:Context!;
+    open var context:Context!;
     
     /**
      Method returns binded JID retrieved from property of `SessionObject`
      - parameter sessionObject: instance of `SessionObject` to retrieve from
      - returns: binded JID
      */
-    public static func getBindedJid(sessionObject:SessionObject) -> JID? {
+    open static func getBindedJid(_ sessionObject:SessionObject) -> JID? {
         return sessionObject.getProperty(ResourceBinderModule.BINDED_RESOURCE_JID);
     }
     
@@ -59,7 +59,7 @@ public class ResourceBinderModule: XmppModule, ContextAware {
     }
     
     /// Method called to bind resource
-    public func bind() {
+    open func bind() {
         let iq = Iq();
         iq.type = StanzaType.set;
         let bind = Element(name:"bind");
@@ -91,23 +91,23 @@ public class ResourceBinderModule: XmppModule, ContextAware {
     }
     
     /// Method should not be called due to empty `criteria` property
-    public func process(elem: Stanza) throws {
+    open func process(_ elem: Stanza) throws {
         throw ErrorCondition.bad_request
     }
     
     /// Event fired when resource is binding fails
-    public class ResourceBindErrorEvent: Event {
+    open class ResourceBindErrorEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ResourceBindErrorEvent();
+        open static let TYPE = ResourceBindErrorEvent();
         
-        public let type = "ResourceBindErrorEvent";
+        open let type = "ResourceBindErrorEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Error condition returned by server
-        public let errorCondition:ErrorCondition?;
+        open let errorCondition:ErrorCondition?;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.errorCondition = nil;
         }
@@ -119,17 +119,17 @@ public class ResourceBinderModule: XmppModule, ContextAware {
     }
     
     /// Event fired when resource is binded
-    public class ResourceBindSuccessEvent: Event {
+    open class ResourceBindSuccessEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ResourceBindSuccessEvent();
+        open static let TYPE = ResourceBindSuccessEvent();
         
-        public let type = "ResourceBindSuccessEvent";
+        open let type = "ResourceBindSuccessEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// Full JID with binded resource
-        public let bindedJid:JID!;
+        open let bindedJid:JID!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.bindedJid = nil;
         }

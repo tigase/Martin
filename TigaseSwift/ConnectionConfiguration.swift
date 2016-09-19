@@ -22,7 +22,7 @@
 import Foundation
 
 /// Helper class to make it possible to set connection properties in easy way
-public class ConnectionConfiguration {
+open class ConnectionConfiguration {
     
     var sessionObject:SessionObject!;
     
@@ -34,7 +34,7 @@ public class ConnectionConfiguration {
      Set domain as domain to which we should connect - will be used if `userJid` is not set
      - parameter domain: domain to connect to
      */
-    public func setDomain(domain: String?) {
+    open func setDomain(_ domain: String?) {
         self.sessionObject.setUserProperty(SessionObject.DOMAIN_NAME, value: domain);
     }
     
@@ -42,7 +42,7 @@ public class ConnectionConfiguration {
      Set jid of user as which we should connect
      - parameter jid: jid
      */
-    public func setUserJID(jid:BareJID?) {
+    open func setUserJID(_ jid:BareJID?) {
         self.sessionObject.setUserProperty(SessionObject.USER_BARE_JID, value: jid);
         setDomain(nil);
     }
@@ -51,7 +51,7 @@ public class ConnectionConfiguration {
      Set password for authentication as user
      - parameter password: password
      */
-    public func setUserPassword(password:String?) {
+    open func setUserPassword(_ password:String?) {
         self.sessionObject.setUserProperty(SessionObject.PASSWORD, value: password);
     }
 
@@ -59,7 +59,7 @@ public class ConnectionConfiguration {
      Set server host to which we should connect (ie. to select particular node of a server cluster)
      - parameter serverHost: name or ip address of server
      */
-    public func setServerHost(serverHost: String?) {
+    open func setServerHost(_ serverHost: String?) {
         self.sessionObject.setUserProperty(SocketConnector.SERVER_HOST, value: serverHost);
     }
  
@@ -67,7 +67,7 @@ public class ConnectionConfiguration {
      Set server port to which we should connect (ie. if there is no SRV records and server uses port other than default port 5222)
      - parameter serverPort: server port to connect to
      */
-    public func setServerPort(serverPort: Int?) {
+    open func setServerPort(_ serverPort: Int?) {
         self.sessionObject.setUserProperty(SocketConnector.SERVER_PORT, value: serverPort);
     }
 }

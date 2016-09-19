@@ -28,19 +28,19 @@ import Foundation
  
  [XEP-0115: Entity Capabilities]:http://xmpp.org/extensions/xep-0115.html
  */
-public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHandler {
+open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHandler {
     
     /// Key used to cache verification string in `SessionObject`
-    public static let VERIFICATION_STRING_KEY = "XEP115VerificationString";
+    open static let VERIFICATION_STRING_KEY = "XEP115VerificationString";
     
     /// ID of module for lookup in `XmppModulesManager`
-    public static let ID = "caps";
+    open static let ID = "caps";
     
-    public let id = ID;
-    public let criteria = Criteria.empty();
-    public let features = ["http://jabber.org/protocol/caps"];
+    open let id = ID;
+    open let criteria = Criteria.empty();
+    open let features = ["http://jabber.org/protocol/caps"];
     
-    public var context: Context! {
+    open var context: Context! {
         willSet {
             guard context != nil else {
                 return;
@@ -57,32 +57,32 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
     }
     
     /// Keeps instance of `CapabilitiesCache` responsible for caching discovery results
-    public var cache: CapabilitiesCache?;
+    open var cache: CapabilitiesCache?;
     
     /// Node used in CAPS advertisement
-    public var nodeName = "http://tigase.org/TigaseSwift";
+    open var nodeName = "http://tigase.org/TigaseSwift";
     
     public init() {
         
     }
     
     /// Method do noting
-    public func process(stanza: Stanza) throws {
+    open func process(_ stanza: Stanza) throws {
         throw ErrorCondition.bad_request;
     }
     
-    public func initialize() {
+    open func initialize() {
         if cache == nil {
             cache = DefaultCapabilitiesCache();
         }
     }
     
-    public func handleEvent(event: Event) {
+    open func handleEvent(_ event: Event) {
         switch event {
         case let e as PresenceModule.BeforePresenceSendEvent:
             onBeforePresenceSend(e);
         case let e as PresenceModule.ContactPresenceChanged:
-            dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)) {
+            DispatchQueue.global(qos: DispatchQoS.QoSClass.background).async {
                 self.onReceivedPresence(e);
             }
         default:
@@ -97,7 +97,7 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
      
      - parameter e: event fired before `Presence` is send
      */
-    func onBeforePresenceSend(e: PresenceModule.BeforePresenceSendEvent) {
+    func onBeforePresenceSend(_ e: PresenceModule.BeforePresenceSendEvent) {
         guard let ver: String = context.sessionObject.getProperty(CapabilitiesModule.VERIFICATION_STRING_KEY) ?? calculateVerificationString() else {
             return;
         }
@@ -117,7 +117,7 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
      
      - parameter e: event fired when `Presence` is received
      */
-    func onReceivedPresence(e: PresenceModule.ContactPresenceChanged) {
+    func onReceivedPresence(_ e: PresenceModule.ContactPresenceChanged) {
         guard cache != nil && e.presence != nil, let from = e.presence.from else {
             return;
         }
@@ -188,8 +188,8 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
      - parameter features: available feature for client
      - returns: verification string
      */
-    func generateVerificationString(identities: [String], features availableFeatures: [String]) -> String? {
-        var features = availableFeatures.sort();
+    func generateVerificationString(_ identities: [String], features availableFeatures: [String]) -> String? {
+        let features = availableFeatures.sorted();
         var string: String = "";
         
         for identity in identities {
@@ -200,7 +200,7 @@ public class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventH
             string += feature + "<";
         }
         
-        return Digest.SHA1.digestToBase64(string.dataUsingEncoding(NSUTF8StringEncoding));
+        return Digest.sha1.digestToBase64(string.data(using: String.Encoding.utf8));
     }
 }
 
@@ -215,28 +215,28 @@ public protocol CapabilitiesCache {
      - returns: array of supported features or `nil` if there is not entry in
      cache for this node
      */
-    func getFeatures(node: String) -> [String]?;
+    func getFeatures(_ node: String) -> [String]?;
     
     /**
      Retrieve identity of remote client which adverties this node
      - parameter node: node to look for identity
      - returns: XMPP client idenitity or `nil` if no available in cache
      */
-    func getIdentity(node: String) -> DiscoveryModule.Identity?;
+    func getIdentity(_ node: String) -> DiscoveryModule.Identity?;
     
     /**
      Retrieves array of nodes which supports feature
      - parameter feature: feature which should be supported
      - returns: array of nodes supporting this feature known in cache
      */
-    func getNodesWithFeature(feature: String) -> [String];
+    func getNodesWithFeature(_ feature: String) -> [String];
     
     /**
      Check if information for node are in cache
      - parameter node: node to check
      - returns: true if data is available in cache
      */
-    func isCached(node: String) -> Bool;
+    func isCached(_ node: String) -> Bool;
     
     /**
      Store data in cache
@@ -244,6 +244,6 @@ public protocol CapabilitiesCache {
      - parameter identitity: XMPP client identity
      - parameter features: array of feature supported by client
      */
-    func store(node: String, identity: DiscoveryModule.Identity?, features: [String]);
+    func store(_ node: String, identity: DiscoveryModule.Identity?, features: [String]);
     
 }

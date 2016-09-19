@@ -34,7 +34,7 @@ public protocol ChatManager {
      - parameter chat: chat to close
      - returns: true - if chat was closed
      */
-    func close(chat:Chat) ->Bool;
+    func close(_ chat:Chat) ->Bool;
     
     /**
      Create chat
@@ -42,14 +42,14 @@ public protocol ChatManager {
      - parameter thread: id of thread
      - returns: instance of Chat if opened
      */
-    func createChat(jid:JID, thread:String?) -> Chat?;
+    func createChat(_ jid:JID, thread:String?) -> Chat?;
     /**
      Get instance of already opened chat
      - parameter jid: jid to exchange messages
      - parameter thread: id of thread
      - returns: instance of Chat if any opened and matches
      */
-    func getChat(jid:JID, thread:String?) -> Chat?;
+    func getChat(_ jid:JID, thread:String?) -> Chat?;
     /**
      Get array of opened chats
      - returns: array of all currently open chats
@@ -59,51 +59,51 @@ public protocol ChatManager {
      Check if there is any chat open with jid
      - parameter jid: jid to check
      */
-    func isChatOpenFor(jid:BareJID) -> Bool;
+    func isChatOpenFor(_ jid:BareJID) -> Bool;
 }
 
 /**
  Implementation of Chat
  */
-public class Chat: ChatProtocol {
+open class Chat: ChatProtocol {
     
-    private static let queue = dispatch_queue_create("chat_queue", DISPATCH_QUEUE_CONCURRENT);
+    fileprivate static let queue = DispatchQueue(label: "chat_queue", attributes: DispatchQueue.Attributes.concurrent);
     
     // common variables
-    private var _jid: JID;
+    fileprivate var _jid: JID;
     /// JID with which messages are exchanged
-    public var jid: JID {
+    open var jid: JID {
         get {
             var r: JID!;
-            dispatch_sync(Chat.queue) {
+            Chat.queue.sync {
                 r = self._jid;
             }
             return r;
         }
         set {
-            dispatch_barrier_async(Chat.queue) {
+            Chat.queue.async(flags: .barrier, execute: {
                 self._jid = newValue;
-            }
+            }) 
         }
     }
     /// Is it possible to open many chats with same bare JID?
-    public let allowFullJid = true;
+    open let allowFullJid = true;
 
     // class specific variables
     /// Thread ID of message exchange
-    private var _thread: String?;
-    public var thread:String? {
+    fileprivate var _thread: String?;
+    open var thread:String? {
         get {
             var r: String?;
-            dispatch_sync(Chat.queue) {
+            Chat.queue.sync {
                 r = self._thread;
             }
             return r;
         }
         set {
-            dispatch_barrier_async(Chat.queue) {
+            Chat.queue.async(flags: .barrier, execute: {
                 self._thread = newValue;
-            }
+            }) 
         }
     }
     
@@ -119,8 +119,8 @@ public class Chat: ChatProtocol {
      - parameter subject: subject of message
      - parameter additionalElements: additional elements to add to message
      */
-    public func createMessage(body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
-        var msg = Message();
+    open func createMessage(_ body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
+        let msg = Message();
         msg.to = jid;
         msg.type = type;
         msg.thread = thread;

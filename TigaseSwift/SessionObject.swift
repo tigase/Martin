@@ -24,25 +24,25 @@ import Foundation
 /**
  Instances of this class keep configuration properties for connections and commonly used state values.
  */
-public class SessionObject: Logger {
+open class SessionObject: Logger {
     
-    public static let DOMAIN_NAME = "domainName";
+    open static let DOMAIN_NAME = "domainName";
     
-    public static let NICKNAME = "nickname";
+    open static let NICKNAME = "nickname";
     
-    public static let PASSWORD = "password";
+    open static let PASSWORD = "password";
     
-    public static let RESOURCE = "resource";
+    open static let RESOURCE = "resource";
     
-    public static let USER_BARE_JID = "userBareJid";
+    open static let USER_BARE_JID = "userBareJid";
     
-    public static let STARTTLS_ACTIVE = "starttls#active";
+    open static let STARTTLS_ACTIVE = "starttls#active";
     
-    public static let STARTTLS_DISLABLED = "starttls#disabled";
+    open static let STARTTLS_DISLABLED = "starttls#disabled";
     
-    public static let COMPRESSION_ACTIVE = "compression#active";
+    open static let COMPRESSION_ACTIVE = "compression#active";
     
-    public static let COMPRESSION_DISABLED = "compression#disabled";
+    open static let COMPRESSION_DISABLED = "compression#disabled";
     
     /**
      Possible scopes of properties stored in SessionObject instance:
@@ -66,19 +66,19 @@ public class SessionObject: Logger {
         }
     }
     
-    private let queue = dispatch_queue_create("session_object_queue", DISPATCH_QUEUE_CONCURRENT);
-    private let eventBus: EventBus;
-    private var properties = [String:Entry]();
+    fileprivate let queue = DispatchQueue(label: "session_object_queue", attributes: DispatchQueue.Attributes.concurrent);
+    fileprivate let eventBus: EventBus;
+    fileprivate var properties = [String:Entry]();
     
     /// Returns BareJID of user for connection - will be nil if user jid is not set (ie. during ANONYMOUS connection)
-    public var userBareJid: BareJID? {
+    open var userBareJid: BareJID? {
         get {
             return self.getProperty(SessionObject.USER_BARE_JID);
         }
     }
     
     /// Returns domain name of server for connection
-    public var domainName: String? {
+    open var domainName: String? {
         get {
             return userBareJid?.domain ?? getProperty(SessionObject.DOMAIN_NAME);
         }
@@ -92,20 +92,20 @@ public class SessionObject: Logger {
      Clears properties from matching scopes.
      - parameter scopes: remove properties for this scopes (if no scopes are passed then clears `stream` and `session` scopes
      */
-    public func clear(scopes scopes_:Scope...) {
+    open func clear(scopes scopes_:Scope...) {
         var scopes = scopes_;
         if scopes.isEmpty {
             scopes.append(Scope.session);
             scopes.append(Scope.stream);
         }
         log("removing properties for scopes", scopes);
-        dispatch_barrier_sync(queue) {
+        queue.sync(flags: .barrier, execute: {
             for (k,v) in self.properties {
-                if (scopes.indexOf({ $0 == v.scope }) != nil) {
-                    self.properties.removeValueForKey(k);
+                if (scopes.index(where: { $0 == v.scope }) != nil) {
+                    self.properties.removeValue(forKey: k);
                 }
             }
-        }
+        }) 
         
         eventBus.fire(ClearedEvent(sessionObject: self, scopes: scopes));
     }
@@ -116,9 +116,9 @@ public class SessionObject: Logger {
      - parameter scope: scope for which to check (if nil then we check if property is set for any scope)
      - returns: true - if property is set
      */
-    public func hasProperty(prop:String, scope:Scope? = nil) -> Bool {
+    open func hasProperty(_ prop:String, scope:Scope? = nil) -> Bool {
         var result = false;
-        dispatch_sync(queue) {
+        queue.sync {
             let e = self.properties[prop];
             result = e != nil && (scope == nil || e?.scope == scope);
         }
@@ -132,7 +132,7 @@ public class SessionObject: Logger {
      - parameter scope: scope for which to return property value (for any scope if nil)
      - returns: value set for property or passed default value
      */
-    public func getProperty<T>(prop:String, defValue:T, scope:Scope? = nil) -> T {
+    open func getProperty<T>(_ prop:String, defValue:T, scope:Scope? = nil) -> T {
         return getProperty(prop, scope: scope) ?? defValue;
     }
 
@@ -142,9 +142,9 @@ public class SessionObject: Logger {
      - parameter scope: scope for which to return property value (for any scope if nil)
      - returns: value set for property
      */
-    public func getProperty<T>(prop:String, scope:Scope? = nil) -> T? {
+    open func getProperty<T>(_ prop:String, scope:Scope? = nil) -> T? {
         var result: T? = nil;
-        dispatch_sync(queue) {
+        queue.sync {
             let e = self.properties[prop];
             if (e == nil) {
                 return;
@@ -162,35 +162,35 @@ public class SessionObject: Logger {
      - parameter value: value to set
      - parameter scope: scope for which to set value
      */
-    public func setProperty(prop:String, value:Any?, scope:Scope = Scope.session) {
-        dispatch_barrier_sync(queue) {
+    open func setProperty(_ prop:String, value:Any?, scope:Scope = Scope.session) {
+        queue.sync(flags: .barrier, execute: {
             if (value == nil) {
-                self.properties.removeValueForKey(prop);
+                self.properties.removeValue(forKey: prop);
                 return;
             }
             self.properties[prop] = Entry(scope:scope, value: value!)
-        }
+        }) 
     }
     
     /**
      Set property value to passed value for `user` scope
      */
-    public func setUserProperty(prop:String, value:Any?) {
+    open func setUserProperty(_ prop:String, value:Any?) {
         self.setProperty(prop, value: value, scope: Scope.user)
     }
     
     /// Event fired when `SessionObject` instance is being cleared
-    public class ClearedEvent: Event {
+    open class ClearedEvent: Event {
         /// Identified of event which should be used during registration of `EventHandler`
-        public static let TYPE = ClearedEvent();
+        open static let TYPE = ClearedEvent();
         
-        public let type = "ClearedEvent";
+        open let type = "ClearedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
+        open let sessionObject:SessionObject!;
         /// scopes which were cleared
-        public let scopes:[Scope]!;
+        open let scopes:[Scope]!;
         
-        private init() {
+        fileprivate init() {
             self.sessionObject = nil;
             self.scopes = nil;
         }

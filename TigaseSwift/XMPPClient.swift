@@ -93,40 +93,40 @@ import Foundation
  ```
  
  */
-public class XMPPClient: Logger, EventHandler {
+open class XMPPClient: Logger, EventHandler {
     
-    public let sessionObject:SessionObject;
-    public let connectionConfiguration:ConnectionConfiguration!;
-    public var socketConnector:SocketConnector? {
+    open let sessionObject:SessionObject;
+    open let connectionConfiguration:ConnectionConfiguration!;
+    open var socketConnector:SocketConnector? {
         willSet {
             sessionLogic?.unbind();
         }
     }
-    public let modulesManager:XmppModulesManager!;
-    public let eventBus:EventBus;
-    public let context:Context!;
-    private var sessionLogic:XmppSessionLogic?;
-    private let responseManager:ResponseManager;
+    open let modulesManager:XmppModulesManager!;
+    open let eventBus:EventBus;
+    open let context:Context!;
+    fileprivate var sessionLogic:XmppSessionLogic?;
+    fileprivate let responseManager:ResponseManager;
     
-    private var keepaliveTimer: Timer?;
-    public var keepaliveTimeout: NSTimeInterval = (3 * 60) - 5;
+    fileprivate var keepaliveTimer: Timer?;
+    open var keepaliveTimeout: TimeInterval = (3 * 60) - 5;
     
-    public var state:SocketConnector.State {
+    open var state:SocketConnector.State {
         return sessionLogic?.state ?? socketConnector?.state ?? .disconnected;
     }
 
     /// Internal processing queue
-    private let queue: dispatch_queue_t;
-    private var queueTag: UnsafeMutablePointer<Void> ;
+    fileprivate let queue: DispatchQueue;
+    fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
     
     public convenience override init() {
         self.init(eventBus: nil);
     }
     
     public init(eventBus: EventBus?) {
-        self.queue = dispatch_queue_create("xmpp_queue", DISPATCH_QUEUE_SERIAL);
-        self.queueTag = UnsafeMutablePointer<Void>(Unmanaged.passUnretained(self.queue).toOpaque());
-        dispatch_queue_set_specific(queue, queueTag, queueTag, nil);
+        self.queue = DispatchQueue(label: "xmpp_queue", attributes: []);
+        self.queueTag = DispatchSpecificKey<DispatchQueue?>();
+        queue.setSpecific(key: queueTag, value: queue);
         
         if eventBus == nil {
             self.eventBus = EventBus();
@@ -145,12 +145,13 @@ public class XMPPClient: Logger, EventHandler {
     
     deinit {
         eventBus.unregister(self, events: SocketConnector.DisconnectedEvent.TYPE);
+        queue.setSpecific(key: queueTag, value: nil);
     }
     
     /**
      Method initiates modules if needed and starts process of connecting to XMPP server.
      */
-    public func login() -> Void {
+    open func login() -> Void {
         guard state == SocketConnector.State.disconnected else {
             log("XMPP in state:", state, " - not starting connection");
             return;
@@ -179,7 +180,7 @@ public class XMPPClient: Logger, EventHandler {
      
      [XEP-0198: Stream Management - Resumption]: http://xmpp.org/extensions/xep-0198.html#resumption
      */
-    public func disconnect(force: Bool = false) -> Void {
+    open func disconnect(_ force: Bool = false) -> Void {
         guard state == SocketConnector.State.connected || state == SocketConnector.State.connecting else {
             log("XMPP in state:", state, " - not stopping connection");
             return;
@@ -195,7 +196,7 @@ public class XMPPClient: Logger, EventHandler {
     /**
      Sends whitespace to XMPP server to keep connection alive
      */
-    public func keepalive() {
+    open func keepalive() {
         guard state == .connected else {
             return;
         }
@@ -205,7 +206,7 @@ public class XMPPClient: Logger, EventHandler {
     /**
      Handles events fired by other classes used by this connection.
      */
-    public func handleEvent(event: Event) {
+    open func handleEvent(_ event: Event) {
         switch event {
         case let de as SocketConnector.DisconnectedEvent:
             keepaliveTimer?.cancel();
@@ -223,20 +224,20 @@ public class XMPPClient: Logger, EventHandler {
         }
     }
     
-    private func dispatch_sync_local_queue(block: dispatch_block_t) {
-        if (dispatch_get_specific(queueTag) != nil) {
+    fileprivate func dispatch_sync_local_queue(_ block: ()->()) {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
             block();
         } else {
-            dispatch_sync(queue, block);
+            queue.sync(execute: block);
         }
     }
     
-    private func dispatch_sync_with_result_local_queue<T>(block: ()-> T) -> T {
-        if (dispatch_get_specific(queueTag) != nil) {
+    fileprivate func dispatch_sync_with_result_local_queue<T>(_ block: ()-> T) -> T {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
             return block();
         } else {
             var result: T!;
-            dispatch_sync(queue) {
+            queue.sync {
                 result = block();
             }
             return result;
@@ -246,35 +247,35 @@ public class XMPPClient: Logger, EventHandler {
     /**
      Implementation of `PacketWriter` protocol passed to `Context` instance
      */
-    private class SocketPacketWriter: PacketWriter {
+    fileprivate class SocketPacketWriter: PacketWriter {
         
         let connector: SocketConnector;
         let responseManager: ResponseManager;
-        let queue: dispatch_queue_t;
+        let queue: DispatchQueue;
         
-        init(connector: SocketConnector, responseManager: ResponseManager, queue: dispatch_queue_t) {
+        init(connector: SocketConnector, responseManager: ResponseManager, queue: DispatchQueue) {
             self.connector = connector;
             self.responseManager = responseManager;
             self.queue = queue;
         }
         
-        override func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback: ((Stanza?) -> Void)?) {
+        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: ((Stanza?) -> Void)?) {
             responseManager.registerResponseHandler(stanza, timeout: timeout, callback: callback);
             self.write(stanza);
         }
         
-        override func write(stanza: Stanza, timeout: NSTimeInterval = 30, onSuccess: ((Stanza) -> Void)?, onError: ((Stanza,ErrorCondition?) -> Void)?, onTimeout: (() -> Void)?) {
+        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, onSuccess: ((Stanza) -> Void)?, onError: ((Stanza,ErrorCondition?) -> Void)?, onTimeout: (() -> Void)?) {
             responseManager.registerResponseHandler(stanza, timeout: timeout, onSuccess: onSuccess, onError: onError, onTimeout: onTimeout);
             self.write(stanza);
         }
 
-        override func write(stanza: Stanza, timeout: NSTimeInterval = 30, callback: AsyncCallback) {
+        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: AsyncCallback) {
             responseManager.registerResponseHandler(stanza, timeout: timeout, callback: callback);
             self.write(stanza);
         }
 
-        override func write(stanza: Stanza) {
-            dispatch_async(queue) {
+        override func write(_ stanza: Stanza) {
+            queue.async {
                 self.connector.send(stanza);
             }
         }
