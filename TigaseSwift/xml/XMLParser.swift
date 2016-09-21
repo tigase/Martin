@@ -71,7 +71,7 @@ private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix
         }
     }
     var namespaces:[String:String]? = nil;
-    if nb_namespaces > 0 && nb_attributes != nil {
+    if nb_namespaces > 0 {
         namespaces = [String:String]();
         namespaces_!.withMemoryRebound(to: ns.self, capacity: Int(nb_namespaces)) {
             var nsPtr = $0;
