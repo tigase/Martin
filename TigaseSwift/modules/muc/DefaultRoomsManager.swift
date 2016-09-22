@@ -46,7 +46,7 @@ open class DefaultRoomsManager: ContextAware {
      Check if room is open
      - parameter roomJid: jid of room
      */
-    open func contains(_ roomJid: BareJID) -> Bool {
+    open func contains(roomJid: BareJID) -> Bool {
         var result = false;
         queue.sync {
             result = self.rooms[roomJid] != nil;
@@ -60,7 +60,7 @@ open class DefaultRoomsManager: ContextAware {
      - parameter nickname: nickname
      - parameter password: password for room
      */
-    open func createRoomInstance(_ roomJid: BareJID, nickname: String, password: String?) -> Room {
+    open func createRoomInstance(roomJid: BareJID, nickname: String, password: String?) -> Room {
         let room = Room(context: context, roomJid: roomJid, nickname: nickname);
         room.password = password;
         return room;
@@ -71,7 +71,7 @@ open class DefaultRoomsManager: ContextAware {
      - parameter roomJid: jid of room
      - returns: instance of Room if created
      */
-    open func get(_ roomJid: BareJID) -> Room? {
+    open func getRoom(for roomJid: BareJID) -> Room? {
         var result: Room?;
         queue.sync {
             result = self.rooms[roomJid];
@@ -99,7 +99,7 @@ open class DefaultRoomsManager: ContextAware {
      Register room instance in RoomManager
      - parameter room: room instance to register
      */
-    open func register(_ room: Room) {
+    open func register(room: Room) {
         queue.async(flags: .barrier, execute: {
             self.rooms[room.roomJid]  = room;
         }) 
@@ -109,7 +109,7 @@ open class DefaultRoomsManager: ContextAware {
      Remove room instance
      - parameter room: room instance to remove
      */
-    open func remove(_ room: Room) {
+    open func remove(room: Room) {
         queue.async(flags: .barrier, execute: {
             self.rooms.removeValue(forKey: room.roomJid);
         }) 

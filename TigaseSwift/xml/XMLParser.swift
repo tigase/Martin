@@ -91,7 +91,7 @@ private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix
             }
         }
     }
-    parser.delegate.startElement(name!, prefix: prefix, namespaces: namespaces, attributes: attributes);
+    parser.delegate.startElement(name: name!, prefix: prefix, namespaces: namespaces, attributes: attributes);
     
 }
 
@@ -99,7 +99,7 @@ private let SAX_endElement: endElementNsSAX2Func = { ctx_, localname, prefix_, U
     let parser = unsafeBitCast(ctx_, to: XMLParser.self);
     let name = strFromCUtf8(localname);
     let prefix = strFromCUtf8(prefix_);
-    parser.delegate.endElement(name!, prefix: prefix);
+    parser.delegate.endElement(name: name!, prefix: prefix);
 }
 
 private let SAX_charactersFound: charactersSAXFunc = { ctx_, chars_, len_ in
@@ -113,7 +113,7 @@ typealias errorSAXFunc_ = @convention(c) (_ parsingContext: UnsafeMutableRawPoin
 private let SAX_error: errorSAXFunc_ = { ctx_, msg_ in
     let parser = unsafeBitCast(ctx_, to: XMLParser.self);
     let msg = String(cString: msg_, encoding: String.Encoding.utf8);
-    parser.delegate.error(msg!);
+    parser.delegate.error(msg: msg!);
 }
 
 private var saxHandler = xmlSAXHandler(
@@ -181,10 +181,22 @@ open class XMLParser: Logger {
      - parameter buffer: pointer to data
      - parameter length: number of data to process
      */
-    open func parse(_ buffer: UnsafeMutablePointer<UInt8>, length: Int) {
+    open func parse(bytes buffer: UnsafeMutablePointer<UInt8>, length: Int) {
         log("parsing data:", length, String(data:Data(bytes: UnsafePointer<UInt8>(buffer), count: length), encoding: String.Encoding.utf8));
         _ = buffer.withMemoryRebound(to: CChar.self, capacity: length) {
             xmlParseChunk(ctx, $0, Int32(length), 0);
+        }
+    }
+
+    /**
+     Parses data passed as parameters and returns result by calling proper
+     delegates functions
+     - parameter data: instance of Data to process
+     */
+    open func parse(data: Data) {
+        log("parsing data:", data.count, String(data: data, encoding: String.Encoding.utf8));
+        data.withUnsafeBytes { (ptr: UnsafePointer<CChar>) -> Void in
+            xmlParseChunk(ctx, ptr, Int32(data.count), 0);
         }
     }
     
@@ -213,14 +225,14 @@ public protocol XMLParserDelegate: class {
      - parameter namespaces: declared namespaces
      - parameter attributes: attributes of element
      */
-    func startElement(_ name:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]);
+    func startElement(name:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]);
     
     /**
      Called when element end is found
      - parameter name: name of element
      - parameter prefix: prefix of element
      */
-    func endElement(_ name:String, prefix:String?);
+    func endElement(name:String, prefix:String?);
     
     /**
      Called when characters are found inside element
@@ -231,6 +243,6 @@ public protocol XMLParserDelegate: class {
     /**
      Called on error during parsing
      */
-    func error(_ msg:String);
+    func error(msg:String);
     
 }

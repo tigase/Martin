@@ -259,25 +259,25 @@ open class Room: ChatProtocol, ContextAware {
         return message;
     }
     
-    open func add(_ occupant: Occupant) {
+    open func add(occupant: Occupant) {
         Room.queue.async(flags: .barrier, execute: {
             self._presences[occupant.nickname] = occupant;
         }) 
     }
     
-    open func remove(_ occupant: Occupant) {
+    open func remove(occupant: Occupant) {
         Room.queue.async(flags: .barrier, execute: {
             self._presences.removeValue(forKey: occupant.nickname);
         }) 
     }
     
-    open func addTemp(_ nickname: String, occupant: Occupant) {
+    open func addTemp(nickname: String, occupant: Occupant) {
         Room.queue.async(flags: .barrier, execute: {
             self._tempOccupants[nickname] = occupant;
         }) 
     }
     
-    open func removeTemp(_ nickname: String) -> Occupant? {
+    open func removeTemp(nickname: String) -> Occupant? {
         var result: Occupant?;
         Room.queue.sync(flags: .barrier, execute: {
             result = self._tempOccupants.removeValue(forKey: nickname);

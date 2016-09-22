@@ -83,9 +83,9 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    open func discoverServerFeatures(_ onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+    open func discoverServerFeatures(onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
-            getInfo(JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
+            getInfo(for: JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
                 self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
                 onInfoReceived?(node, identities, features);
                 }, onError: onError);
@@ -94,11 +94,11 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     
     /**
      Method retieves informations about particular XMPP recipient and it's node
-     - parameter jid: recipient to query
+     - parameter for: recipient to query
      - parameter node: node to query for informations
      - parameter callback: called on result or failure
      */
-    open func getInfo(_ jid: JID, node: String?, callback: @escaping (Stanza?) -> Void) {
+    open func getInfo(for jid: JID, node: String?, callback: @escaping (Stanza?) -> Void) {
         let iq = Iq();
         iq.to  = jid;
         iq.type = StanzaType.get;
@@ -113,23 +113,23 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     
     /**
      Method retieves informations about particular XMPP recipient and it's node
-     - parameter jid: recipient to query
+     - parameter for: recipient to query
      - parameter node: node to query for informations
      - parameter onInfoReceived: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func getInfo(_ jid:JID, node requestedNode:String? = nil, onInfoReceived:@escaping (_ node: String?, _ identities: [Identity], _ features: [String]) -> Void, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
-        getInfo(jid, node: requestedNode, callback: {(stanza: Stanza?) -> Void in
+    open func getInfo(for jid:JID, node requestedNode:String? = nil, onInfoReceived:@escaping (_ node: String?, _ identities: [Identity], _ features: [String]) -> Void, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+        getInfo(for: jid, node: requestedNode, callback: {(stanza: Stanza?) -> Void in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                let query = stanza!.findChild("query", xmlns: DiscoveryModule.INFO_XMLNS);
-                let identities = query!.mapChildren({ e -> Identity in
+                let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
+                let identities = query!.mapChildren(transform: { e -> Identity in
                     return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
                     }, filter: { (e:Element) -> Bool in
                        return e.name == "identity"
                 });
-                let features = query!.mapChildren({ e -> String in
+                let features = query!.mapChildren(transform: { e -> String in
                     return e.getAttribute("var")!;
                     }, filter: { (e:Element) -> Bool in
                         return e.name == "feature" && e.getAttribute("var") != nil;
@@ -144,11 +144,11 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     
     /**
      Method retieves items available at particular XMPP recipient and it's node
-     - parameter jid: recipient to query
+     - parameter for: recipient to query
      - parameter node: node to query for items
      - parameter callback: called on result or failure
      */
-    open func getItems(_ jid:JID, node:String? = nil, callback: @escaping (Stanza?) -> Void) {
+    open func getItems(for jid:JID, node:String? = nil, callback: @escaping (Stanza?) -> Void) {
         let iq = Iq();
         iq.to  = jid;
         iq.type = StanzaType.get;
@@ -164,18 +164,18 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
 
     /**
      Method retieves items available at particular XMPP recipient and it's node
-     - parameter jid: recipient to query
+     - parameter for: recipient to query
      - parameter node: node to query for items
      - parameter onItemsReceived: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func getItems(_ jid: JID, node requestedNode: String? = nil, onItemsReceived: @escaping (_ node:String?, _ items:[Item]) -> Void, onError: @escaping (_ errorCondition:ErrorCondition?) -> Void) {
-        getItems(jid, node: requestedNode, callback: {(stanza:Stanza?) -> Void in
+    open func getItems(for jid: JID, node requestedNode: String? = nil, onItemsReceived: @escaping (_ node:String?, _ items:[Item]) -> Void, onError: @escaping (_ errorCondition:ErrorCondition?) -> Void) {
+        getItems(for: jid, node: requestedNode, callback: {(stanza:Stanza?) -> Void in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                let query = stanza!.findChild("query", xmlns: DiscoveryModule.ITEMS_XMLNS);
-                let items = query!.mapChildren({ i -> Item in
+                let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
+                let items = query!.mapChildren(transform: { i -> Item in
                         return Item(jid: JID(i.getAttribute("jid")!), node: i.getAttribute("node"), name: i.getAttribute("name"));
                     }, filter: { (e) -> Bool in
                         return e.name == "item";
@@ -206,8 +206,8 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     /**
      Processes stanzas with type equal `get`
      */
-    open func processGet(_ stanza:Stanza) throws {
-        let query = stanza.findChild("query")!;
+    open func processGet(stanza:Stanza) throws {
+        let query = stanza.findChild(name: "query")!;
         let node = query.getAttribute("node");
         if let xmlns = query.xmlns {
             if let callback = callbacks[node ?? ""] {
@@ -228,12 +228,12 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     /**
      Processes stanzas with type equal `set`
      */
-    open func processSet(_ stanza:Stanza) throws {
+    open func processSet(stanza:Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
     func processGetInfo(_ stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
-        let result = stanza.makeResult(StanzaType.result);
+        let result = stanza.makeResult(type: StanzaType.result);
         
         let queryResult = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
         if node != nil {
@@ -260,7 +260,7 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     }
     
     func processGetItems(_ stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
-        let result = stanza.makeResult(StanzaType.result);
+        let result = stanza.makeResult(type: StanzaType.result);
         
         let queryResult = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
         if node != nil {

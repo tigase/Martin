@@ -42,11 +42,11 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
     }
     
-    open func processGet(_ stanza: Stanza) throws {
+    open func processGet(stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
-    open func processSet(_ stanza: Stanza) throws {
+    open func processSet(stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
@@ -104,7 +104,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     }
     
     open static func isRegistrationAvailable(_ featuresElement: Element?) -> Bool {
-        return featuresElement?.findChild("register", xmlns: "http://jabber.org/features/iq-register") != nil;
+        return featuresElement?.findChild(name: "register", xmlns: "http://jabber.org/features/iq-register") != nil;
     }
     
     /**
@@ -123,7 +123,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
      - parameter onSuccess: called after sucessful registration
      - parameter onError: called on error or due to timeout
      */
-    public static func connectAndRegister(_ client: XMPPClient! = nil, userJid: BareJID, password: String?, email: String?, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?)->Void) -> XMPPClient {
+    public static func connectAndRegister(client: XMPPClient! = nil, userJid: BareJID, password: String?, email: String?, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?)->Void) -> XMPPClient {
         var client = client
         if client == nil {
             client = XMPPClient();
@@ -174,14 +174,14 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         }
         
         func registerEvents(_ client: XMPPClient) {
-            client.eventBus.register(self, events: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
+            client.eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
         }
         
         func unregisterEvents(_ client: XMPPClient) {
-            client.eventBus.unregister(self, events: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
+            client.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
         }
         
-        func handleEvent(_ event: Event) {
+        func handle(event: Event) {
             switch event {
             case is StreamFeaturesReceivedEvent:
                 // check registration possibility
@@ -189,11 +189,11 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
                 let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
                 
-                guard startTlsActive || context.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED, defValue: false) || ((featuresElement?.findChild("starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
+                guard startTlsActive || context.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED, defValue: false) || ((featuresElement?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
                     return;
                 }
                 
-                guard compressionActive || context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren("compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild("method")?.value == "zlib" })) == nil) else {
+                guard compressionActive || context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
                     return;
                 }
                 
@@ -215,7 +215,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                             self.onSuccess?();
                             return;
                         default:
-                            if let name = stanza!.element.findChild("error")?.firstChild()?.name {
+                            if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
                                 errorCondition = ErrorCondition(rawValue: name);
                             }
                         }

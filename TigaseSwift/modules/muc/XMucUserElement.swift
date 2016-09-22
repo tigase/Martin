@@ -24,40 +24,40 @@ import Foundation
 /// Class holds additional information about occupant which are sent in presence from MUC room
 open class XMucUserElement {
     
-    open static func extract(_ presence: Presence?) -> XMucUserElement? {
-        let elem = presence?.findChild("x", xmlns: "http://jabber.org/protocol/muc#user");
+    open static func extract(from presence: Presence?) -> XMucUserElement? {
+        let elem = presence?.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         return elem == nil ? nil : XMucUserElement(element: elem!);
     }
     
     var element: Element;
 
     open var affiliation: Affiliation {
-        if let affiliationVal = element.findChild("item")?.getAttribute("affiliation") {
+        if let affiliationVal = element.findChild(name: "item")?.getAttribute("affiliation") {
             return Affiliation(rawValue: affiliationVal) ?? .none;
         }
         return .none;
     }
     
     open var jid: JID? {
-        if let jidVal = element.findChild("item")?.getAttribute("jid") {
+        if let jidVal = element.findChild(name: "item")?.getAttribute("jid") {
             return JID(jidVal);
         }
         return nil;
     }
     
     open var nick: String? {
-        return element.findChild("item")?.getAttribute("nick");
+        return element.findChild(name: "item")?.getAttribute("nick");
     }
     
     open var role: Role {
-        if let roleVal = element.findChild("item")?.getAttribute("role") {
+        if let roleVal = element.findChild(name: "item")?.getAttribute("role") {
             return Role(rawValue: roleVal) ?? .none;
         }
         return .none;
     }
     
     open var statuses: [Int] {
-        return element.mapChildren({ (el) -> Int? in
+        return element.mapChildren(transform: { (el) -> Int? in
             return Int(el.getAttribute("code")!);
             }, filter: {(el) -> Bool in
             return el.name == "status" && el.getAttribute("code") != nil;

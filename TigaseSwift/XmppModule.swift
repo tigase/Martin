@@ -36,6 +36,6 @@ public protocol XmppModule: class {
      This method is responsible for actual processing of `Stanza` instance.
      - throws: ErrorCondition - if processing resulted in an error
      */
-    func process(_ stanza: Stanza) throws
+    func process(stanza: Stanza) throws
     
 }

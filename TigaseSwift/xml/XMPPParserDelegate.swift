@@ -32,7 +32,7 @@ open class XMPPParserDelegate: Logger, XMLParserDelegate {
     var el_stack = [Element]()
     var all_roots = [Element]()
     
-    open func startElement(_ elementName:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]) {
+    open func startElement(name elementName:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]) {
         
         if namespaces != nil {
             for (k,v) in namespaces! {
@@ -49,7 +49,7 @@ open class XMPPParserDelegate: Logger, XMLParserDelegate {
                     attrs[k] = v;
                 }
             }
-            self.delegate?.onStreamStart(attrs);
+            self.delegate?.onStreamStart(attributes: attrs);
             return
         }
         
@@ -68,7 +68,7 @@ open class XMPPParserDelegate: Logger, XMLParserDelegate {
         el_stack.append(elem);
     }
     
-    open func endElement(_ elementName: String, prefix: String?) {
+    open func endElement(name elementName: String, prefix: String?) {
         if (elementName == "stream" && prefix == "stream") {
             self.delegate?.onStreamTerminate();
             return
@@ -76,7 +76,7 @@ open class XMPPParserDelegate: Logger, XMLParserDelegate {
         let elem = el_stack.removeLast()
         if (el_stack.isEmpty) {
             //all_roots.append(elem)
-            self.delegate?.processElement(elem)
+            self.delegate?.process(element: elem)
         } else {
             el_stack.last?.addChild(elem);
         }
@@ -86,9 +86,9 @@ open class XMPPParserDelegate: Logger, XMLParserDelegate {
         el_stack.last?.addNode(CData(value: value))
     }
     
-    open func error(_ msg: String) {
+    open func error(msg: String) {
         log("error occurred", msg);
-        self.delegate?.onError(msg);
+        self.delegate?.onError(msg: msg);
     }
     
 }

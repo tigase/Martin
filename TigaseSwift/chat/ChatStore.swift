@@ -32,34 +32,34 @@ public protocol ChatStore {
     
     /**
      Find instance of T matching jid and filter
-     - parameter jid: jid to match
+     - parameter with: jid to match
      - parameter filter: filter to match
      - returns: instance of T if any matches
      */
-    func get<T:ChatProtocol>(_ jid:BareJID, filter: @escaping (T)->Bool) -> T?;
+    func getChat<T: ChatProtocol>(with jid: BareJID, filter: @escaping (T)->Bool) -> T?;
     /**
      Find all instances conforming to implementation of T
      */
-    func getAll<T:ChatProtocol>() -> [T];
+    func getAllChats<T: ChatProtocol>() -> [T];
     
     /**
      Check if there is any chat open with jid
      - parameter jid: jid to check
      - returns: true if ChatProtocol is open
      */
-    func isFor(_ jid:BareJID) -> Bool;
+    func isFor(jid: BareJID) -> Bool;
     /**
      Register opened chat protocol instance
      - parameter chat: chat protocol instance to register
      - returns: registered chat protocol instance (may be new instance)
      */
-    func open<T:ChatProtocol>(_ chat:ChatProtocol) -> T?;
+    func open<T: ChatProtocol>(chat: ChatProtocol) -> T?;
     /**
      Unregister closed chat protocol instance
      - parameter chat: chat protocol instance to unregister
      - returns: true if chat protocol instance was unregistered
      */
-    func close(_ chat:ChatProtocol) -> Bool;
+    func close(chat: ChatProtocol) -> Bool;
 }
 
 open class DefaultChatStore: ChatStore {
@@ -90,7 +90,7 @@ open class DefaultChatStore: ChatStore {
         }
     }
 
-    open func get<T>(_ jid:BareJID, filter: @escaping (T)->Bool) -> T? {
+    open func getChat<T>(with jid:BareJID, filter: @escaping (T)->Bool) -> T? {
         var result: T?;
         queue.sync {
             if let chats = self.chatsByBareJid[jid] {
@@ -107,7 +107,7 @@ open class DefaultChatStore: ChatStore {
         return result;
     }
     
-    open func getAll<T>() -> [T] {
+    open func getAllChats<T>() -> [T] {
         var result = [T]();
         queue.sync {
             self.chatsByBareJid.values.forEach { (chats) in
@@ -122,7 +122,7 @@ open class DefaultChatStore: ChatStore {
     }
     
     
-    open func isFor(_ jid:BareJID) -> Bool {
+    open func isFor(jid:BareJID) -> Bool {
         var result = false;
         queue.sync {
             let chats = self.chatsByBareJid[jid];
@@ -131,7 +131,7 @@ open class DefaultChatStore: ChatStore {
         return result;
     }
 
-    open func open<T>(_ chat:ChatProtocol) -> T? {
+    open func open<T>(chat:ChatProtocol) -> T? {
         let jid = chat.jid;
         var result: T?;
         queue.sync(flags: .barrier, execute: {
@@ -149,7 +149,7 @@ open class DefaultChatStore: ChatStore {
         return result;
     }
     
-    open func close(_ chat:ChatProtocol) -> Bool {
+    open func close(chat:ChatProtocol) -> Bool {
         let bareJid = chat.jid.bareJid;
         var result = false;
         queue.sync(flags: .barrier, execute: {

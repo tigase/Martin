@@ -43,10 +43,10 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     open var context: Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(self, events: SessionObject.ClearedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE);
             }
             if context != nil {
-                context.eventBus.register(self, events: SessionObject.ClearedEvent.TYPE);
+                context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE);
             }
         }
     }
@@ -96,7 +96,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
      - parameter resumption: should resumption be enabled
      - parameter maxResumptionTimeout: maximal resumption timeout to use
      */
-    open func enable(_ resumption: Bool = true, maxResumptionTimeout: Int? = nil) {
+    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) {
         guard !(ackEnabled || resumptionEnabled) else {
             return;
         }
@@ -117,7 +117,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     /**
      Method hadles events received from `EventBus`
      */
-    open func handleEvent(_ event: Event) {
+    open func handle(event: Event) {
         switch event {
         case let e as SessionObject.ClearedEvent:
             for scope in e.scopes {
@@ -140,10 +140,10 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
      - returns: true - if is supported
      */
     open func isAvailable() -> Bool {
-        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
+        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild(name: "sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
     }
     
-    open func process(_ stanza: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         // all requests should be processed already
         throw ErrorCondition.undefined_condition;
     }
@@ -152,7 +152,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
      Method filters incoming stanza to process StreamManagement stanzas.
      - parameter stanza: stanza to process
      */
-    open func processIncomingStanza(_ stanza: Stanza) -> Bool {
+    open func processIncoming(stanza: Stanza) -> Bool {
         guard ackEnabled else {
             guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
                 return false;
@@ -194,7 +194,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
      stanza until they will be acked.
      - parameter stanza: stanza to process
      */
-    open func processOutgoingStanza(_ stanza: Stanza) {
+    open func processOutgoing(stanza: Stanza) {
         guard ackEnabled else {
             return;
         }

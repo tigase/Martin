@@ -39,11 +39,11 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     open var context:Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(self, events: SessionObject.ClearedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE);
             }
             roomsManager?.context = context;
             if context != nil {
-                context.eventBus.register(self, events: SessionObject.ClearedEvent.TYPE);
+                context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE);
             }
         }
     }
@@ -80,7 +80,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         roomsManager.initialize();
     }
     
-    open func handleEvent(_ event: Event) {
+    open func handle(event: Event) {
         switch event {
         case let sec as SessionObject.ClearedEvent:
             if sec.scopes.contains(SessionObject.Scope.session) {
@@ -89,7 +89,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
 
                     let occupants = room.presences.values;
                     for occupant in occupants {
-                        room.remove(occupant);
+                        room.remove(occupant: occupant);
                         // should we fire this event?
                         // context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, ))
                     }
@@ -107,7 +107,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
      - parameter invitation: initation to decline
      - parameter reason: reason why it was declined
      */
-    open func declineInvitation(_ invitation: Invitation, reason: String?) {
+    open func decline(invitation: Invitation, reason: String?) {
         if invitation is MediatedInvitation {
             let message = Message();
             message.to = JID(invitation.roomJid);
@@ -131,7 +131,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
      - parameter invitee: user to invite
      - parameter reason: reason for invitation
      */
-    open func invite(_ room: Room, invitee: JID, reason: String?) {
+    open func invite(to room: Room, invitee: JID, reason: String?) {
         room.invite(invitee, reason: reason);
     }
     
@@ -142,7 +142,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
      - parameter reason: reason for invitation
      - parameter theadId: thread id for invitation
      */
-    open func inviteDirectly(_ room: Room, invitee: JID, reason: String?, threadId: String?) {
+    open func inviteDirectly(to room: Room, invitee: JID, reason: String?, threadId: String?) {
         room.inviteDirectly(invitee, reason: reason, threadId: threadId);
     }
     
@@ -154,15 +154,15 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
      - parameter password: password for room if needed
      - returns: instance of Room
      */
-    open func join(_ roomName: String, mucServer: String, nickname: String, password: String? = nil) -> Room {
+    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil) -> Room {
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
-        var room = roomsManager.get(roomJid);
+        var room = roomsManager.getRoom(for: roomJid);
         if room != nil {
             return room!;
         }
-        room = roomsManager.createRoomInstance(roomJid, nickname: nickname, password: password);
-        roomsManager.register(room!);
+        room = roomsManager.createRoomInstance(roomJid: roomJid, nickname: nickname, password: password);
+        roomsManager.register(room: room!);
         let presence = room!.rejoin();
         
         context.eventBus.fire(JoinRequestedEvent(sessionObject: context.sessionObject, presence: presence, room: room!, nickname: nickname));
@@ -174,7 +174,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
      Leave MUC room
      - parameter room: room to leave
      */
-    open func leave(_ room: Room) {
+    open func leave(room: Room) {
         if room.state == .joined {
             room._state = .not_joined;
             
@@ -184,12 +184,12 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             context.writer?.write(presence);
         }
         
-        roomsManager.remove(room);
+        roomsManager.remove(room: room);
         
         context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
     }
     
-    open func process(_ stanza: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         switch stanza {
         case let p as Presence:
             try processPresence(p);
@@ -212,7 +212,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         let from = presence.from!;
         let roomJid = from.bareJid;
         let nickname = from.resource;
-        let room:Room! = roomsManager.get(roomJid);
+        let room:Room! = roomsManager.getRoom(for: roomJid);
         let type = presence.type;
         guard room != nil else {
             return;
@@ -236,7 +236,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             room._state = .not_joined;
         }
         
-        let xUser = XMucUserElement.extract(presence);
+        let xUser = XMucUserElement.extract(from: presence);
         
         var occupant = room.presences[nickname!];
         let presenceOld = occupant?.presence;
@@ -244,23 +244,23 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         
         if (presenceOld != nil && presenceOld!.type == nil) && type == StanzaType.unavailable && xUser?.statuses.index(of: 303) != nil {
             let newNickName = xUser?.nick;
-            room.remove(occupant!);
-            room.addTemp(newNickName!, occupant: occupant!);
+            room.remove(occupant: occupant!);
+            room.addTemp(nickname: newNickName!, occupant: occupant!);
         } else if room.state != .joined && xUser?.statuses.index(of: 110) != nil {
             room._state = .joined;
-            room.add(occupant!);
+            room.add(occupant: occupant!);
             context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname));
         } else if (presenceOld == nil || presenceOld?.type == StanzaType.unavailable) && type == nil {
-            if let tmp = room.removeTemp(nickname!) {
+            if let tmp = room.removeTemp(nickname: nickname!) {
                 let oldNickname = tmp.nickname;
-                room.add(occupant!);
+                room.add(occupant: occupant!);
                 context.eventBus.fire(OccupantChangedNickEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: oldNickname));
             } else {
-                room.add(occupant!);
+                room.add(occupant: occupant!);
                 context.eventBus.fire(OccupantComesEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
             }
         } else if (presenceOld != nil && presenceOld!.type == nil && type == StanzaType.unavailable) {
-            room.remove(occupant!);
+            room.remove(occupant: occupant!);
             context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         } else {
             context.eventBus.fire(OccupantChangedPresenceEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
@@ -276,7 +276,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         let roomJid = from.bareJid;
         let nickname = from.resource;
         
-        let room:Room! = roomsManager.get(roomJid);
+        let room:Room! = roomsManager.getRoom(for: roomJid);
         guard room != nil else {
             return;
         }
@@ -293,7 +293,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     }
     
     func processDirectInvitationMessage(_ message: Message) {
-        let x = message.findChild("x", xmlns: "jabber:x:conference");
+        let x = message.findChild(name: "x", xmlns: "jabber:x:conference");
         let contStr = x?.getAttribute("continue");
         let cont = contStr == "true" || contStr == "1";
         
@@ -303,8 +303,8 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     }
     
     func processMediatedInvitationMessage(_ message: Message) {
-        let x = message.findChild("x", xmlns: "http://jabber.org/protocol/muc#user");
-        let invite = x?.findChild("invite");
+        let x = message.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
+        let invite = x?.findChild(name: "invite");
         
         let invitation = MediatedInvitation(sessionObject: context.sessionObject, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.stringValue), reason: invite?.getAttribute("reason"), password: x?.getAttribute("password"));
         
@@ -313,13 +313,13 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     
     func processInvitationDeclinedMessage(_ message: Message) {
         let from = message.from!.bareJid;
-        let room = roomsManager.get(from);
+        let room = roomsManager.getRoom(for: from);
         guard room != nil else {
             return;
         }
         
-        let decline = message.findChild("x", xmlns: "http://jabber.org/protocol/muc#user")?.findChild("decline");
-        let reason = decline?.findChild("reason")?.stringValue;
+        let decline = message.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user")?.findChild(name: "decline");
+        let reason = decline?.findChild(name: "reason")?.stringValue;
         let invitee = decline?.getAttribute("from");
         
         context.eventBus.fire(InvitationDeclinedEvent(sessionObject: context.sessionObject, message: message, room: room!, invitee: invitee == nil ? nil : JID(invitee!), reason: reason));

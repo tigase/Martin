@@ -61,7 +61,7 @@ open class ResponseManager: Logger {
      - paramater stanza: stanza to process
      - returns: callback handler if any
      */
-    open func getResponseHandler(_ stanza:Stanza)-> ((Stanza?)->Void)? {
+    open func getResponseHandler(for stanza:Stanza)-> ((Stanza?)->Void)? {
         let type = stanza.type;
         if (stanza.id == nil || (type != StanzaType.error && type !=  StanzaType.result)) {
             return nil;
@@ -87,7 +87,7 @@ open class ResponseManager: Logger {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback to execute on response or timeout
      */
-    open func registerResponseHandler(_ stanza:Stanza, timeout:TimeInterval, callback:((Stanza?)->Void)?) {
+    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, callback:((Stanza?)->Void)?) {
         guard callback != nil else {
             return;
         }
@@ -110,12 +110,12 @@ open class ResponseManager: Logger {
      - parameter onSuccess: callback to execute on successful response
      - parameter onError: callback to execute on failure or timeout
      */
-    open func registerResponseHandler(_ stanza:Stanza, timeout:TimeInterval, onSuccess:((Stanza)->Void)?, onError:((Stanza,ErrorCondition?)->Void)?, onTimeout:(()->Void)?) {
+    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, onSuccess:((Stanza)->Void)?, onError:((Stanza,ErrorCondition?)->Void)?, onTimeout:(()->Void)?) {
         guard (onSuccess != nil) || (onError != nil) || (onTimeout != nil) else {
             return;
         }
         
-        self.registerResponseHandler(stanza, timeout: timeout) { (response:Stanza?)->Void in
+        self.registerResponseHandler(for: stanza, timeout: timeout) { (response:Stanza?)->Void in
             if response == nil {
                 onTimeout?();
             } else {
@@ -134,15 +134,15 @@ open class ResponseManager: Logger {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback with methods to execute on response or timeout
      */
-    open func registerResponseHandler(_ stanza:Stanza, timeout:TimeInterval, callback:AsyncCallback) {
-        self.registerResponseHandler(stanza, timeout: timeout) { (response:Stanza?)->Void in
+    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, callback:AsyncCallback) {
+        self.registerResponseHandler(for: stanza, timeout: timeout) { (response:Stanza?)->Void in
             if response == nil {
                 callback.onTimeout();
             } else {
                 if response!.type == StanzaType.error {
-                    callback.onError(response!, error: response!.errorCondition);
+                    callback.onError(response: response!, error: response!.errorCondition);
                 } else {
-                    callback.onSuccess(response!);
+                    callback.onSuccess(response: response!);
                 }
             }
         }
@@ -188,8 +188,8 @@ open class ResponseManager: Logger {
  */
 public protocol AsyncCallback {
     
-    func onError(_ response:Stanza, error:ErrorCondition?);
-    func onSuccess(_ responseStanza:Stanza);
+    func onError(response:Stanza, error:ErrorCondition?);
+    func onSuccess(response:Stanza);
     func onTimeout();
     
 }

@@ -23,7 +23,7 @@ import Foundation
 import CommonCrypto
 
 protocol DigestProtocol {
-    func digest(_ bytes: UnsafeRawPointer, length: Int) -> [UInt8];
+    func digest(bytes: UnsafeRawPointer, length: Int) -> [UInt8];
 }
 
 /**
@@ -45,7 +45,7 @@ public enum Digest: DigestProtocol {
      - parameter length: number of bytes to process
      - returns: hash in form of array of bytes
      */
-    public func digest(_ bytes: UnsafeRawPointer, length inLength: Int) -> [UInt8] {
+    public func digest(bytes: UnsafeRawPointer, length inLength: Int) -> [UInt8] {
         let length = UInt32(inLength);
         switch self {
         case .md5:
@@ -68,12 +68,14 @@ public enum Digest: DigestProtocol {
      - parameter data: data to process
      - returns: hash in form of array of bytes
      */
-    public func digest(_ data: Data?) -> [UInt8]? {
+    public func digest(data: Data?) -> [UInt8]? {
         guard data != nil else {
             return nil;
         }
-        return self.digest((data! as NSData).bytes, length: data!.count);
-    }
+        return data!.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> [UInt8] in
+            return digest(bytes: bytes, length: data!.count);
+        }
+     }
     
     /**
      Convenience function to calculate hash of data provided in NSData
@@ -81,11 +83,38 @@ public enum Digest: DigestProtocol {
      - parameter data: data to process
      - returns: hash as NSData
      */
-    public func digest(_ data: Data?) -> Data? {
-        if var hash:[UInt8] = self.digest(data) {
-            return Data(bytes: &hash, count: hash.count);
+    public func digest(data: Data?) -> Data? {
+        guard data != nil else {
+            return nil;
         }
-        return nil;
+        
+        let length = UInt32(data!.count);
+        switch self {
+        case .md5:
+            var hash = Data.init(count: Int(CC_MD5_DIGEST_LENGTH));
+            data?.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                hash.withUnsafeMutableBytes { (hashPtr: UnsafeMutablePointer<UInt8>) -> Void in
+                    CC_MD5(bytes, length, hashPtr);
+                }
+            }
+            return hash;
+        case .sha1:
+            var hash = Data.init(count: Int(CC_SHA1_DIGEST_LENGTH));
+            data?.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                hash.withUnsafeMutableBytes { (hashPtr: UnsafeMutablePointer<UInt8>) -> Void in
+                    CC_SHA1(bytes, length, hashPtr);
+                }
+            }
+            return hash;
+        case .sha256:
+            var hash = Data.init(count: Int(CC_SHA256_DIGEST_LENGTH));
+            data?.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                hash.withUnsafeMutableBytes { (hashPtr: UnsafeMutablePointer<UInt8>) -> Void in
+                    CC_SHA256(bytes, length, hashPtr);
+                }
+            }
+            return hash;
+        }
     }
     
     /**
@@ -94,8 +123,8 @@ public enum Digest: DigestProtocol {
      - parameter data: data to process
      - returns: Base64 encoded representation of hash
      */
-    public func digestToBase64(_ data: Data?) -> String? {
-        let result:Data? = digest(data);
+    public func digest(toBase64 data: Data?) -> String? {
+        let result:Data? = digest(data: data);
         return result?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
     }
     
@@ -105,14 +134,14 @@ public enum Digest: DigestProtocol {
      - parameter data: data to process
      - returns: hex encoded hash value
      */
-    public func digestToHex(_ data: Data?) -> String? {
-        if let result:[UInt8] = digest(data) {
+    public func digest(toHex data: Data?) -> String? {
+        if let result:[UInt8] = digest(data: data) {
             return result.map() { String(format: "%02x", $0) }.reduce("", +);
         }
         return nil;
     }
     
-    public func hmac(_ keyBytes: UnsafeRawPointer, keyLength: Int, bytes: UnsafeRawPointer, length: Int) -> [UInt8] {
+    public func hmac(keyBytes: UnsafeRawPointer, keyLength: Int, bytes: UnsafeRawPointer, length: Int) -> [UInt8] {
         let ctx = UnsafeMutablePointer<CCHmacContext>.allocate(capacity: 1);
         var algorithm: Int;
         var hmacLength: Int;
@@ -136,19 +165,18 @@ public enum Digest: DigestProtocol {
         return digest;
     }
     
-    public func hmac(_ key: inout [UInt8], data: inout [UInt8]) -> [UInt8] {
-        return hmac(Digest.convert(&key), keyLength: key.count, bytes: &data, length: data.count);
+    public func hmac(key: inout [UInt8], data: inout [UInt8]) -> [UInt8] {
+        return hmac(keyBytes: &key, keyLength: key.count, bytes: &data, length: data.count);
     }
 
-    public func hmac(_ keyData: Data, data: inout [UInt8]) -> [UInt8] {
-        return hmac((keyData as NSData).bytes, keyLength: keyData.count, bytes: &data, length: data.count);
+    public func hmac(keyData: Data, data: inout [UInt8]) -> [UInt8] {
+        return keyData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> [UInt8] in
+            return hmac(keyBytes: bytes, keyLength: keyData.count, bytes: &data, length: data.count);
+        }
     }
     
-    public func hmac(_ key: inout [UInt8], data: Data) -> [UInt8] {
-        return hmac(Digest.convert(&key), keyLength: key.count, bytes: (data as NSData).bytes, length: data.count);
+    public func hmac(key: inout [UInt8], data: Data) -> [UInt8] {
+        return hmac(keyBytes: &key, keyLength: key.count, bytes: (data as NSData).bytes, length: data.count);
     }
     
-    fileprivate static func convert(_ ptr: UnsafePointer<UInt8>) -> UnsafeRawPointer {
-        return UnsafeRawPointer(ptr);
-    }
 }

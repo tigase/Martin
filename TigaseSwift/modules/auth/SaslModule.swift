@@ -90,7 +90,7 @@ open class SaslModule: Logger, XmppModule, ContextAware {
         }
     }
     
-    open func process(_ elem: Stanza) throws {
+    open func process(stanza elem: Stanza) throws {
         do {
         switch elem.name {
             case "success":
@@ -179,7 +179,7 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     
     func getSupportedMechanisms() -> [String] {
         var result = [String]();
-        StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("mechanisms")?.forEachChild("mechanism", fn: { (mech:Element) -> Void in
+        StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild(name: "mechanisms")?.forEachChild(name: "mechanism", fn: { (mech:Element) -> Void in
             result.append(mech.value!);
         });
         return result;

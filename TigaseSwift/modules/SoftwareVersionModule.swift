@@ -60,10 +60,10 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
     /**
      Retrieve version of software used by recipient
-     - parameter jid: address for which we want to retrieve software version
+     - parameter for: address for which we want to retrieve software version
      - parameter callback: called on response or failure
      */
-    open func checkSoftwareVersion(_ jid:JID, callback: @escaping (Stanza?)->Void) {
+    open func checkSoftwareVersion(for jid:JID, callback: @escaping (Stanza?)->Void) {
         let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.get;
@@ -74,19 +74,19 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
     /**
      Retrieve version of software used by recipient
-     - parameter jid: address for which we want to retrieve software version
+     - parameter for: address for which we want to retrieve software version
      - parameter onResult: called on successful response
      - parameter onError: called failure or request timeout
      */
-    open func checkSoftwareVersion(_ jid:JID, onResult: @escaping (_ name:String?, _ version:String?, _ os:String?)->Void, onError: @escaping (_ errorCondition:ErrorCondition?)->Void) {
-        checkSoftwareVersion(jid) { (stanza) in
+    open func checkSoftwareVersion(for jid:JID, onResult: @escaping (_ name:String?, _ version:String?, _ os:String?)->Void, onError: @escaping (_ errorCondition:ErrorCondition?)->Void) {
+        checkSoftwareVersion(for: jid) { (stanza) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                let query = stanza?.findChild("query", xmlns: "jabber:iq:version");
-                let name = query?.findChild("name")?.value;
-                let version = query?.findChild("version")?.value;
-                let os = query?.findChild("os")?.value;
+                let query = stanza?.findChild(name: "query", xmlns: "jabber:iq:version");
+                let name = query?.findChild(name: "name")?.value;
+                let version = query?.findChild(name: "version")?.value;
+                let os = query?.findChild(name: "os")?.value;
                 onResult(name, version, os);
             default:
                 let errorCondition = stanza?.errorCondition;
@@ -99,8 +99,8 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
      Method processes incoming stanzas
      - parameter stanza: stanza to process
      */
-    open func processGet(_ stanza: Stanza) throws {
-        let result = stanza.makeResult(StanzaType.result);
+    open func processGet(stanza: Stanza) throws {
+        let result = stanza.makeResult(type: StanzaType.result);
         
         let query = Element(name: "query", xmlns: "jabber:iq:version");
         result.addChild(query);
@@ -116,7 +116,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
         context.writer?.write(result);
     }
     
-    open func processSet(_ stanza: Stanza) throws {
+    open func processSet(stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
 }

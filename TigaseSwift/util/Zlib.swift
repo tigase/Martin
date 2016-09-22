@@ -148,7 +148,7 @@ open class Zlib {
          - parameter flush: type of flush
          - returns: compressed data as array of bytes (may not contain all data depending on `flush` parameter)
          */
-        public func compress(_ bytes: UnsafePointer<UInt8>, length: Int, flush: Flush = .partial) -> [UInt8] {
+        public func compress(bytes: UnsafePointer<UInt8>, length: Int, flush: Flush = .partial) -> [UInt8] {
             let bytes = bytes
             var result = [UInt8]();
             stream.avail_in = CUnsignedInt(length);
@@ -167,6 +167,34 @@ open class Zlib {
             } while stream.avail_out == 0
             // we should check if stream.avail_in is 0!
             return result;
+        }
+        
+        /**
+         Method compresses data passed and returns array with compressed data
+         - parameter data: instance of Data to compress
+         - parameter flush: type of flush
+         - returns: compressed data as array of bytes (may not contain all data depending on `flush` parameter)
+         */
+        public func compress(data: Data, flush: Flush = .partial) -> Data {
+            return data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
+                var result = Data();
+                stream.avail_in = CUnsignedInt(data.count);
+                stream.next_in = bytes;
+
+                var out = [UInt8](repeating: 0, count: data.count + (data.count / 100) + 13);
+                repeat {
+                    stream.avail_out = CUnsignedInt(out.count);
+                    stream.next_out = &out + 0;
+                    
+                    _ = deflate(&stream, flush: CInt(flush.rawValue));
+                    let outCount = out.count - Int(stream.avail_out);
+                    if outCount > 0 {
+                        result.append(&out, count: outCount);
+                    }
+                } while stream.avail_out == 0
+                
+                return result;
+            }
         }
     }
 
@@ -194,7 +222,7 @@ open class Zlib {
          - parameter flush: type of flush
          - returns: decompressed data as array of bytes
          */
-        public func decompress(_ bytes:UnsafePointer<UInt8>, length: Int, flush: Flush = .partial) -> [UInt8] {
+        public func decompress(bytes:UnsafePointer<UInt8>, length: Int, flush: Flush = .partial) -> [UInt8] {
             let bytes = bytes
             var result = [UInt8]();
             stream.avail_in = CUnsignedInt(length);
@@ -215,6 +243,33 @@ open class Zlib {
             return result;
         }
         
+        /**
+         Method decompresses passed data and returns array with decompressed data
+         - parameter data: instance of Data to decompress
+         - parameter flush: type of flush
+         - returns: decompressed data as array of bytes
+         */
+        public func decompress(data: Data, flush: Flush = .partial) -> Data {
+            return data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
+                var result = Data();
+                stream.avail_in = CUnsignedInt(data.count);
+                stream.next_in = bytes;
+            
+                var out = [UInt8](repeating: 0, count: 50);
+                repeat {
+                    stream.avail_out = CUnsignedInt(out.count);
+                    stream.next_out = &out + 0;
+                
+                    _ = inflate(&stream, flush: CInt(flush.rawValue));
+                    let outCount = out.count - Int(stream.avail_out);
+                    if outCount > 0 {
+                        result.append(&out, count: outCount);
+                    }
+                } while stream.avail_out == 0
+                // we should check if stream.avail_in is 0!
+                return result;
+            }
+        }
     }
     
     fileprivate let inflater: Inflater;
@@ -238,8 +293,17 @@ open class Zlib {
      - parameter length: number of data to process
      - returns: compressed data as array of bytes
      */
-    open func compress(_ bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
-        return deflater.compress(bytes, length: length, flush: flush);
+    open func compress(bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
+        return deflater.compress(bytes: bytes, length: length, flush: flush);
+    }
+
+    /**
+     Method compresses data
+     - parameter data: instance of Data
+     - returns: compressed data as Data
+     */
+    open func compress(data: Data) -> Data {
+        return deflater.compress(data: data, flush: flush);
     }
     
     /**
@@ -248,8 +312,18 @@ open class Zlib {
      - parameter length: number of data to process
      - returns: decompressed data as array of bytes
      */
-    open func decompress(_ bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
-        return inflater.decompress(bytes, length: length, flush: flush);
+    open func decompress(bytes: UnsafePointer<UInt8>, length: Int) -> [UInt8] {
+        return inflater.decompress(bytes: bytes, length: length, flush: flush);
+    }
+
+    /**
+     Method decompresses data
+     - parameter data: instance of Data
+     - parameter length: number of data to process
+     - returns: decompressed data as Data
+     */
+    open func decompress(data: Data) -> Data {
+        return inflater.decompress(data: data, flush: flush);
     }
 
 }

@@ -35,7 +35,7 @@ open class Occupant {
     public init(occupant: Occupant? = nil, presence: Presence) {
         nickname = presence.from!.resource!;
         self.presence = presence;
-        if let xUser = XMucUserElement.extract(presence) {
+        if let xUser = XMucUserElement.extract(from: presence) {
             affiliation = xUser.affiliation;
             role = xUser.role;
             jid = xUser.jid;

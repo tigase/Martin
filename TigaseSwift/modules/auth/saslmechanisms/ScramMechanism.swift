@@ -124,12 +124,12 @@ open class ScramMechanism: Logger, SaslMechanism {
             let part = "," + msg! + ",";
             data.authMessage = data.clientFirstMessageBare! + part + clientFinalMessage;
             
-            data.saltedPassword = hi(normalize(callback.getCredential()), salt: salt, iterations: iterations);
+            data.saltedPassword = hi(password: normalize(callback.getCredential()), salt: salt, iterations: iterations);
             var clientKeyData = self.clientKeyData;
-            var clientKey = algorithm.hmac(&data.saltedPassword, data: &clientKeyData);
-            var storedKey = algorithm.digest(&clientKey, length: clientKey.count);
+            var clientKey = algorithm.hmac(key: &data.saltedPassword, data: &clientKeyData);
+            var storedKey = algorithm.digest(bytes: &clientKey, length: clientKey.count);
             
-            var clientSignature = algorithm.hmac(&storedKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
+            var clientSignature = algorithm.hmac(key: &storedKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
             var clientProof = xor(clientKey, &clientSignature);
             
             clientFinalMessage += "," + "p=" + Foundation.Data(bytes: &clientProof, count: clientProof.count).base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
@@ -160,8 +160,8 @@ open class ScramMechanism: Logger, SaslMechanism {
             }
             
             var serverKeyData = self.serverKeyData;
-            var serverKey = algorithm.hmac(&data.saltedPassword, data: &serverKeyData);
-            var serverSignature = algorithm.hmac(&serverKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
+            var serverKey = algorithm.hmac(key: &data.saltedPassword, data: &serverKeyData);
+            var serverSignature = algorithm.hmac(key: &serverKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
             
             let value = Foundation.Data(base64Encoded: v, options: NSData.Base64DecodingOptions(rawValue: 0));
             guard value != nil && (value! == Foundation.Data(bytes: &serverSignature, count: serverSignature.count)) else {
@@ -190,17 +190,17 @@ open class ScramMechanism: Logger, SaslMechanism {
             && sessionObject.hasProperty(SessionObject.USER_BARE_JID);
     }
     
-    func hi(_ password: Foundation.Data, salt: Foundation.Data, iterations: Int) -> [UInt8] {
+    func hi(password: Foundation.Data, salt: Foundation.Data, iterations: Int) -> [UInt8] {
         let k = password;
         var z = Array<UInt8>(repeating: 0, count: salt.count);
         (salt as NSData).getBytes(&z, length: salt.count);
         z.append(contentsOf: [ 0, 0, 0, 1]);
         
-        var u = algorithm.hmac(k, data: &z);
+        var u = algorithm.hmac(keyData: k, data: &z);
         var result = u;
         
         for _ in  1..<iterations {
-            u = algorithm.hmac(k, data: &u);
+            u = algorithm.hmac(keyData: k, data: &u);
             for j in 0..<u.count {
                 result[j] ^= u[j];
             }

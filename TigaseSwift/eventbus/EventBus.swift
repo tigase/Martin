@@ -51,18 +51,18 @@ open class EventBus: Logger, LocalQueueDispatcher {
     /**
      Registeres handler to be notified when events of particular types are fired
      - parameter handler: handler to register
-     - parameter events: events on which handler should be notified
+     - parameter for: events on which handler should be notified
      */
-    open func register(_ handler:EventHandler, events:Event...) {
-        register(handler, events: events);
+    open func register(handler:EventHandler, for events:Event...) {
+        register(handler: handler, for: events);
     }
     
     /**
      Registeres handler to be notified when events of particular types are fired
      - parameter handler: handler to register
-     - parameter events: events on which handler should be notified
+     - parameter for: events on which handler should be notified
      */
-    open func register(_ handler:EventHandler, events:[Event]) {
+    open func register(handler:EventHandler, for events:[Event]) {
         queue.async {
             for event in events {
                 let type = event.type;
@@ -81,18 +81,18 @@ open class EventBus: Logger, LocalQueueDispatcher {
     /**
      Unregisteres handler, so it will not be notified when events of particular types are fired
      - parameter handler: handler to unregister
-     - parameter events: events on which handler should not be notified
+     - parameter for: events on which handler should not be notified
      */
-    open func unregister(_ handler:EventHandler, events:Event...) {
-        self.unregister(handler, events: events);
+    open func unregister(handler:EventHandler, for events:Event...) {
+        self.unregister(handler: handler, for: events);
     }
     
     /**
      Unregisteres handler, so it will not be notified when events of particular types are fired
      - parameter handler: handler to unregister
-     - parameter events: events on which handler should not be notified
+     - parameter for: events on which handler should not be notified
      */
-    open func unregister(_ handler:EventHandler, events:[Event]) {
+    open func unregister(handler:EventHandler, for events:[Event]) {
         queue.async {
             for event in events {
                 let type = event.type;
@@ -116,7 +116,7 @@ open class EventBus: Logger, LocalQueueDispatcher {
                 let type = event.type;
                 if let handlers = self.handlersByEvent[type] {
                     for handler in handlers {
-                        handler.handleEvent(event);
+                        handler.handle(event: event);
                     }
                 }
             }
@@ -125,7 +125,7 @@ open class EventBus: Logger, LocalQueueDispatcher {
                 let type = event.type;
                 if let handlers = self.handlersByEvent[type] {
                     for handler in handlers {
-                        handler.handleEvent(event);
+                        handler.handle(event: event);
                     }
                 }
             }

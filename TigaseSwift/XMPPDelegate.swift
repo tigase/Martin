@@ -23,7 +23,7 @@ import Foundation
 
 open class XMPPDelegate : NSObject, XMPPStreamDelegate {
     
-    open func onError(_ msg: String?) {
+    open func onError(msg: String?) {
         log("error parsing XML", msg);
     }
     
@@ -31,11 +31,11 @@ open class XMPPDelegate : NSObject, XMPPStreamDelegate {
         log("stream closed")
     }
     
-    open func onStreamStart(_ attributes: [String : String]) {
+    open func onStreamStart(attributes: [String : String]) {
         log("stream started: \(attributes)")
     }
     
-    open func processElement(_ packet: Element) {
+    open func process(element packet: Element) {
         log("got packet:  " + packet.stringValue)
     }
     

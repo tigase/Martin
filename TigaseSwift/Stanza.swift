@@ -40,7 +40,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     
     /// Returns information about delay in delivery of stanza
     open var delay:Delay? {
-        if let delayEl = element.findChild("delay", xmlns: "urn:xmpp:delay") {
+        if let delayEl = element.findChild(name: "delay", xmlns: "urn:xmpp:delay") {
             return Delay(element: delayEl);
         }
         return nil;
@@ -123,7 +123,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
             if type != StanzaType.error {
                 return nil;
             }
-            if let name = element.findChild("error")?.findChild(xmlns:"urn:ietf:params:xml:ns:xmpp-stanzas")?.name {
+            if let name = element.findChild(name: "error")?.findChild(xmlns:"urn:ietf:params:xml:ns:xmpp-stanzas")?.name {
                 return ErrorCondition(rawValue: name);
             }
             return nil;
@@ -155,12 +155,12 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         self.element.addChildren(children);
     }
     
-    open func findChild(_ name:String? = nil, xmlns:String? = nil) -> Element? {
-        return self.element.findChild(name, xmlns: xmlns);
+    open func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+        return self.element.findChild(name: name, xmlns: xmlns);
     }
     
-    open func getChildren(_ name:String? = nil, xmlns:String? = nil) -> Array<Element> {
-        return self.element.getChildren(name, xmlns: xmlns);
+    open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+        return self.element.getChildren(name: name, xmlns: xmlns);
     }
     
     open func getAttribute(_ key:String) -> String? {
@@ -184,7 +184,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         - Iq: for elements named 'iq'
         - Stanza: for any other elements not matching above rules
      */
-    open static func fromElement(_ elem:Element) -> Stanza {
+    open static func from(element elem:Element) -> Stanza {
         switch elem.name {
         case "message":
             return Message(elem:elem);
@@ -201,13 +201,13 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
      Creates stanza of type error with passsed error condition.
      - returns: response stanza based on this stanza with error condition set
      */
-    open func errorResult(_ condition:ErrorCondition, text:String? = nil) -> Stanza {
-        return errorResult(condition.type, errorCondition: condition.rawValue);
+    open func errorResult(condition:ErrorCondition, text:String? = nil) -> Stanza {
+        return errorResult(errorType: condition.type, errorCondition: condition.rawValue);
     }
     
-    open func errorResult(_ errorType:String?, errorCondition:String, errorText:String? = nil, xmlns:String = "urn:ietf:params:xml:ns:xmpp-stanzas") -> Stanza {
+    open func errorResult(errorType:String?, errorCondition:String, errorText:String? = nil, xmlns:String = "urn:ietf:params:xml:ns:xmpp-stanzas") -> Stanza {
         let elem = element;
-        let response = Stanza.fromElement(elem);
+        let response = Stanza.from(element: elem);
         response.type = StanzaType.error;
         response.to = self.from;
         response.from = self.to;
@@ -231,9 +231,9 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
      Creates response stanza with following type set
      - parameter type: type to set in response stanza
      */
-    open func makeResult(_ type:StanzaType) -> Stanza {
+    open func makeResult(type:StanzaType) -> Stanza {
         let elem = Element(name: element.name, cdata: nil, attributes: element.attributes);
-        let response = Stanza.fromElement(elem);
+        let response = Stanza.from(element: elem);
         response.to = self.from;
         response.from = self.to;
         response.type = type;
@@ -241,13 +241,13 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Returns value of matching element
-    func getElementValue(_ name:String?, xmlns:String? = nil) -> String? {
-        return findChild(name, xmlns: xmlns)?.value;
+    func getElementValue(name:String?, xmlns:String? = nil) -> String? {
+        return findChild(name: name, xmlns: xmlns)?.value;
     }
     
     /// Creates new subelement with following name, xmlns and value. It will replace any other subelement with same name and xmlns
-    func setElementValue(_ name:String, xmlns:String? = nil, value:String?) {
-        element.forEachChild(name, xmlns: xmlns) { (e:Element) -> Void in
+    func setElementValue(name:String, xmlns:String? = nil, value:String?) {
+        element.forEachChild(name: name, xmlns: xmlns) { (e:Element) -> Void in
             self.element.removeChild(e);
         };
         if value != nil {
@@ -262,30 +262,30 @@ open class Message: Stanza {
     /// Message plain text
     open var body:String? {
         get {
-            return getElementValue("body");
+            return getElementValue(name: "body");
         }
         set {
-            setElementValue("body", value: newValue);
+            setElementValue(name: "body", value: newValue);
         }
     }
     
     /// Message subject
     open var subject:String? {
         get {
-            return getElementValue("subject");
+            return getElementValue(name: "subject");
         }
         set {
-            setElementValue("subject", value: newValue);
+            setElementValue(name: "subject", value: newValue);
         }
     }
     
     /// Message thread id
     open var thread:String? {
         get {
-            return getElementValue("thread");
+            return getElementValue(name: "thread");
         }
         set {
-            setElementValue("thread", value: newValue);
+            setElementValue(name: "thread", value: newValue);
         }
     }
     
@@ -344,24 +344,24 @@ open class Presence: Stanza {
     /// Suggested nickname to use
     open var nickname:String? {
         get {
-            return getElementValue("nick", xmlns: "http://jabber.org/protocol/nick");
+            return getElementValue(name: "nick", xmlns: "http://jabber.org/protocol/nick");
         }
         set {
-            setElementValue("nick", xmlns: "http://jabber.org/protocol/nick", value: newValue);
+            setElementValue(name: "nick", xmlns: "http://jabber.org/protocol/nick", value: newValue);
         }
     }
     
     /// Priority of presence and resource connection
     open var priority:Int! {
         get {
-            let x = findChild("priority")?.value;
+            let x = findChild(name: "priority")?.value;
             if x != nil {
                 return Int(x!) ?? 0;
             }
             return 0;
         }
         set {
-            element.forEachChild("priority") { (e:Element) -> Void in
+            element.forEachChild(name: "priority") { (e:Element) -> Void in
                 self.element.removeChild(e);
             };
             if newValue != nil {
@@ -377,7 +377,7 @@ open class Presence: Stanza {
      */
     open var show:Show? {
         get {
-            let x = findChild("show")?.value;
+            let x = findChild(name: "show")?.value;
             let type = self.type;
             guard type != StanzaType.error && type != StanzaType.unavailable else {
                 return nil;
@@ -392,7 +392,7 @@ open class Presence: Stanza {
             return Show(rawValue: x!);
         }
         set {
-            element.forEachChild("show") { (e:Element) -> Void in
+            element.forEachChild(name: "show") { (e:Element) -> Void in
                 self.element.removeChild(e);
             };
             if newValue != nil && newValue != Show.online {
@@ -404,10 +404,10 @@ open class Presence: Stanza {
     /// Text with additional description - mainly for human use
     open var status:String? {
         get {
-            return findChild("status")?.value;
+            return findChild(name: "status")?.value;
         }
         set {
-            element.forEachChild("status") { (e:Element) -> Void in
+            element.forEachChild(name: "status") { (e:Element) -> Void in
                 self.element.removeChild(e);
             };
             if newValue != nil {

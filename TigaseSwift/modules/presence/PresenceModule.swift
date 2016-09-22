@@ -44,10 +44,10 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     open var context:Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
             if context != nil {
-                context.eventBus.register(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
         }
     }
@@ -89,7 +89,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
         presenceStore.setHandler(PresenceStoreHandlerImpl(presenceModule:self));
     }
     
-    open func handleEvent(_ event: Event) {
+    open func handle(event: Event) {
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             if initialPresence {
@@ -106,12 +106,12 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
         }
     }
     
-    open func process(_ stanza: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         if let presence = stanza as? Presence {
             let type = presence.type ?? StanzaType.available;
             switch type {
             case .available, .unavailable, .error:
-                let availabilityChanged = presenceStore.update(presence);
+                let availabilityChanged = presenceStore.update(presence: presence);
                 context.eventBus.fire(ContactPresenceChanged(sessionObject: context.sessionObject, presence: presence, availabilityChanged: availabilityChanged));
             case .unsubscribed:
                 context.eventBus.fire(ContactUnsubscribedEvent(sessionObject: context.sessionObject, presence: presence));
@@ -125,7 +125,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     
     /// Send initial presence
     open func sendInitialPresence() {
-        setPresence(.online, status: nil, priority: nil);
+        setPresence(show: .online, status: nil, priority: nil);
     }
     
     /**
@@ -135,7 +135,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
      - parameter priority: priority of presence
      - parameter additionalElements: array of additional elements which should be added to presence
      */
-    open func setPresence(_ show:Presence.Show, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
+    open func setPresence(show:Presence.Show, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
         let presence = Presence();
         presence.show = show;
         presence.status = status;
@@ -155,9 +155,9 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     
     /**
      Request subscription
-     - parameter jid: jid to request subscription
+     - parameter to: jid to request subscription
      */
-    open func subscribe(_ jid:JID) {
+    open func subscribe(to jid:JID) {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribe;
@@ -166,10 +166,10 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     }
 
     /**
-     Subscribe JID
-     - parameter jid: jid to subscribe
+     Subscribed to JID
+     - parameter to: jid to subscribe
      */
-    open func subscribed(_ jid:JID) {
+    open func subscribed(jid:JID) {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribed;
@@ -179,9 +179,9 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
 
     /**
      Unsubscribe from jid
-     - parameter jid: jid to unsubscribe from
+     - parameter from: jid to unsubscribe from
      */
-    open func unsubscribe(_ jid:JID) {
+    open func unsubscribe(from jid:JID) {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.unsubscribe;
@@ -190,10 +190,10 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     }
     
     /**
-     Unsubscribed JID
-     - parameter jid: jid which is being unsubscribed
+     Unsubscribed from JID
+     - parameter from: jid which is being unsubscribed
      */
-    open func unsubscribed(_ jid:JID) {
+    open func unsubscribed(from jid:JID) {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.unsubscribed;
@@ -311,15 +311,15 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
             self.presenceModule = presenceModule;
         }
         
-        open func onOffline(_ presence: Presence) {
+        open func onOffline(presence: Presence) {
             let offlinePresence = Presence();
             offlinePresence.type = StanzaType.unavailable;
             offlinePresence.from = JID(presence.from!.bareJid);
             presenceModule.context.eventBus.fire(ContactPresenceChanged(sessionObject: presenceModule.context.sessionObject, presence: offlinePresence, availabilityChanged: true));
         }
         
-        open func setPresence(_ show: Presence.Show, status: String?, priority: Int?) {
-            presenceModule.setPresence(show, status: status, priority: priority);
+        open func setPresence(show: Presence.Show, status: String?, priority: Int?) {
+            presenceModule.setPresence(show: show, status: status, priority: priority);
         }
     }
 }

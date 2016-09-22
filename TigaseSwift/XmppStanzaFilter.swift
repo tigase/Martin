@@ -34,10 +34,10 @@ public protocol XmppStanzaFilter: class {
      
      - returns: false - to keep processing or true to stop processing
      */
-    func processIncomingStanza(_ stanza:Stanza) -> Bool;
+    func processIncoming(stanza:Stanza) -> Bool;
     
     /**
      Filters outgoing stanza by processing it
      */
-    func processOutgoingStanza(_ stanza:Stanza);
+    func processOutgoing(stanza:Stanza);
 }

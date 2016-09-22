@@ -45,14 +45,14 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
             guard context != nil else {
                 return;
             }
-            context.eventBus.unregister(self, events: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
+            context.eventBus.unregister(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
         }
         
         didSet {
             guard context != nil else {
                 return;
             }
-            context.eventBus.register(self, events: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
+            context.eventBus.register(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
         }
     }
     
@@ -67,7 +67,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     }
     
     /// Method do noting
-    open func process(_ stanza: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         throw ErrorCondition.bad_request;
     }
     
@@ -77,13 +77,13 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
         }
     }
     
-    open func handleEvent(_ event: Event) {
+    open func handle(event: Event) {
         switch event {
         case let e as PresenceModule.BeforePresenceSendEvent:
-            onBeforePresenceSend(e);
+            onBeforePresenceSend(event: e);
         case let e as PresenceModule.ContactPresenceChanged:
             DispatchQueue.global(qos: DispatchQoS.QoSClass.background).async {
-                self.onReceivedPresence(e);
+                self.onReceivedPresence(event: e);
             }
         default:
             break;
@@ -95,9 +95,9 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
      This method is responsible for calculation of verification string if needed
      and injecting CAPS element to presence before it is send.
      
-     - parameter e: event fired before `Presence` is send
+     - parameter event: event fired before `Presence` is send
      */
-    func onBeforePresenceSend(_ e: PresenceModule.BeforePresenceSendEvent) {
+    func onBeforePresenceSend(event e: PresenceModule.BeforePresenceSendEvent) {
         guard let ver: String = context.sessionObject.getProperty(CapabilitiesModule.VERIFICATION_STRING_KEY) ?? calculateVerificationString() else {
             return;
         }
@@ -115,30 +115,30 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
      and if unknown verification string is found it executes discovery to add it
      to cache.
      
-     - parameter e: event fired when `Presence` is received
+     - parameter event: event fired when `Presence` is received
      */
-    func onReceivedPresence(_ e: PresenceModule.ContactPresenceChanged) {
+    func onReceivedPresence(event e: PresenceModule.ContactPresenceChanged) {
         guard cache != nil && e.presence != nil, let from = e.presence.from else {
             return;
         }
         
-        guard let c = e.presence.findChild("c", xmlns: "http://jabber.org/protocol/caps") else {
+        guard let c = e.presence.findChild(name: "c", xmlns: "http://jabber.org/protocol/caps") else {
             return;
         }
         guard let node = c.getAttribute("node"), let ver = c.getAttribute("ver") else {
             return;
         }
         let nodeName = node + "#" + ver;
-        guard !cache!.isCached(nodeName) else {
+        guard !cache!.isCached(node: nodeName) else {
             return;
         }
         
         guard let discoveryModule: DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) else {
             return;
         }
-        discoveryModule.getInfo(from, node: nodeName, onInfoReceived: { (node, identities, features) in
+        discoveryModule.getInfo(for: from, node: nodeName, onInfoReceived: { (node, identities, features) in
             let identity = identities.first;
-            self.cache?.store(node!, identity: identity, features: features);
+            self.cache?.store(node: node!, identity: identity, features: features);
             }, onError: nil);
     }
     
@@ -200,7 +200,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
             string += feature + "<";
         }
         
-        return Digest.sha1.digestToBase64(string.data(using: String.Encoding.utf8));
+        return Digest.sha1.digest(toBase64: string.data(using: String.Encoding.utf8));
     }
 }
 
@@ -211,32 +211,32 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
 public protocol CapabilitiesCache {
     /**
      Retreives array of features available for particular node from cache
-     - parameter node: node for which we want to check supported features
+     - parameter for: node for which we want to check supported features
      - returns: array of supported features or `nil` if there is not entry in
      cache for this node
      */
-    func getFeatures(_ node: String) -> [String]?;
+    func getFeatures(for node: String) -> [String]?;
     
     /**
      Retrieve identity of remote client which adverties this node
-     - parameter node: node to look for identity
+     - parameter for: node to look for identity
      - returns: XMPP client idenitity or `nil` if no available in cache
      */
-    func getIdentity(_ node: String) -> DiscoveryModule.Identity?;
+    func getIdentity(for node: String) -> DiscoveryModule.Identity?;
     
     /**
      Retrieves array of nodes which supports feature
-     - parameter feature: feature which should be supported
+     - parameter withFeature: feature which should be supported
      - returns: array of nodes supporting this feature known in cache
      */
-    func getNodesWithFeature(_ feature: String) -> [String];
+    func getNodes(withFeature feature: String) -> [String];
     
     /**
      Check if information for node are in cache
      - parameter node: node to check
      - returns: true if data is available in cache
      */
-    func isCached(_ node: String) -> Bool;
+    func isCached(node: String) -> Bool;
     
     /**
      Store data in cache
@@ -244,6 +244,6 @@ public protocol CapabilitiesCache {
      - parameter identitity: XMPP client identity
      - parameter features: array of feature supported by client
      */
-    func store(_ node: String, identity: DiscoveryModule.Identity?, features: [String]);
+    func store(node: String, identity: DiscoveryModule.Identity?, features: [String]);
     
 }

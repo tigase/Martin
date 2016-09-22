@@ -42,7 +42,7 @@ open class MobileModeModule: XmppModule, ContextAware {
     /// Available optimization modes on server
     open var availableModes:[Mode] {
         get {
-            return (StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.mapChildren({(f)-> Mode in
+            return (StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.mapChildren(transform: {(f)-> Mode in
                 return Mode(rawValue: f.xmlns!)!
                 }, filter: { (f) -> Bool in
                     return f.name == "mobile" && f.xmlns != nil && Mode(rawValue: f.xmlns!) != nil;
@@ -53,7 +53,7 @@ open class MobileModeModule: XmppModule, ContextAware {
     public init() {
     }
     
-    open func process(_ elem: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         throw ErrorCondition.feature_not_implemented;
     }
     
@@ -61,7 +61,7 @@ open class MobileModeModule: XmppModule, ContextAware {
      Enable optimization mode
      - paramater mode: mode to use
      */
-    open func enable(_ mode: Mode? = nil) {
+    open func enable(mode: Mode? = nil) {
         _ = setState(true, mode: mode);
     }
     
@@ -69,7 +69,7 @@ open class MobileModeModule: XmppModule, ContextAware {
      Disable optimization mode
      - paramater mode: mode to disable
      */
-    open func disable(_ mode: Mode? = nil) {
+    open func disable(mode: Mode? = nil) {
         _ = setState(false, mode: mode);
     }
     

@@ -40,7 +40,7 @@ open class XMPPDNSSrvResolver : Logger {
      - parameter domain: domain name to resolve
      - parameter connector: instance of `SocketConnector` to call when DNS resolution is finished
      */
-    func resolve(_ domain:String, connector:SocketConnector) -> Void {
+    func resolve(domain:String, connector:SocketConnector) -> Void {
         self.domain = domain;
         self.srvRecords.removeAll();
         self.connector = connector;
@@ -74,7 +74,7 @@ open class XMPPDNSSrvResolver : Logger {
                 return a.weight > b.weight;
             }
         }
-        connector.connect(domain, dnsRecords: srvRecords);
+        connector.connect(dnsName: domain, dnsRecords: srvRecords);
         connector = nil;
     }
     

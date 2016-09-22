@@ -124,7 +124,7 @@ open class Element : Node, ElementProtocol {
      - parameter xmlns: xmlns of element to find
      - returns: first element which name and xmlns matches
      */
-    open func findChild(_ name:String? = nil, xmlns:String? = nil) -> Element? {
+    open func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
         for node in nodes {
             if (node is Element) {
                 let elem = node as! Element;
@@ -163,7 +163,7 @@ open class Element : Node, ElementProtocol {
      - parameter xmlns: xmlns of child element
      - parameter fn: closure to execute
      */
-    open func forEachChild(_ name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
+    open func forEachChild(name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
         for node in nodes {
             if (node is Element) {
                 let elem = node as! Element;
@@ -192,7 +192,7 @@ open class Element : Node, ElementProtocol {
      - parameter filter: closure used for filtering child elements
      - returns: array of objects returned by transformation closure
      */
-    open func mapChildren<U>(_ transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
+    open func mapChildren<U>(transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
         var tmp = getChildren();
         if filter != nil {
             tmp = tmp.filter({ e -> Bool in
@@ -214,7 +214,7 @@ open class Element : Node, ElementProtocol {
      - parameter xmlns: xmlns of child element
      - returns: array of matching elements
      */
-    open func getChildren(_ name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+    open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         var result = Array<Element>();
         for node in nodes {
             if (node is Element) {
@@ -334,19 +334,19 @@ open class Element : Node, ElementProtocol {
     
     /**
      Convenience function for parsing string with XML to create elements
-     - parameter toParse: string with XML to parse
+     - parameter string: string with XML to parse
      - returns: parsed Element if any
      */
-    open static func fromString(_ toParse: String) -> Element? {
+    open static func from(string toParse: String) -> Element? {
         class Holder: XMPPStreamDelegate {
             var parsed:Element?;
-            fileprivate func onError(_ msg: String?) {
+            fileprivate func onError(msg: String?) {
             }
-            fileprivate func onStreamStart(_ attributes: [String : String]) {
+            fileprivate func onStreamStart(attributes: [String : String]) {
             }
             fileprivate func onStreamTerminate() {
             }
-            fileprivate func processElement(_ packet: Element) {
+            fileprivate func process(element packet: Element) {
                 parsed = packet;
             }
         }
@@ -355,9 +355,8 @@ open class Element : Node, ElementProtocol {
         let xmlDelegate = XMPPParserDelegate();
         xmlDelegate.delegate = holder;
         let parser = XMLParser(delegate: xmlDelegate);
-        var data = toParse.data(using: String.Encoding.utf8);
-        let ptr = UnsafeMutablePointer<UInt8>(mutating: (data! as NSData).bytes.bindMemory(to: UInt8.self, capacity: data!.count));
-        parser.parse(ptr, length: data!.count);
+        let data = toParse.data(using: String.Encoding.utf8);
+        parser.parse(data: data!);
         return holder.parsed;
     }
 }

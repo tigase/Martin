@@ -42,14 +42,14 @@ public protocol ElementProtocol {
      - parameter xmlns: xmlns of element to find
      - returns: first found element if any
      */
-    func findChild(_ name:String?, xmlns:String?) -> Element?;
+    func findChild(name:String?, xmlns:String?) -> Element?;
     /**
      Find child elements matching name and xmlns
      - parameter name: name of element
      - parameter xmlns: xmlns of element
      - returns: array of matching child elements
      */
-    func getChildren(_ name:String?, xmlns:String?) -> Array<Element>;
+    func getChildren(name:String?, xmlns:String?) -> Array<Element>;
     /**
      Get value for attribute
      - parameter key: attribute

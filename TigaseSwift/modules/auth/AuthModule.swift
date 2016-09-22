@@ -42,9 +42,9 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         }
         set {
             if newValue == nil {
-                _context.eventBus.unregister(self, events: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
+                _context.eventBus.unregister(handler: self, for: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
             } else {
-                newValue.eventBus.register(self, events: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
+                newValue.eventBus.register(handler: self, for: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
             }
             _context = newValue;
         }
@@ -58,7 +58,7 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         
     }
     
-    open func process(_ elem: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         
     }
     
@@ -78,7 +78,7 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
      for proper workflow.
      - parameter event: event to process
      */
-    open func handleEvent(_ event: Event) {
+    open func handle(event: Event) {
         switch event {
         case is SaslModule.SaslAuthSuccessEvent:
             let saslEvent = event as! SaslModule.SaslAuthSuccessEvent;

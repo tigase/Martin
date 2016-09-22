@@ -156,7 +156,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      
      - parameter serverToConnect: used internally to force connection to particular XMPP server (ie. one of many in cluster)
      */
-    open func start(_ serverToConnect:String? = nil) {
+    open func start(serverToConnect:String? = nil) {
         guard state == .disconnected else {
             log("start() - stopping connetion as state is not connecting", state);
             return;
@@ -167,16 +167,16 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         
             if let port: Int = self.context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
                 self.log("connecting to server:", server, "on port:", port);
-                self.connect(server, port: port, ssl: false);
+                self.connect(addr: server, port: port, ssl: false);
             } else {
                 self.log("connecting to server:", server);
                 let dnsResolver = self.dnsResolver;
-                dnsResolver.resolve(server, connector:self);
+                dnsResolver.resolve(domain: server, connector:self);
             }
         }
     }
     
-    func connect(_ dnsName:String, dnsRecords:Array<XMPPSrvRecord>) {
+    func connect(dnsName:String, dnsRecords:Array<XMPPSrvRecord>) {
         guard state == .connecting else {
             log("connect(dns) - stopping connetion as state is not connecting", state);
             return;
@@ -188,11 +188,11 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             }
         
             let rec:XMPPSrvRecord = self.dnsResolver.srvRecords[0];
-            self.connect(rec.target, port: rec.port, ssl: false);
+            self.connect(addr: rec.target, port: rec.port, ssl: false);
         }
     }
     
-    fileprivate func connect(_ addr:String, port:Int, ssl:Bool) -> Void {
+    fileprivate func connect(addr:String, port:Int, ssl:Bool) -> Void {
         log("connecting to:", addr, port);
         guard state == .connecting else {
             log("connect(addr) - stopping connetion as state is not connecting", state);
@@ -228,13 +228,13 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     }
     
     func startTLS() {
-        self.send("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
+        self.send(data: "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
     }
     
     func startZlib() {
         let e = Element(name: "compress", xmlns: "http://jabber.org/protocol/compress");
         e.addChild(Element(name: "method", cdata: "zlib"));
-        self.send(e.stringValue);
+        self.send(data: e.stringValue);
     }
     
     func stop() {
@@ -246,20 +246,20 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         case .connected:
             self.state = State.disconnecting;
             self.log("closing XMPP stream");
-            self.send("</stream:stream>");
+            self.send(data: "</stream:stream>");
             self.closeTimer = Timer(delayInSeconds: 3, repeats: false) {
-                self.closeSocket(State.disconnected);
+                self.closeSocket(newState: State.disconnected);
             }
         case .connecting:
             self.state = State.disconnecting;
             self.log("closing TCP connection");
-            self.closeSocket(State.disconnected);
+            self.closeSocket(newState: State.disconnected);
         }
         }
     }
     
     func forceStop() {
-        closeSocket(State.disconnected);
+        closeSocket(newState: State.disconnected);
     }
     
     func configureTLS() {
@@ -297,7 +297,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
             let domain = self.sessionObject.domainName!;
             let seeOtherHost = (self.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) && userJid != nil) ? " from='\(userJid!)'" : ""
-            self.send("<stream:stream to='\(domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
+            self.send(data: "<stream:stream to='\(domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
         }
     }
     
@@ -312,8 +312,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         restartStream();
     }
     
-    override open func processElement(_ packet: Element) {
-        super.processElement(packet);
+    override open func process(element packet: Element) {
+        super.process(element: packet);
         if packet.name == "error" && packet.xmlns == "http://etherx.jabber.org/streams" {
             sessionLogic.onStreamError(packet);
         } else if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
@@ -321,29 +321,29 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         } else if packet.name == "compressed" && packet.xmlns == "http://jabber.org/protocol/compress" {
             proceedZlib();
         } else {
-            processStanza(Stanza.fromElement(packet));
+            process(stanza: Stanza.from(element: packet));
         }
     }
     
-    override open func onError(_ msg: String?) {
-        closeSocket(State.disconnected);
+    override open func onError(msg: String?) {
+        closeSocket(newState: State.disconnected);
     }
     
     override open func onStreamTerminate() {
         log("onStreamTerminate called... state:", state);
         switch state {
         case .disconnecting:
-            closeSocket(State.disconnected);
+            closeSocket(newState: State.disconnected);
         // connecting is also set in case of see other host
         case .connected, .connecting:
             //-- probably from other socket, ie due to restart!
             let inStreamState = inStream?.streamStatus;
             if inStreamState == nil || inStreamState == .error || inStreamState == .closed {
-                closeSocket(State.disconnected)
+                closeSocket(newState: State.disconnected)
             } else {
                 state = State.disconnecting;
                 sendSync("</stream:stream>");
-                closeSocket(State.disconnected);
+                closeSocket(newState: State.disconnected);
             }
         default:
             break;
@@ -356,42 +356,42 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      
      [see-other-host]: http://xmpp.org/rfcs/rfc6120.html#streams-error-conditions-see-other-host
      */
-    open func reconnect(_ newHost:String) {
+    open func reconnect(newHost:String) {
         dispatch_sync_local_queue() {
             self.log("closing socket before reconnecting using see-other-host!")
             self.state_ = .disconnecting;
-            self.closeSocket(nil);
+            self.closeSocket(newState: nil);
             self.state_ = .disconnected;
         }
         queue.async {
             self.log("reconnecting to new host:", newHost);
-            self.start(newHost);
+            self.start(serverToConnect: newHost);
         }
     }
     
     /**
      This method will process any stanza received from XMPP server.
      */
-    func processStanza(_ stanza: Stanza) {
+    func process(stanza: Stanza) {
         sessionLogic.receivedIncomingStanza(stanza);
     }
     
     /**
      This method will process any stanza before it will be sent to XMPP server.
      */
-    func send(_ stanza:Stanza) {
+    func send(stanza:Stanza) {
         sessionLogic.sendingOutgoingStanza(stanza);
-        self.send(stanza.element.stringValue)
+        self.send(data: stanza.element.stringValue)
     }
     
     open func keepAlive() {
-        self.send(" ");
+        self.send(data: " ");
     }
     
     /**
      Methods prepares data to be sent using `dispatch_async()` to send data using other thread.
      */
-    fileprivate func send(_ data:String) {
+    fileprivate func send(data:String) {
         queue.async {
             self.sendSync(data);
         }
@@ -404,14 +404,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         self.log("sending stanza:", data);
         let buf = data.data(using: String.Encoding.utf8)!;
         if zlib != nil {
-            let outBuf = zlib!.compress((buf as NSData).bytes.bindMemory(to: UInt8.self, capacity: buf.count), length: buf.count);
-            outStreamBuffer?.appendData(outBuf);
-            outStreamBuffer?.writeData(self.outStream);
+            let outBuf = zlib!.compress(data: buf);
+            outStreamBuffer?.append(data: outBuf);
+            outStreamBuffer?.writeData(to: self.outStream);
         } else {
-            var outBuf = [UInt8](repeating: 0, count: buf.count);
-            (buf as NSData).getBytes(&outBuf, length: buf.count);
-            outStreamBuffer?.appendData(outBuf);
-            outStreamBuffer?.writeData(self.outStream);
+            outStreamBuffer?.append(data: buf);
+            outStreamBuffer?.writeData(to: self.outStream);
         }
     }
     
@@ -471,19 +469,19 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                         return;
                     }
                     
+                    var buffer = [UInt8](repeating: 0, count: 2048);
                     while inStream.hasBytesAvailable {
-                        var buffer = [UInt8](repeating: 0, count: 2048);
-                        
                         let read = inStream.read(&buffer, maxLength: buffer.count)
                         guard read > 0 else {
                             return;
                         }
                         
+                        let data = Data(bytes: &buffer, count: read);
                         if self.zlib != nil {
-                            var data = self.zlib!.decompress(buffer, length: read);
-                            self.parser?.parse(&data, length: data.count);
+                            let decompressedData = self.zlib!.decompress(data: data);
+                            self.parser?.parse(data: decompressedData);
                         } else {
-                            self.parser?.parse(&buffer, length: read);
+                            self.parser?.parse(data: data);
                         }
                     }
                 }
@@ -507,19 +505,19 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 if !sslCertificateValidated! {
                     log("SSL certificate validation failed");
                     self.context.eventBus.fire(CertificateErrorEvent(sessionObject: context.sessionObject, trust: trust));
-                    self.closeSocket(.disconnected);
+                    self.closeSocket(newState: .disconnected);
                     return;
                 }
             }
             if aStream == self.outStream {
                 queue.async {
-                    self.outStreamBuffer?.writeData(self.outStream);
+                    self.outStreamBuffer?.writeData(to: self.outStream);
                 }
             }
         case Stream.Event.endEncountered:
             log("stream event: EndEncountered");
             queue.async {
-                self.closeSocket(State.disconnected);
+                self.closeSocket(newState: State.disconnected);
             }
         default:
             log("stream event:", aStream.description);            
@@ -529,7 +527,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     /**
      Internal method used to properly close TCP connection and set state if needed
      */
-    fileprivate func closeSocket(_ newState: State?) {
+    fileprivate func closeSocket(newState: State?) {
         closeStreams();
         zlib = nil;
         if newState != nil {
@@ -621,14 +619,14 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     
     class WriteBuffer: Logger {
         
-        var queue = Queue<[UInt8]>();
+        var queue = Queue<Data>();
         var position = 0;
         
-        func appendData(_ data: [UInt8]) {
+        func append(data: Data) {
             queue.offer(data);
         }
         
-        func writeData(_ outputStream: OutputStream?) {
+        func writeData(to outputStream: OutputStream?) {
             guard outputStream != nil && outputStream!.hasSpaceAvailable else {
                 return;
             }
@@ -636,8 +634,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             guard data != nil else {
                 return;
             }
-            let  remainingLength = data!.count - position;
-            let sent = outputStream!.write(&data! + position, maxLength: remainingLength);
+            let remainingLength = data!.count - position;
+            
+            let sent = data!.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> Int in
+                return outputStream!.write(ptr + position, maxLength: remainingLength);
+            }
+            
             if sent < 0 {
                 return;
             }

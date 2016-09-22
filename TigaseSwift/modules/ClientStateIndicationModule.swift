@@ -44,14 +44,14 @@ open class ClientStateIndicationModule: XmppModule, ContextAware {
     /// Available optimization modes on server
     open var available: Bool {
         get {
-            return StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.findChild("csi", xmlns: ClientStateIndicationModule.CSI_XMLNS) != nil;
+            return StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.findChild(name: "csi", xmlns: ClientStateIndicationModule.CSI_XMLNS) != nil;
         }
     }
     
     public init() {
     }
     
-    open func process(_ elem: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         throw ErrorCondition.feature_not_implemented;
     }
     

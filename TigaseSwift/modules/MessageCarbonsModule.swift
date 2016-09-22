@@ -46,7 +46,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
         
     }
     
-    open func process(_ message: Stanza) throws {
+    open func process(stanza message: Stanza) throws {
         var error: ErrorCondition? = nil;
         message.element.forEachChild(xmlns: MessageCarbonsModule.MC_XMLNS) { (carb) in
             let action = Action(rawValue: carb.name);
@@ -102,8 +102,8 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
      - returns: array of forwarded Messsages
      */
     func getEncapsulatedMessages(_ carb: Element) -> [Message]? {
-        return carb.findChild("forwarded", xmlns: MessageCarbonsModule.SF_XMLNS)?.mapChildren({ (messageEl) -> Message in
-            return Stanza.fromElement(messageEl) as! Message;
+        return carb.findChild(name: "forwarded", xmlns: MessageCarbonsModule.SF_XMLNS)?.mapChildren(transform: { (messageEl) -> Message in
+            return Stanza.from(element: messageEl) as! Message;
         }, filter: { (el) -> Bool in
             return el.name == "message";
         });

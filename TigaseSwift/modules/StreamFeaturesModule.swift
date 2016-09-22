@@ -54,7 +54,7 @@ open class StreamFeaturesModule: XmppModule, ContextAware {
      Processes received stream features and fires event
      - parameter stanza: stanza to process
      */
-    open func process(_ stanza:Stanza) throws {
+    open func process(stanza:Stanza) throws {
         context.sessionObject.setProperty("stream:features", value: stanza.element);
         context.eventBus.fire(StreamFeaturesReceivedEvent(context:context, element: stanza.element));
     }

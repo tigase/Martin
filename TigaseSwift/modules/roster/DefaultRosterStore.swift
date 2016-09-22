@@ -48,7 +48,7 @@ open class DefaultRosterStore: RosterStore {
         }) 
     }
     
-    open override func get(_ jid:JID) -> RosterItem? {
+    open override func get(for jid:JID) -> RosterItem? {
         var item: RosterItem?;
         queue.sync {
             item = self.roster[jid];
@@ -56,7 +56,7 @@ open class DefaultRosterStore: RosterStore {
         return item;
     }
     
-    open override func removeItem(_ jid:JID) {
+    open override func removeItem(for jid:JID) {
         queue.async(flags: .barrier, execute: {
             self.roster.removeValue(forKey: jid);
         }) 

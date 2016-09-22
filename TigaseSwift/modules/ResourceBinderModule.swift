@@ -72,14 +72,14 @@ open class ResourceBinderModule: XmppModule, ContextAware {
             if let type = stanza?.type {
                 switch type {
                 case .result:
-                    if let name = stanza!.element.findChild("bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild("jid")?.value {
+                    if let name = stanza!.element.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {
                         let jid = JID(name);
                         self.context.sessionObject.setProperty(ResourceBinderModule.BINDED_RESOURCE_JID, value: jid);
                         self.context.eventBus.fire(ResourceBindSuccessEvent(sessionObject: self.context.sessionObject, bindedJid: jid));
                         return;
                     }
                 default:
-                    if let name = stanza!.element.findChild("error")?.firstChild()?.name {
+                    if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
                         errorCondition = ErrorCondition(rawValue: name);
                     }
                 }
@@ -91,7 +91,7 @@ open class ResourceBinderModule: XmppModule, ContextAware {
     }
     
     /// Method should not be called due to empty `criteria` property
-    open func process(_ elem: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         throw ErrorCondition.bad_request
     }
     

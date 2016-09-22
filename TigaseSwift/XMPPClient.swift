@@ -62,7 +62,7 @@ import Foundation
     init() {
     }
  
-    func handleEvent(event: Event) {
+    func handle(event: Event) {
         print("event bus handler got event = ", event);
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
@@ -83,7 +83,7 @@ import Foundation
  }
 
  let eventHandler = EventBusHandler();
- client.context.eventBus.register(eventHandler, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, RosterModule.ItemUpdatedEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE, MessageModule.MessageReceivedEvent.TYPE, MessageModule.ChatCreatedEvent.TYPE);
+ client.context.eventBus.register(eventHandler, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, RosterModule.ItemUpdatedEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE, MessageModule.MessageReceivedEvent.TYPE, MessageModule.ChatCreatedEvent.TYPE);
  
  // start XMPP connection to server
  client.login();
@@ -140,11 +140,11 @@ open class XMPPClient: Logger, EventHandler {
         context = Context(sessionObject: self.sessionObject, eventBus: self.eventBus, modulesManager: modulesManager);
         responseManager = ResponseManager(context: context);
         super.init()
-        self.eventBus.register(self, events: SocketConnector.DisconnectedEvent.TYPE);
+        self.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
     }
     
     deinit {
-        eventBus.unregister(self, events: SocketConnector.DisconnectedEvent.TYPE);
+        eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
         queue.setSpecific(key: queueTag, value: nil);
     }
     
@@ -206,7 +206,7 @@ open class XMPPClient: Logger, EventHandler {
     /**
      Handles events fired by other classes used by this connection.
      */
-    open func handleEvent(_ event: Event) {
+    open func handle(event: Event) {
         switch event {
         case let de as SocketConnector.DisconnectedEvent:
             keepaliveTimer?.cancel();
@@ -260,23 +260,23 @@ open class XMPPClient: Logger, EventHandler {
         }
         
         override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: ((Stanza?) -> Void)?) {
-            responseManager.registerResponseHandler(stanza, timeout: timeout, callback: callback);
+            responseManager.registerResponseHandler(for: stanza, timeout: timeout, callback: callback);
             self.write(stanza);
         }
         
         override func write(_ stanza: Stanza, timeout: TimeInterval = 30, onSuccess: ((Stanza) -> Void)?, onError: ((Stanza,ErrorCondition?) -> Void)?, onTimeout: (() -> Void)?) {
-            responseManager.registerResponseHandler(stanza, timeout: timeout, onSuccess: onSuccess, onError: onError, onTimeout: onTimeout);
+            responseManager.registerResponseHandler(for: stanza, timeout: timeout, onSuccess: onSuccess, onError: onError, onTimeout: onTimeout);
             self.write(stanza);
         }
 
         override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: AsyncCallback) {
-            responseManager.registerResponseHandler(stanza, timeout: timeout, callback: callback);
+            responseManager.registerResponseHandler(for: stanza, timeout: timeout, callback: callback);
             self.write(stanza);
         }
 
         override func write(_ stanza: Stanza) {
             queue.async {
-                self.connector.send(stanza);
+                self.connector.send(stanza: stanza);
             }
         }
         

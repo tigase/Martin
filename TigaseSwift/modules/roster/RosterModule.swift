@@ -37,10 +37,10 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
     open var context:Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
             if context != nil {
-                context.eventBus.register(self, events: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
         }
     }
@@ -80,7 +80,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         loadFromCache();
     }
     
-    open func handleEvent(_ event: Event) {
+    open func handle(event: Event) {
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             rosterRequest();
@@ -94,17 +94,17 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         }
     }
     
-    open func processGet(_ stanza: Stanza) throws {
+    open func processGet(stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
     
-    open func processSet(_ stanza: Stanza) throws {
+    open func processSet(stanza: Stanza) throws {
         let bindedJid = ResourceBinderModule.getBindedJid(context.sessionObject);
         if (stanza.from != nil && stanza.from != bindedJid) {
             throw ErrorCondition.not_allowed;
         }
         
-        if let query = stanza.findChild("query", xmlns: "jabber:iq:roster") {
+        if let query = stanza.findChild(name: "query", xmlns: "jabber:iq:roster") {
             processRosterQuery(query, force: false);
         }
     }
@@ -115,7 +115,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         }
         
         let ver = query.getAttribute("ver");
-        query.forEachChild("item") { (item:Element) -> Void in
+        query.forEachChild(name: "item") { (item:Element) -> Void in
             self.processRosterItem(item);
         }
     
@@ -130,17 +130,17 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         let name = item.getAttribute("name");
         let subscription:RosterItem.Subscription = item.getAttribute("subscription") == nil ? RosterItem.Subscription.none : RosterItem.Subscription(rawValue: item.getAttribute("subscription")!)!;
         let ask = item.getAttribute("ask") == "subscribe";
-        let groups:[String] = item.mapChildren({(g:Element) -> String in
+        let groups:[String] = item.mapChildren(transform: {(g:Element) -> String in
                 return g.value!;
             }, filter: {(e:Element) -> Bool in
                 return e.name == "group";
             });
         
-        var currentItem = rosterStore.get(jid);
+        var currentItem = rosterStore.get(for: jid);
         var action = Action.other;
         var modifiedGroups:[String]? = nil;
         if (subscription == .remove && currentItem != nil) {
-            rosterStore.removeItem(jid);
+            rosterStore.removeItem(for: jid);
             action = .removed;
             modifiedGroups = currentItem!.groups;
         } else {
@@ -165,7 +165,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
                     return !currentItem!.groups.contains(gname);
                 }));
             }
-            currentItem = currentItem != nil ? currentItem!.update(name, subscription: subscription, groups: groups, ask: ask) : RosterItem(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask);
+            currentItem = currentItem != nil ? currentItem!.update(name: name, subscription: subscription, groups: groups, ask: ask) : RosterItem(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask);
             
             rosterStore.addItem(currentItem!);
             
@@ -193,7 +193,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         
         context.writer?.write(iq, callback: { (result:Stanza?) in
             if (result?.type == StanzaType.result) {
-                if let query = result!.findChild("query", xmlns: "jabber:iq:roster") {
+                if let query = result!.findChild(name: "query", xmlns: "jabber:iq:roster") {
                     self.processRosterQuery(query, force: true);
                 }
             }
@@ -236,7 +236,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         if (versionProvider == nil) {
             return false;
         }
-        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild("ver", xmlns: "urn:xmpp:features:rosterver") != nil;
+        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild(name: "ver", xmlns: "urn:xmpp:features:rosterver") != nil;
     }
     
     fileprivate func loadFromCache() {
@@ -304,19 +304,20 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
             self.rosterModule = module;
         }
         
-        func add(_ jid: JID, name: String?, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+        func
+            add(jid: JID, name: String?, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
         }
         
-        func remove(_ jid: JID, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+        func remove(jid: JID, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(jid, name: nil, groups: [String](), subscription: RosterItem.Subscription.remove, onSuccess: onSuccess, onError: onError);
         }
         
-        func update(_ item: RosterItem, name: String?, groups: [String]? = nil, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+        func update(item: RosterItem, name: String?, groups: [String]? = nil, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(item.jid, name: name, groups: groups ?? item.groups, onSuccess: onSuccess, onError: onError);
         }
 
-        func update(_ item: RosterItem, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+        func update(item: RosterItem, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
             self.rosterModule.updateItem(item.jid, name: item.name, groups: groups, onSuccess: onSuccess, onError: onError);
         }
         

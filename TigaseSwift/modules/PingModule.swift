@@ -61,12 +61,12 @@ open class PingModule: AbstractIQModule, ContextAware {
     /**
      Processes ping requests and responds properly
      */
-    open func processGet(_ stanza: Stanza) throws {
-        let result = stanza.makeResult(StanzaType.result);
+    open func processGet(stanza: Stanza) throws {
+        let result = stanza.makeResult(type: StanzaType.result);
         context.writer?.write(result);
     }
     
-    open func processSet(_ stanza: Stanza) throws {
+    open func processSet(stanza: Stanza) throws {
         throw ErrorCondition.not_allowed;
     }
 }

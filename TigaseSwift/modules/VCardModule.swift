@@ -45,7 +45,7 @@ open class VCardModule: XmppModule, ContextAware {
         
     }
     
-    open func process(_ elem: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         throw ErrorCondition.unexpected_request;
     }
     
@@ -83,10 +83,10 @@ open class VCardModule: XmppModule, ContextAware {
     
     /**
      Retrieve vcard for JID
-     - parameter jid: JID for which vcard should be retrieved
+     - parameter from: JID for which vcard should be retrieved
      - parameter callback: called with result
      */
-    open func retrieveVCard(_ jid: JID? = nil, callback: @escaping (Stanza?) -> Void) {
+    open func retrieveVCard(from jid: JID? = nil, callback: @escaping (Stanza?) -> Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid;
@@ -101,12 +101,12 @@ open class VCardModule: XmppModule, ContextAware {
      - parameter onSuccess: called retrieved vcard
      - parameter onError: called on failure or timeout
      */
-    open func retrieveVCard(_ jid: JID? = nil, onSuccess: @escaping (_ vcard: VCard)->Void, onError: @escaping (_ errorCondition: ErrorCondition?)->Void) {
-        retrieveVCard(jid) { (stanza) in
+    open func retrieveVCard(from jid: JID? = nil, onSuccess: @escaping (_ vcard: VCard)->Void, onError: @escaping (_ errorCondition: ErrorCondition?)->Void) {
+        retrieveVCard(from: jid) { (stanza) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                if let vcardEl = stanza?.findChild("vCard", xmlns: VCardModule.VCARD_XMLNS) {
+                if let vcardEl = stanza?.findChild(name: "vCard", xmlns: VCardModule.VCARD_XMLNS) {
                     let vcard = VCard(element: vcardEl)!;
                     onSuccess(vcard);
                 }
@@ -280,7 +280,7 @@ open class VCardModule: XmppModule, ContextAware {
         open var emails: [Email] {
             get {
                 var result = [Email]();
-                element.forEachChild("EMAIL") { (el) in
+                element.forEachChild(name: "EMAIL") { (el) in
                     if let email = Email(element: el) {
                         result.append(email);
                     }
@@ -288,7 +288,7 @@ open class VCardModule: XmppModule, ContextAware {
                 return result;
             }
             set {
-                let oldValue = element.getChildren("EMAIL");
+                let oldValue = element.getChildren(name: "EMAIL");
                 oldValue.forEach { (el) in
                     element.removeChild(el);
                 }
@@ -301,7 +301,7 @@ open class VCardModule: XmppModule, ContextAware {
         open var addresses: [Address] {
             get {
                 var result = [Address]();
-                element.forEachChild("ADR") { (el) in
+                element.forEachChild(name: "ADR") { (el) in
                     if let address = Address(element: el) {
                         result.append(address);
                     }
@@ -309,7 +309,7 @@ open class VCardModule: XmppModule, ContextAware {
                 return result;
             }
             set {
-                let oldValue = element.getChildren("ADR");
+                let oldValue = element.getChildren(name: "ADR");
                 oldValue.forEach { (el) in
                     element.removeChild(el);
                 }
@@ -322,7 +322,7 @@ open class VCardModule: XmppModule, ContextAware {
         open var telephones: [Telephone] {
             get {
                 var result = [Telephone]();
-                element.forEachChild("TEL") { (el) in
+                element.forEachChild(name: "TEL") { (el) in
                     if let telephone = Telephone(element: el) {
                         result.append(telephone);
                     }
@@ -330,7 +330,7 @@ open class VCardModule: XmppModule, ContextAware {
                 return result;
             }
             set {
-                let oldValue = element.getChildren("TEL");
+                let oldValue = element.getChildren(name: "TEL");
                 oldValue.forEach { (el) in
                     element.removeChild(el);
                 }
@@ -354,7 +354,7 @@ open class VCardModule: XmppModule, ContextAware {
         open func getElementValue(_ path: String...) -> String? {
             var elem = element;
             for name in path {
-                elem = elem?.findChild(name);
+                elem = elem?.findChild(name: name);
             }
             return elem?.value;
         }
@@ -367,7 +367,7 @@ open class VCardModule: XmppModule, ContextAware {
             while elem != nil && i<path.count {
                 let name = path[i];
                 parent = elem;
-                elem = elem?.findChild(name);
+                elem = elem?.findChild(name: name);
                 if elem == nil && value != nil {
                     elem = Element(name: name);
                     parent?.addChild(elem!);
@@ -503,7 +503,7 @@ open class VCardModule: XmppModule, ContextAware {
                 get {
                     var result = [Kind]();
                     for kind in Kind.allValues {
-                        if element.findChild(kind.rawValue) != nil {
+                        if element.findChild(name: kind.rawValue) != nil {
                             result.append(kind);
                         }
                     }
@@ -511,7 +511,7 @@ open class VCardModule: XmppModule, ContextAware {
                 }
                 set {
                     for kind in Kind.allValues {
-                        if let el = element.findChild(kind.rawValue) {
+                        if let el = element.findChild(name: kind.rawValue) {
                             element.removeChild(el);
                         }
                     }
@@ -550,7 +550,7 @@ open class VCardModule: XmppModule, ContextAware {
                 get {
                     var types = [EntryType]();
                     for type in EntryType.allValues {
-                        if element.findChild(type.rawValue) != nil {
+                        if element.findChild(name: type.rawValue) != nil {
                             types.append(type);
                         }
                     }
@@ -558,7 +558,7 @@ open class VCardModule: XmppModule, ContextAware {
                 }
                 set {
                     for type in EntryType.allValues {
-                        if let el = element.findChild(type.rawValue) {
+                        if let el = element.findChild(name: type.rawValue) {
                             element.removeChild(el);
                         }
                     }
@@ -569,11 +569,11 @@ open class VCardModule: XmppModule, ContextAware {
             }
             
             func getElementValue(_ name: String) -> String? {
-                return element.findChild(name)?.value;
+                return element.findChild(name: name)?.value;
             }
             
             func setElementValue(_ name: String, value: String?) {
-                var el = element.findChild(name);
+                var el = element.findChild(name: name);
                 if  value == nil {
                     if el != nil {
                         element.removeChild(el!);
@@ -595,11 +595,11 @@ extension Presence {
     /// Hash of photo embedded in vcard-temp
     public var vcardTempPhoto:String? {
         get {
-            return self.findChild("x", xmlns: "vcard-temp:x:update")?.findChild("photo")?.value;
+            return self.findChild(name: "x", xmlns: "vcard-temp:x:update")?.findChild(name: "photo")?.value;
         }
         set {
-            var x = self.findChild("x", xmlns: "vcard-temp:x:update");
-            var photo = x?.findChild("photo");
+            var x = self.findChild(name: "x", xmlns: "vcard-temp:x:update");
+            var photo = x?.findChild(name: "photo");
             if newValue == nil {
                 if photo != nil {
                     x!.removeChild(photo!);

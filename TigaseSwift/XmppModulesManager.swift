@@ -57,15 +57,15 @@ open class XmppModulesManager : ContextAware {
      Processes passed stanza and return list of `XmppModule` instances which should process this stanza.
      Instances of `XmppModule` are selected by checking if it's `criteria` field matches stanza.
      */
-    open func findModules(_ stanza:Stanza) -> [XmppModule] {
-        return findModules(stanza.element);
+    open func findModules(for stanza:Stanza) -> [XmppModule] {
+        return findModules(for: stanza.element);
     }
     
     /**
      Processes passed element and return list of `XmppModule` instances which should process this element.
      Instances of `XmppModule` are selected by checking if it's `criteria` field matches element.
      */
-    open func findModules(_ elem:Element) -> [XmppModule] {
+    open func findModules(for elem:Element) -> [XmppModule] {
         var results = [XmppModule]();
         for module in modules {
             if module.criteria.match(elem) {

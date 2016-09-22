@@ -49,8 +49,8 @@ open class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
      */
     open static func isSessionEstablishmentRequired(_ sessionObject:SessionObject) -> Bool {
         if let featuresElement = StreamFeaturesModule.getStreamFeatures(sessionObject) {
-            if let session = featuresElement.findChild("session", xmlns: SESSION_XMLNS) {
-                return session.findChild("optional") == nil;
+            if let session = featuresElement.findChild(name: "session", xmlns: SESSION_XMLNS) {
+                return session.findChild(name: "optional") == nil;
             }
         }
         return false;
@@ -61,7 +61,7 @@ open class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
     }
     
     /// Method should not be called due to empty `criteria`
-    open func process(_ elem: Stanza) throws {
+    open func process(stanza: Stanza) throws {
         throw ErrorCondition.bad_request;
     }
     
@@ -81,7 +81,7 @@ open class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
                     self.context.eventBus.fire(SessionEstablishmentSuccessEvent(sessionObject:self.context.sessionObject));
                     return;
                 default:
-                    if let name = stanza!.element.findChild("error")?.firstChild()?.name {
+                    if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
                         errorCondition = ErrorCondition(rawValue: name);
                     }
                 }

@@ -42,39 +42,39 @@ open class DefaultChatManager: ChatManager {
         self.chatStore = chatStore;
     }
     
-    open func close(_ chat: Chat) -> Bool {
-        let result = chatStore.close(chat);
+    open func close(chat: Chat) -> Bool {
+        let result = chatStore.close(chat: chat);
         if result {
             context.eventBus.fire(MessageModule.ChatClosedEvent(sessionObject: context.sessionObject, chat: chat));
         }
         return result;
     }
     
-    open func createChat(_ jid: JID, thread: String? = nil) -> Chat? {
-        let chat:Chat? = chatStore.open(Chat(jid: jid, thread: thread));
+    open func createChat(with jid: JID, thread: String? = nil) -> Chat? {
+        let chat:Chat? = chatStore.open(chat: Chat(jid: jid, thread: thread));
         if chat != nil {
             context.eventBus.fire(MessageModule.ChatCreatedEvent(sessionObject: context.sessionObject, chat:chat!));
         }
         return chat;
     }
     
-    open func getChat(_ jid:JID, thread:String? = nil) -> Chat? {
+    open func getChat(with jid:JID, thread:String? = nil) -> Chat? {
         var chat:Chat? = nil;
         
         if thread != nil {
-            chat = chatStore.get(jid.bareJid, filter:{ (c) -> Bool in
+            chat = chatStore.getChat(with: jid.bareJid, filter:{ (c) -> Bool in
                 return c.thread == thread;
             });
         }
         
         if chat == nil && jid.resource != nil {
-            chat = chatStore.get(jid.bareJid, filter: { (c) -> Bool in
+            chat = chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
                 return c.jid == jid;
             });
         }
         
         if chat == nil {
-            chat = chatStore.get(jid.bareJid, filter: { (c) -> Bool in
+            chat = chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
                 return c.jid.bareJid == jid.bareJid;
             });
         }
@@ -83,10 +83,10 @@ open class DefaultChatManager: ChatManager {
     }
     
     open func getChats() -> [Chat] {
-        return chatStore.getAll();
+        return chatStore.getAllChats();
     }
     
-    open func isChatOpenFor(_ jid: BareJID) -> Bool {
-        return chatStore.isFor(jid);
+    open func isChatOpen(with jid: BareJID) -> Bool {
+        return chatStore.isFor(jid: jid);
     }
 }

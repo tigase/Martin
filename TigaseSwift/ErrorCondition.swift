@@ -103,6 +103,6 @@ public enum ErrorCondition: String, Error {
     }
     
     public func createResponse(_ stanza:Stanza) -> Stanza {
-        return stanza.errorResult(self)
+        return stanza.errorResult(condition: self)
     }
 }

@@ -1,3 +1,5 @@
+
+
 //
 // DefaultCapabilitiesCache.swift
 //
@@ -36,7 +38,7 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
     
     fileprivate var queue = DispatchQueue(label: "capabilities_cache_queue", attributes: DispatchQueue.Attributes.concurrent);
     
-    open func getFeatures(_ node: String) -> [String]? {
+    open func getFeatures(for node: String) -> [String]? {
         var result: [String]?;
         queue.sync {
             result = self.features[node];
@@ -44,7 +46,7 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         return result;
     }
     
-    open func getIdentity(_ node: String) -> DiscoveryModule.Identity? {
+    open func getIdentity(for node: String) -> DiscoveryModule.Identity? {
         var result: DiscoveryModule.Identity?;
         queue.sync {
             result = self.identities[node];
@@ -52,7 +54,7 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         return result;
     }
     
-    open func getNodesWithFeature(_ feature: String) -> [String] {
+    open func getNodes(withFeature feature: String) -> [String] {
         var result = Set<String>();
         for (node, features) in self.features {
             if features.index(of: feature) != nil {
@@ -62,7 +64,7 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         return Array(result);
     }
     
-    open func isCached(_ node: String) -> Bool {
+    open func isCached(node: String) -> Bool {
         var result = false;
         queue.sync {
             result = self.features.index(forKey: node) != nil;
@@ -70,7 +72,7 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         return result;
     }
     
-    open func store(_ node: String, identity: DiscoveryModule.Identity?, features: [String]) {
+    open func store(node: String, identity: DiscoveryModule.Identity?, features: [String]) {
         queue.async(flags: .barrier, execute: {
             self.identities[node] = identity;
             self.features[node] = features;

@@ -34,22 +34,22 @@ public protocol ChatManager {
      - parameter chat: chat to close
      - returns: true - if chat was closed
      */
-    func close(_ chat:Chat) ->Bool;
+    func close(chat:Chat) ->Bool;
     
     /**
      Create chat
-     - parameter jid: jid to exchange messages
+     - parameter with: jid to exchange messages
      - parameter thread: id of thread
      - returns: instance of Chat if opened
      */
-    func createChat(_ jid:JID, thread:String?) -> Chat?;
+    func createChat(with jid:JID, thread:String?) -> Chat?;
     /**
      Get instance of already opened chat
-     - parameter jid: jid to exchange messages
+     - parameter with: jid to exchange messages
      - parameter thread: id of thread
      - returns: instance of Chat if any opened and matches
      */
-    func getChat(_ jid:JID, thread:String?) -> Chat?;
+    func getChat(with jid:JID, thread:String?) -> Chat?;
     /**
      Get array of opened chats
      - returns: array of all currently open chats
@@ -57,9 +57,9 @@ public protocol ChatManager {
     func getChats() -> [Chat];
     /**
      Check if there is any chat open with jid
-     - parameter jid: jid to check
+     - parameter with: jid to check
      */
-    func isChatOpenFor(_ jid:BareJID) -> Bool;
+    func isChatOpen(with jid:BareJID) -> Bool;
 }
 
 /**

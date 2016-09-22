@@ -48,8 +48,8 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
      - parameter thread: thread id of chat
      - returns: instance of `Chat`
      */
-    open func createChat(_ jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
-        return chatManager.createChat(jid, thread: thread);
+    open func createChat(with jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
+        return chatManager.createChat(with: jid, thread: thread);
     }
     
     open func initialize() {
@@ -58,13 +58,13 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
         }
     }
     
-    open func process(_ stanza: Stanza) {
+    open func process(stanza: Stanza) {
         let message = stanza as! Message;
         _ = processMessage(message, interlocutorJid: message.from);
     }
     
     func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
-        var chat = chatManager.getChat(interlocutorJid!, thread: message.thread);
+        var chat = chatManager.getChat(with: interlocutorJid!, thread: message.thread);
         
         if chat == nil && message.body == nil {
             fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: nil, message: message));
@@ -72,7 +72,7 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
         }
         
         if chat == nil {
-            chat = chatManager.createChat(interlocutorJid!, thread: message.thread);
+            chat = chatManager.createChat(with: interlocutorJid!, thread: message.thread);
         } else {
             if chat!.jid != interlocutorJid {
                 chat!.jid = interlocutorJid!;
@@ -97,7 +97,7 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
      - parameter subject: subject of message
      - parameter additionalElements: array of additional elements to add to message
      */
-    open func sendMessage(_ chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
+    open func sendMessage(in chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
         let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
         context.writer?.write(msg);
         return msg;

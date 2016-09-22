@@ -47,7 +47,7 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
     }
     
     
-    open func update(_ name: String?, subscription: Subscription, groups: [String], ask: Bool) -> RosterItem {
+    open func update(name: String?, subscription: Subscription, groups: [String], ask: Bool) -> RosterItem {
         return RosterItem(jid: self.jid, name: name, subscription: subscription, groups: groups, ask: ask);
     }
 //    public func updateName(name: String?, )
