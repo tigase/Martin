@@ -46,7 +46,7 @@ open class Criteria {
      - parameter types: list of allowed values for `type` attribute
      - parameter containsAttribute: checks if passed attribute is set
      */
-    open static func name(_ name: String, xmlns: String? = nil, types:[String]? = nil, containsAttribute: String? = nil) -> Criteria {
+    open static func name(_ name: String, xmlns: String? = nil, types:[String?]? = nil, containsAttribute: String? = nil) -> Criteria {
         return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil, containsAttribute: containsAttribute);
     }
 
@@ -58,9 +58,9 @@ open class Criteria {
      - parameter types: list of allowed values for `type` attribute
      - parameter containsAttribute: checks if passed attribute is set
      */
-    open static func name(_ name: String, xmlns: String? = nil, types:[StanzaType], containsAttribute: String? = nil) -> Criteria {
-        let typesStr = types.map { (type) -> String in
-            return type.rawValue;
+    open static func name(_ name: String, xmlns: String? = nil, types:[StanzaType?], containsAttribute: String? = nil) -> Criteria {
+        let typesStr = types.map { (type) -> String? in
+            return type?.rawValue;
         }
         return ElementCriteria(name: name, xmlns: xmlns, types: typesStr, attributes: nil, containsAttribute: containsAttribute);
     }
@@ -133,10 +133,10 @@ open class Criteria {
         let name:String?;
         let xmlns:String?;
         let attributes:[String:String]?;
-        let types:[String]?;
+        let types:[String?]?;
         let containsAttribute: String?;
         
-        init(name: String? = nil, xmlns: String? = nil, types:[String]? = nil, attributes:[String:String]?, containsAttribute: String? = nil) {
+        init(name: String? = nil, xmlns: String? = nil, types:[String?]? = nil, attributes:[String:String]?, containsAttribute: String? = nil) {
             self.name = name;
             self.xmlns = xmlns;
             self.types = types;
@@ -154,8 +154,10 @@ open class Criteria {
                 match = match && (xmlns == elem.xmlns);
             }
             if (types != nil) {
-                let type = elem.getAttribute("type") ?? "";
-                match = match && (types?.index(of: type) != nil);
+                let type = elem.getAttribute("type");
+                match = match && (types?.index(where: { (v: String?) -> Bool in
+                    return v == type;
+                }) != nil);
             }
             if (attributes != nil) {
                 for (k,v) in self.attributes! {

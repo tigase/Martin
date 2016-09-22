@@ -29,7 +29,7 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     
     open let id = ID;
     
-    open let criteria = Criteria.name("message", types:[StanzaType.chat, StanzaType.normal, StanzaType.headline, StanzaType.error]);
+    open let criteria = Criteria.name("message", types:[StanzaType.chat, StanzaType.normal, nil, StanzaType.headline, StanzaType.error]);
     
     open let features = [String]();
     
