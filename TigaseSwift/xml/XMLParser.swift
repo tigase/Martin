@@ -24,16 +24,16 @@ import Foundation
 import LibXML2
 
 struct attr {
-    var name:UnsafePointer<UInt8>;
-    var prefix:UnsafePointer<UInt8>;
-    var attrUri:UnsafePointer<UInt8>;
-    var valueBegin:UnsafePointer<UInt8>;
-    var valueEnd:UnsafePointer<UInt8>;
+    var name:UnsafePointer<UInt8>?;
+    var prefix:UnsafePointer<UInt8>?;
+    var attrUri:UnsafePointer<UInt8>?;
+    var valueBegin:UnsafePointer<UInt8>?;
+    var valueEnd:UnsafePointer<UInt8>?;
 }
 
 struct ns {
-    var prefix:UnsafePointer<UInt8>;
-    var uri:UnsafePointer<UInt8>;
+    var prefix:UnsafePointer<UInt8>?;
+    var uri:UnsafePointer<UInt8>?;
 }
 
 private func strFromCUtf8(_ ptr:UnsafePointer<UInt8>?) -> String? {
@@ -56,7 +56,7 @@ private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix
             while i < Int(nb_attributes) {
                 var name = strFromCUtf8(attrsPtr.pointee.name);
                 var prefix = strFromCUtf8(attrsPtr.pointee.prefix);
-                var value = String(data: Data(bytes: UnsafePointer<UInt8>((attrsPtr.pointee.valueBegin)), count: (attrsPtr.pointee.valueEnd)-(attrsPtr.pointee.valueBegin)), encoding: String.Encoding.utf8);
+                var value = String(data: Data(bytes: UnsafePointer<UInt8>((attrsPtr.pointee.valueBegin)!), count: (attrsPtr.pointee.valueEnd)!-(attrsPtr.pointee.valueBegin)!), encoding: String.Encoding.utf8);
                 if (value != nil) {
                     value = EscapeUtils.unescape(value!);
                 }
