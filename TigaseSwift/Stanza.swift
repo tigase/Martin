@@ -321,7 +321,7 @@ open class Presence: Stanza {
         case xa
         case dnd
         
-        var weight:Int {
+        public var weight:Int {
             switch self {
             case .chat:
                 return 5;
