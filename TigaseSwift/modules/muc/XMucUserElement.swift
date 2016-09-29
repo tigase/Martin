@@ -31,9 +31,9 @@ open class XMucUserElement {
     
     var element: Element;
 
-    open var affiliation: Affiliation {
+    open var affiliation: MucAffiliation {
         if let affiliationVal = element.findChild(name: "item")?.getAttribute("affiliation") {
-            return Affiliation(rawValue: affiliationVal) ?? .none;
+            return MucAffiliation(rawValue: affiliationVal) ?? .none;
         }
         return .none;
     }
@@ -49,9 +49,9 @@ open class XMucUserElement {
         return element.findChild(name: "item")?.getAttribute("nick");
     }
     
-    open var role: Role {
+    open var role: MucRole {
         if let roleVal = element.findChild(name: "item")?.getAttribute("role") {
-            return Role(rawValue: roleVal) ?? .none;
+            return MucRole(rawValue: roleVal) ?? .none;
         }
         return .none;
     }

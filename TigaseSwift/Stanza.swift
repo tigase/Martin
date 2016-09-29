@@ -159,8 +159,16 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         return self.element.findChild(name: name, xmlns: xmlns);
     }
     
+    open func findChild(where body: (Element) -> Bool) -> Element? {
+        return self.element.findChild(where: body);
+    }
+    
     open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         return self.element.getChildren(name: name, xmlns: xmlns);
+    }
+    
+    open func getChildren(where body: (Element) -> Bool) -> Array<Element> {
+        return self.element.getChildren(where: body);
     }
     
     open func getAttribute(_ key:String) -> String? {
@@ -169,6 +177,10 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     
     open func removeChild(_ child: Element) {
         self.element.removeChild(child);
+    }
+    
+    open func removeChildren(where body: (Element)->Bool) {
+        self.element.removeChildren(where: body);
     }
     
     open func setAttribute(_ key:String, value:String?) {

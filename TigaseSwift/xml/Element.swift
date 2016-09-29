@@ -96,6 +96,14 @@ open class Element : Node, ElementProtocol {
         }
     }
     
+    public init(element: Element) {
+        self.name = element.name;
+        self.attributes_ = element.attributes;
+        super.init();
+        self.xmlns = element.xmlns;
+        self.nodes = element.nodes;
+    }
+    
     /**
      Add subelement
      - parameter child: element to add as subelement
@@ -139,6 +147,23 @@ open class Element : Node, ElementProtocol {
                     }
                 }
                 return elem;
+            }
+        }
+        return nil;
+    }
+    
+    /**
+     In subelements finds element for which passed closure returns true
+     - parameter where: element matcher
+     - returns: first element which matches
+     */
+    open func findChild(where body: (Element)->Bool) -> Element? {
+        for node in nodes {
+            if (node is Element) {
+                let elem = node as! Element;
+                if body(elem) {
+                    return elem;
+                }
             }
         }
         return nil;
@@ -234,6 +259,24 @@ open class Element : Node, ElementProtocol {
         }
         return result;
     }
+
+    /**
+     Finds every child element for which matcher returns true
+     - parameter where: matcher closure
+     - returns: array of matching elements
+     */
+    open func getChildren(where body: (Element)->Bool) -> Array<Element> {
+        var result = Array<Element>();
+        for node in nodes {
+            if (node is Element) {
+                let elem = node as! Element;
+                if body(elem) {
+                    result.append(elem);
+                }
+            }
+        }
+        return result;
+    }
     
     /**
      Returns value of attribute
@@ -250,6 +293,16 @@ open class Element : Node, ElementProtocol {
      */
     open func removeChild(_ child: Element) {
         self.removeNode(child);
+    }
+    
+    /**
+     Remove mathing elements from child elements
+     - parameter where: matcher closure
+     */
+    open func removeChildren(where body: (Element)->Bool) {
+        self.getChildren(where: body).forEach { (child) in
+            self.removeChild(child);
+        }
     }
     
     /**

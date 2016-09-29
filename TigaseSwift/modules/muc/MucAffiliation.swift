@@ -1,5 +1,5 @@
 //
-// Affiliation.swift
+// MucAffiliation.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -32,7 +32,7 @@ import Foundation
  Every affiliation contains properties which will tell 
  if action is allowed or not in this affiliation.
  */
-public enum Affiliation: String {
+public enum MucAffiliation: String {
     case owner
     case admin
     case member

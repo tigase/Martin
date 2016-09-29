@@ -93,11 +93,33 @@
 		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
 		FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514111CE9C3FB003AF765 /* MucModule.swift */; };
 		FEC514141CE9C4CA003AF765 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514131CE9C4CA003AF765 /* Room.swift */; };
-		FEC514161CE9C702003AF765 /* Role.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514151CE9C702003AF765 /* Role.swift */; };
-		FEC514181CE9C9AE003AF765 /* Affiliation.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514171CE9C9AE003AF765 /* Affiliation.swift */; };
-		FEC5141A1CE9CC2A003AF765 /* Occupant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514191CE9CC2A003AF765 /* Occupant.swift */; };
+		FEC514161CE9C702003AF765 /* MucRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514151CE9C702003AF765 /* MucRole.swift */; };
+		FEC514181CE9C9AE003AF765 /* MucAffiliation.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514171CE9C9AE003AF765 /* MucAffiliation.swift */; };
+		FEC5141A1CE9CC2A003AF765 /* MucOccupant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514191CE9CC2A003AF765 /* MucOccupant.swift */; };
 		FEC5141C1CE9CD8F003AF765 /* XMucUserElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */; };
 		FEC5141E1CE9E012003AF765 /* DefaultRoomsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */; };
+		FEDCBF6E1D9D689300AE9129 /* PubSubModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF6D1D9D689300AE9129 /* PubSubModule.swift */; };
+		FEDCBF771D9E9C5C00AE9129 /* JabberDataElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF761D9E9C5C00AE9129 /* JabberDataElement.swift */; };
+		FEDCBF791D9E9C6F00AE9129 /* TextSingleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF781D9E9C6F00AE9129 /* TextSingleField.swift */; };
+		FEDCBF7D1D9EAB1100AE9129 /* SingleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF7C1D9EAB1100AE9129 /* SingleField.swift */; };
+		FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF7E1D9EC2FE00AE9129 /* ListSingleField.swift */; };
+		FEDCBF811D9EC64A00AE9129 /* JidSingleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF801D9EC64A00AE9129 /* JidSingleField.swift */; };
+		FEDCBF831D9EC72900AE9129 /* TextPrivateField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF821D9EC72900AE9129 /* TextPrivateField.swift */; };
+		FEDCBF851D9EC75500AE9129 /* HiddenField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF841D9EC75500AE9129 /* HiddenField.swift */; };
+		FEDCBF871D9EC77300AE9129 /* BooleanField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF861D9EC77300AE9129 /* BooleanField.swift */; };
+		FEDCBF891D9EC7FB00AE9129 /* FixedField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF881D9EC7FB00AE9129 /* FixedField.swift */; };
+		FEDCBF8B1D9EC87200AE9129 /* MultiField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF8A1D9EC87200AE9129 /* MultiField.swift */; };
+		FEDCBF8D1D9EC97100AE9129 /* ListField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF8C1D9EC97100AE9129 /* ListField.swift */; };
+		FEDCBF8F1D9EC98900AE9129 /* ListMultiField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF8E1D9EC98900AE9129 /* ListMultiField.swift */; };
+		FEDCBF911D9EC9DD00AE9129 /* JidMultiField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF901D9EC9DD00AE9129 /* JidMultiField.swift */; };
+		FEDCBF931D9ECA8400AE9129 /* TextMultiField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF921D9ECA8400AE9129 /* TextMultiField.swift */; };
+		FEDCBF951D9EE20600AE9129 /* PubSubModuleOwnerExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF941D9EE20600AE9129 /* PubSubModuleOwnerExtension.swift */; };
+		FEDCBF971D9EEB1D00AE9129 /* PubSubSubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF961D9EEB1D00AE9129 /* PubSubSubscription.swift */; };
+		FEDCBF991D9FB79800AE9129 /* PubSubAffiliation.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF981D9FB79800AE9129 /* PubSubAffiliation.swift */; };
+		FEDCBF9B1D9FBE2000AE9129 /* PubSubModulePublisherExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF9A1D9FBE2000AE9129 /* PubSubModulePublisherExtension.swift */; };
+		FEDCBF9D1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF9C1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift */; };
+		FEDCBF9F1D9FDDD100AE9129 /* RSM.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBF9E1D9FDDD100AE9129 /* RSM.swift */; };
+		FEDCBFA11DA003E600AE9129 /* PubSubErrorCondition.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBFA01DA003E600AE9129 /* PubSubErrorCondition.swift */; };
 		FEDE939D1D0C747100CA60A9 /* InBandRegistrationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */; };
 		FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */; };
 /* End PBXBuildFile section */
@@ -203,11 +225,33 @@
 		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
 		FEC514111CE9C3FB003AF765 /* MucModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucModule.swift; sourceTree = "<group>"; };
 		FEC514131CE9C4CA003AF765 /* Room.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
-		FEC514151CE9C702003AF765 /* Role.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Role.swift; sourceTree = "<group>"; };
-		FEC514171CE9C9AE003AF765 /* Affiliation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Affiliation.swift; sourceTree = "<group>"; };
-		FEC514191CE9CC2A003AF765 /* Occupant.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Occupant.swift; sourceTree = "<group>"; };
+		FEC514151CE9C702003AF765 /* MucRole.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucRole.swift; sourceTree = "<group>"; };
+		FEC514171CE9C9AE003AF765 /* MucAffiliation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucAffiliation.swift; sourceTree = "<group>"; };
+		FEC514191CE9CC2A003AF765 /* MucOccupant.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucOccupant.swift; sourceTree = "<group>"; };
 		FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMucUserElement.swift; sourceTree = "<group>"; };
 		FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultRoomsManager.swift; sourceTree = "<group>"; };
+		FEDCBF6D1D9D689300AE9129 /* PubSubModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubModule.swift; sourceTree = "<group>"; };
+		FEDCBF761D9E9C5C00AE9129 /* JabberDataElement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JabberDataElement.swift; sourceTree = "<group>"; };
+		FEDCBF781D9E9C6F00AE9129 /* TextSingleField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextSingleField.swift; sourceTree = "<group>"; };
+		FEDCBF7C1D9EAB1100AE9129 /* SingleField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SingleField.swift; sourceTree = "<group>"; };
+		FEDCBF7E1D9EC2FE00AE9129 /* ListSingleField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListSingleField.swift; sourceTree = "<group>"; };
+		FEDCBF801D9EC64A00AE9129 /* JidSingleField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JidSingleField.swift; sourceTree = "<group>"; };
+		FEDCBF821D9EC72900AE9129 /* TextPrivateField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextPrivateField.swift; sourceTree = "<group>"; };
+		FEDCBF841D9EC75500AE9129 /* HiddenField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HiddenField.swift; sourceTree = "<group>"; };
+		FEDCBF861D9EC77300AE9129 /* BooleanField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BooleanField.swift; sourceTree = "<group>"; };
+		FEDCBF881D9EC7FB00AE9129 /* FixedField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FixedField.swift; sourceTree = "<group>"; };
+		FEDCBF8A1D9EC87200AE9129 /* MultiField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiField.swift; sourceTree = "<group>"; };
+		FEDCBF8C1D9EC97100AE9129 /* ListField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListField.swift; sourceTree = "<group>"; };
+		FEDCBF8E1D9EC98900AE9129 /* ListMultiField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListMultiField.swift; sourceTree = "<group>"; };
+		FEDCBF901D9EC9DD00AE9129 /* JidMultiField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JidMultiField.swift; sourceTree = "<group>"; };
+		FEDCBF921D9ECA8400AE9129 /* TextMultiField.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextMultiField.swift; sourceTree = "<group>"; };
+		FEDCBF941D9EE20600AE9129 /* PubSubModuleOwnerExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubModuleOwnerExtension.swift; sourceTree = "<group>"; };
+		FEDCBF961D9EEB1D00AE9129 /* PubSubSubscription.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubSubscription.swift; sourceTree = "<group>"; };
+		FEDCBF981D9FB79800AE9129 /* PubSubAffiliation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubAffiliation.swift; sourceTree = "<group>"; };
+		FEDCBF9A1D9FBE2000AE9129 /* PubSubModulePublisherExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubModulePublisherExtension.swift; sourceTree = "<group>"; };
+		FEDCBF9C1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubModuleSubscriberExtension.swift; sourceTree = "<group>"; };
+		FEDCBF9E1D9FDDD100AE9129 /* RSM.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RSM.swift; sourceTree = "<group>"; };
+		FEDCBFA01DA003E600AE9129 /* PubSubErrorCondition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubErrorCondition.swift; sourceTree = "<group>"; };
 		FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InBandRegistrationModule.swift; sourceTree = "<group>"; };
 		FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVersionModule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -257,6 +301,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FEDCBF6C1D9D688300AE9129 /* pubsub */,
 				FE7F64551D28173600B9DF56 /* caps */,
 				FEC514101CE9C3EC003AF765 /* muc */,
 				FE94E50D1CCA303900FAE755 /* chat */,
@@ -362,6 +407,7 @@
 		FE3F33D51CA1CBB9001A5CD6 /* TigaseSwift */ = {
 			isa = PBXGroup;
 			children = (
+				FEDCBF731D9E9C0900AE9129 /* xmpp */,
 				FE3024331CE20C1900466497 /* crypto */,
 				FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */,
 				FE9A1ED01CC5386100D0509D /* util */,
@@ -465,13 +511,57 @@
 			children = (
 				FEC514111CE9C3FB003AF765 /* MucModule.swift */,
 				FEC514131CE9C4CA003AF765 /* Room.swift */,
-				FEC514151CE9C702003AF765 /* Role.swift */,
-				FEC514171CE9C9AE003AF765 /* Affiliation.swift */,
-				FEC514191CE9CC2A003AF765 /* Occupant.swift */,
+				FEC514151CE9C702003AF765 /* MucRole.swift */,
+				FEC514171CE9C9AE003AF765 /* MucAffiliation.swift */,
+				FEC514191CE9CC2A003AF765 /* MucOccupant.swift */,
 				FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */,
 				FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */,
 			);
 			path = muc;
+			sourceTree = "<group>";
+		};
+		FEDCBF6C1D9D688300AE9129 /* pubsub */ = {
+			isa = PBXGroup;
+			children = (
+				FEDCBF6D1D9D689300AE9129 /* PubSubModule.swift */,
+				FEDCBF941D9EE20600AE9129 /* PubSubModuleOwnerExtension.swift */,
+				FEDCBF961D9EEB1D00AE9129 /* PubSubSubscription.swift */,
+				FEDCBF981D9FB79800AE9129 /* PubSubAffiliation.swift */,
+				FEDCBF9A1D9FBE2000AE9129 /* PubSubModulePublisherExtension.swift */,
+				FEDCBF9C1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift */,
+				FEDCBFA01DA003E600AE9129 /* PubSubErrorCondition.swift */,
+			);
+			path = pubsub;
+			sourceTree = "<group>";
+		};
+		FEDCBF731D9E9C0900AE9129 /* xmpp */ = {
+			isa = PBXGroup;
+			children = (
+				FEDCBF751D9E9C1100AE9129 /* forms */,
+				FEDCBF9E1D9FDDD100AE9129 /* RSM.swift */,
+			);
+			path = xmpp;
+			sourceTree = "<group>";
+		};
+		FEDCBF751D9E9C1100AE9129 /* forms */ = {
+			isa = PBXGroup;
+			children = (
+				FEDCBF761D9E9C5C00AE9129 /* JabberDataElement.swift */,
+				FEDCBF781D9E9C6F00AE9129 /* TextSingleField.swift */,
+				FEDCBF7C1D9EAB1100AE9129 /* SingleField.swift */,
+				FEDCBF7E1D9EC2FE00AE9129 /* ListSingleField.swift */,
+				FEDCBF801D9EC64A00AE9129 /* JidSingleField.swift */,
+				FEDCBF821D9EC72900AE9129 /* TextPrivateField.swift */,
+				FEDCBF841D9EC75500AE9129 /* HiddenField.swift */,
+				FEDCBF861D9EC77300AE9129 /* BooleanField.swift */,
+				FEDCBF881D9EC7FB00AE9129 /* FixedField.swift */,
+				FEDCBF8A1D9EC87200AE9129 /* MultiField.swift */,
+				FEDCBF8C1D9EC97100AE9129 /* ListField.swift */,
+				FEDCBF8E1D9EC98900AE9129 /* ListMultiField.swift */,
+				FEDCBF901D9EC9DD00AE9129 /* JidMultiField.swift */,
+				FEDCBF921D9ECA8400AE9129 /* TextMultiField.swift */,
+			);
+			path = forms;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -603,7 +693,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FEC514181CE9C9AE003AF765 /* Affiliation.swift in Sources */,
+				FEDCBF971D9EEB1D00AE9129 /* PubSubSubscription.swift in Sources */,
+				FEC514181CE9C9AE003AF765 /* MucAffiliation.swift in Sources */,
 				FE94E50C1CC90C6400FAE755 /* PresenceStore.swift in Sources */,
 				FE2EFDA41CB680A2000D254E /* Stanza.swift in Sources */,
 				FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */,
@@ -615,6 +706,7 @@
 				FE2EFDAF1CB825D0000D254E /* XmppSessionLogic.swift in Sources */,
 				FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */,
 				FE2EFDB11CB91549000D254E /* PacketWriter.swift in Sources */,
+				FEDCBF891D9EC7FB00AE9129 /* FixedField.swift in Sources */,
 				FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */,
 				FE2EFD781CB57C70000D254E /* XMPPDNSSrvResolver.swift in Sources */,
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,
@@ -632,23 +724,33 @@
 				FE3024351CE20C2300466497 /* Crypto.swift in Sources */,
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
+				FEDCBF8D1D9EC97100AE9129 /* ListField.swift in Sources */,
+				FEDCBF771D9E9C5C00AE9129 /* JabberDataElement.swift in Sources */,
 				FE3A45D31CE7289600C36264 /* Zlib.swift in Sources */,
-				FEC514161CE9C702003AF765 /* Role.swift in Sources */,
+				FEC514161CE9C702003AF765 /* MucRole.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
+				FEDCBF811D9EC64A00AE9129 /* JidSingleField.swift in Sources */,
 				FE94E5131CCA3E9700FAE755 /* DefaultChatManager.swift in Sources */,
 				FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */,
 				FE2EFDB51CBD0A64000D254E /* SaslError.swift in Sources */,
 				FE2EFDB71CBD1DE7000D254E /* ResourceBinderModule.swift in Sources */,
+				FEDCBF9B1D9FBE2000AE9129 /* PubSubModulePublisherExtension.swift in Sources */,
+				FEDCBF8F1D9EC98900AE9129 /* ListMultiField.swift in Sources */,
 				FE94E50F1CCA306300FAE755 /* MessageModule.swift in Sources */,
+				FEDCBFA11DA003E600AE9129 /* PubSubErrorCondition.swift in Sources */,
 				FE2EFD9E1CB67145000D254E /* ContextAware.swift in Sources */,
 				FE94E5051CC8DE5A00FAE755 /* RosterCacheProvider.swift in Sources */,
+				FEDCBF991D9FB79800AE9129 /* PubSubAffiliation.swift in Sources */,
 				FE94E5011CC7C26300FAE755 /* DefaultRosterStore.swift in Sources */,
 				FE2EFD9A1CB66DA9000D254E /* StreamFeaturesModule.swift in Sources */,
 				FE2EFD7A1CB57C70000D254E /* BareJID.swift in Sources */,
 				FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */,
+				FEDCBF831D9EC72900AE9129 /* TextPrivateField.swift in Sources */,
+				FEDCBF9F1D9FDDD100AE9129 /* RSM.swift in Sources */,
 				FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */,
 				FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */,
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
+				FEDCBF6E1D9D689300AE9129 /* PubSubModule.swift in Sources */,
 				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,
 				FE3024301CE0D7F300466497 /* VCardModule.swift in Sources */,
 				FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */,
@@ -656,9 +758,13 @@
 				FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */,
 				FE2EFD791CB57C70000D254E /* XMPPSrvRecord.swift in Sources */,
 				FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */,
+				FEDCBF8B1D9EC87200AE9129 /* MultiField.swift in Sources */,
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
+				FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */,
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
+				FEDCBF9D1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift in Sources */,
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
+				FEDCBF851D9EC75500AE9129 /* HiddenField.swift in Sources */,
 				FE2EFD7B1CB57C70000D254E /* JID.swift in Sources */,
 				FE2EFE201CC417D9000D254E /* XMLParser.swift in Sources */,
 				FEC514141CE9C4CA003AF765 /* Room.swift in Sources */,
@@ -667,7 +773,10 @@
 				FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */,
 				FE2EFD981CB66C0C000D254E /* DefaultCredentialsCallback.swift in Sources */,
 				FEDE939D1D0C747100CA60A9 /* InBandRegistrationModule.swift in Sources */,
+				FEDCBF7D1D9EAB1100AE9129 /* SingleField.swift in Sources */,
 				FE94E5151CCB847200FAE755 /* ChatStore.swift in Sources */,
+				FEDCBF951D9EE20600AE9129 /* PubSubModuleOwnerExtension.swift in Sources */,
+				FEDCBF911D9EC9DD00AE9129 /* JidMultiField.swift in Sources */,
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,
 				FE2EFD761CB57C70000D254E /* DNSSrv.c in Sources */,
@@ -676,8 +785,10 @@
 				FE7361D01D2A4F8B00EFEA64 /* AnonymousMechanism.swift in Sources */,
 				FE2EFDAD1CB80E7A000D254E /* EventHandler.swift in Sources */,
 				FE2EFDB91CBD231B000D254E /* ResponseManager.swift in Sources */,
+				FEDCBF791D9E9C6F00AE9129 /* TextSingleField.swift in Sources */,
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
-				FEC5141A1CE9CC2A003AF765 /* Occupant.swift in Sources */,
+				FEC5141A1CE9CC2A003AF765 /* MucOccupant.swift in Sources */,
+				FEDCBF871D9EC77300AE9129 /* BooleanField.swift in Sources */,
 				FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */,
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,
 				FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */,
@@ -688,6 +799,7 @@
 				FE3024241CDD1C6B00466497 /* Delay.swift in Sources */,
 				FE2EFD941CB66B0E000D254E /* AuthModule.swift in Sources */,
 				FE3F33EE1CA1CDFC001A5CD6 /* XMPPStreamDelegate.swift in Sources */,
+				FEDCBF931D9ECA8400AE9129 /* TextMultiField.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,5 +1,5 @@
 //
-// Role.swift
+// MucRole.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -31,7 +31,7 @@ import Foundation
  Every role contains properties which describes what user 
  in particular role can and cannot do.
  */
-public enum Role: String {
+public enum MucRole: String {
     
     case moderator
     case participant

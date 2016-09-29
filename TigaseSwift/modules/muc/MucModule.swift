@@ -240,7 +240,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         
         var occupant = room.presences[nickname!];
         let presenceOld = occupant?.presence;
-        occupant = Occupant(occupant: occupant, presence: presence);
+        occupant = MucOccupant(occupant: occupant, presence: presence);
         
         if (presenceOld != nil && presenceOld!.type == nil) && type == StanzaType.unavailable && xUser?.statuses.index(of: 303) != nil {
             let newNickName = xUser?.nick;
@@ -432,7 +432,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         /// Room in which occupant changed nickname
         open let room: Room!;
         /// Occupant
-        open let occupant: Occupant!;
+        open let occupant: MucOccupant!;
         /// Nickname of occupant
         open let nickname: String?;
         
@@ -444,7 +444,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             self.nickname = nil;
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: Occupant, nickname: String?) {
+        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?) {
             self.sessionObject = sessionObject;
             self.presence = presence;
             self.room = room;
@@ -466,7 +466,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         /// Room in which occupant changed presence
         open let room: Room!;
         /// Occupant which changed presence
-        open let occupant: Occupant!;
+        open let occupant: MucOccupant!;
         /// Occupant nickname
         open let nickname: String?;
         /// Additional informations from new presence
@@ -481,7 +481,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             self.xUser = nil;
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: Occupant, nickname: String?, xUser: XMucUserElement?) {
+        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
             self.sessionObject = sessionObject;
             self.presence = presence;
             self.room = room;
@@ -504,7 +504,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         /// Room to which occupant entered
         open let room: Room!;
         /// Occupant
-        open let occupant: Occupant!;
+        open let occupant: MucOccupant!;
         /// Occupant nickname
         open let nickname: String?;
         /// Additonal informations about occupant
@@ -519,7 +519,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             self.xUser = nil;
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: Occupant, nickname: String?, xUser: XMucUserElement?) {
+        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
             self.sessionObject = sessionObject;
             self.presence = presence;
             self.room = room;
@@ -542,7 +542,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         /// Room which occupant left
         open let room: Room!;
         /// Occupant
-        open let occupant: Occupant!;
+        open let occupant: MucOccupant!;
         /// Nickname of occupant
         open let nickname: String?;
         /// Additional informations about occupant
@@ -557,7 +557,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             self.xUser = nil;
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: Occupant, nickname: String?, xUser: XMucUserElement?) {
+        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
             self.sessionObject = sessionObject;
             self.presence = presence;
             self.room = room;

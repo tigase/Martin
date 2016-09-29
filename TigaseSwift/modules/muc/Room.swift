@@ -101,10 +101,10 @@ open class Room: ChatProtocol, ContextAware {
         }
     }
     
-    fileprivate var _presences = [String: Occupant]();
+    fileprivate var _presences = [String: MucOccupant]();
     /// Room occupants
-    open var presences: [String: Occupant] {
-        var result: [String: Occupant]!;
+    open var presences: [String: MucOccupant] {
+        var result: [String: MucOccupant]!;
         Room.queue.sync {
             result = self._presences;
         }
@@ -125,10 +125,10 @@ open class Room: ChatProtocol, ContextAware {
     
     fileprivate static let queue = DispatchQueue(label: "room_queue", attributes: DispatchQueue.Attributes.concurrent);
     
-    fileprivate var _tempOccupants = [String:Occupant]();
+    fileprivate var _tempOccupants = [String:MucOccupant]();
     /// Temporary occupants
-    open var tempOccupants: [String:Occupant] {
-        var result: [String: Occupant]!;
+    open var tempOccupants: [String:MucOccupant] {
+        var result: [String: MucOccupant]!;
         Room.queue.sync {
             result = self._tempOccupants;
         }
@@ -259,26 +259,26 @@ open class Room: ChatProtocol, ContextAware {
         return message;
     }
     
-    open func add(occupant: Occupant) {
+    open func add(occupant: MucOccupant) {
         Room.queue.async(flags: .barrier, execute: {
             self._presences[occupant.nickname] = occupant;
         }) 
     }
     
-    open func remove(occupant: Occupant) {
+    open func remove(occupant: MucOccupant) {
         Room.queue.async(flags: .barrier, execute: {
             self._presences.removeValue(forKey: occupant.nickname);
         }) 
     }
     
-    open func addTemp(nickname: String, occupant: Occupant) {
+    open func addTemp(nickname: String, occupant: MucOccupant) {
         Room.queue.async(flags: .barrier, execute: {
             self._tempOccupants[nickname] = occupant;
         }) 
     }
     
-    open func removeTemp(nickname: String) -> Occupant? {
-        var result: Occupant?;
+    open func removeTemp(nickname: String) -> MucOccupant? {
+        var result: MucOccupant?;
         Room.queue.sync(flags: .barrier, execute: {
             result = self._tempOccupants.removeValue(forKey: nickname);
         }) 

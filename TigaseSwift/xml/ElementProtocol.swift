@@ -42,14 +42,26 @@ public protocol ElementProtocol {
      - parameter xmlns: xmlns of element to find
      - returns: first found element if any
      */
-    func findChild(name:String?, xmlns:String?) -> Element?;
+    func findChild(name: String?, xmlns: String?) -> Element?;
+    /**
+     In subelements finds element for which passed closure returns true
+     - parameter where: element matcher
+     - returns: first element which matches
+     */
+    func findChild(where: (Element)->Bool) -> Element?;
     /**
      Find child elements matching name and xmlns
      - parameter name: name of element
      - parameter xmlns: xmlns of element
      - returns: array of matching child elements
      */
-    func getChildren(name:String?, xmlns:String?) -> Array<Element>;
+    func getChildren(name: String?, xmlns: String?) -> Array<Element>;
+    /**
+     Finds every child element for which matcher returns true
+     - parameter where: matcher closure
+     - returns: array of matching elements
+     */
+    func getChildren(where: (Element)->Bool) -> Array<Element>;
     /**
      Get value for attribute
      - parameter key: attribute
@@ -62,10 +74,15 @@ public protocol ElementProtocol {
      */
     func removeChild(_ child: Element);
     /**
+     Remove mathing elements from child elements
+     - parameter where: matcher closure
+     */
+    func removeChildren(where: (Element)->Bool);
+    /**
      Set value for attribute
      - parameter key: attribute
      - parameter value: value to set
      */
-    func setAttribute(_ key:String, value:String?);
+    func setAttribute(_ key: String, value: String?);
     
 }

@@ -1,5 +1,5 @@
 //
-// Occupant.swift
+// MucOccupant.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -24,15 +24,15 @@ import Foundation
 /**
  Class is representation of MUC room occupant
  */
-open class Occupant {
+open class MucOccupant {
     
-    open let affiliation: Affiliation;
-    open let role: Role;
+    open let affiliation: MucAffiliation;
+    open let role: MucRole;
     open let jid: JID?;
     open let presence: Presence;
     open let nickname: String;
     
-    public init(occupant: Occupant? = nil, presence: Presence) {
+    public init(occupant: MucOccupant? = nil, presence: Presence) {
         nickname = presence.from!.resource!;
         self.presence = presence;
         if let xUser = XMucUserElement.extract(from: presence) {
