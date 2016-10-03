@@ -147,12 +147,16 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
     }
     
     /// Instace which contains item id and payload in single object
-    open class Item {
+    open class Item: CustomStringConvertible {
         
         /// Item id
         open let id: String;
         /// Item payload
         open let payload: Element;
+        
+        open var description: String {
+            return "[id: " + id + ", payload: " + payload.stringValue + "]";
+        }
         
         public init(id: String, payload: Element) {
             self.id = id;

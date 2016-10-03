@@ -46,3 +46,12 @@ In this example you can find how to join to room, send message to room and handl
 ----
 include::../files/examples/MucClient.swift[]
 ----
+
+== Simple client with support for PubSub
+
+In this example you can find how to create PubSub node, publish item, receive notifications, retrieve items and delete PubSub node.
+
+[source,swift]
+----
+include::../files/examples/PubSubClient.swift[]
+----

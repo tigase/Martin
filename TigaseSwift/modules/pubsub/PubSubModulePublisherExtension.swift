@@ -38,7 +38,7 @@ extension PubSubModulePublisherExtension {
      - parameter onSuccess: called when request succeeds - passes instance of response stanza, node name and item id
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
-    public func publishItem(at pubSubJid: BareJID, to nodeName: String, itemId: String? = nil, payload: Element, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         let callback = createCallback(onSuccess: { (stanza) in
             let publishEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)!.findChild(name: "publish")!;
             let node = publishEl.getAttribute("node")!;
@@ -58,10 +58,12 @@ extension PubSubModulePublisherExtension {
      - parameter payload: item payload
      - parameter callback: called when response is received or request times out
      */
-    public func publishItem(at pubSubJid: BareJID, to nodeName: String, itemId: String? = nil, payload: Element, callback: ((Stanza?)->Void)?) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = JID(pubSubJid);
+        if pubSubJid != nil {
+            iq.to = JID(pubSubJid!);
+        }
         
         let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
         iq.addChild(pubsub);
@@ -87,7 +89,7 @@ extension PubSubModulePublisherExtension {
      - parameter onSuccess: called when request succeeds - passes instance of response stanza
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
-    public func retractItem(at pubSubJid: BareJID, from nodeName: String, itemId: String, onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         let callback = createCallback(onSuccess: onSuccess, onError: onError);
         
         self.retractItem(at: pubSubJid, from: nodeName, itemId: itemId, callback: callback);
@@ -100,10 +102,12 @@ extension PubSubModulePublisherExtension {
      - parameter itemId: id of item
      - parameter callback: called when response is received or request times out
      */
-    public func retractItem(at pubSubJid: BareJID, from nodeName: String, itemId: String, callback: ((Stanza?)->Void)?) {
+    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = JID(pubSubJid);
+        if pubSubJid != nil {
+            iq.to = JID(pubSubJid!);
+        }
         
         let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
         iq.addChild(pubsub);
