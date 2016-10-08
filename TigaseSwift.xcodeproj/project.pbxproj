@@ -66,6 +66,7 @@
 		FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */; };
 		FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */; };
 		FE7361D01D2A4F8B00EFEA64 /* AnonymousMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */; };
+		FE752D611DA50D45006884B9 /* PEPUserAvatarModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */; };
 		FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */; };
 		FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */; };
 		FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */; };
@@ -91,6 +92,7 @@
 		FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */; };
 		FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */; };
 		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
+		FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */; };
 		FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514111CE9C3FB003AF765 /* MucModule.swift */; };
 		FEC514141CE9C4CA003AF765 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514131CE9C4CA003AF765 /* Room.swift */; };
 		FEC514161CE9C702003AF765 /* MucRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514151CE9C702003AF765 /* MucRole.swift */; };
@@ -198,6 +200,7 @@
 		FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClientStateIndicationModule.swift; sourceTree = "<group>"; };
 		FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScramMechanism.swift; sourceTree = "<group>"; };
 		FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnonymousMechanism.swift; sourceTree = "<group>"; };
+		FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PEPUserAvatarModule.swift; sourceTree = "<group>"; };
 		FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapabilitiesModule.swift; sourceTree = "<group>"; };
 		FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultCapabilitiesCache.swift; sourceTree = "<group>"; };
 		FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalQueueDispatcher.swift; sourceTree = "<group>"; };
@@ -223,6 +226,7 @@
 		FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElementProtocol.swift; sourceTree = "<group>"; };
 		FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCarbonsModule.swift; sourceTree = "<group>"; };
 		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
+		FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractPEPModule.swift; sourceTree = "<group>"; };
 		FEC514111CE9C3FB003AF765 /* MucModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucModule.swift; sourceTree = "<group>"; };
 		FEC514131CE9C4CA003AF765 /* Room.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
 		FEC514151CE9C702003AF765 /* MucRole.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucRole.swift; sourceTree = "<group>"; };
@@ -301,6 +305,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FE752D5F1DA50D35006884B9 /* pep */,
 				FEDCBF6C1D9D688300AE9129 /* pubsub */,
 				FE7F64551D28173600B9DF56 /* caps */,
 				FEC514101CE9C3EC003AF765 /* muc */,
@@ -450,6 +455,15 @@
 				FE3024251CDD1F6500466497 /* DelayTests.swift */,
 			);
 			path = TigaseSwiftTests;
+			sourceTree = "<group>";
+		};
+		FE752D5F1DA50D35006884B9 /* pep */ = {
+			isa = PBXGroup;
+			children = (
+				FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */,
+				FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */,
+			);
+			path = pep;
 			sourceTree = "<group>";
 		};
 		FE7F64551D28173600B9DF56 /* caps */ = {
@@ -778,6 +792,7 @@
 				FEDCBF951D9EE20600AE9129 /* PubSubModuleOwnerExtension.swift in Sources */,
 				FEDCBF911D9EC9DD00AE9129 /* JidMultiField.swift in Sources */,
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
+				FE752D611DA50D45006884B9 /* PEPUserAvatarModule.swift in Sources */,
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,
 				FE2EFD761CB57C70000D254E /* DNSSrv.c in Sources */,
 				FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */,
@@ -788,6 +803,7 @@
 				FEDCBF791D9E9C6F00AE9129 /* TextSingleField.swift in Sources */,
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
 				FEC5141A1CE9CC2A003AF765 /* MucOccupant.swift in Sources */,
+				FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */,
 				FEDCBF871D9EC77300AE9129 /* BooleanField.swift in Sources */,
 				FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */,
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,

@@ -60,7 +60,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     open var cache: CapabilitiesCache?;
     
     /// Node used in CAPS advertisement
-    open var nodeName = "http://tigase.org/TigaseSwift";
+    open var nodeName = "http://tigase.org/TigaseSwift" + "X";
     
     public init() {
         

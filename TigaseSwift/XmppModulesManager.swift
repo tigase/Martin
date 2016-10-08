@@ -127,6 +127,9 @@ open class XmppModulesManager : ContextAware {
                 self.filters.remove(at: idx);
             }
         }
+        if var contextAware = module as? ContextAware {
+            contextAware.context = nil;
+        }
         return module;
     }
     

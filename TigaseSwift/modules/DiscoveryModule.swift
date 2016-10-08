@@ -45,6 +45,9 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
     open static let ID = "discovery";
     
+    open static let SERVER_IDENTITY_TYPES_KEY = "serverIdentityTypes";
+    open static let SERVER_FEATURES_KEY = "serverFeatures";
+    
     open let id = ID;
     
     open var context:Context!;
@@ -86,6 +89,8 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     open func discoverServerFeatures(onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
             getInfo(for: JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
+                self.context.sessionObject.setProperty(DiscoveryModule.SERVER_IDENTITY_TYPES_KEY, value: identities);
+                self.context.sessionObject.setProperty(DiscoveryModule.SERVER_FEATURES_KEY, value: features)
                 self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
                 onInfoReceived?(node, identities, features);
                 }, onError: onError);
