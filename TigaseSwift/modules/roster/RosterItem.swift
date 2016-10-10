@@ -67,7 +67,7 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
         case remove
         case to
         
-        var isFrom: Bool {
+        public var isFrom: Bool {
             switch self {
             case .from, .both:
                 return true;
@@ -76,7 +76,7 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
             }
         }
         
-        var isTo: Bool {
+        public var isTo: Bool {
             switch self {
             case .to, .both:
                 return true;

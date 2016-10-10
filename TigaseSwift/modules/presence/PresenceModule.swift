@@ -167,9 +167,9 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
 
     /**
      Subscribed to JID
-     - parameter to: jid to subscribe
+     - parameter by: jid which is being subscribed
      */
-    open func subscribed(jid:JID) {
+    open func subscribed(by jid:JID) {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribed;
@@ -191,9 +191,9 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     
     /**
      Unsubscribed from JID
-     - parameter from: jid which is being unsubscribed
+     - parameter by: jid which is being unsubscribed
      */
-    open func unsubscribed(from jid:JID) {
+    open func unsubscribed(by jid:JID) {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.unsubscribed;
