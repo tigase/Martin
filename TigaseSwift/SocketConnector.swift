@@ -380,7 +380,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      This method will process any stanza before it will be sent to XMPP server.
      */
     func send(stanza:Stanza) {
-        sessionLogic.sendingOutgoingStanza(stanza);
+        sessionLogic?.sendingOutgoingStanza(stanza);
         self.send(data: stanza.element.stringValue)
     }
     
