@@ -62,7 +62,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
      */
     open var from:JID? {
         get {
-            if let jidStr = element.getAttribute("from") {
+            if from_ == nil, let jidStr = element.getAttribute("from") {
                 from_ = JID(jidStr);
             }
             return from_;
@@ -82,7 +82,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
      */
     open var to:JID? {
         get {
-            if let jidStr = element.getAttribute("to") {
+            if to_ == nil, let jidStr = element.getAttribute("to") {
                 to_ = JID(jidStr);
             }
             return to_;

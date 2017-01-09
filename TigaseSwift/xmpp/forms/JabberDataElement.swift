@@ -76,11 +76,11 @@ open class JabberDataElement {
         self.init(from: elem)!;
     }
     
-    public init?(from element: Element) {
-        guard element.name == "x" && element.xmlns == "jabber:x:data" else {
+    public init?(from element: Element?) {
+        guard element?.name == "x" && element?.xmlns == "jabber:x:data" else {
             return nil;
         }
-        self.element = element;
+        self.element = element!;
     }
     
     open func addField(_ field: Field) {

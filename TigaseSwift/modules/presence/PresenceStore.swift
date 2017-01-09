@@ -138,7 +138,7 @@ open class PresenceStore {
         var result = false;
         if let from = presence.from {
             queue.sync(flags: .barrier, execute: {
-                self.presenceByJid[from] = presence;
+                self.presenceByJid.updateValue(presence, forKey: from);
                 var byResource = self.presencesMapByBareJid[from.bareJid] ?? [String:Presence]();
                 byResource[from.resource ?? ""] = presence;
                 self.presencesMapByBareJid[from.bareJid] = byResource;

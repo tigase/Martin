@@ -47,6 +47,10 @@ open class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
         }
     }
     
+    open var withoutResource: JID {
+        return JID(bareJid);
+    }
+    
     /**
      Create instance
      - parameter jid: instance of BareJID

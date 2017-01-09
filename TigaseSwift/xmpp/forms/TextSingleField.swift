@@ -23,9 +23,12 @@ open class TextSingleField: Field, SingleField {
         super.init(from: from);
     }
     
-    public convenience init(name: String, label: String? = nil, desc: String? = nil, required: Bool = false) {
+    public convenience init(name: String, label: String? = nil, desc: String? = nil, required: Bool = false, value: String? = nil) {
         let elem = Field.createFieldElement(name: name, type: "text-single", label: label, desc: desc, required: required);
         self.init(from: elem)!;
+        if (value != nil) {
+            self.value = value;
+        }
     }
     
 }
