@@ -126,6 +126,63 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     }
     
     /**
+     Retrieve configuration of MUC room (only room owner is allowed to do so)
+     - parameter roomJid: jid of MUC room
+     - parameter onSuccess: called where response with result is received
+     - parameter onError: called when received error or request timed out
+     */
+    open func getRoomConfiguration(roomJid: JID, onSuccess: @escaping (JabberDataElement)->Void, onError: ((ErrorCondition?)->Void)?) {
+        let iq = Iq();
+        iq.type = StanzaType.get;
+        iq.to = roomJid;
+        
+        iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
+        context.writer?.write(iq, callback: {(stanza:Stanza?) in
+            let type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                let data = JabberDataElement(from: stanza!.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data"));
+                if data == nil {
+                    onError?(ErrorCondition.undefined_condition)
+                } else {
+                    onSuccess(data!);
+                }
+            default:
+                let errorCondition = stanza?.errorCondition;
+                onError?(errorCondition);
+            }
+        });
+    }
+    
+    /**
+     Set configuration of MUC room (only room owner is allowed to do so)
+     - parameter roomJid: jid of MUC room
+     - parameter configuration: room configuration
+     - parameter onSuccess: called where response with result is received
+     - parameter onError: called when received error or request timed out
+     */
+    open func setRoomConfiguration(roomJid: JID, configuration: JabberDataElement, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?)->Void)?) {
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        iq.to = roomJid;
+        
+        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
+        iq.addChild(query);
+        query.addChild(configuration.submitableElement(type: .submit));
+        
+        context.writer?.write(iq, callback: {(stanza:Stanza?) in
+            let type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                onSuccess();
+            default:
+                let errorCondition = stanza?.errorCondition;
+                onError?(errorCondition);
+            }
+        });
+    }
+    
+    /**
      Invite user to MUC room
      - parameter room: room for invitation
      - parameter invitee: user to invite
