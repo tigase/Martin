@@ -489,7 +489,13 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         case Stream.Event.hasSpaceAvailable:
             log("stream event: HasSpaceAvailable");
             if sslCertificateValidated == nil {
-                let trust = self.inStream?.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLPeerTrust as String as String)) as! SecTrust;
+                let trustVal = self.inStream?.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLPeerTrust as String));
+                guard trustVal != nil else {
+                    self.closeSocket(newState: .disconnected);
+                    return;
+                }
+                
+                let trust: SecTrust = trustVal as! SecTrust;
                 
                 let sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = context.sessionObject.getProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR);
                 if sslCertificateValidator != nil {
