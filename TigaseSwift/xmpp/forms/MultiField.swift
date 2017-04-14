@@ -8,15 +8,17 @@
 
 import Foundation
 
-public protocol MultiField: class {
+public protocol MultiField: class, ValidatableField {
     
     var element: Element { get }
     
     var rawValue: [String] { get set }
     
+    var required: Bool { get set }
+    
 }
 
-extension MultiField {
+public extension MultiField {
     
     public var rawValue: [String] {
         get {
@@ -29,5 +31,8 @@ extension MultiField {
             }
         }
     }
-    
+ 
+    public var valid: Bool {
+        return (!self.required) || !rawValue.isEmpty;
+    }
 }

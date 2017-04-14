@@ -13,7 +13,7 @@ open class BooleanField: Field, SingleField {
     open var value: Bool {
         get {
             let v = rawValue;
-            return v != nil && (v == "!" || v == "true");
+            return v != nil && (v == "1" || v == "true");
         }
         set {
             self.rawValue = newValue ? "1" : "0";
@@ -24,9 +24,14 @@ open class BooleanField: Field, SingleField {
         super.init(from: from);
     }
     
-    public convenience init(name: String, label: String? = nil, desc: String? = nil, required: Bool = false) {
+    public convenience init(name: String, label: String? = nil, desc: String? = nil, required: Bool = false, value: Bool = false) {
         let elem = Field.createFieldElement(name: name, type: "boolean", label: label, desc: desc, required: required);
         self.init(from: elem)!;
+        initValue(value);
+    }
+    
+    fileprivate func initValue(_ value: Bool) {
+        self.value = value;
     }
     
 }

@@ -8,15 +8,17 @@
 
 import Foundation
 
-public protocol SingleField: class {
+public protocol SingleField: class, ValidatableField {
     
     var element: Element { get }
     
     var rawValue: String? { get set }
     
+    var required: Bool { get set }
+
 }
 
-extension SingleField {
+public extension SingleField {
     
     public var rawValue: String? {
         get {
@@ -35,5 +37,8 @@ extension SingleField {
             }
         }
     }
-        
+    
+    public var valid: Bool {
+        return (!self.required) || rawValue != nil;
+    }
 }

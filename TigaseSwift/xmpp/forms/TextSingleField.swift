@@ -26,9 +26,11 @@ open class TextSingleField: Field, SingleField {
     public convenience init(name: String, label: String? = nil, desc: String? = nil, required: Bool = false, value: String? = nil) {
         let elem = Field.createFieldElement(name: name, type: "text-single", label: label, desc: desc, required: required);
         self.init(from: elem)!;
-        if (value != nil) {
-            self.value = value;
-        }
+        initValue(value);
+    }
+    
+    fileprivate func initValue(_ value: String?) {
+        self.value = value;
     }
     
 }

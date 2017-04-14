@@ -58,7 +58,7 @@ open class XMPPDNSSrvResolver : Logger {
                 let resolver:XMPPDNSSrvResolver = XMPPDNSSrvResolver.bridge(resolverPtr!);
                 resolver.resolved();
         });
-        log("dns returned code: ", err);
+        log("dns returned code: ", err, "for _xmpp-client._tcp. at", domain);
     }
     
     /**

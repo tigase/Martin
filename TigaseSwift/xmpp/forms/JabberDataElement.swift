@@ -22,6 +22,18 @@ open class JabberDataElement {
         return names;
     }
     
+    open var visibleFieldNames: [String] {
+        var names = [String]();
+        element.forEachChild(name: "field") { (fieldEl) in
+            if fieldEl.getAttribute("type") != "hidden" {
+                if let name = fieldEl.getAttribute("var") {
+                    names.append(name);
+                }
+            }
+        }
+        return names;
+    }
+    
     open var instructions: [String?]? {
         get {
             let elems = element.getChildren(name: "instructions");
@@ -105,7 +117,8 @@ open class JabberDataElement {
     }
     
     open func wrapIntoField(elem: Element) -> Field? {
-        switch element.getAttribute("type") ?? "text-single" {
+        let type: String = elem.getAttribute("type") ?? "text-single";
+        switch type {
             case "boolean":
                 return BooleanField(from: elem);
             case "fixed":
@@ -122,7 +135,7 @@ open class JabberDataElement {
                 return ListSingleField(from: elem);
             case "text-multi":
                 return TextMultiField(from: elem);
-            case "text-privete":
+            case "text-private":
                 return TextPrivateField(from: elem);
             default:
                 return TextSingleField(from: elem);
@@ -212,4 +225,10 @@ public enum XDataType: String {
     case form
     case result
     case submit
+}
+
+public protocol ValidatableField {
+    
+    var valid: Bool { get }
+    
 }

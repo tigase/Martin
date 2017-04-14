@@ -8,13 +8,13 @@
 
 import Foundation
 
-protocol ListField: class {
+public protocol ListField: class {
     
     var element: Element { get }
     
 }
 
-extension ListField {
+public extension ListField {
     
     var options: [ListFieldOption] {
         get {
@@ -41,7 +41,7 @@ open class ListFieldOption {
     open let label: String?;
     open let value: String;
     
-    public init(value: String, label: String?) {
+    public init(value: String, label: String? = nil) {
         self.value = value;
         self.label = label;
     }

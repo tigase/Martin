@@ -79,6 +79,52 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     }
     
     /**
+     Retrieves registration form and call provided callback
+     - parameter from: destination JID for registration - useful for registration in transports
+     - parameter onSuccess: called when form is retrieved, or nil if there is no form
+     - parameter onError: called when server returned error
+     */
+    open func retrieveRegistrationForm(from jid: JID? = nil, onSuccess: @escaping (JabberDataElement?)->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
+        let iq = Iq();
+        iq.type = StanzaType.get;
+        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
+    
+        let query = Element(name: "query", xmlns: "jabber:iq:register");
+        
+        iq.addChild(query);
+        context.writer?.write(iq, callback: {(response) in
+            let type = response?.type ?? .error;
+            switch type {
+            case .result:
+                let form = JabberDataElement(from: response?.findChild(name: "query", xmlns: "jabber:iq:register")?.findChild(name: "x", xmlns: "jabber:x:data"));
+                onSuccess(form);
+            default:
+                onError(response?.errorCondition, response?.findChild(name: "error")?.findChild(name: "text")?.value);
+            }
+        });
+    }
+    
+    open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
+        
+        let query = Element(name: "query", xmlns: "jabber:iq:register");
+        query.addChild(form.submitableElement(type: .submit));
+        
+        iq.addChild(query);
+        context.writer?.write(iq, callback: {(response) in
+            let type = response?.type ?? .error;
+            switch type {
+            case .result:
+                onSuccess();
+            default:
+                onError(response?.errorCondition, response?.findChild(name: "error")?.findChild(name: "text")?.value);
+            }
+        });
+    }
+    
+    /**
      Unregisters currently connected and authenticated user
      - parameter callback: called when user is unregistrated
      */
@@ -134,7 +180,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
         client?.connectionConfiguration.setDomain(client!.sessionObject.domainName ?? userJid.domain);
         
-        let handler = RegistrationEventHandler(client: client!);
+        let handler = RegistrationEventHandlerOld(client: client!);
         handler.userJid = userJid;
         handler.password = password;
         handler.email = email;
@@ -146,7 +192,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         return client!;
     }
     
-    class RegistrationEventHandler: EventHandler {
+    class RegistrationEventHandlerOld: EventHandler {
         
         var client: XMPPClient! {
             willSet {
@@ -181,7 +227,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             client.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
         }
         
-        func handle(event: Event) {
+        public func handle(event: Event) {
             switch event {
             case is StreamFeaturesReceivedEvent:
                 // check registration possibility
@@ -234,4 +280,179 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         }
         
     }
+    
+    open class AccountRegistrationTask: EventHandler {
+        
+        var client: XMPPClient! {
+            willSet {
+                if newValue == nil && self.client != nil {
+                    let curr = self.client;
+                    client.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
+                    DispatchQueue.main.async {
+                        curr?.disconnect();
+                    }
+                }
+            }
+            didSet {
+                if client != nil {
+                    client.eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
+                }
+            }
+        };
+        var inBandRegistrationModule: InBandRegistrationModule!;
+        var onForm: ((JabberDataElement, AccountRegistrationTask)->Void)?;
+        var onSuccess: (()->Void)?;
+        var onError: ((ErrorCondition?, String?)->Void)?;
+        
+        var usesDataForm = false;
+        var formToSubmit: JabberDataElement?;
+        var serverAvailable: Bool = false;
+        
+        public init(client: XMPPClient? = nil, domainName: String, onForm: @escaping (JabberDataElement, InBandRegistrationModule.AccountRegistrationTask)->Void, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
+            self.setClient(client: client ?? XMPPClient());
+            self.onForm = onForm;
+            self.onSuccess = onSuccess;
+            self.onError = onError;
+            
+            _ = self.client?.modulesManager.register(StreamFeaturesModule());
+            self.inBandRegistrationModule = self.client!.modulesManager.register(InBandRegistrationModule());
+            
+            self.client?.connectionConfiguration.setDomain(self.client!.sessionObject.domainName ?? domainName);
+            self.client?.sessionObject.setUserProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR, value: {(sessionObject: SessionObject, trust: SecTrust) -> Bool in
+                return true;
+            })
+            self.client?.login();
+        }
+        
+        open func submit(form: JabberDataElement) {
+            formToSubmit = form;
+            guard (client?.state ?? .disconnected) != .disconnected else {
+                client?.login();
+                return;
+            }
+            if (usesDataForm) {
+                inBandRegistrationModule.submitRegistrationForm(form: form, onSuccess: {
+                    let callback = self.onSuccess!;
+                    self.finish();
+                    callback();
+                }, onError: self.onErrorFn);
+            } else {
+                let username = (form.getField(named: "username") as? TextSingleField)?.value;
+                let password = (form.getField(named: "password") as? TextPrivateField)?.value;
+                let email = (form.getField(named: "email") as? TextSingleField)?.value;
+                inBandRegistrationModule.register(username: username, password: password, email: email, callback: { (response) in
+                    let type = response?.type ?? .error;
+                    switch (type) {
+                    case .result:
+                        let callback = self.onSuccess!;
+                        self.finish();
+                        callback();
+                    default:
+                        self.onErrorFn(errorCondition: response?.errorCondition, message: response?.findChild(name: "error")?.findChild(name: "text")?.value);
+                    }
+                })
+            }
+        }
+        
+        open func cancel() {
+            self.client?.disconnect();
+            self.finish();
+        }
+        
+        public func handle(event: Event) {
+            switch event {
+            case is StreamFeaturesReceivedEvent:
+                serverAvailable = true;
+                // check registration possibility
+                guard isStreamReady() else {
+                    return;
+                }
+                let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
+                guard InBandRegistrationModule.isRegistrationAvailable(featuresElement) else {
+                    onErrorFn(errorCondition: ErrorCondition.feature_not_implemented, message: nil);
+                    return;
+                }
+                
+                inBandRegistrationModule.retrieveRegistrationForm(onSuccess: {(serverForm) in
+                    self.usesDataForm = serverForm != nil;
+                    let form = serverForm ?? JabberDataElement(type: .form);
+                    if serverForm == nil {
+                        form.addField(TextSingleField(name: "username", required: true));
+                        form.addField(TextPrivateField(name: "password", required: true));
+                        form.addField(TextSingleField(name: "email", required: true));
+                    }
+                    if self.formToSubmit == nil {
+                        self.onForm!(form, self);
+                    } else {
+                        var sameForm = true;
+                        var labelsChanged = false;
+                        form.fieldNames.forEach({(name) in
+                            let newField = form.getField(named: name);
+                            let oldField = self.formToSubmit!.getField(named: name);
+                            if newField != nil && oldField != nil {
+                                labelsChanged = newField?.label != oldField?.label;
+                                if labelsChanged {
+                                    oldField?.label = newField?.label;
+                                    oldField?.element.removeChildren(where: { (el) -> Bool in
+                                        el.name == "value";
+                                    })
+                                }
+                            } else {
+                                sameForm = false;
+                            }
+                        });
+                        if (!sameForm) {
+                            self.onForm!(form, self);
+                        } else if (labelsChanged) {
+                            self.onForm!(self.formToSubmit!, self);
+                        } else {
+                            self.submit(form: self.formToSubmit!);
+                        }
+                        self.formToSubmit = nil;
+                    }
+                }, onError: self.onErrorFn);
+            case is SocketConnector.DisconnectedEvent:
+                if !serverAvailable {
+                    onErrorFn(errorCondition: ErrorCondition.service_unavailable, message: nil);
+                }
+            default:
+                break;
+            }
+        }
+        
+        fileprivate func setClient(client: XMPPClient) {
+            self.client = client;
+        }
+        
+        fileprivate func onErrorFn(errorCondition: ErrorCondition?, message: String?) -> Void {
+            let callback = self.onError!;
+            self.finish();
+            callback(errorCondition, message);
+        }
+        
+        fileprivate func isStreamReady() -> Bool {
+            let startTlsActive = client.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
+            let compressionActive = client.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
+            let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
+            
+            guard startTlsActive || client.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED, defValue: false) || ((featuresElement?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
+                return false;
+            }
+            
+            guard compressionActive || client.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+                return false;
+            }
+            return true;
+        }
+        
+        fileprivate func finish() {
+            client = nil;
+            inBandRegistrationModule = nil;
+            onForm = nil;
+            onSuccess = nil;
+            onError = nil;
+        }
+        
+    }
+    
 }
