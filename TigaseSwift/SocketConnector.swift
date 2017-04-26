@@ -198,9 +198,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             log("connect(addr) - stopping connetion as state is not connecting", state);
             return;
         }
-        autoreleasepool {
-        Stream.getStreamsToHost(withName: addr, port: port, inputStream: &inStream, outputStream: &outStream)
-        }
+        
+        Stream.getStreamsToHost(withName: addr, port: port, inputStream: &inStream, outputStream: &outStream);
         
         self.inStream!.delegate = self
         self.outStream!.delegate = self
@@ -265,8 +264,11 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     func configureTLS() {
         log("configuring TLS");
 
-        self.inStream?.delegate = self
-        self.outStream?.delegate = self
+        guard let inStream = self.inStream, let outStream = self.outStream else {
+            return;
+        }
+        inStream.delegate = self
+        outStream.delegate = self
 
         let domain = self.sessionObject.domainName!;
         
@@ -274,16 +276,16 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         let settings:NSDictionary = NSDictionary(objects: [StreamSocketSecurityLevel.negotiatedSSL, domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
                 kCFStreamSSLPeerName as NSString,
                 kCFStreamSSLValidatesCertificateChain as NSString])
-        let started = CFReadStreamSetProperty(self.inStream! as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef)
+        let started = CFReadStreamSetProperty(inStream as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef)
         if (!started) {
             self.log("could not start STARTTLS");
         }
-        CFWriteStreamSetProperty(self.outStream! as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef);
-        self.inStream?.open();
-        self.outStream?.open();
+        CFWriteStreamSetProperty(outStream as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef);
+        inStream.open();
+        outStream.open();
         
-        self.inStream?.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
-        self.outStream?.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
+        inStream.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
+        outStream.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
             
         self.context.sessionObject.setProperty(SessionObject.STARTTLS_ACTIVE, value: true, scope: SessionObject.Scope.stream);
     }
