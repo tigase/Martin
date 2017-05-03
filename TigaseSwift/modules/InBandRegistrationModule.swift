@@ -382,7 +382,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                         form.addField(TextSingleField(name: "email", required: true));
                     }
                     if self.formToSubmit == nil {
-                        self.onForm!(form, self);
+                        self.onForm?(form, self);
                     } else {
                         var sameForm = true;
                         var labelsChanged = false;
@@ -402,9 +402,9 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                             }
                         });
                         if (!sameForm) {
-                            self.onForm!(form, self);
+                            self.onForm?(form, self);
                         } else if (labelsChanged) {
-                            self.onForm!(self.formToSubmit!, self);
+                            self.onForm?(self.formToSubmit!, self);
                         } else {
                             self.submit(form: self.formToSubmit!);
                         }
