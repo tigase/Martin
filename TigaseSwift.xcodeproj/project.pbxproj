@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FE01ADA51E2243DD00FA7E65 /* PushNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */; };
+		FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */; };
 		FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFD401CAED46B000D254E /* SessionObject.swift */; };
 		FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFD421CAED89A000D254E /* ConnectionConfiguration.swift */; };
 		FE2EFD631CB29B28000D254E /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FE2EFD621CB29B28000D254E /* libresolv.tbd */; };
@@ -137,6 +139,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PushNotificationsModule.swift; sourceTree = "<group>"; };
+		FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdHocCommandsModule.swift; sourceTree = "<group>"; };
 		FE2EFD401CAED46B000D254E /* SessionObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionObject.swift; sourceTree = "<group>"; };
 		FE2EFD421CAED89A000D254E /* ConnectionConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConnectionConfiguration.swift; sourceTree = "<group>"; };
 		FE2EFD621CB29B28000D254E /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
@@ -327,6 +331,8 @@
 				FE596F781CF1C35B0079E22B /* PingModule.swift */,
 				FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */,
 				FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */,
+				FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */,
+				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -721,6 +727,7 @@
 				FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */,
 				FE2EFDB11CB91549000D254E /* PacketWriter.swift in Sources */,
 				FEDCBF891D9EC7FB00AE9129 /* FixedField.swift in Sources */,
+				FE01ADA51E2243DD00FA7E65 /* PushNotificationsModule.swift in Sources */,
 				FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */,
 				FE2EFD781CB57C70000D254E /* XMPPDNSSrvResolver.swift in Sources */,
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,
@@ -775,6 +782,7 @@
 				FEDCBF8B1D9EC87200AE9129 /* MultiField.swift in Sources */,
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
 				FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */,
+				FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */,
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
 				FEDCBF9D1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift in Sources */,
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
