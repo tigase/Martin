@@ -245,7 +245,11 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         case .connected:
             self.state = State.disconnecting;
             self.log("closing XMPP stream");
-            self.send(data: "</stream:stream>");
+            self.sessionLogic.onStreamClose {
+                self.queue.async {
+                    self.send(data: "</stream:stream>");
+                }
+            }
             self.closeTimer = Timer(delayInSeconds: 3, repeats: false) {
                 self.closeSocket(newState: State.disconnected);
             }

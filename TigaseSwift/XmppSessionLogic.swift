@@ -38,6 +38,8 @@ public protocol XmppSessionLogic: class {
     func sendingOutgoingStanza(_ stanza:Stanza);
     /// Called to send data to keep connection open
     func keepalive();
+    /// Called when stream is closing
+    func onStreamClose(completionHandler: @escaping ()->Void);
     /// Called when stream error happens
     func onStreamError(_ streamError:Element);
     /// Using properties set decides which name use to connect to XMPP server
@@ -100,6 +102,16 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         let domain = context.sessionObject.domainName!;
         let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
         return streamManagementModule?.resumptionLocation ?? context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
+    }
+    
+    open func onStreamClose(completionHandler: @escaping () -> Void) {
+        if let streamManagementModule: StreamManagementModule = modulesManager.getModule(StreamManagementModule.ID) {
+            streamManagementModule.request();
+            streamManagementModule.sendAck();
+        }
+        queue.async {
+            completionHandler();
+        }
     }
     
     open func onStreamError(_ streamErrorEl: Element) {

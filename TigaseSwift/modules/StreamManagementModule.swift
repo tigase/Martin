@@ -217,7 +217,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     
     /// Send ACK request to server
     open func request() {
-        if lastRequestTimestamp.timeIntervalSinceNow < 1 {
+        guard lastRequestTimestamp.timeIntervalSinceNow < 1 else {
             return;
         }
         
@@ -248,8 +248,15 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     
     /// Send ACK to server
     open func sendAck() {
-        guard lastSentH != ackH.incomingCounter else {
+        guard let a = prepareAck() else {
             return;
+        }
+        context.writer?.write(a);
+    }
+    
+    func prepareAck() -> Stanza? {
+        guard lastSentH != ackH.incomingCounter else {
+            return nil;
         }
         
         let value = ackH.incomingCounter;
@@ -257,7 +264,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
         
         let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
         a.setAttribute("h", value: String(value));
-        context.writer?.write(a);
+        return a;
     }
     
     /// Process ACK from server
