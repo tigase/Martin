@@ -44,10 +44,10 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     open var context:Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
             if context != nil {
-                context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
         }
     }
@@ -97,6 +97,8 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
             } else {
                 log("skipping sending initial presence");
             }
+        case is StreamManagementModule.FailedEvent:
+            presenceStore.clear();
         case let ce as SessionObject.ClearedEvent:
             if ce.scopes.contains(.session) {
                 presenceStore.clear();

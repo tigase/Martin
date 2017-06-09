@@ -117,7 +117,18 @@ open class Room: ChatProtocol, ContextAware {
         }
     }
     
-    var _state: State = .not_joined;
+    var _state: State = .not_joined {
+        didSet {
+            if _state == .not_joined {
+                let occupants = self.presences.values;
+                for occupant in occupants {
+                    self.remove(occupant: occupant);
+                    // should we fire this event?
+                    // context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, ))
+                }
+            }
+        }
+    }
     /// State of room
     open var state: State {
         return _state;
@@ -295,5 +306,6 @@ open class Room: ChatProtocol, ContextAware {
         case joined
         case not_joined
         case requested
+        case destroyed
     }
 }

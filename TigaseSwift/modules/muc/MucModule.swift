@@ -39,11 +39,11 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     open var context:Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
             }
             roomsManager?.context = context;
             if context != nil {
-                context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE);
+                context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
             }
         }
     }
@@ -84,19 +84,10 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         switch event {
         case let sec as SessionObject.ClearedEvent:
             if sec.scopes.contains(SessionObject.Scope.session) {
-                for room in roomsManager.getRooms() {
-                    room._state = .not_joined;
-
-                    let occupants = room.presences.values;
-                    for occupant in occupants {
-                        room.remove(occupant: occupant);
-                        // should we fire this event?
-                        // context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, ))
-                    }
-                    
-                    context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
-                }
+                markRoomsAsNotJoined();
             }
+        case is StreamManagementModule.FailedEvent:
+            markRoomsAsNotJoined();
         default:
             log("received event of unsupported type", event);
         }
@@ -243,6 +234,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         
         roomsManager.remove(room: room);
         
+        room._state = .destroyed;
         context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
     }
     
@@ -291,6 +283,8 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         
         if (type == StanzaType.unavailable && nickname == room.nickname) {
             room._state = .not_joined;
+            context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: presence, room: room));
+            return;
         }
         
         let xUser = XMucUserElement.extract(from: presence);
@@ -382,6 +376,14 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         context.eventBus.fire(InvitationDeclinedEvent(sessionObject: context.sessionObject, message: message, room: room!, invitee: invitee == nil ? nil : JID(invitee!), reason: reason));
     }
 
+    fileprivate func markRoomsAsNotJoined() {
+        for room in roomsManager.getRooms() {
+            room._state = .not_joined;
+            
+            context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
+        }
+    }
+    
     /**
      Event fired when join request is sent
      */

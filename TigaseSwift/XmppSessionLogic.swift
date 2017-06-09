@@ -198,9 +198,6 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         case let re as StreamManagementModule.ResumedEvent:
             processSessionBindedAndEstablished(re.sessionObject);
         case is StreamManagementModule.FailedEvent:
-            if let presenceModule: PresenceModule = modulesManager.getModule(PresenceModule.ID) {
-                presenceModule.presenceStore.clear();
-            }
             if let bindModule: ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
                 bindModule.bind();
             }
