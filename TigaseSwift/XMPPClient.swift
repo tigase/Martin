@@ -112,7 +112,11 @@ open class XMPPClient: Logger, EventHandler {
     open var keepaliveTimeout: TimeInterval = (3 * 60) - 5;
     
     open var state:SocketConnector.State {
-        return sessionLogic?.state ?? socketConnector?.state ?? .disconnected;
+        var value:SocketConnector.State = .disconnected;
+        queue.sync {
+            value = sessionLogic?.state ?? socketConnector?.state ?? .disconnected;
+        }
+        return value;
     }
 
     /// Internal processing queue
@@ -157,20 +161,22 @@ open class XMPPClient: Logger, EventHandler {
             return;
         }
         log("starting connection......");
-        socketConnector = SocketConnector(context: context);
-        context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queue: queue);
-        sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queue: queue, queueTag: queueTag);
-        sessionLogic!.bind();
-        modulesManager.initIfRequired();
-        
-        keepaliveTimer?.cancel();
-        if keepaliveTimeout > 0 {
-            keepaliveTimer = Timer(delayInSeconds: keepaliveTimeout, repeats: true, callback: { Void->Void in self.keepalive() });
-        } else {
-            keepaliveTimer = nil;
+        queue.sync {
+            socketConnector = SocketConnector(context: context);
+            context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queue: queue);
+            sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queue: queue, queueTag: queueTag);
+            sessionLogic!.bind();
+            modulesManager.initIfRequired();
+            
+            keepaliveTimer?.cancel();
+            if keepaliveTimeout > 0 {
+                keepaliveTimer = Timer(delayInSeconds: keepaliveTimeout, repeats: true, callback: { Void->Void in self.keepalive() });
+            } else {
+                keepaliveTimer = nil;
+            }
+            
+            socketConnector?.start()
         }
-        
-        socketConnector?.start()
     }
 
     /**
@@ -217,7 +223,9 @@ open class XMPPClient: Logger, EventHandler {
                 context.sessionObject.clear(scopes: SessionObject.Scope.stream);
             }
             sessionLogic?.unbind();
-            sessionLogic = nil;
+            queue.sync {
+                sessionLogic = nil;
+            }
             log("connection stopped......");
         default:
             log("received unhandled event:", event);

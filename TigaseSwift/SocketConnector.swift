@@ -199,6 +199,15 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             return;
         }
         
+        if (inStream != nil) {
+            log("inStream not null during reconnection!", inStream);
+            inStream = nil;
+        }
+        if (outStream != nil) {
+            log("outStream not null during reconnection!", outStream);
+            outStream = nil;
+        }
+        
         Stream.getStreamsToHost(withName: addr, port: port, inputStream: &inStream, outputStream: &outStream);
         
         self.inStream!.delegate = self

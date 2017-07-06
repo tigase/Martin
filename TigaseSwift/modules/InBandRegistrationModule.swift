@@ -425,9 +425,11 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         }
         
         fileprivate func onErrorFn(errorCondition: ErrorCondition?, message: String?) -> Void {
-            let callback = self.onError!;
+            let callback = self.onError
             self.finish();
-            callback(errorCondition, message);
+            if (callback != nil) {
+                callback!(errorCondition, message);
+            }
         }
         
         fileprivate func isStreamReady() -> Bool {
