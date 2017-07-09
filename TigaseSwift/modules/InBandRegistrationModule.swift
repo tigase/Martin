@@ -426,9 +426,10 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
         fileprivate func onErrorFn(errorCondition: ErrorCondition?, message: String?) -> Void {
             let callback = self.onError
-            self.finish();
             if (callback != nil) {
                 callback!(errorCondition, message);
+            } else {
+                self.finish();
             }
         }
         
