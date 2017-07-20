@@ -64,9 +64,12 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     }
     
     func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
-        var chat = chatManager.getChat(with: interlocutorJid!, thread: message.thread);
+        var chat: Chat? = nil;
+        if interlocutorJid != nil {
+            chat = chatManager.getChat(with: interlocutorJid!, thread: message.thread);
+        }
         
-        if chat == nil && message.body == nil {
+        if chat == nil && (message.body == nil || interlocutorJid == nil) {
             fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: nil, message: message));
             return nil;
         }
