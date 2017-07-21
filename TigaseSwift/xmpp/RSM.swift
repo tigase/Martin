@@ -102,22 +102,22 @@ open class RSM {
         
         let element: Element;
         
-        var first: String? {
+        open var first: String? {
             return element.findChild(name: "first")?.value;
         }
         
-        var last: String? {
+        open var last: String? {
             return element.findChild(name: "last")?.value;
         }
         
-        var index: Int? {
+        open var index: Int? {
             guard let v = element.findChild(name: "first")?.getAttribute("index") else {
                 return nil;
             }
             return Int(v);
         }
         
-        var count: Int? {
+        open var count: Int? {
             guard let v = element.findChild(name: "count")?.value else {
                 return nil;
             }
