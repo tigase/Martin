@@ -173,6 +173,9 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
         
         guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
             ackH.incrementIncoming();
+            if lastSentH + 5 <= ackH.incomingCounter {
+                sendAck();
+            }
             return false;
         }
         
@@ -280,12 +283,18 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     
     /// Process ACK request from server
     func processAckRequest(_ stanza: Stanza) {
-        let value = ackH.incomingCounter;
-        lastSentH = value;
-
-        let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
-        a.setAttribute("h", value: String(value));
-        context.writer?.write(a);
+        let oldValue = self.ackH.incomingCounter;
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            let value = self.ackH.incomingCounter;
+            guard oldValue == value else {
+                return;
+            }
+            self.lastSentH = value;
+            
+            let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
+            a.setAttribute("h", value: String(value));
+            self.context.writer?.write(a);
+        }
     }
     
     func processFailed(_ stanza: Stanza) {
