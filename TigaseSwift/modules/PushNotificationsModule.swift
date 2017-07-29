@@ -68,12 +68,15 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         context.eventBus.fire(NotificationsDisabledEvent(sessionObject: context.sessionObject, service: pushServiceJid!, node: node));
     }
     
-    open func enable(serviceJid: JID, node: String, publishOptions: JabberDataElement? = nil, onSuccess: @escaping (Stanza)->Void, onError: @escaping (ErrorCondition?)->Void) {
+    open func enable(serviceJid: JID, node: String, enableForAway: Bool = false, publishOptions: JabberDataElement? = nil, onSuccess: @escaping (Stanza)->Void, onError: @escaping (ErrorCondition?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
         enable.setAttribute("jid", value: serviceJid.stringValue);
         enable.setAttribute("node", value: node);
+        if enableForAway {
+            enable.setAttribute("away", value: "true");
+        }
         if publishOptions != nil {
             enable.addChild(publishOptions!.submitableElement(type: .submit));
         }
