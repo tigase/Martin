@@ -52,7 +52,6 @@
 		FE3024261CDD1F6500466497 /* DelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3024251CDD1F6500466497 /* DelayTests.swift */; };
 		FE30242C1CDDF52400466497 /* XmppStanzaFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */; };
 		FE30242E1CDDF53500466497 /* StreamManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242D1CDDF53500466497 /* StreamManagementModule.swift */; };
-		FE3024301CE0D7F300466497 /* VCardModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE30242F1CE0D7F300466497 /* VCardModule.swift */; };
 		FE3024351CE20C2300466497 /* Crypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3024341CE20C2300466497 /* Crypto.swift */; };
 		FE3A45D11CE7282B00C36264 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FE3A45D01CE7282B00C36264 /* libz.tbd */; };
 		FE3A45D31CE7289600C36264 /* Zlib.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3A45D21CE7289600C36264 /* Zlib.swift */; };
@@ -94,6 +93,7 @@
 		FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */; };
 		FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */; };
 		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
+		FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */; };
 		FEB1BAB01F1F567800F10238 /* MessageArchiveManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */; };
 		FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */; };
 		FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514111CE9C3FB003AF765 /* MucModule.swift */; };
@@ -127,6 +127,9 @@
 		FEDCBFA11DA003E600AE9129 /* PubSubErrorCondition.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDCBFA01DA003E600AE9129 /* PubSubErrorCondition.swift */; };
 		FEDE939D1D0C747100CA60A9 /* InBandRegistrationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */; };
 		FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */; };
+		FEF8C2361F2CE9F30089C096 /* VCardTempModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF8C2351F2CE9F30089C096 /* VCardTempModule.swift */; };
+		FEF8C2381F2CEA120089C096 /* VCard4Module.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF8C2371F2CEA120089C096 /* VCard4Module.swift */; };
+		FEF8C23A1F2CEA1E0089C096 /* VCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF8C2391F2CEA1E0089C096 /* VCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,7 +188,6 @@
 		FE3024251CDD1F6500466497 /* DelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DelayTests.swift; sourceTree = "<group>"; };
 		FE30242B1CDDF52400466497 /* XmppStanzaFilter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XmppStanzaFilter.swift; sourceTree = "<group>"; };
 		FE30242D1CDDF53500466497 /* StreamManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamManagementModule.swift; sourceTree = "<group>"; };
-		FE30242F1CE0D7F300466497 /* VCardModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModule.swift; sourceTree = "<group>"; };
 		FE3024341CE20C2300466497 /* Crypto.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Crypto.swift; sourceTree = "<group>"; };
 		FE3024361CE20CB000466497 /* libcommonCrypto.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcommonCrypto.tbd; path = usr/lib/system/libcommonCrypto.tbd; sourceTree = SDKROOT; };
 		FE3A45D01CE7282B00C36264 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -231,6 +233,7 @@
 		FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElementProtocol.swift; sourceTree = "<group>"; };
 		FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCarbonsModule.swift; sourceTree = "<group>"; };
 		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
+		FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModuleProtocol.swift; sourceTree = "<group>"; };
 		FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageArchiveManagementModule.swift; sourceTree = "<group>"; };
 		FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractPEPModule.swift; sourceTree = "<group>"; };
 		FEC514111CE9C3FB003AF765 /* MucModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucModule.swift; sourceTree = "<group>"; };
@@ -264,6 +267,9 @@
 		FEDCBFA01DA003E600AE9129 /* PubSubErrorCondition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PubSubErrorCondition.swift; sourceTree = "<group>"; };
 		FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InBandRegistrationModule.swift; sourceTree = "<group>"; };
 		FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVersionModule.swift; sourceTree = "<group>"; };
+		FEF8C2351F2CE9F30089C096 /* VCardTempModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardTempModule.swift; sourceTree = "<group>"; };
+		FEF8C2371F2CEA120089C096 /* VCard4Module.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCard4Module.swift; sourceTree = "<group>"; };
+		FEF8C2391F2CEA1E0089C096 /* VCard.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -311,6 +317,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FEF8C2341F2CE9F30089C096 /* vcard */,
 				FEB1BAAE1F1F567800F10238 /* mam */,
 				FE752D5F1DA50D35006884B9 /* pep */,
 				FEDCBF6C1D9D688300AE9129 /* pubsub */,
@@ -328,7 +335,6 @@
 				FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */,
 				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
 				FE30242D1CDDF53500466497 /* StreamManagementModule.swift */,
-				FE30242F1CE0D7F300466497 /* VCardModule.swift */,
 				FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */,
 				FEA554871CE3A55B00676608 /* MobileModeModule.swift */,
 				FE596F781CF1C35B0079E22B /* PingModule.swift */,
@@ -595,6 +601,17 @@
 			path = forms;
 			sourceTree = "<group>";
 		};
+		FEF8C2341F2CE9F30089C096 /* vcard */ = {
+			isa = PBXGroup;
+			children = (
+				FEF8C2351F2CE9F30089C096 /* VCardTempModule.swift */,
+				FEF8C2371F2CEA120089C096 /* VCard4Module.swift */,
+				FEF8C2391F2CEA1E0089C096 /* VCard.swift */,
+				FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */,
+			);
+			path = vcard;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -724,6 +741,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEF8C23A1F2CEA1E0089C096 /* VCard.swift in Sources */,
 				FEDCBF971D9EEB1D00AE9129 /* PubSubSubscription.swift in Sources */,
 				FEC514181CE9C9AE003AF765 /* MucAffiliation.swift in Sources */,
 				FE94E50C1CC90C6400FAE755 /* PresenceStore.swift in Sources */,
@@ -744,6 +762,7 @@
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,
 				FE3F33F01CA1CE22001A5CD6 /* XmppModule.swift in Sources */,
 				FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */,
+				FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */,
 				FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */,
 				FE2EFD831CB57D25000D254E /* Node.swift in Sources */,
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
@@ -785,7 +804,6 @@
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
 				FEDCBF6E1D9D689300AE9129 /* PubSubModule.swift in Sources */,
 				FE9A1ECF1CC51CE000D0509D /* StreamError.swift in Sources */,
-				FE3024301CE0D7F300466497 /* VCardModule.swift in Sources */,
 				FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */,
 				FE94E50A1CC90C5800FAE755 /* PresenceModule.swift in Sources */,
 				FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */,
@@ -807,6 +825,7 @@
 				FE9A1ED21CC5387700D0509D /* Timer.swift in Sources */,
 				FE2EFD981CB66C0C000D254E /* DefaultCredentialsCallback.swift in Sources */,
 				FEDE939D1D0C747100CA60A9 /* InBandRegistrationModule.swift in Sources */,
+				FEF8C2361F2CE9F30089C096 /* VCardTempModule.swift in Sources */,
 				FEDCBF7D1D9EAB1100AE9129 /* SingleField.swift in Sources */,
 				FE94E5151CCB847200FAE755 /* ChatStore.swift in Sources */,
 				FEDCBF951D9EE20600AE9129 /* PubSubModuleOwnerExtension.swift in Sources */,
@@ -830,6 +849,7 @@
 				FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */,
 				FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */,
 				FE94E5171CCB961000FAE755 /* UIDGenerator.swift in Sources */,
+				FEF8C2381F2CEA120089C096 /* VCard4Module.swift in Sources */,
 				FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */,
 				FE30242E1CDDF53500466497 /* StreamManagementModule.swift in Sources */,
 				FE3024241CDD1C6B00466497 /* Delay.swift in Sources */,

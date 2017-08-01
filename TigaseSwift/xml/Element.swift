@@ -79,6 +79,18 @@ open class Element : Node, ElementProtocol {
         }
         self.attributes_ = attributes;
     }
+
+    /**
+     Creates instance of `Element`
+     - parameter name: name of element
+     - parameter cdata: value of element
+     - parameter xmlns: xmlns of element
+     - parameter children: list of child elements
+     */
+    public convenience init(name: String, cdata:String? = nil, xmlns: String? = nil, children: [Element]) {
+        self.init(name: name, cdata: cdata, xmlns: xmlns);
+        self.addChildren(children);
+    }
     
     /**
      Creates instance of `Element`
