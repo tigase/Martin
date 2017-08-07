@@ -63,6 +63,7 @@
 		FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */; };
 		FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */; };
 		FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */; };
+		FE56288F1F35CD4D00452C73 /* HttpFileUploadModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */; };
 		FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE596F781CF1C35B0079E22B /* PingModule.swift */; };
 		FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */; };
 		FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */; };
@@ -203,6 +204,7 @@
 		FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMPPDelegate.swift; sourceTree = "<group>"; };
 		FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Criteria.swift; sourceTree = "<group>"; };
 		FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketConnector.swift; sourceTree = "<group>"; };
+		FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpFileUploadModule.swift; sourceTree = "<group>"; };
 		FE596F781CF1C35B0079E22B /* PingModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PingModule.swift; sourceTree = "<group>"; };
 		FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClientStateIndicationModule.swift; sourceTree = "<group>"; };
 		FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScramMechanism.swift; sourceTree = "<group>"; };
@@ -342,6 +344,7 @@
 				FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */,
 				FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */,
 				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
+				FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -833,6 +836,7 @@
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
 				FE752D611DA50D45006884B9 /* PEPUserAvatarModule.swift in Sources */,
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,
+				FE56288F1F35CD4D00452C73 /* HttpFileUploadModule.swift in Sources */,
 				FE2EFD761CB57C70000D254E /* DNSSrv.c in Sources */,
 				FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */,
 				FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */,

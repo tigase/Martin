@@ -129,6 +129,16 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
             return nil;
         }
     }
+    
+    /// Returns error text associated with this error stanza
+    open var errorText: String? {
+        get {
+            if type != StanzaType.error {
+                return nil;
+            }
+            return element.findChild(name: "error")?.findChild(name: "text")?.value;
+        }
+    }
 
     /// Returns XMLNS of element
     open var xmlns:String? {
@@ -298,6 +308,23 @@ open class Message: Stanza {
         }
         set {
             setElementValue(name: "thread", value: newValue);
+        }
+    }
+    
+    /// Message OOB url
+    open var oob: String? {
+        get {
+            return findChild(name: "x", xmlns: "jabber:x:oob")?.findChild(name: "url")?.value;
+        }
+        set {
+            element.forEachChild(name: "x", xmlns: "jabber:x:oob") { (e:Element) -> Void in
+                self.element.removeChild(e);
+            };
+            if newValue != nil {
+                let x = Element(name: "x", xmlns: "jabber:x:oob");
+                x.addChild(Element(name: "url", cdata: newValue))
+                element.addChild(x);
+            }
         }
     }
     
