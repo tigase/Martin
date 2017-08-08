@@ -388,7 +388,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      This method will process any stanza received from XMPP server.
      */
     func process(stanza: Stanza) {
-        sessionLogic.receivedIncomingStanza(stanza);
+        sessionLogic?.receivedIncomingStanza(stanza);
     }
     
     /**
