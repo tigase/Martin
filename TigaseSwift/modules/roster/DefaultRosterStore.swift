@@ -72,5 +72,10 @@ open class DefaultRosterStore: RosterStore {
         }) 
     }
     
+    open override func removeAll() {
+        queue.async(flags: .barrier) {
+            self.roster.removeAll();
+        }
+    }
     
 }
