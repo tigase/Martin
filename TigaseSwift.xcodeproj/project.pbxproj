@@ -92,6 +92,7 @@
 		FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */; };
 		FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */; };
 		FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */; };
+		FEA370C01F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */; };
 		FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */; };
 		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
 		FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */; };
@@ -233,6 +234,7 @@
 		FE9A1ED51CC5550300D0509D /* EscapeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscapeUtils.swift; sourceTree = "<group>"; };
 		FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoveryModule.swift; sourceTree = "<group>"; };
 		FE9A1ED91CC6993000D0509D /* ElementProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElementProtocol.swift; sourceTree = "<group>"; };
+		FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageDeliveryReceiptsModule.swift; sourceTree = "<group>"; };
 		FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCarbonsModule.swift; sourceTree = "<group>"; };
 		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
 		FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModuleProtocol.swift; sourceTree = "<group>"; };
@@ -345,6 +347,7 @@
 				FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */,
 				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
 				FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */,
+				FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -813,6 +816,7 @@
 				FE2EFD791CB57C70000D254E /* XMPPSrvRecord.swift in Sources */,
 				FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */,
 				FEDCBF8B1D9EC87200AE9129 /* MultiField.swift in Sources */,
+				FEA370C01F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift in Sources */,
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
 				FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */,
 				FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */,
