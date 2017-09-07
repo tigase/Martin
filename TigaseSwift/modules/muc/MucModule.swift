@@ -49,7 +49,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     }
     
     open let criteria = Criteria.or(
-        Criteria.name("message", types: [StanzaType.groupchat], containsAttribute: "from"),
+        Criteria.name("message", types: [StanzaType.groupchat, StanzaType.error], containsAttribute: "from"),
         Criteria.name("presence", containsAttribute: "from"),
         DIRECT_INVITATION,
         MEDIATED_INVITATION,
@@ -333,7 +333,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         }
         
         let timestamp = message.delay?.stamp ?? Date();
-        if room.state != .joined {
+        if room.state != .joined && message.type != StanzaType.error {
             room._state = .joined;
             log("Message while not joined in room:", room, " with nickname:", nickname);
             

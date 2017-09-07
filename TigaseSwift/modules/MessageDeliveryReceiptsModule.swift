@@ -43,7 +43,7 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
     }
     
     open func process(stanza: Stanza) throws {
-        guard let message = stanza as? Message else {
+        guard let message = stanza as? Message, stanza.type != StanzaType.error else {
             return;
         }
         
