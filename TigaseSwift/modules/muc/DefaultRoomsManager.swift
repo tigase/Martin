@@ -36,10 +36,10 @@ open class DefaultRoomsManager: ContextAware {
     
     fileprivate var rooms = [BareJID:Room]();
     
-    fileprivate let queue = DispatchQueue(label: "room_manager_queue", attributes: DispatchQueue.Attributes.concurrent);
+    open let dispatcher: QueueDispatcher;
     
-    public init() {
-        
+    public init(dispatcher: QueueDispatcher? = nil) {
+        self.dispatcher = dispatcher ?? QueueDispatcher(queue: DispatchQueue(label: "room_manager_queue", attributes: DispatchQueue.Attributes.concurrent), queueTag: DispatchSpecificKey<DispatchQueue?>());
     }
     
     /**
@@ -47,11 +47,9 @@ open class DefaultRoomsManager: ContextAware {
      - parameter roomJid: jid of room
      */
     open func contains(roomJid: BareJID) -> Bool {
-        var result = false;
-        queue.sync {
-            result = self.rooms[roomJid] != nil;
+        return dispatcher.sync {
+            return self.rooms[roomJid] != nil;
         }
-        return result;
     }
     
     /**
@@ -72,23 +70,40 @@ open class DefaultRoomsManager: ContextAware {
      - returns: instance of Room if created
      */
     open func getRoom(for roomJid: BareJID) -> Room? {
-        var result: Room?;
-        queue.sync {
-            result = self.rooms[roomJid];
+        return dispatcher.sync {
+            return self.rooms[roomJid];
         }
-        return result;
     }
+    
+    /**
+     Get room instance for room jid or create a new one
+     - parameter roomJid: jid of room
+     - returns: instance of Room if created
+     */
+    open func getRoomOrCreate(for roomJid: BareJID, nickname: String, password: String?, onCreate: @escaping (Room)->Void) -> Room {
+        return dispatcher.sync(flags: .barrier) {
+            if let room = getRoom(for: roomJid) {
+                return room;
+            }
+            
+            let room = createRoomInstance(roomJid: roomJid, nickname: nickname, password: password);
+            self.register(room: room);
+            DispatchQueue.global().async {
+                onCreate(room);
+            }
+            return room;
+        }
+    }
+
     
     /**
      Get array of all open rooms
      - returns: array of rooms
      */
     open func getRooms() -> [Room] {
-        var rooms: [Room]!;
-        queue.sync {
-            rooms = Array(self.rooms.values);
+        return dispatcher.sync {
+            return Array(self.rooms.values);
         }
-        return rooms;
     }
     
     open func initialize() {
@@ -100,7 +115,7 @@ open class DefaultRoomsManager: ContextAware {
      - parameter room: room instance to register
      */
     open func register(room: Room) {
-        queue.async(flags: .barrier, execute: {
+        dispatcher.sync(flags: .barrier, execute: {
             self.rooms[room.roomJid]  = room;
         }) 
     }
@@ -110,8 +125,8 @@ open class DefaultRoomsManager: ContextAware {
      - parameter room: room instance to remove
      */
     open func remove(room: Room) {
-        queue.async(flags: .barrier, execute: {
+        dispatcher.sync(flags: .barrier) {
             self.rooms.removeValue(forKey: room.roomJid);
-        }) 
+        }
     }
 }

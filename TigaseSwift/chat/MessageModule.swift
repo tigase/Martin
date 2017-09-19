@@ -64,25 +64,18 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     }
     
     func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
-        var chat: Chat? = nil;
-        if interlocutorJid != nil {
-            chat = chatManager.getChat(with: interlocutorJid!, thread: message.thread);
-        }
+        let chat = getOrCreateChatForProcessing(message: message, interlocutorJid: interlocutorJid);
         
-        if chat == nil && (message.body == nil || interlocutorJid == nil) {
+        if chat == nil {
             fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: nil, message: message));
             return nil;
         }
         
-        if chat == nil {
-            chat = chatManager.createChat(with: interlocutorJid!, thread: message.thread);
-        } else {
-            if chat!.jid != interlocutorJid {
-                chat!.jid = interlocutorJid!;
-            }
-            if chat!.thread != message.thread {
-                chat!.thread = message.thread;
-            }
+        if chat!.jid != interlocutorJid {
+            chat!.jid = interlocutorJid!;
+        }
+        if chat!.thread != message.thread {
+            chat!.thread = message.thread;
         }
         
         if chat != nil &&  fireEvents {
@@ -90,6 +83,18 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
         }
         
         return chat;
+    }
+    
+    fileprivate func getOrCreateChatForProcessing(message: Message, interlocutorJid: JID?) -> Chat? {
+        guard interlocutorJid != nil else {
+            return nil;
+        }
+        
+        if message.body != nil {
+            return chatManager.getChatOrCreate(with: interlocutorJid!, thread: message.thread);
+        } else {
+            return chatManager.getChat(with: interlocutorJid!, thread: message.thread);
+        }
     }
     
     /**

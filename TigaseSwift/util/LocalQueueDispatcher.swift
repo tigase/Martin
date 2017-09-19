@@ -54,3 +54,59 @@ extension LocalQueueDispatcher {
     }
 
 }
+
+public class QueueDispatcher {
+    
+    fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
+    fileprivate var queue: DispatchQueue;
+    
+    public init(queue: DispatchQueue, queueTag: DispatchSpecificKey<DispatchQueue?>) {
+        self.queue = queue;
+        self.queueTag = queueTag;
+        self.queue.setSpecific(key: queueTag, value: self.queue)
+    }
+    
+    deinit {
+        queue.setSpecific(key: queueTag, value: nil);
+    }
+    
+    open func sync<T>(flags: DispatchWorkItemFlags, execute: () throws -> T) rethrows -> T {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+            return try execute();
+        } else {
+            return try queue.sync(flags: flags, execute: execute)
+        }
+    }
+
+    open func sync(flags: DispatchWorkItemFlags, execute: () throws -> Void) rethrows {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+            try execute();
+        } else {
+            try queue.sync(flags: flags, execute: execute);
+        }
+    }
+
+    open func sync<T>(execute: () throws -> T) rethrows -> T {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+            return try execute();
+        } else {
+            return try queue.sync(execute: execute);
+        }
+    }
+
+    open func sync(execute: () throws -> Void) rethrows {
+        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+            try execute();
+        } else {
+            try queue.sync(execute: execute);
+        }
+    }
+
+    open func async(flags: DispatchWorkItemFlags, execute: @escaping ()->Void) {
+        queue.async(flags: flags, execute: execute);
+    }
+    
+    open func async(execute: @escaping () -> Void) {
+        queue.async(execute: execute);
+    }
+}

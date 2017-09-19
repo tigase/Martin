@@ -58,7 +58,20 @@ open class DefaultChatManager: ChatManager {
         return chat;
     }
     
-    open func getChat(with jid:JID, thread:String? = nil) -> Chat? {
+    open func getChatOrCreate(with jid:JID, thread:String? = nil) -> Chat? {
+        if let chat = getChat(with: jid, thread: thread) {
+            return chat;
+        }
+        return chatStore.dispatcher.sync(flags: .barrier) {
+            if let chat = getChat(with: jid, thread: thread) {
+                return chat;
+            }
+            
+            return createChat(with: jid, thread: thread);
+        }
+    }
+    
+    open func getChat(with jid: JID, thread: String?) -> Chat? {
         var chat:Chat? = nil;
         
         if thread != nil {

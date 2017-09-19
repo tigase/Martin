@@ -51,6 +51,13 @@ public protocol ChatManager {
      */
     func getChat(with jid:JID, thread:String?) -> Chat?;
     /**
+     Get instance of already opened chat or create a new one
+     - parameter with: jid to exchange messages
+     - parameter thread: id of thread
+     - returns: instance of Chat if any opened and matches
+     */
+    func getChatOrCreate(with jid:JID, thread:String?) -> Chat?;
+    /**
      Get array of opened chats
      - returns: array of all currently open chats
      */

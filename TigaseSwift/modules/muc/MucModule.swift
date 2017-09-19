@@ -205,17 +205,10 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil) -> Room {
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
-        var room = roomsManager.getRoom(for: roomJid);
-        if room != nil {
-            return room!;
-        }
-        room = roomsManager.createRoomInstance(roomJid: roomJid, nickname: nickname, password: password);
-        roomsManager.register(room: room!);
-        let presence = room!.rejoin();
-        
-        context.eventBus.fire(JoinRequestedEvent(sessionObject: context.sessionObject, presence: presence, room: room!, nickname: nickname));
-        
-        return room!;
+        return roomsManager.getRoomOrCreate(for: roomJid, nickname: nickname, password: password, onCreate: { (room) in
+            let presence = room.rejoin();
+            self.context.eventBus.fire(JoinRequestedEvent(sessionObject: self.context.sessionObject, presence: presence, room: room, nickname: nickname));
+        });
     }
     
     /**
