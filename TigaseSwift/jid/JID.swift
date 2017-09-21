@@ -43,7 +43,10 @@ open class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
     
     open var hashValue: Int {
         get {
-            return stringValue.hashValue;
+            guard resource != nil else {
+                return bareJid.hashValue;
+            }
+            return bareJid.hashValue ^ resource!.hashValue;
         }
     }
     

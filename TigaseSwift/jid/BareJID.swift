@@ -33,9 +33,7 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     /// String representation
     open let stringValue:String;
     
-    open var hashValue: Int {
-        return stringValue.hashValue;
-    }
+    open let hashValue: Int;
     
     /**
      Create instance
@@ -46,6 +44,7 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
         self.localPart = localPart;
         self.domain = domain;
         self.stringValue = BareJID.toString(localPart, domain);
+        self.hashValue = stringValue.lowercased().hashValue;
     }
     
     /**
@@ -58,6 +57,7 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
         self.localPart = jid.localPart
         self.domain = jid.domain
         self.stringValue = BareJID.toString(localPart, domain);
+        self.hashValue = stringValue.lowercased().hashValue;
     }
     
     /**
@@ -71,6 +71,7 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
         localPart = (idx == nil) ? nil : bareJid.substring(to: idx!);
         domain = (idx == nil) ? bareJid : bareJid.substring(from: bareJid.characters.index(after: idx!));
         self.stringValue = BareJID.toString(localPart, domain);
+        self.hashValue = stringValue.lowercased().hashValue;
     }
     
     /**
@@ -91,7 +92,8 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     public init(_ jid: JID) {
         self.domain = jid.domain
         self.localPart = jid.localPart
-        self.stringValue = BareJID.toString(localPart, domain);
+        self.stringValue = jid.bareJid.stringValue;
+        self.hashValue = jid.bareJid.hashValue;
     }
     
     open var description : String {
@@ -108,5 +110,5 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
 }
 
 public func ==(lhs: BareJID, rhs: BareJID) -> Bool {
-    return lhs.domain == rhs.domain && lhs.localPart == rhs.localPart;
+    return lhs.stringValue.caseInsensitiveCompare(rhs.stringValue) == .orderedSame;
 }
