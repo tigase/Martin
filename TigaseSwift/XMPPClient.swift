@@ -142,6 +142,7 @@ open class XMPPClient: Logger, EventHandler {
         connectionConfiguration = ConnectionConfiguration(self.sessionObject);
         modulesManager = XmppModulesManager();
         context = Context(sessionObject: self.sessionObject, eventBus: self.eventBus, modulesManager: modulesManager);
+        sessionObject.context = context;
         responseManager = ResponseManager(context: context);
         super.init()
         self.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);

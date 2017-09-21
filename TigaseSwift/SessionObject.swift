@@ -84,6 +84,8 @@ open class SessionObject: Logger {
         }
     }
     
+    open internal(set) weak var context: Context!;
+    
     public init(eventBus:EventBus) {
         self.eventBus = eventBus;
     }
