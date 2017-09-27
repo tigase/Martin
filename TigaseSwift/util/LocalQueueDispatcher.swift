@@ -60,6 +60,11 @@ public class QueueDispatcher {
     fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
     fileprivate var queue: DispatchQueue;
     
+    public convenience init(label: String, attributes: DispatchQueue.Attributes? = nil) {
+        let queue = attributes == nil ? DispatchQueue(label: label) : DispatchQueue(label: label, attributes: attributes!);
+        self.init(queue: queue, queueTag: DispatchSpecificKey<DispatchQueue?>());
+    }
+    
     public init(queue: DispatchQueue, queueTag: DispatchSpecificKey<DispatchQueue?>) {
         self.queue = queue;
         self.queueTag = queueTag;
