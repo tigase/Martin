@@ -165,7 +165,9 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     }
     
     func processChallenge(_ stanza: Stanza) throws {
-        let mechanism: SaslMechanism = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM)!;
+        guard let mechanism: SaslMechanism = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM) else {
+            return;
+        }
         if mechanism.isComplete(context.sessionObject) {
             throw ErrorCondition.bad_request;
         }
