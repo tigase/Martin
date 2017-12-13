@@ -55,6 +55,8 @@
 		FE3024351CE20C2300466497 /* Crypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3024341CE20C2300466497 /* Crypto.swift */; };
 		FE3A45D11CE7282B00C36264 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FE3A45D01CE7282B00C36264 /* libz.tbd */; };
 		FE3A45D31CE7289600C36264 /* Zlib.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3A45D21CE7289600C36264 /* Zlib.swift */; };
+		FE3DCCEA1FE14A85008B6C8B /* SslCertificateValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3DCCE91FE14A85008B6C8B /* SslCertificateValidator.swift */; };
+		FE3DCCEC1FE158D7008B6C8B /* SslCertificateInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3DCCEB1FE158D7008B6C8B /* SslCertificateInfo.swift */; };
 		FE3F33D71CA1CBB9001A5CD6 /* TigaseSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		FE3F33DE1CA1CBB9001A5CD6 /* TigaseSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */; };
 		FE3F33E31CA1CBB9001A5CD6 /* TigaseSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33E21CA1CBB9001A5CD6 /* TigaseSwiftTests.swift */; };
@@ -194,6 +196,8 @@
 		FE3024361CE20CB000466497 /* libcommonCrypto.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcommonCrypto.tbd; path = usr/lib/system/libcommonCrypto.tbd; sourceTree = SDKROOT; };
 		FE3A45D01CE7282B00C36264 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		FE3A45D21CE7289600C36264 /* Zlib.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Zlib.swift; sourceTree = "<group>"; };
+		FE3DCCE91FE14A85008B6C8B /* SslCertificateValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SslCertificateValidator.swift; sourceTree = "<group>"; };
+		FE3DCCEB1FE158D7008B6C8B /* SslCertificateInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SslCertificateInfo.swift; sourceTree = "<group>"; };
 		FE3F33D31CA1CBB9001A5CD6 /* TigaseSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TigaseSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE3F33D61CA1CBB9001A5CD6 /* TigaseSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TigaseSwift.h; sourceTree = "<group>"; };
 		FE3F33D81CA1CBB9001A5CD6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -537,6 +541,8 @@
 				FE94E5161CCB961000FAE755 /* UIDGenerator.swift */,
 				FE3A45D21CE7289600C36264 /* Zlib.swift */,
 				FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */,
+				FE3DCCE91FE14A85008B6C8B /* SslCertificateValidator.swift */,
+				FE3DCCEB1FE158D7008B6C8B /* SslCertificateInfo.swift */,
 			);
 			path = util;
 			sourceTree = "<group>";
@@ -813,9 +819,11 @@
 				FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */,
 				FE94E50A1CC90C5800FAE755 /* PresenceModule.swift in Sources */,
 				FE9A1ED81CC66DCF00D0509D /* DiscoveryModule.swift in Sources */,
+				FE3DCCEC1FE158D7008B6C8B /* SslCertificateInfo.swift in Sources */,
 				FE2EFD791CB57C70000D254E /* XMPPSrvRecord.swift in Sources */,
 				FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */,
 				FEDCBF8B1D9EC87200AE9129 /* MultiField.swift in Sources */,
+				FE3DCCEA1FE14A85008B6C8B /* SslCertificateValidator.swift in Sources */,
 				FEA370C01F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift in Sources */,
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
 				FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */,

@@ -287,7 +287,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             willSet {
                 if newValue == nil && self.client != nil {
                     let curr = self.client;
-                    client.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
+                    client.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SocketConnector.CertificateErrorEvent.TYPE);
                     DispatchQueue.main.async {
                         curr?.disconnect();
                     }
@@ -295,7 +295,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             }
             didSet {
                 if client != nil {
-                    client.eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
+                    client.eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SocketConnector.CertificateErrorEvent.TYPE);
                 }
             }
         };
@@ -303,12 +303,15 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         var onForm: ((JabberDataElement, AccountRegistrationTask)->Void)?;
         var onSuccess: (()->Void)?;
         var onError: ((ErrorCondition?, String?)->Void)?;
+        var onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)?;
         
         var usesDataForm = false;
         var formToSubmit: JabberDataElement?;
         var serverAvailable: Bool = false;
         
-        public init(client: XMPPClient? = nil, domainName: String, onForm: @escaping (JabberDataElement, InBandRegistrationModule.AccountRegistrationTask)->Void, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
+        var acceptedCertificate: SslCertificateInfo? = nil;
+        
+        public init(client: XMPPClient? = nil, domainName: String, onForm: @escaping (JabberDataElement, InBandRegistrationModule.AccountRegistrationTask)->Void, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void, sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil) {
             self.setClient(client: client ?? XMPPClient());
             self.onForm = onForm;
             self.onSuccess = onSuccess;
@@ -318,9 +321,8 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             self.inBandRegistrationModule = self.client!.modulesManager.register(InBandRegistrationModule());
             
             self.client?.connectionConfiguration.setDomain(self.client!.sessionObject.domainName ?? domainName);
-            self.client?.sessionObject.setUserProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR, value: {(sessionObject: SessionObject, trust: SecTrust) -> Bool in
-                return true;
-            })
+            self.client?.sessionObject.setUserProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR, value: sslCertificateValidator);
+            self.onCertificateValidationError = onCertificateValidationError;
             self.client?.login();
         }
         
@@ -361,6 +363,18 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
         public func handle(event: Event) {
             switch event {
+            case let e as SocketConnector.CertificateErrorEvent:
+                if self.onCertificateValidationError != nil {
+                    let certData = SslCertificateInfo(trust: e.trust!);
+                    self.serverAvailable = true;
+                    self.onCertificateValidationError!(certData, {() -> Void in
+                        SslCertificateValidator.setAcceptedSslCertificate(self.client.sessionObject, fingerprint: certData.details.fingerprintSha1);
+                        self.acceptedCertificate = certData;
+                        self.serverAvailable = false;
+                        self.client.login();
+                    });
+                }
+
             case is StreamFeaturesReceivedEvent:
                 serverAvailable = true;
                 // check registration possibility
@@ -418,6 +432,10 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             default:
                 break;
             }
+        }
+        
+        public func getAcceptedCertificate() -> SslCertificateInfo? {
+            return acceptedCertificate;
         }
         
         fileprivate func setClient(client: XMPPClient) {
