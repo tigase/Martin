@@ -171,7 +171,9 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             } else {
                 self.log("connecting to server:", server);
                 let dnsResolver = self.dnsResolver;
-                dnsResolver.resolve(domain: server, connector:self);
+                DispatchQueue.global().async {
+                    dnsResolver.resolve(domain: server, connector:self);
+                }
             }
         }
     }
