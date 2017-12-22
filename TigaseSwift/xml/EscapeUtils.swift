@@ -26,7 +26,7 @@ import Foundation
  */
 open class EscapeUtils {
     
-    fileprivate static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"] ];
+    fileprivate static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"], ["'", "&apos;", "&#39;"] ];
     
     /**
      Unescape string
