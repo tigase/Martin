@@ -44,6 +44,11 @@ open class XMPPDNSSrvResolver : Logger {
         self.domain = domain;
         self.srvRecords.removeAll();
         self.connector = connector;
+        // we do not want to use DNS resolution for ".local" domain as it is pointless and only takes time..
+        guard !domain.hasSuffix(".local") else {
+            self.resolved();
+            return;
+        }
         let err = DNSQuerySRVRecord("_xmpp-client._tcp." + domain + ".", XMPPDNSSrvResolver.bridge(self), { (record:UnsafeMutablePointer<DNSSrvRecord>?, resolverPtr:UnsafeMutableRawPointer?) -> Void in
             let r = record!.pointee;
             let port = Int(r.port);

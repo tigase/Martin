@@ -41,8 +41,14 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
     open func process(stanza: Stanza) throws {
         throw ErrorCondition.feature_not_implemented;
     }
-    
+
     open func execute(on to: JID?, command node: String, action: Action?, data: JabberDataElement?, onSuccess: @escaping (Stanza, JabberDataElement?)->Void, onError: @escaping (ErrorCondition?)->Void) {
+        execute(on: to, command: node, action: action, data: data, onSuccess: onSuccess, onError: { (stanza, errorCondition) in
+            onError(errorCondition);
+        });
+    }
+    
+    open func execute(on to: JID?, command node: String, action: Action?, data: JabberDataElement?, onSuccess: @escaping (Stanza, JabberDataElement?)->Void, onError: @escaping (Stanza?,ErrorCondition?)->Void) {
         let iq = Iq();
         iq.type = .set;
         iq.to = to;
@@ -69,7 +75,7 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
                     }
                 }
             }
-            onError(errorCondition);
+            onError(stanza, errorCondition);
         }
     }
     

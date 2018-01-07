@@ -69,6 +69,7 @@
 		FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE596F781CF1C35B0079E22B /* PingModule.swift */; };
 		FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */; };
 		FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */; };
+		FE689CFB1FFA6171007AFB17 /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE689CFA1FFA6171007AFB17 /* Reachability.swift */; };
 		FE7361D01D2A4F8B00EFEA64 /* AnonymousMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */; };
 		FE752D611DA50D45006884B9 /* PEPUserAvatarModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */; };
 		FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */; };
@@ -213,6 +214,7 @@
 		FE596F781CF1C35B0079E22B /* PingModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PingModule.swift; sourceTree = "<group>"; };
 		FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClientStateIndicationModule.swift; sourceTree = "<group>"; };
 		FE597A171D23C8DC0090F1A8 /* ScramMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScramMechanism.swift; sourceTree = "<group>"; };
+		FE689CFA1FFA6171007AFB17 /* Reachability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reachability.swift; sourceTree = "<group>"; };
 		FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnonymousMechanism.swift; sourceTree = "<group>"; };
 		FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PEPUserAvatarModule.swift; sourceTree = "<group>"; };
 		FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapabilitiesModule.swift; sourceTree = "<group>"; };
@@ -543,6 +545,7 @@
 				FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */,
 				FE3DCCE91FE14A85008B6C8B /* SslCertificateValidator.swift */,
 				FE3DCCEB1FE158D7008B6C8B /* SslCertificateInfo.swift */,
+				FE689CFA1FFA6171007AFB17 /* Reachability.swift */,
 			);
 			path = util;
 			sourceTree = "<group>";
@@ -791,6 +794,7 @@
 				FEDCBF771D9E9C5C00AE9129 /* JabberDataElement.swift in Sources */,
 				FE3A45D31CE7289600C36264 /* Zlib.swift in Sources */,
 				FEC514161CE9C702003AF765 /* MucRole.swift in Sources */,
+				FE689CFB1FFA6171007AFB17 /* Reachability.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
 				FEDCBF811D9EC64A00AE9129 /* JidSingleField.swift in Sources */,
 				FE94E5131CCA3E9700FAE755 /* DefaultChatManager.swift in Sources */,
