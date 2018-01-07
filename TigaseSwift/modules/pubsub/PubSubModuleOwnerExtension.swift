@@ -107,6 +107,7 @@ extension PubSubModuleOwnerExtension {
         iq.addChild(pubsub);
         
         let configure = Element(name: "configure");
+        configure.setAttribute("node", value: nodeName);
         configure.addChild(configuration.submitableElement(type: .submit));
         pubsub.addChild(configure);
         
@@ -138,12 +139,53 @@ extension PubSubModuleOwnerExtension {
      */
     public func requestDefaultNodeConfiguration(from pubSubJid: BareJID, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
-        iq.type = StanzaType.set;
+        iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
         
         let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS);
         iq.addChild(pubsub);
 
+        pubsub.addChild(Element(name: "default"));
+        
+        self.context.writer?.write(iq, callback: callback);
+    }
+    
+    /**
+     Retrieve default node configuration from PubSub service
+     - parameter from: address of PubSub service
+     - parameter node: node to retrieve configuration
+     - parameter onSuccess: called when request succeeds - passes response stanza and default node configuration
+     - parameter onError: called when request failed - passes general and detailed error condition if available
+     */
+    public func retrieveNodeConfiguration(from pubSubJid: BareJID, node: String, onSuccess: ((Stanza, JabberDataElement)->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?) {
+        let callback = createCallback(onSuccess: { (stanza) in
+            guard let config = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "configure")?.findChild(name: "x", xmlns: "jabber:x:data") else {
+                onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
+                return;
+            }
+            onSuccess?(stanza, JabberDataElement(from: config)!);
+        }, onError: onError);
+        
+        retrieveNodeConfiguration(from: pubSubJid, node: node, callback: callback);
+    }
+
+    /**
+     Retrieve node configuration from PubSub service
+     - parameter from: address of PubSub service
+     - parameter node: node to retrieve configuration
+     - parameter callback: called when response is received or request times out
+     */
+    public func retrieveNodeConfiguration(from pubSubJid: BareJID, node: String, callback: ((Stanza?)->Void)?) {
+        let iq = Iq();
+        iq.type = StanzaType.get;
+        iq.to = JID(pubSubJid);
+        
+        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS);
+        let configure = Element(name: "configure");
+        configure.setAttribute("node", value: node);
+        pubsub.addChild(configure);
+        iq.addChild(pubsub);
+        
         pubsub.addChild(Element(name: "default"));
         
         self.context.writer?.write(iq, callback: callback);
