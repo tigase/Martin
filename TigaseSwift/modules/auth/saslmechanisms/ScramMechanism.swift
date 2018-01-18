@@ -27,11 +27,23 @@ open class ScramMechanism: Logger, SaslMechanism {
 
     open static let SCRAM_SASL_DATA_KEY = "SCRAM_SASL_DATA_KEY";
     
-    fileprivate static let ALPHABET = [Character]("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".characters);
+    open static let SCRAM_SALTED_PASSWORD_CACHE = "SCRAM_SALTED_PASSWORD_CACHE";
+    
+    fileprivate static let ALPHABET = [Character]("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     
     fileprivate static let SERVER_FIRST_MESSAGE = try! NSRegularExpression(pattern: "^(m=[^\\000=]+,)?r=([\\x21-\\x2B\\x2D-\\x7E]+),s=([a-zA-Z0-9/+=]+),i=(\\d+)(?:,.*)?$", options: NSRegularExpression.Options(rawValue: 0));
     fileprivate static let SERVER_LAST_MESSAGE = try! NSRegularExpression(pattern: "^(?:e=([^,]+)|v=([a-zA-Z0-9/+=]+)(?:,.*)?)$", options: NSRegularExpression.Options(rawValue: 0));
-    
+
+    open static func ScramSha256() -> ScramMechanism {
+        var data = "Client Key".data(using: String.Encoding.utf8)!;
+        var clientKey = Array<UInt8>(repeating: 0, count: data.count);
+        (data as NSData).getBytes(&clientKey, length: data.count);
+        data = "Server Key".data(using: String.Encoding.utf8)!;
+        var serverKey = Array<UInt8>(repeating: 0, count: data.count);
+        (data as NSData).getBytes(&serverKey, length: data.count);
+        return ScramMechanism(mechanismName: "SCRAM-SHA-256", algorithm: Digest.sha256, clientKey: clientKey, serverKey: serverKey);
+    }
+
     open static func ScramSha1() -> ScramMechanism {
         var data = "Client Key".data(using: String.Encoding.utf8)!;
         var clientKey = Array<UInt8>(repeating: 0, count: data.count);
@@ -40,6 +52,10 @@ open class ScramMechanism: Logger, SaslMechanism {
         var serverKey = Array<UInt8>(repeating: 0, count: data.count);
         (data as NSData).getBytes(&serverKey, length: data.count);
         return ScramMechanism(mechanismName: "SCRAM-SHA-1", algorithm: Digest.sha1, clientKey: clientKey, serverKey: serverKey);
+    }
+    
+    open static func setSaltedPasswordCache(_ cache: ScramSaltedPasswordCacheProtocol?, sessionObject: SessionObject) {
+        sessionObject.setUserProperty(ScramMechanism.SCRAM_SALTED_PASSWORD_CACHE, value: cache);
     }
     
     /// Name of mechanism
@@ -67,6 +83,8 @@ open class ScramMechanism: Logger, SaslMechanism {
         
         let data = getData(sessionObject);
     
+        let saltedPasswordCache: ScramSaltedPasswordCacheProtocol? = sessionObject.getProperty(ScramMechanism.SCRAM_SALTED_PASSWORD_CACHE);
+        
         switch data.stage {
         case 0:
             data.conce = randomString();
@@ -89,7 +107,7 @@ open class ScramMechanism: Logger, SaslMechanism {
                 throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
             }
             let msg = String(data: msgBytes!, encoding: String.Encoding.utf8);
-            let r = ScramMechanism.SERVER_FIRST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.characters.count));
+            let r = ScramMechanism.SERVER_FIRST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.count));
             
             guard r.count == 1 && r[0].numberOfRanges >= 5  else {
                 throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
@@ -124,9 +142,16 @@ open class ScramMechanism: Logger, SaslMechanism {
             let part = "," + msg! + ",";
             data.authMessage = data.clientFirstMessageBare! + part + clientFinalMessage;
             
-            data.saltedPassword = hi(password: normalize(callback.getCredential()), salt: salt, iterations: iterations);
+            let saltedCacheId = saltedPasswordCache?.generateId(algorithm: algorithm, salt: salt, iterations: iterations);
+            if saltedCacheId != nil {
+                data.saltedPassword = saltedPasswordCache?.getSaltedPassword(for: sessionObject, id: saltedCacheId!);
+            }
+            if data.saltedPassword == nil {
+                data.saltedCacheId = saltedCacheId;
+                data.saltedPassword = hi(password: normalize(callback.getCredential()), salt: salt, iterations: iterations);
+            }
             var clientKeyData = self.clientKeyData;
-            var clientKey = algorithm.hmac(key: &data.saltedPassword, data: &clientKeyData);
+            var clientKey = algorithm.hmac(key: &data.saltedPassword!, data: &clientKeyData);
             var storedKey = algorithm.digest(bytes: &clientKey, length: clientKey.count);
             
             var clientSignature = algorithm.hmac(key: &storedKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
@@ -138,38 +163,45 @@ open class ScramMechanism: Logger, SaslMechanism {
             return clientFinalMessage.data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
         case 2:
             guard input != nil else {
+                saltedPasswordCache?.clearCache(for: sessionObject);
                 throw ClientSaslException.badChallenge(msg: "Received empty challenge!");
             }
 
             let msgBytes = Foundation.Data(base64Encoded: input!, options: NSData.Base64DecodingOptions(rawValue: 0));
             
             guard msgBytes != nil else {
+                saltedPasswordCache?.clearCache(for: sessionObject);
                 throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
             }
             let msg = String(data: msgBytes!, encoding: String.Encoding.utf8);
-            let r = ScramMechanism.SERVER_LAST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.characters.count));
+            let r = ScramMechanism.SERVER_LAST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.count));
             
             guard r.count == 1 && r[0].numberOfRanges >= 3  else {
+                saltedPasswordCache?.clearCache(for: sessionObject);
                 throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
             }
             let msgNS = msg! as NSString;
             let m = r[0];
             _ = groupPartOfString(m, group: 1, str: msgNS);
             guard let v = groupPartOfString(m, group: 2, str: msgNS) else {
+                saltedPasswordCache?.clearCache(for: sessionObject);
                 throw ClientSaslException.badChallenge(msg: "Invalid value of 'v'");
             }
             
             var serverKeyData = self.serverKeyData;
-            var serverKey = algorithm.hmac(key: &data.saltedPassword, data: &serverKeyData);
+            var serverKey = algorithm.hmac(key: &data.saltedPassword!, data: &serverKeyData);
             var serverSignature = algorithm.hmac(key: &serverKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
             
             let value = Foundation.Data(base64Encoded: v, options: NSData.Base64DecodingOptions(rawValue: 0));
             guard value != nil && (value! == Foundation.Data(bytes: &serverSignature, count: serverSignature.count)) else {
+                saltedPasswordCache?.clearCache(for: sessionObject);
                 throw ClientSaslException.invalidServerSignature;
             }
             
             data.stage += 1;
-            
+            if let saltedCacheId = data.saltedCacheId, let saltedPassword = data.saltedPassword {
+                saltedPasswordCache?.store(for: sessionObject, id: saltedCacheId, saltedPassword: saltedPassword);
+            }
             setComplete(sessionObject, completed: true);
             
             // releasing data object
@@ -177,6 +209,7 @@ open class ScramMechanism: Logger, SaslMechanism {
             return nil;
         default:
             guard isComplete(sessionObject) && input == nil else {
+                saltedPasswordCache?.clearCache(for: sessionObject);
                 throw ClientSaslException.genericError(msg: "Client in illegal state! stage = \(data.stage)");
             }
             // let's assume this is ok as session is authenticated
@@ -225,7 +258,7 @@ open class ScramMechanism: Logger, SaslMechanism {
     func randomString() -> String {
         let length = 20;
         //let x = ScramMechanism.ALPHABET.count;
-        var buffer = Array(repeating: "\0".characters.first!, count: length);
+        var buffer = Array(repeating: "\0".first!, count: length);
         for i in 0..<length {
             let r = Int(arc4random_uniform(UInt32(length)));
             let c = ScramMechanism.ALPHABET[r];
@@ -261,7 +294,8 @@ open class ScramMechanism: Logger, SaslMechanism {
         var cb: String = "n,";
         var clientFirstMessageBare: String?;
         var conce: String?;
-        var saltedPassword = [UInt8]();
+        var saltedCacheId: String?;
+        var saltedPassword: [UInt8]?;
         var stage: Int = 0;
     }
 }

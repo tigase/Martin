@@ -39,6 +39,17 @@ public enum Digest: DigestProtocol {
     case sha1
     case sha256
     
+    public var name: String {
+        switch self {
+        case .md5:
+            return "MD5";
+        case .sha1:
+            return "SHA1";
+        case .sha256:
+            return "SHA256";
+        }
+    }
+    
     /**
      Function processes bytes from unsafe buffer and calculates hash
      - parameter bytes: bytes to process
