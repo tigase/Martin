@@ -21,12 +21,36 @@
 
 import Foundation
 
+/**
+ Protocol for a class providing implementation of a caching functionality for salted version
+ of a password used during authentication using SCRAM mechanism.
+ This may improve performance and reduce battery usage as generation of salted version is
+ a CPU intensive task.
+ */
 public protocol ScramSaltedPasswordCacheProtocol {
     
+    /**
+     Retrive salted version of a password for provided parameters
+     - parameter for: instance of `SessionObject`
+     - parameter id: id of a salted password generated using `generateId()` method
+     */
     func getSaltedPassword(for: SessionObject, id: String) -> [UInt8]?;
     
+    /**
+     Store salted version of a password for future usage
+     - parameter for: instance of `SessionObject`
+     - parameter id: id of a salted password generated using `generateId()` method
+     - parameter saltedPassword: actual value of a salted password
+     
+     - Node:
+     This method should clear any other salted password values stored for passed instance of a `SessionObject`.
+    */
     func store(for: SessionObject, id: String, saltedPassword: [UInt8]);
     
+    /**
+     Clear all cached salted passwords for particular session object
+     - parameter for: instance of `SessionObject`
+    */
     func clearCache(for: SessionObject);
  
 }
