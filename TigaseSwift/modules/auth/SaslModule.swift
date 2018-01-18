@@ -71,6 +71,7 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     
     public override init() {
         super.init();
+        self.addMechanism(ScramMechanism.ScramSha256());
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
         self.addMechanism(AnonymousMechanism());
