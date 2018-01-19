@@ -75,6 +75,8 @@
 		FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */; };
 		FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */; };
 		FE7F9301200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F9300200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift */; };
+		FE7F930520121E69004C6195 /* DNSSrvResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930420121E69004C6195 /* DNSSrvResolver.swift */; };
+		FE7F930720121F4C004C6195 /* DNSSrvResolverWithCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */; };
 		FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
@@ -221,6 +223,8 @@
 		FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapabilitiesModule.swift; sourceTree = "<group>"; };
 		FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultCapabilitiesCache.swift; sourceTree = "<group>"; };
 		FE7F9300200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScramSaltedPasswordCacheProcotol.swift; sourceTree = "<group>"; };
+		FE7F930420121E69004C6195 /* DNSSrvResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolver.swift; sourceTree = "<group>"; };
+		FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolverWithCache.swift; sourceTree = "<group>"; };
 		FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalQueueDispatcher.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
@@ -313,6 +317,8 @@
 				FE2EFD6F1CB57C70000D254E /* DNSSrv.h */,
 				FE2EFD701CB57C70000D254E /* XMPPDNSSrvResolver.swift */,
 				FE2EFD711CB57C70000D254E /* XMPPSrvRecord.swift */,
+				FE7F930420121E69004C6195 /* DNSSrvResolver.swift */,
+				FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */,
 			);
 			path = dns;
 			sourceTree = "<group>";
@@ -774,6 +780,7 @@
 				FE9A1ED61CC5550300D0509D /* EscapeUtils.swift in Sources */,
 				FE2EFDB11CB91549000D254E /* PacketWriter.swift in Sources */,
 				FEDCBF891D9EC7FB00AE9129 /* FixedField.swift in Sources */,
+				FE7F930520121E69004C6195 /* DNSSrvResolver.swift in Sources */,
 				FE01ADA51E2243DD00FA7E65 /* PushNotificationsModule.swift in Sources */,
 				FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */,
 				FE2EFD781CB57C70000D254E /* XMPPDNSSrvResolver.swift in Sources */,
@@ -859,6 +866,7 @@
 				FE56288F1F35CD4D00452C73 /* HttpFileUploadModule.swift in Sources */,
 				FE2EFD761CB57C70000D254E /* DNSSrv.c in Sources */,
 				FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */,
+				FE7F930720121F4C004C6195 /* DNSSrvResolverWithCache.swift in Sources */,
 				FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */,
 				FE7361D01D2A4F8B00EFEA64 /* AnonymousMechanism.swift in Sources */,
 				FE2EFDAD1CB80E7A000D254E /* EventHandler.swift in Sources */,

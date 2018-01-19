@@ -30,7 +30,8 @@
 
 struct DNSQueryContext {
     void *resolver;
-    void (*callback)(struct DNSSrvRecord *record, void *resolver);
+    void (*onSrvRecord)(struct DNSSrvRecord *record, void *resolver);
+    void (*onFinished)(int error, void *resolver);
 };
 
 void DNSQuerySRVRecordProcessReply(DNSServiceRef       sdRef,
@@ -45,8 +46,11 @@ void DNSQuerySRVRecordProcessReply(DNSServiceRef       sdRef,
                                    uint32_t            ttl,
                                    void*               context) {
     
+    struct DNSQueryContext *dnsContext = (struct DNSQueryContext *) context;
+
     if (errorCode != kDNSServiceErr_NoError) {
         // TODO: error during processing request - need to handle this
+        
         return;
     }
     
@@ -85,8 +89,7 @@ void DNSQuerySRVRecordProcessReply(DNSServiceRef       sdRef,
         dns_free_resource_record(rr);
     }
     
-    struct DNSQueryContext *dnsContext = (struct DNSQueryContext *) context;
-    ((void (*)(struct DNSSrvRecord*, void *))dnsContext->callback)(&data, dnsContext->resolver);
+    ((void (*)(struct DNSSrvRecord*, void *))dnsContext->onSrvRecord)(&data, dnsContext->resolver);
     
     free(data.target);
 }
@@ -95,7 +98,8 @@ int32_t DNSQuerySRVRecord(const char* fullname, void *resolver, void (*callbackO
     DNSServiceRef sdRef;
     DNSServiceErrorType err;
     struct DNSQueryContext context;
-    context.callback = callbackOnSrvRecord;
+    context.onSrvRecord = callbackOnSrvRecord;
+    context.onFinished = callbackOnFinished;
     context.resolver = resolver;
     
     err = DNSServiceQueryRecord(&sdRef, kDNSServiceFlagsReturnIntermediates, kDNSServiceInterfaceIndexAny, fullname, kDNSServiceType_SRV, kDNSServiceClass_IN, DNSQuerySRVRecordProcessReply, &context);

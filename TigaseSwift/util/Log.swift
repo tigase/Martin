@@ -46,7 +46,7 @@ public struct Log {
      - parameter items: items to log
      - parameter from: source of this entry
      */
-    public static func log(_ items: Any..., from: Any? = nil) {
+    public static func log(_ items: Any?..., from: Any? = nil) {
         #if !DISABLE_LOG
             logInternal(items, from: from)
         #endif
@@ -57,7 +57,7 @@ public struct Log {
      - parameter items: items to log
      - parameter from: source of this entry
      */
-    static func logInternal<T>(_ items: [T], from: Any? = nil) {
+    static func logInternal<T>(_ items: [T?], from: Any? = nil) {
         #if !DISABLE_LOG
             let date = Date();
             let prefix = dateFormatter.string(from: date);
@@ -65,7 +65,9 @@ public struct Log {
             if (from != nil) {
                 entry +=  "\(from!) ";
             }
-            entry += (items.map({ it in "\(it)"}).joined(separator: " "));
+            entry += (items.map({ it in
+                return it == nil ? "nil" : "\(it!)";
+            }).joined(separator: " "));
             print(entry)
         #endif
     }
@@ -88,7 +90,7 @@ open class Logger {
      of this entry log.
      - parameter items: items to add to log
      */
-    open func log(_ items: Any...) {
+    open func log(_ items: Any?...) {
         #if !DISABLE_LOG
             Log.logInternal(items, from: type(of: self))
         #endif
@@ -103,7 +105,7 @@ extension NSObject {
      of this entry log.
      - parameter items: items to add to log
      */
-    public func log(_ items: Any...) {
+    public func log(_ items: Any?...) {
         #if !DISABLE_LOG
             Log.logInternal(items, from: type(of: self))
         #endif

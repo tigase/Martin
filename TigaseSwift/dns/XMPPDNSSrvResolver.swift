@@ -26,62 +26,78 @@ import Foundation
  
  Returns resolved IP address if there is no SRV entries for domain
  */
-open class XMPPDNSSrvResolver : Logger {
+open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
     
-    /// Domain name being checked
-    var domain:String!;
-    /// List of found records
-    var srvRecords = [XMPPSrvRecord]();
-    /// Intance of SocketConnector for callback when DNS resolution is finished
-    weak var connector:SocketConnector!;
-
     /**
      Resolve XMPP SRV records for domain
      - parameter domain: domain name to resolve
-     - parameter connector: instance of `SocketConnector` to call when DNS resolution is finished
+     - parameter completionHandler: handler to be called after DNS resoltion is finished
      */
-    func resolve(domain:String, connector:SocketConnector) -> Void {
-        self.domain = domain;
-        self.srvRecords.removeAll();
-        self.connector = connector;
-        // we do not want to use DNS resolution for ".local" domain as it is pointless and only takes time..
+    open func resolve(domain: String, completionHandler: @escaping ([XMPPSrvRecord]?) -> Void) {
         guard !domain.hasSuffix(".local") else {
-            self.resolved();
+            completionHandler([XMPPSrvRecord]());
             return;
         }
-        let err = DNSQuerySRVRecord("_xmpp-client._tcp." + domain + ".", XMPPDNSSrvResolver.bridge(self), { (record:UnsafeMutablePointer<DNSSrvRecord>?, resolverPtr:UnsafeMutableRawPointer?) -> Void in
+        
+        let ctx = DNSCtx(completionHandler: completionHandler);
+        
+        let err = DNSQuerySRVRecord("_xmpp-client._tcp." + domain + ".", XMPPDNSSrvResolver.bridge(ctx), { (record:UnsafeMutablePointer<DNSSrvRecord>?, ctxPtr:UnsafeMutableRawPointer?) -> Void in
             let r = record!.pointee;
             let port = Int(r.port);
             let weight = Int(r.weight);
             let priority = Int(r.priority);
-            let target = String(cString: UnsafePointer<CChar>(r.target), encoding: String.Encoding.isoLatin1)
+            guard let target = String(cString: UnsafePointer<CChar>(r.target), encoding: String.Encoding.isoLatin1) else {
+                return;
+            }
             Log.log("received: ", r.priority, r.weight, r.port, target);
-            let rec = XMPPSrvRecord(port: port, weight: weight, priority: priority, target: target!);
-            let resolver:XMPPDNSSrvResolver = XMPPDNSSrvResolver.bridge(resolverPtr!);
-            resolver.srvRecords.append(rec);
-            }, { (err:Int32, resolverPtr:UnsafeMutableRawPointer?) -> Void in
-                let resolver:XMPPDNSSrvResolver = XMPPDNSSrvResolver.bridge(resolverPtr!);
-                resolver.resolved();
+            let rec = XMPPSrvRecord(port: port, weight: weight, priority: priority, target: target);
+            let dnsCtx: DNSCtx = XMPPDNSSrvResolver.bridge(ctxPtr!);
+            dnsCtx.srvRecords.append(rec);
+        }, { (err:Int32, ctxPtr:UnsafeMutableRawPointer?) -> Void in
+            let dnsCtx: DNSCtx = XMPPDNSSrvResolver.bridge(ctxPtr!);
+            dnsCtx.finished(err);
         });
         log("dns returned code: ", err, "for _xmpp-client._tcp. at", domain);
+
+        if err != 0 {
+            ctx.finished(err);
+        }
     }
     
-    /**
-     Function called from `DNSSrv` notifying that DNS resolution done in `C` completed
-     */
-    func resolved() {
-        srvRecords.sort { (a,b) -> Bool in
-            if (a.priority < b.priority) {
-                return true;
-            } else if (a.priority > b.priority) {
-                return false;
-            } else {
-                return a.weight > b.weight;
-            }
-        }
-        connector.connect(dnsName: domain, dnsRecords: srvRecords);
-        connector = nil;
-    }
+//    /**
+//     Resolve XMPP SRV records for domain
+//     - parameter domain: domain name to resolve
+//     - parameter connector: instance of `SocketConnector` to call when DNS resolution is finished
+//     */
+//    func resolve(domain:String, connector:SocketConnector) -> Void {
+//        self.domain = domain;
+//        self.srvRecords.removeAll();
+//        self.connector = connector;
+//
+//        // we do not want to use DNS resolution for ".local" domain as it is pointless and only takes time..
+//        guard !domain.hasSuffix(".local") else {
+//            self.resolved();
+//            return;
+//        }
+//        let err = DNSQuerySRVRecord("_xmpp-client._tcp." + domain + ".", XMPPDNSSrvResolver.bridge(self), { (record:UnsafeMutablePointer<DNSSrvRecord>?, resolverPtr:UnsafeMutableRawPointer?) -> Void in
+//            let r = record!.pointee;
+//            let port = Int(r.port);
+//            let weight = Int(r.weight);
+//            let priority = Int(r.priority);
+//            let target = String(cString: UnsafePointer<CChar>(r.target), encoding: String.Encoding.isoLatin1)
+//            Log.log("received: ", r.priority, r.weight, r.port, target);
+//            let rec = XMPPSrvRecord(port: port, weight: weight, priority: priority, target: target!);
+//            let resolver:XMPPDNSSrvResolver = XMPPDNSSrvResolver.bridge(resolverPtr!);
+//            resolver.srvRecords.append(rec);
+//            }, { (err:Int32, resolverPtr:UnsafeMutableRawPointer?) -> Void in
+//                let resolver:XMPPDNSSrvResolver = XMPPDNSSrvResolver.bridge(resolverPtr!);
+//                resolver.resolved();
+//        });
+//        log("dns returned code: ", err, "for _xmpp-client._tcp. at", domain);
+//        if err < 0 {
+//            resolved();
+//        }
+//    }
     
     static func bridge<T : AnyObject>(_ obj : T) -> UnsafeMutableRawPointer {
         return Unmanaged.passUnretained(obj).toOpaque();
@@ -89,5 +105,31 @@ open class XMPPDNSSrvResolver : Logger {
     
     static func bridge<T : AnyObject>(_ ptr : UnsafeMutableRawPointer) -> T {
         return Unmanaged<T>.fromOpaque(ptr).takeUnretainedValue();
+    }
+
+    class DNSCtx {
+        var srvRecords = [XMPPSrvRecord]();
+        var completionHandler: ([XMPPSrvRecord]?) -> Void;
+        
+        init(completionHandler: @escaping ([XMPPSrvRecord]?) -> Void) {
+            self.completionHandler = completionHandler;
+        }
+        
+        func finished(_ err: Int32) {
+            guard err == 0 else {
+                completionHandler(nil);
+                return;
+            }
+            srvRecords.sort { (a,b) -> Bool in
+                if (a.priority < b.priority) {
+                    return true;
+                } else if (a.priority > b.priority) {
+                    return false;
+                } else {
+                    return a.weight > b.weight;
+                }
+            }
+            completionHandler(srvRecords);
+        }
     }
 }

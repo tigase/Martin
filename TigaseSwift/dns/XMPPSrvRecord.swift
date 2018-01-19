@@ -24,12 +24,16 @@ import Foundation
 /**
  Class holds informations for single SRV record of DNS entries
  */
-open class XMPPSrvRecord: CustomStringConvertible {
+open class XMPPSrvRecord: NSObject, NSCoding {
     
     let port:Int!;
     let weight:Int!;
     let priority:Int!;
     let target:String!;
+
+    open override var description: String {
+        return "port: \(port), weight: \(weight), priority: \(priority), target: \(target!)";
+    }
     
     init(port:Int, weight:Int, priority:Int, target:String) {
         self.port = port;
@@ -38,8 +42,23 @@ open class XMPPSrvRecord: CustomStringConvertible {
         self.target = target;
     }
     
-    open var description: String {
-        return "port: \(port), weight: \(weight), priority: \(priority), target: \(target!)";
+    public required convenience init?(coder aDecoder: NSCoder) {
+        guard
+            let port = aDecoder.decodeObject(forKey: "port") as? Int,
+            let weight = aDecoder.decodeObject(forKey: "weight") as? Int,
+            let priority = aDecoder.decodeObject(forKey: "priority") as? Int,
+            let target = aDecoder.decodeObject(forKey: "target") as? String else {
+                return nil;
+        }
+        
+        self.init(port: port, weight: weight, priority: priority, target: target);
     }
-    
+
+    public func encode(with aCoder: NSCoder) {
+        aCoder.encode(port, forKey: "port");
+        aCoder.encode(weight, forKey: "weight");
+        aCoder.encode(priority, forKey: "priority");
+        aCoder.encode(target, forKey: "target");
+    }
+
 }

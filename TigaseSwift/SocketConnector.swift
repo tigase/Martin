@@ -75,7 +75,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     var outStreamBuffer: WriteBuffer?;
     var parserDelegate: XMLParserDelegate?
     var parser: XMLParser?
-    let dnsResolver = XMPPDNSSrvResolver();
+    var dnsResolver: DNSSrvResolver?;
     weak var sessionLogic: XmppSessionLogic!;
     var closeTimer: Timer?;
     var zlib: Zlib?;
@@ -170,26 +170,34 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 self.connect(addr: server, port: port, ssl: false);
             } else {
                 self.log("connecting to server:", server);
-                let dnsResolver = self.dnsResolver;
+                if let dnsResolver = self.context.sessionObject.dnsSrvResolver {
+                    self.dnsResolver = dnsResolver;
+                }
+                if self.dnsResolver == nil {
+                    self.dnsResolver = XMPPDNSSrvResolver();
+                }
                 DispatchQueue.global().async {
-                    dnsResolver.resolve(domain: server, connector:self);
+                    self.dnsResolver!.resolve(domain: server) { dnsRecords in
+                        self.connect(dnsName: server, srvRecords: dnsRecords);
+                    }
                 }
             }
         }
     }
     
-    func connect(dnsName:String, dnsRecords:Array<XMPPSrvRecord>) {
+    func connect(dnsName: String, srvRecords: [XMPPSrvRecord]?) {
         guard state == .connecting else {
             log("connect(dns) - stopping connetion as state is not connecting", state);
             return;
         }
-        log("got dns records:", dnsResolver.srvRecords);
+        log("got dns records:", srvRecords);
         queue.async {
-            if (self.dnsResolver.srvRecords.isEmpty) {
-                self.dnsResolver.srvRecords.append(XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: dnsName));
+            var records = srvRecords ?? [XMPPSrvRecord]();
+            if (records.isEmpty) {
+                records.append(XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: dnsName));
             }
         
-            let rec:XMPPSrvRecord = self.dnsResolver.srvRecords[0];
+            let rec:XMPPSrvRecord = records[0];
             self.connect(addr: rec.target, port: rec.port, ssl: false);
         }
     }
