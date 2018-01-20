@@ -108,13 +108,13 @@ private let SAX_charactersFound: charactersSAXFunc = { ctx_, chars_, len_ in
     parser.delegate.charactersFound(chars!);
 }
 
-typealias errorSAXFunc_ = @convention(c) (_ parsingContext: UnsafeMutableRawPointer, _ errorMessage: UnsafePointer<CChar>) -> Void;
-
-private let SAX_error: errorSAXFunc_ = { ctx_, msg_ in
-    let parser = unsafeBitCast(ctx_, to: XMLParser.self);
-    let msg = String(cString: msg_, encoding: String.Encoding.utf8);
-    parser.delegate.error(msg: msg!);
-}
+//typealias errorSAXFunc_ = @convention(c) (_ parsingContext: UnsafeMutableRawPointer, _ errorMessage: UnsafePointer<CChar>, _ parameter: UnsafePointer<CChar>?) -> Void;
+//
+//private let SAX_error: errorSAXFunc_ = { ctx_, msg_, parameter_ in
+//    let parser = unsafeBitCast(ctx_, to: XMLParser.self);
+//    let msg = String(cString: msg_, encoding: String.Encoding.utf8)! + ", " + String(cString: parameter_!, encoding: String.Encoding.utf8)!
+//    parser.delegate.error(msg: msg);
+//}
 
 private var saxHandler = xmlSAXHandler(
     internalSubset: nil,
@@ -139,7 +139,7 @@ private var saxHandler = xmlSAXHandler(
     processingInstruction: nil,
     comment: nil,
     warning: nil,
-    error: unsafeBitCast(SAX_error, to: errorSAXFunc.self),
+    error: nil,//unsafeBitCast(SAX_error, to: errorSAXFunc.self),
     fatalError: nil,
     getParameterEntity: nil,
     cdataBlock: nil,
@@ -193,10 +193,18 @@ open class XMLParser: Logger {
      delegates functions
      - parameter data: instance of Data to process
      */
-    open func parse(data: Data) {
+    open func parse(data: Data) throws {
         log("parsing data:", data.count, String(data: data, encoding: String.Encoding.utf8));
-        data.withUnsafeBytes { (ptr: UnsafePointer<CChar>) -> Void in
-            xmlParseChunk(ctx, ptr, Int32(data.count), 0);
+        try data.withUnsafeBytes { (ptr: UnsafePointer<CChar>) -> Void in
+            let err = xmlParseChunk(ctx, ptr, Int32(data.count), 0);
+            if err > 0 {
+                if err == 64 {
+                    if let position = data.range(of: "<?xml ".data(using: .utf8)!)?.lowerBound {
+                        throw XmlParserError.xmlDeclarationInside(Int(err), position);
+                    }
+                }
+                throw XmlParserError.unknown(Int(err))
+            }
         }
     }
     
@@ -206,6 +214,29 @@ open class XMLParser: Logger {
     
     static func bridge<T : AnyObject>(_ ptr : UnsafeMutableRawPointer) -> T {
         return Unmanaged<T>.fromOpaque(ptr).takeUnretainedValue();
+    }
+}
+
+public enum XmlParserError: Error {
+    case unknown(Int)
+    case xmlDeclarationInside(Int, Int)
+    
+    var code: Int {
+        switch self {
+        case .unknown(let codeInt):
+            return codeInt;
+        case .xmlDeclarationInside(let codeInt, _):
+            return codeInt;
+        }
+    }
+    
+    var position: Int? {
+        switch self {
+        case .xmlDeclarationInside( _, let position):
+            return position;
+        default:
+            return nil;
+        }
     }
 }
 
@@ -239,10 +270,5 @@ public protocol XMLParserDelegate: class {
      - parameter value: found characters
      */
     func charactersFound(_ value:String);
-    
-    /**
-     Called on error during parsing
-     */
-    func error(msg:String);
-    
+        
 }

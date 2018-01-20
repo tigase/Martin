@@ -32,6 +32,9 @@ public protocol XmppSessionLogic: class {
     /// Unregister to stop listening for events
     func unbind();
     
+    /// Called when stream should be started
+    func startStream();
+    
     /// Called when stanza is received
     func receivedIncomingStanza(_ stanza:Stanza);
     /// Called when stanza is about to be send
@@ -51,6 +54,8 @@ public protocol XmppSessionLogic: class {
  following XMPP session logic for socket connections.
  */
 open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueueDispatcher {
+    
+    var quickstart: Bool = true;
     
     fileprivate let context:Context;
     fileprivate let modulesManager:XmppModulesManager;
@@ -81,7 +86,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     open func bind() {
         connector.sessionLogic = self;
         context.eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE);
-        context.eventBus.register(handler: self, for: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE);
+        context.eventBus.register(handler: self, for: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE, AuthModule.AuthFinishExpectedEvent.TYPE);
         context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentErrorEvent.TYPE);
         context.eventBus.register(handler: self, for: ResourceBinderModule.ResourceBindSuccessEvent.TYPE, ResourceBinderModule.ResourceBindErrorEvent.TYPE);
         context.eventBus.register(handler: self, for: StreamManagementModule.FailedEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE);
@@ -90,7 +95,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     
     open func unbind() {
         context.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE);
-        context.eventBus.unregister(handler: self, for: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE);
+        context.eventBus.unregister(handler: self, for: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE, AuthModule.AuthFinishExpectedEvent.TYPE);
         context.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentErrorEvent.TYPE);
         context.eventBus.unregister(handler: self, for: ResourceBinderModule.ResourceBindSuccessEvent.TYPE, ResourceBinderModule.ResourceBindErrorEvent.TYPE);
         context.eventBus.unregister(handler: self, for: StreamManagementModule.FailedEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE);
@@ -116,6 +121,10 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     
     open func onStreamError(_ streamErrorEl: Element) {
         if let seeOtherHost = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams") {
+            if let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining = modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID) {
+                streamFeaturesWithPipelining.connectionRestarted();
+            }
+            
             connector.reconnect(newHost: seeOtherHost.value!)
             return;
         }
@@ -201,6 +210,8 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
             if let bindModule: ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
                 bindModule.bind();
             }
+        case is AuthModule.AuthFinishExpectedEvent:
+            processAuthFinishExpected();
         default:
             log("received unhandled event:", event);
         }
@@ -211,7 +222,22 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     }
     
     func processAuthSuccess(_ event:AuthModule.AuthSuccessEvent) {
-        connector.restartStream();
+        let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining? = modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID);
+
+        if !(streamFeaturesWithPipelining?.active ?? false) {
+            connector.restartStream();
+        }
+    }
+    
+    func processAuthFinishExpected() {
+        guard let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining = modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID) else {
+            return;
+        }
+        
+        // current version of Tigase is not capable of pipelining auth with <stream> as get features is called before authentication is done!!
+        if streamFeaturesWithPipelining.active {
+            self.startStream();
+        }
     }
     
     func processResourceBindSuccess(_ event:ResourceBinderModule.ResourceBindSuccessEvent) {
@@ -256,7 +282,18 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         } else if !authorized {
             log("starting authentication");
             if let authModule:AuthModule = modulesManager.getModule(AuthModule.ID) {
-                authModule.login();
+                if !authModule.inProgress {
+                    authModule.login();
+                } else {
+                    log("skipping authentication as it is already in progress!");
+                    if resumption && context.sessionObject.userBareJid != nil {
+                        streamManagementModule!.resume();
+                    } else {
+                        if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
+                            bindModule.bind();
+                        }
+                    }
+                }
             }
         } else if authorized {
             if resumption && context.sessionObject.userBareJid != nil {
@@ -280,7 +317,20 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
         return (featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) != nil;
     }
-
+    
+    open func startStream() {
+        let userJid:BareJID? = self.context.sessionObject.getProperty(SessionObject.USER_BARE_JID);
+        // replace with this first one to enable see-other-host feature
+        //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
+        let domain = self.context.sessionObject.domainName!;
+        let seeOtherHost = (self.context.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) && userJid != nil) ? " from='\(userJid!)'" : ""
+        self.connector.send(data: "<stream:stream to='\(domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
+        
+        if let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining = self.context.modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID) {
+            streamFeaturesWithPipelining.streamStarted();
+        }
+    }
+    
     /// Event fired when XMPP stream error happens
     open class ErrorEvent: Event {
         

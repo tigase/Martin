@@ -35,6 +35,7 @@ open class AnonymousMechanism: SaslMechanism {
     
     open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) throws -> String? {
         setComplete(sessionObject, completed: true);
+        setCompleteExpected(sessionObject);
         return nil;
     }
     

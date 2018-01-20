@@ -54,6 +54,10 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
     
     open let features = [String]();
     
+    open var inProgress: Bool {
+        return context.sessionObject.getProperty("AUTH_IN_PROGRESS", defValue: false);
+    }
+    
     public override init() {
         
     }
@@ -67,9 +71,8 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
      mechanisms for authentication
      */
     open func login() {
-        let saslModule:SaslModule? = _context.modulesManager.getModule(SaslModule.ID);
-        if saslModule != nil {
-            saslModule?.login();
+        if let saslModule:SaslModule = _context.modulesManager.getModule(SaslModule.ID) {
+            saslModule.login();
         }
     }
     
@@ -82,6 +85,7 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         switch event {
         case is SaslModule.SaslAuthSuccessEvent:
             let saslEvent = event as! SaslModule.SaslAuthSuccessEvent;
+            _context.sessionObject.setProperty("AUTH_IN_PROGRESS", value: false);
             saslEvent.sessionObject.setProperty(AuthModule.AUTHORIZED, value: true, scope: SessionObject.Scope.stream);
             _context.eventBus.fire(AuthSuccessEvent(sessionObject: saslEvent.sessionObject));
         case is SaslModule.SaslAuthFailedEvent:
@@ -90,6 +94,7 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
             _context.eventBus.fire(AuthFailedEvent(sessionObject: saslEvent.sessionObject, error: saslEvent.error));
         case is SaslModule.SaslAuthStartEvent:
             let saslEvent = event as! SaslModule.SaslAuthStartEvent;
+            _context.sessionObject.setProperty("AUTH_IN_PROGRESS", value: true);
             _context.eventBus.fire(AuthStartEvent(sessionObject: saslEvent.sessionObject));
         default:
             log("handing of unsupported event", event);
@@ -134,6 +139,24 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         public init(sessionObject: SessionObject) {
             self.sessionObject = sessionObject;
         }
+    }
+    
+    open class AuthFinishExpectedEvent: Event {
+        
+        open static let TYPE = AuthFinishExpectedEvent();
+        
+        open let type = "AuthFinishExpectedEvent";
+        
+        open let sessionObject: SessionObject!;
+        
+        init() {
+            sessionObject = nil;
+        }
+        
+        public init(sessionObject: SessionObject) {
+            self.sessionObject = sessionObject;
+        }
+        
     }
     
     /// Event fired when after sucessful authentication

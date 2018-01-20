@@ -421,7 +421,7 @@ open class Element : Node, ElementProtocol {
         xmlDelegate.delegate = holder;
         let parser = XMLParser(delegate: xmlDelegate);
         let data = toParse.data(using: String.Encoding.utf8);
-        parser.parse(data: data!);
+        try? parser.parse(data: data!);
         return holder.parsed;
     }
 }

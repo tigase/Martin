@@ -49,6 +49,14 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     fileprivate var mechanisms = [String:SaslMechanism]();
     fileprivate var _mechanismsOrder = [String]();
     
+    open var inProgress: Bool {
+        guard let mechanism: SaslMechanism = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM) else {
+            return false;
+        }
+        
+        return mechanism.isCompleteExpected(context.sessionObject) && !mechanism.isComplete(context.sessionObject);
+    }
+    
     /// Order of mechanisms preference
     open var mechanismsOrder:[String] {
         get {
@@ -122,8 +130,7 @@ open class SaslModule: Logger, XmppModule, ContextAware {
      Begin SASL authentication process
      */
     open func login() {
-        let mechanism = guessSaslMechanism();
-        if mechanism == nil {
+        guard let mechanism = guessSaslMechanism() else {
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.invalid_mechanism));
             return;
         }
@@ -132,12 +139,18 @@ open class SaslModule: Logger, XmppModule, ContextAware {
         do {
             let auth = Stanza(name: "auth");
             auth.element.xmlns = SaslModule.SASL_XMLNS;
-            auth.element.setAttribute("mechanism", value: mechanism!.name);
-            auth.element.value = try mechanism?.evaluateChallenge(nil, sessionObject: context.sessionObject);
+            auth.element.setAttribute("mechanism", value: mechanism.name);
+            auth.element.value = try mechanism.evaluateChallenge(nil, sessionObject: context.sessionObject);
         
-            context.eventBus.fire(SaslAuthStartEvent(sessionObject:context.sessionObject, mechanism: mechanism!.name))
+            context.eventBus.fire(SaslAuthStartEvent(sessionObject:context.sessionObject, mechanism: mechanism.name))
         
             context.writer!.write(auth);
+            
+            if mechanism.isCompleteExpected(context.sessionObject) {
+                context.writer?.execAfterWrite {
+                    self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(sessionObject: self.context.sessionObject));
+                }
+            }
         } catch _ {
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.aborted));
         }
@@ -178,6 +191,12 @@ open class SaslModule: Logger, XmppModule, ContextAware {
         responseEl.element.xmlns = SaslModule.SASL_XMLNS;
         responseEl.element.value = response;
         context.writer?.write(responseEl);
+        
+        if mechanism.isCompleteExpected(context.sessionObject) {
+            context.writer?.execAfterWrite {
+                self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(sessionObject: self.context.sessionObject));
+            }
+        }
     }
     
     func getSupportedMechanisms() -> [String] {

@@ -85,10 +85,5 @@ open class XMPPParserDelegate: Logger, XMLParserDelegate {
     open func charactersFound(_ value: String) {
         el_stack.last?.addNode(CData(value: value))
     }
-    
-    open func error(msg: String) {
-        log("error occurred", msg);
-        self.delegate?.onError(msg: msg);
-    }
-    
+        
 }

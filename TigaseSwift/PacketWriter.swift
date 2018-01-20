@@ -65,4 +65,9 @@ open class PacketWriter {
     open func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback:AsyncCallback) {
     
     }
+    
+    open func execAfterWrite(handler: @escaping () -> Void) {
+        
+    }
 }
+

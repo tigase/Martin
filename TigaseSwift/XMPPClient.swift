@@ -289,5 +289,10 @@ open class XMPPClient: Logger, EventHandler {
             }
         }
         
+        override func execAfterWrite(handler: @escaping () -> Void) {
+            queue.async {
+                handler();
+            }
+        }
     }
 }

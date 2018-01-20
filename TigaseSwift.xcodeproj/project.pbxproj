@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FE00157B2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */; };
 		FE01ADA51E2243DD00FA7E65 /* PushNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */; };
 		FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */; };
 		FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFD401CAED46B000D254E /* SessionObject.swift */; };
@@ -151,6 +152,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamFeaturesModuleWithPipelining.swift; sourceTree = "<group>"; };
 		FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PushNotificationsModule.swift; sourceTree = "<group>"; };
 		FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdHocCommandsModule.swift; sourceTree = "<group>"; };
 		FE2EFD401CAED46B000D254E /* SessionObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionObject.swift; sourceTree = "<group>"; };
@@ -362,6 +364,7 @@
 				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
 				FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */,
 				FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */,
+				FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -803,6 +806,7 @@
 				FEDCBF8D1D9EC97100AE9129 /* ListField.swift in Sources */,
 				FEDCBF771D9E9C5C00AE9129 /* JabberDataElement.swift in Sources */,
 				FE3A45D31CE7289600C36264 /* Zlib.swift in Sources */,
+				FE00157B2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift in Sources */,
 				FEC514161CE9C702003AF765 /* MucRole.swift in Sources */,
 				FE689CFB1FFA6171007AFB17 /* Reachability.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,

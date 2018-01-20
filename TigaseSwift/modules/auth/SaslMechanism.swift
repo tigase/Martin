@@ -73,5 +73,14 @@ extension SaslMechanism {
     func setComplete(_ sessionObject:SessionObject, completed:Bool) {
         sessionObject.setProperty("SASL_COMPLETE_KEY", value: completed, scope: SessionObject.Scope.stream);
     }
+    
+    func setCompleteExpected(_ sessionObject: SessionObject) {
+        sessionObject.setProperty("SASL_COMPLETE_EXPECTED_KEY", value: true);
+    }
+    
+    func isCompleteExpected(_ sessionObject: SessionObject) -> Bool {
+        return sessionObject.getProperty("SASL_COMPLETE_EXPECTED_KEY", defValue: false);
+    }
+
 }
 

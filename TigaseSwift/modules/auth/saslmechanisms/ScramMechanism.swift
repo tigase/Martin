@@ -160,6 +160,7 @@ open class ScramMechanism: Logger, SaslMechanism {
             clientFinalMessage += "," + "p=" + Foundation.Data(bytes: &clientProof, count: clientProof.count).base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
 
             data.stage += 1;
+            setCompleteExpected(sessionObject);
             return clientFinalMessage.data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
         case 2:
             guard input != nil else {

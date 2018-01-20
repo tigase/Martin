@@ -317,12 +317,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         queue.async {
             self.parser = XMLParser(delegate: self.parserDelegate!);
             self.log("starting new parser", self.parser!);
-            let userJid:BareJID? = self.sessionObject.getProperty(SessionObject.USER_BARE_JID);
-            // replace with this first one to enable see-other-host feature
-            //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
-            let domain = self.sessionObject.domainName!;
-            let seeOtherHost = (self.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) && userJid != nil) ? " from='\(userJid!)'" : ""
-            self.send(data: "<stream:stream to='\(domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
+            self.sessionLogic.startStream();
         }
     }
     
@@ -351,6 +346,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     }
     
     override open func onError(msg: String?) {
+        log(msg);
         closeSocket(newState: State.disconnected);
     }
     
@@ -416,7 +412,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     /**
      Methods prepares data to be sent using `dispatch_async()` to send data using other thread.
      */
-    fileprivate func send(data:String) {
+    func send(data:String) {
         queue.async {
             self.sendSync(data);
         }
@@ -504,9 +500,9 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                         let data = Data(bytes: &buffer, count: read);
                         if self.zlib != nil {
                             let decompressedData = self.zlib!.decompress(data: data);
-                            self.parser?.parse(data: decompressedData);
+                            self.parseXml(data: decompressedData);
                         } else {
-                            self.parser?.parse(data: data);
+                            self.parseXml(data: data);
                         }
                     }
                 }
@@ -552,6 +548,20 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             }
         default:
             log("stream event:", aStream.description);            
+        }
+    }
+    
+    fileprivate func parseXml(data: Data) {
+        do {
+            try self.parser?.parse(data: data);
+        } catch XmlParserError.xmlDeclarationInside(_, let position) {
+            self.parser = XMLParser(delegate: self.parserDelegate!);
+            log("got XML declaration within XML, restarting XML parser...");
+            try! self.parser?.parse(data: data[position..<data.count]);
+        } catch XmlParserError.unknown(let errorCode) {
+            self.onError(msg: "XML stream parsing error, code: \(errorCode)");
+        } catch {
+            self.onError(msg: "XML stream parsing error");
         }
     }
     

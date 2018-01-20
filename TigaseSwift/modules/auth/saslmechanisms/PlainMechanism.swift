@@ -52,6 +52,8 @@ open class PlainMechanism: SaslMechanism {
         if base64 != nil {
             setComplete(sessionObject, completed: true);
         }
+        
+        setCompleteExpected(sessionObject);
         return base64;
     }
     

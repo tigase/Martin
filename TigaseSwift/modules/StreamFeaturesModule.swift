@@ -28,9 +28,10 @@ import Foundation
  */
 open class StreamFeaturesModule: XmppModule, ContextAware {
 
+    open static let ID = "stream:features";
     open static let STREAM_FEATURES_KEY = "stream:features";
     
-    open let id = "stream:features";
+    open let id = ID;
     open let criteria = Criteria.name("features", xmlns: "http://etherx.jabber.org/streams");
     open let features = [String]();
     
@@ -55,10 +56,17 @@ open class StreamFeaturesModule: XmppModule, ContextAware {
      - parameter stanza: stanza to process
      */
     open func process(stanza:Stanza) throws {
-        context.sessionObject.setProperty("stream:features", value: stanza.element);
-        context.eventBus.fire(StreamFeaturesReceivedEvent(context:context, element: stanza.element));
+        setStreamFeatures(stanza.element);
     }
 
+    open func fireEvent(streamFeatures element: Element) {
+        context.eventBus.fire(StreamFeaturesReceivedEvent(context:context, element: element));
+    }
+    
+    func setStreamFeatures(_ element: Element) {
+        context.sessionObject.setProperty("stream:features", value: element);
+        fireEvent(streamFeatures: element);
+    }
 }
 
 /// Event fired when stream features are received
