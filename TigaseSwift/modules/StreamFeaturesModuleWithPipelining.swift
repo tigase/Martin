@@ -75,12 +75,7 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
         switch event {
         case let e as SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
             let pipeliningSupported = newCachedFeatures.count > 0 && newCachedFeatures.count == newCachedFeatures.filter({ features in
-                return features.findChild(where: { f in
-                    guard let value = f.getAttribute("var") else {
-                        return false;
-                    }
-                    return "urn:xmpp:features:pipelining" == value;
-                }) != nil;
+                return features.findChild(name: "pipelining", xmlns: "urn:xmpp:features:pipelining") != nil;
             }).count;
             cache?.set(for: e.sessionObject, features: pipeliningSupported ? newCachedFeatures : nil);
             newCachedFeatures.removeAll();
