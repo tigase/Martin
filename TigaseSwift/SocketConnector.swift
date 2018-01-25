@@ -317,7 +317,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         queue.async {
             self.parser = XMLParser(delegate: self.parserDelegate!);
             self.log("starting new parser", self.parser!);
-            self.sessionLogic.startStream();
+            self.sessionLogic?.startStream();
         }
     }
     
