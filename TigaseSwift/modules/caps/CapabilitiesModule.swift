@@ -82,9 +82,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
         case let e as PresenceModule.BeforePresenceSendEvent:
             onBeforePresenceSend(event: e);
         case let e as PresenceModule.ContactPresenceChanged:
-            DispatchQueue.global(qos: DispatchQoS.QoSClass.background).async {
-                self.onReceivedPresence(event: e);
-            }
+            onReceivedPresence(event: e);
         default:
             break;
         }
@@ -129,17 +127,16 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
             return;
         }
         let nodeName = node + "#" + ver;
-        guard !cache!.isCached(node: nodeName) else {
-            return;
-        }
         
-        guard let discoveryModule: DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) else {
-            return;
-        }
-        discoveryModule.getInfo(for: from, node: nodeName, onInfoReceived: { (node, identities, features) in
-            let identity = identities.first;
-            self.cache?.store(node: node!, identity: identity, features: features);
+        cache!.isCached(node: nodeName) { cached in
+            guard let discoveryModule: DiscoveryModule = self.context.modulesManager.getModule(DiscoveryModule.ID) else {
+                return;
+            }
+            discoveryModule.getInfo(for: from, node: nodeName, onInfoReceived: { (node, identities, features) in
+                let identity = identities.first;
+                self.cache?.store(node: node!, identity: identity, features: features);
             }, onError: nil);
+        }
     }
     
     /**
@@ -236,7 +233,7 @@ public protocol CapabilitiesCache {
      - parameter node: node to check
      - returns: true if data is available in cache
      */
-    func isCached(node: String) -> Bool;
+    func isCached(node: String, handler: @escaping (Bool)->Void);
     
     /**
      Store data in cache

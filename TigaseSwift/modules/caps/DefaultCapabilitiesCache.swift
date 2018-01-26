@@ -64,12 +64,11 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         return Array(result);
     }
     
-    open func isCached(node: String) -> Bool {
-        var result = false;
-        queue.sync {
-            result = self.features.index(forKey: node) != nil;
+    open func isCached(node: String, handler: @escaping (Bool)->Void) {
+        queue.async {
+            let result = self.features.index(forKey: node) != nil;
+            handler(result);
         }
-        return result;
     }
     
     open func store(node: String, identity: DiscoveryModule.Identity?, features: [String]) {

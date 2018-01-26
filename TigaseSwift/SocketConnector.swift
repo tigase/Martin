@@ -76,7 +76,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     var parserDelegate: XMLParserDelegate?
     var parser: XMLParser?
     var dnsResolver: DNSSrvResolver?;
-    weak var sessionLogic: XmppSessionLogic!;
+    weak var sessionLogic: XmppSessionLogic?;
     var closeTimer: Timer?;
     var zlib: Zlib?;
     /**
@@ -163,7 +163,10 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
         queue.async {
             self.state = .connecting;
-            let server:String = serverToConnect ?? self.sessionLogic.serverToConnect();
+            guard let server:String = serverToConnect ?? self.sessionLogic?.serverToConnect() else {
+                self.state = .disconnected;
+                return;
+            }
         
             if let port: Int = self.context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
                 self.log("connecting to server:", server, "on port:", port);
@@ -264,7 +267,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         case .connected:
             self.state = State.disconnecting;
             self.log("closing XMPP stream");
-            self.sessionLogic.onStreamClose {
+            self.sessionLogic?.onStreamClose {
                 self.queue.async {
                     self.send(data: "</stream:stream>");
                 }
@@ -335,7 +338,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     override open func process(element packet: Element) {
         super.process(element: packet);
         if packet.name == "error" && packet.xmlns == "http://etherx.jabber.org/streams" {
-            sessionLogic.onStreamError(packet);
+            sessionLogic?.onStreamError(packet);
         } else if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
             proceedTLS();
         } else if packet.name == "compressed" && packet.xmlns == "http://jabber.org/protocol/compress" {
