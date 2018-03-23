@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class JabberDataElement {
+open class JabberDataElementFieldAware {
     
     open let element: Element;
     
@@ -34,6 +34,61 @@ open class JabberDataElement {
         }
         return names;
     }
+    
+    public init?(from: Element) {
+        self.element = from;
+    }
+    
+    open func addField(_ field: Field) {
+        element.removeChildren(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == field.name});
+        element.addChild(field.element);
+    }
+    
+    open func getField<T: Field>(named name: String) -> T? {
+        guard let fieldEl = element.findChild(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == name}) else {
+            return nil;
+        }
+        
+        return wrapIntoField(elem: fieldEl) as? T;
+    }
+    
+    open func removeField(named name: String) {
+        element.removeChildren(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == name})
+    }
+    
+    open func removeField(_ field: Field) {
+        element.removeChildren(where: { (elem)->Bool in return elem == field.element});
+    }
+    
+    open func wrapIntoField(elem: Element) -> Field? {
+        let type: String = elem.getAttribute("type") ?? "text-single";
+        switch type {
+        case "boolean":
+            return BooleanField(from: elem);
+        case "fixed":
+            return FixedField(from: elem);
+        case "hidden":
+            return HiddenField(from: elem);
+        case "jid-multi":
+            return JidMultiField(from: elem);
+        case "jid-single":
+            return JidSingleField(from: elem);
+        case "list-multi":
+            return ListMultiField(from: elem);
+        case "list-single":
+            return ListSingleField(from: elem);
+        case "text-multi":
+            return TextMultiField(from: elem);
+        case "text-private":
+            return TextPrivateField(from: elem);
+        default:
+            return TextSingleField(from: elem);
+        }
+    }
+    
+}
+
+open class JabberDataElement: JabberDataElementFieldAware {
     
     open var visibleFieldNames: [String] {
         var names = [String]();
@@ -70,6 +125,14 @@ open class JabberDataElement {
         }
     }
 
+    open var reported: [Reported] {
+        return element.mapChildren(transform: { (el)  in
+            return Reported(from: el, parent: self.element);
+        }) { (el) -> Bool in
+            return el.name == "reported";
+        }
+    }
+    
     open var title: String? {
         get {
             return element.findChild(name: "title")?.value;
@@ -101,58 +164,11 @@ open class JabberDataElement {
         self.init(from: elem)!;
     }
     
-    public init?(from element: Element?) {
+    public override init?(from element: Element?) {
         guard element?.name == "x" && element?.xmlns == "jabber:x:data" else {
             return nil;
         }
-        self.element = element!;
-    }
-    
-    open func addField(_ field: Field) {
-        element.removeChildren(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == field.name});
-        element.addChild(field.element);
-    }
-    
-    open func getField<T: Field>(named name: String) -> T? {
-        guard let fieldEl = element.findChild(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == name}) else {
-            return nil;
-        }
-    
-        return wrapIntoField(elem: fieldEl) as? T;
-    }
-    
-    open func removeField(named name: String) {
-        element.removeChildren(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == name})
-    }
-    
-    open func removeField(_ field: Field) {
-        element.removeChildren(where: { (elem)->Bool in return elem == field.element});
-    }
-    
-    open func wrapIntoField(elem: Element) -> Field? {
-        let type: String = elem.getAttribute("type") ?? "text-single";
-        switch type {
-            case "boolean":
-                return BooleanField(from: elem);
-            case "fixed":
-                return FixedField(from: elem);
-            case "hidden":
-                return HiddenField(from: elem);
-            case "jid-multi":
-                return JidMultiField(from: elem);
-            case "jid-single":
-                return JidSingleField(from: elem);
-            case "list-multi":
-                return ListMultiField(from: elem);
-            case "list-single":
-                return ListSingleField(from: elem);
-            case "text-multi":
-                return TextMultiField(from: elem);
-            case "text-private":
-                return TextPrivateField(from: elem);
-            default:
-                return TextSingleField(from: elem);
-        }
+        super.init(from: element!);
     }
     
     open func submitableElement(type: XDataType) -> Element {
@@ -160,6 +176,7 @@ open class JabberDataElement {
         elem.setAttribute("type", value: type.rawValue);
         return elem;
     }
+    
 }
 
 open class Field {
@@ -230,6 +247,61 @@ open class Field {
             elem.addChild(Element(name: "required"));
         }
         return elem;
+    }
+}
+
+open class Reported {
+    open let element: Element;
+    fileprivate let parent: Element;
+    
+    open var rows: [Row] {
+        let children = parent.getChildren();
+        var idx = children.index(of: element)!.advanced(by: 1);
+        var result: [Row] = [];
+        while children.count > idx && children[idx].name == "item" {
+            if let row = Row(from: children[idx]) {
+                result.append(row);
+            }
+            idx = idx.advanced(by: 1);
+        }
+        return result;
+    };
+    
+    public init?(from: Element, parent: Element) {
+        guard from.name == "reported" && parent.findChild(where: { el in el == from }) != nil else {
+            return nil;
+        }
+        self.element = from;
+        self.parent = parent;
+    }
+    
+    open var fieldNames: [String] {
+        return element.mapChildren(transform: { (fieldEl) in
+            return fieldEl.getAttribute("var");
+        }, filter: { (child) in child.name == "field" });
+    }
+    
+    open var count: Int {
+        let children = parent.getChildren();
+        let start = children.index(of: element)!.advanced(by: 1);
+        var end = start;
+        while children.count > end && children[end].name == "item" {
+            end = end.advanced(by: 1);
+        }
+        
+        // FIXME: maybe it would be better to create rows when reported element is created??
+        return end.distance(to: start);
+    }
+    
+    open class Row: JabberDataElementFieldAware {
+        
+        public override init?(from: Element) {
+            guard from.name == "item" else {
+                return nil;
+            }
+            super.init(from: from);
+        }
+        
     }
 }
 
