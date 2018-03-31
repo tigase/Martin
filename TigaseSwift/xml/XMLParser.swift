@@ -21,7 +21,7 @@
 
 import Foundation
 
-import LibXML2
+import libxml2
 
 struct attr {
     var name:UnsafePointer<UInt8>?;
