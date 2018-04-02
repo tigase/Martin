@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import zlib
 
 /**
  Wrapper/Helper class for easier usage of ZLib for compression/decompression
@@ -82,38 +83,11 @@ open class Zlib {
      Class for internal use.
      */
     open class Base {
-    
-        /// returns version of ZLib library
-        @_silgen_name("zlibVersion") fileprivate static func zlibVersion() -> OpaquePointer;
         
         /// version of ZLib library
-        fileprivate static var version = Base.zlibVersion();
+        fileprivate static var version = zlibVersion();
         /// instance of `z_stream` structure
         fileprivate var stream = z_stream();
-        
-        /**
-         Structure which defines z_stream structure used by ZLib library
-         */
-        struct z_stream {
-            fileprivate var next_in: UnsafePointer<UInt8>? = nil;    /* next input byte */
-            fileprivate var avail_in: CUnsignedInt = 0;             /* number of bytes available at next_in */
-            fileprivate var total_in: CUnsignedLong = 0;            /* total number of input bytes read so far */
-            
-            fileprivate var next_out: UnsafePointer<UInt8>? = nil;   /* next output byte should be put there */
-            fileprivate var avail_out: CUnsignedInt = 0;            /* remaining free space at next_out */
-            fileprivate var total_out: CUnsignedLong = 0;           /* total number of bytes output so far */
-            
-            fileprivate var msg: UnsafePointer<UInt8>? = nil;        /* last error message, NULL if no error */
-            fileprivate var state: OpaquePointer? = nil;            /* not visible by applications */
-            
-            fileprivate var zalloc: OpaquePointer? = nil;           /* used to allocate the internal state */
-            fileprivate var zfree: OpaquePointer? = nil;            /* used to free the internal state */
-            fileprivate var opaque: OpaquePointer? = nil;           /* private data object passed to zalloc and zfree */
-            
-            fileprivate var data_type: CInt = 0;                    /* best guess about the data type: binary or text */
-            fileprivate var adler: CUnsignedLong = 0;               /* adler32 value of the uncompressed data */
-            fileprivate var reserved: CUnsignedLong = 0;            /* reserved for future use */
-        }
         
     }
 
@@ -124,17 +98,13 @@ open class Zlib {
      */
     open class Deflater: Base {
         
-        @_silgen_name("deflateInit_") fileprivate func deflateInit_(_ stream : UnsafeMutableRawPointer, level : CInt, version : OpaquePointer, stream_size : CInt) -> CInt
-        @_silgen_name("deflate") fileprivate func deflate(_ stream : UnsafeMutableRawPointer, flush : CInt) -> CInt
-        @_silgen_name("deflateEnd") fileprivate func deflateEnd(_ strean : UnsafeMutableRawPointer) -> CInt
-        
         /**
          Creates instance of `Deflater`
          - paramter level: sets compression level
          */
         public init(level: Compression = .default) {
             super.init();
-            _ = deflateInit_(&stream, level: CInt(level.rawValue), version: Base.version, stream_size: CInt(MemoryLayout<z_stream>.size));
+            _ = deflateInit_(&stream, CInt(level.rawValue), Base.version, CInt(MemoryLayout<z_stream>.size));
         }
         
         deinit {
@@ -152,14 +122,14 @@ open class Zlib {
             let bytes = bytes
             var result = [UInt8]();
             stream.avail_in = CUnsignedInt(length);
-            stream.next_in = bytes;
+            stream.next_in = UnsafeMutablePointer<Bytef>(mutating: bytes);
             
             var out = [UInt8](repeating: 0, count: length + (length / 100) + 13);
             repeat {
                 stream.avail_out = CUnsignedInt(out.count);
                 stream.next_out = &out + 0;
                 
-                _ = deflate(&stream, flush: CInt(flush.rawValue));
+                _ = deflate(&stream, CInt(flush.rawValue));
                 let outCount = out.count - Int(stream.avail_out);
                 if outCount > 0 {
                     result += Array(out[0...outCount-1]);
@@ -176,17 +146,17 @@ open class Zlib {
          - returns: compressed data as array of bytes (may not contain all data depending on `flush` parameter)
          */
         public func compress(data: Data, flush: Flush = .partial) -> Data {
-            return data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
+            return data.withUnsafeBytes { (bytes: UnsafePointer<Bytef>) -> Data in
                 var result = Data();
                 stream.avail_in = CUnsignedInt(data.count);
-                stream.next_in = bytes;
+                stream.next_in = UnsafeMutablePointer<Bytef>(mutating: bytes);
 
                 var out = [UInt8](repeating: 0, count: data.count + (data.count / 100) + 13);
                 repeat {
                     stream.avail_out = CUnsignedInt(out.count);
                     stream.next_out = &out + 0;
                     
-                    _ = deflate(&stream, flush: CInt(flush.rawValue));
+                    _ = deflate(&stream, CInt(flush.rawValue));
                     let outCount = out.count - Int(stream.avail_out);
                     if outCount > 0 {
                         result.append(&out, count: outCount);
@@ -205,14 +175,10 @@ open class Zlib {
      */
     open class Inflater: Base {
         
-        @_silgen_name("inflateInit_") fileprivate func inflateInit_(_ stream : UnsafeMutableRawPointer, version : OpaquePointer, stream_size : CInt) -> CInt
-        @_silgen_name("inflate") fileprivate func inflate(_ stream : UnsafeMutableRawPointer, flush : CInt) -> CInt
-        @_silgen_name("inflateEnd") fileprivate func inflateEnd(_ stream : UnsafeMutableRawPointer) -> CInt
-        
         /// Creates instance of `Inflater`
         public override init() {
             super.init();
-            _ = inflateInit_(&stream, version: Base.version, stream_size: CInt(MemoryLayout<z_stream>.size));
+            _ = inflateInit_(&stream, Base.version, CInt(MemoryLayout<z_stream>.size));
         }
         
         /**
@@ -226,14 +192,14 @@ open class Zlib {
             let bytes = bytes
             var result = [UInt8]();
             stream.avail_in = CUnsignedInt(length);
-            stream.next_in = bytes;
+            stream.next_in = UnsafeMutablePointer<Bytef>(mutating: bytes);
             
             var out = [UInt8](repeating: 0, count: 50);
             repeat {
                 stream.avail_out = CUnsignedInt(out.count);
                 stream.next_out = &out + 0;
                 
-                _ = inflate(&stream, flush: CInt(flush.rawValue));
+                _ = inflate(&stream, CInt(flush.rawValue));
                 let outCount = out.count - Int(stream.avail_out);
                 if outCount > 0 {
                     result += Array(out[0...outCount-1]);
@@ -253,14 +219,14 @@ open class Zlib {
             return data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
                 var result = Data();
                 stream.avail_in = CUnsignedInt(data.count);
-                stream.next_in = bytes;
+                stream.next_in = UnsafeMutablePointer<Bytef>(mutating: bytes);
             
                 var out = [UInt8](repeating: 0, count: 50);
                 repeat {
                     stream.avail_out = CUnsignedInt(out.count);
                     stream.next_out = &out + 0;
                 
-                    _ = inflate(&stream, flush: CInt(flush.rawValue));
+                    _ = inflate(&stream, CInt(flush.rawValue));
                     let outCount = out.count - Int(stream.avail_out);
                     if outCount > 0 {
                         result.append(&out, count: outCount);
