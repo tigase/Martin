@@ -96,7 +96,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     open var state:State {
         get {
             return self.dispatch_sync_with_result_local_queue() {
-                if self.state_ != State.disconnected && (self.inStream?.streamStatus == Stream.Status.closed || self.outStream?.streamStatus == Stream.Status.closed) {
+                if self.state_ != State.disconnected && ((self.inStream?.streamStatus ?? .notOpen) == Stream.Status.closed || (self.outStream?.streamStatus ?? .notOpen) == Stream.Status.closed) {
                     return State.disconnected;
                 }
                 return self.state_;

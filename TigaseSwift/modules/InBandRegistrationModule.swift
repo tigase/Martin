@@ -415,14 +415,16 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                                 sameForm = false;
                             }
                         });
-                        if (!sameForm) {
-                            self.onForm?(form, self);
-                        } else if (labelsChanged) {
-                            self.onForm?(self.formToSubmit!, self);
-                        } else {
-                            self.submit(form: self.formToSubmit!);
+                        DispatchQueue.global().async {
+                            if (!sameForm) {
+                                self.onForm?(form, self);
+                            } else if (labelsChanged) {
+                                self.onForm?(self.formToSubmit!, self);
+                            } else {
+                                self.submit(form: self.formToSubmit!);
+                            }
+                            self.formToSubmit = nil;
                         }
-                        self.formToSubmit = nil;
                     }
                 }, onError: self.onErrorFn);
             case is SocketConnector.DisconnectedEvent:
