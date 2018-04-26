@@ -67,20 +67,41 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         guard let event = message.findChild(name: "event", xmlns: PubSubModule.PUBSUB_EVENT_XMLNS) else {
             return;
         }
-        guard let itemsElem = event.findChild(name: "items") else {
-            return;
-        }
-        let nodeName = itemsElem.getAttribute("node");
-        
+
         let timestamp = message.delay?.stamp ?? Date();
         
-        itemsElem.getChildren().forEach { (item) in
-            let type = item.name;
-            let itemId = item.getAttribute("id");
-            let payload = item.firstChild();
-         
-            context.eventBus.fire(NotificationReceivedEvent(sessionObject: context.sessionObject, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: type));
+        if let itemsElem = event.findChild(name: "items") {
+            let nodeName = itemsElem.getAttribute("node");
+            itemsElem.getChildren().forEach { (item) in
+                let type = item.name;
+                let itemId = item.getAttribute("id");
+                let payload = item.firstChild();
+                
+                context.eventBus.fire(NotificationReceivedEvent(sessionObject: context.sessionObject, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: type));
+            }
         }
+        
+        if let collectionElem = event.findChild(name: "collection") {
+            if let nodeName = collectionElem.getAttribute("node") {
+                collectionElem.mapChildren(transform: { (el) -> NotificationCollectionChildrenChangedEvent? in
+                    guard let childNode = el.getAttribute("node"), let action = NotificationCollectionChildrenChangedEvent.Action(rawValue: el.name) else {
+                        return nil;
+                    }
+                    return NotificationCollectionChildrenChangedEvent(sessionObject: self.context.sessionObject, message: message, nodeName: nodeName, childNodeName: childNode, action: action, timestamp: timestamp);
+                }, filter: { (el) -> Bool in
+                    el.name == NotificationCollectionChildrenChangedEvent.Action.associate.rawValue || el.name == NotificationCollectionChildrenChangedEvent.Action.dissociate.rawValue;
+                }).forEach { ev in
+                    self.context.eventBus.fire(ev);
+                }
+            }
+        }
+        
+        if let deleteElem = event.findChild(name: "delete") {
+            if let nodeName = deleteElem.getAttribute("node") {
+                self.context.eventBus.fire(NotificationNodeDeletedEvent(sessionObject: self.context.sessionObject, message: message, nodeName: nodeName));
+            }
+        }
+        
     }
     
 
@@ -103,7 +124,7 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         };
     }
     
-    /// Event fired when received message with PubSub notification/event
+    /// Event fired when received message with PubSub notification/event with items
     open class NotificationReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
         open static let TYPE = NotificationReceivedEvent();
@@ -146,6 +167,74 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         
     }
     
+    open class NotificationCollectionChildrenChangedEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
+        open static let TYPE = NotificationCollectionChildrenChangedEvent();
+
+        open let type = "NotificationCollectionChildrenChangedEvent"
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
+        open let sessionObject: SessionObject!;
+        /// Received message with notification
+        open let message: Message!;
+        /// Name of node which sent notification
+        open let nodeName: String!;
+        /// Name of child node
+        open let childNodeName: String!;
+        /// Action
+        open let action: Action!;
+        /// Timestamp of event (may not be current if delivery was delayed on server side)
+        open let timestamp: Date!;
+
+        init() {
+            self.sessionObject = nil;
+            self.message = nil;
+            self.nodeName = nil;
+            self.childNodeName = nil;
+            self.action = nil;
+            self.timestamp = nil;
+        }
+        
+        init(sessionObject: SessionObject, message: Message, nodeName: String, childNodeName: String, action: Action, timestamp: Date) {
+            self.sessionObject = sessionObject;
+            self.message = message;
+            self.nodeName = nodeName;
+            self.childNodeName = childNodeName;
+            self.action = action;
+            self.timestamp = timestamp;
+        }
+
+        public enum Action: String {
+            case associate
+            case dissociate
+        }
+    }
+    
+    open class NotificationNodeDeletedEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
+        open static let TYPE = NotificationNodeDeletedEvent();
+        
+        open let type = "NotificationNodeDeletedEvent"
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
+        open let sessionObject: SessionObject!;
+        /// Received message with notification
+        open let message: Message!;
+        /// Name of node which sent notification
+        open let nodeName: String!;
+        
+        init() {
+            self.sessionObject = nil;
+            self.message = nil;
+            self.nodeName = nil;
+        }
+        
+        init(sessionObject: SessionObject, message: Message, nodeName: String) {
+            self.sessionObject = sessionObject;
+            self.message = message;
+            self.nodeName = nodeName;
+        }
+        
+    }
+
     /// Instace which contains item id and payload in single object
     open class Item: CustomStringConvertible {
         
