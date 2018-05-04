@@ -30,7 +30,7 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
     public init(resolver: DNSSrvResolver, cache: DNSSrvResolverCache, withAutomaticRefresh: Bool = true) {
         self.resolver = resolver;
         self.cache = cache;
-        self.automaticRefresh = true;
+        self.automaticRefresh = withAutomaticRefresh;
     }
     
     open func resolve(domain: String, completionHandler: @escaping ([XMPPSrvRecord]?) -> Void) {
