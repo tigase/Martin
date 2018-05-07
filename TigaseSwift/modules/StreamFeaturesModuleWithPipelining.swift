@@ -32,10 +32,10 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
     
     override open var context: Context! {
         willSet {
-            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE]);
+            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
         }
         didSet {
-            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE]);
+            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
         }
     }
     
@@ -79,10 +79,14 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
             }).count;
             cache?.set(for: e.sessionObject, features: pipeliningSupported ? newCachedFeatures : nil);
             newCachedFeatures.removeAll();
-        case is SocketSessionLogic.ErrorEvent:
+        case let e as SocketSessionLogic.ErrorEvent:
             connectionRestarted();
+            cache?.set(for: e.sessionObject, features: nil);
         case is SocketConnector.DisconnectedEvent:
             connectionRestarted();
+        case let e as AuthModule.AuthFailedEvent:
+            connectionRestarted();
+            cache?.set(for: e.sessionObject, features: nil);
         default:
             break;
         }
