@@ -81,10 +81,10 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     /**
      Retrieves registration form and call provided callback
      - parameter from: destination JID for registration - useful for registration in transports
-     - parameter onSuccess: called when form is retrieved, or nil if there is no form
+     - parameter onSuccess: called when form is retrieved. First parameter determine if server supports registration using Data Forms and second parameter provides list of fields to pass.
      - parameter onError: called when server returned error
      */
-    open func retrieveRegistrationForm(from jid: JID? = nil, onSuccess: @escaping (JabberDataElement?)->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
+    open func retrieveRegistrationForm(from jid: JID? = nil, onSuccess: @escaping (Bool, JabberDataElement)->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
@@ -96,8 +96,26 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             let type = response?.type ?? .error;
             switch type {
             case .result:
-                let form = JabberDataElement(from: response?.findChild(name: "query", xmlns: "jabber:iq:register")?.findChild(name: "x", xmlns: "jabber:x:data"));
-                onSuccess(form);
+                if let form = JabberDataElement(from: response?.findChild(name: "query", xmlns: "jabber:iq:register")?.findChild(name: "x", xmlns: "jabber:x:data")) {
+                    onSuccess(true, form);
+                } else {
+                    let form = JabberDataElement(type: .form);
+                    if let query = response?.findChild(name: "query", xmlns: "jabber:iq:register") {
+                        if let instructions = query.findChild(name: "instructions")?.value {
+                            form.instructions = [instructions];
+                        }
+                        if query.findChild(name: "username") != nil {
+                            form.addField(TextSingleField(name: "username", required: true));
+                        }
+                        if query.findChild(name: "password") != nil {
+                            form.addField(TextPrivateField(name: "password", required: true));
+                        }
+                        if query.findChild(name: "email") != nil {
+                            form.addField(TextSingleField(name: "email", required: true));
+                        }
+                    }
+                    onSuccess(false, form);
+                }
             default:
                 onError(response?.errorCondition, response?.findChild(name: "error")?.findChild(name: "text")?.value);
             }
@@ -387,14 +405,9 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                     return;
                 }
                 
-                inBandRegistrationModule.retrieveRegistrationForm(onSuccess: {(serverForm) in
-                    self.usesDataForm = serverForm != nil;
-                    let form = serverForm ?? JabberDataElement(type: .form);
-                    if serverForm == nil {
-                        form.addField(TextSingleField(name: "username", required: true));
-                        form.addField(TextPrivateField(name: "password", required: true));
-                        form.addField(TextSingleField(name: "email", required: true));
-                    }
+                inBandRegistrationModule.retrieveRegistrationForm(onSuccess: {(usesDataForm, serverForm) in
+                    self.usesDataForm = usesDataForm;
+                    let form = serverForm;
                     if self.formToSubmit == nil {
                         self.onForm?(form, self);
                     } else {
