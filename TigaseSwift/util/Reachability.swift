@@ -25,7 +25,8 @@ import SystemConfiguration
 open class Reachability {
     
     open static let CONNECTIVITY_CHANGED = Notification.Name("messengerConnectivityChanged");
-
+    open static let NETWORK_CHANGED = Notification.Name("networkChanged");
+    
     fileprivate var previousFlags: SCNetworkReachabilityFlags?;
     fileprivate let reachability: SCNetworkReachability;
     
@@ -68,6 +69,7 @@ open class Reachability {
     }
     
     fileprivate func reachabilityChanged() {
+        NotificationCenter.default.post(name: Reachability.NETWORK_CHANGED, object: self);
         guard previousFlags != flags else {
             return;
         }
