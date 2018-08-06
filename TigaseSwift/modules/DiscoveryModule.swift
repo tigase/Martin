@@ -128,18 +128,21 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
-                let identities = query!.mapChildren(transform: { e -> Identity in
+                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
+                    onInfoReceived(requestedNode, [], []);
+                    return;
+                }
+                let identities = query.mapChildren(transform: { e -> Identity in
                     return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
                     }, filter: { (e:Element) -> Bool in
-                       return e.name == "identity"
+                       return e.name == "identity" && e.getAttribute("category") != nil && e.getAttribute("type") != nil
                 });
-                let features = query!.mapChildren(transform: { e -> String in
+                let features = query.mapChildren(transform: { e -> String in
                     return e.getAttribute("var")!;
                     }, filter: { (e:Element) -> Bool in
                         return e.name == "feature" && e.getAttribute("var") != nil;
                 })
-                onInfoReceived(query?.getAttribute("node") ?? requestedNode, identities, features);
+                onInfoReceived(query.getAttribute("node") ?? requestedNode, identities, features);
             default:
                 let errorCondition = stanza?.errorCondition;
                 onError?(errorCondition);
@@ -179,13 +182,16 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
-                let items = query!.mapChildren(transform: { i -> Item in
+                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
+                    onItemsReceived(requestedNode, []);
+                    return;
+                }
+                let items = query.mapChildren(transform: { i -> Item in
                         return Item(jid: JID(i.getAttribute("jid")!), node: i.getAttribute("node"), name: i.getAttribute("name"));
                     }, filter: { (e) -> Bool in
-                        return e.name == "item";
+                        return e.name == "item" && e.getAttribute("jid") != nil;
                 })
-                onItemsReceived(query?.getAttribute("node") ?? requestedNode, items);
+                onItemsReceived(query.getAttribute("node") ?? requestedNode, items);
             default:
                 let errorCondition = stanza?.errorCondition;
                 onError(errorCondition);
