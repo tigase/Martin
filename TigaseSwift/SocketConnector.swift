@@ -560,7 +560,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         } catch XmlParserError.xmlDeclarationInside(_, let position) {
             self.parser = XMLParser(delegate: self.parserDelegate!);
             log("got XML declaration within XML, restarting XML parser...");
-            try! self.parser?.parse(data: data[position..<data.count]);
+            self.parseXml(data: data[position..<data.count]);
         } catch XmlParserError.unknown(let errorCode) {
             self.onError(msg: "XML stream parsing error, code: \(errorCode)");
         } catch {
