@@ -55,6 +55,16 @@ open class PresenceStore {
             self.presencesMapByBareJid.removeAll();
         }) 
     }
+
+    /**
+     Retrieve array of all stored presences
+     - returns: array of `Presence`
+     */
+    open func getAllPresences() -> [Presence] {
+        return queue.sync {
+            Array(presenceByJid.values);
+        };
+    }
     
     /**
      Retrieve best presence for jid

@@ -44,10 +44,10 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     open var context:Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
             if context != nil {
-                context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
+                context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
         }
     }
@@ -68,6 +68,10 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
             return PresenceModule.getPresenceStore(context.sessionObject);
         }
     }
+    
+    /// Should send presence changes events during stream resumption
+    open var fireEventsOnStreamResumption = true;
+    fileprivate var streamResumptionPresences: [Presence]? = nil;
     
     open static func getPresenceStore(_ sessionObject:SessionObject) -> PresenceStore {
         let presenceStore:PresenceStore = sessionObject.getProperty(PRESENCE_STORE_KEY)!;
@@ -92,15 +96,25 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     open func handle(event: Event) {
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
+            self.streamResumptionPresences = nil;
             if initialPresence {
                 sendInitialPresence();
             } else {
                 log("skipping sending initial presence");
             }
+        case is StreamManagementModule.ResumedEvent:
+            self.streamResumptionPresences?.forEach { presence in
+                let availabilityChanged = presenceStore.update(presence: presence);
+                context.eventBus.fire(ContactPresenceChanged(sessionObject: context.sessionObject, presence: presence, availabilityChanged: availabilityChanged));
+            }
+            self.streamResumptionPresences = nil;
         case is StreamManagementModule.FailedEvent:
-            presenceStore.clear();
+            self.streamResumptionPresences = nil;
         case let ce as SessionObject.ClearedEvent:
             if ce.scopes.contains(.session) {
+                presenceStore.clear();
+            } else if ce.scopes.contains(.stream) && self.fireEventsOnStreamResumption {
+                self.streamResumptionPresences = presenceStore.getAllPresences();
                 presenceStore.clear();
             }
         default:
