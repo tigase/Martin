@@ -68,7 +68,7 @@ open class DefaultChatStore: ChatStore {
     
     fileprivate var chatsByBareJid = [BareJID:[ChatProtocol]]();
     
-    open let dispatcher: QueueDispatcher;
+    public let dispatcher: QueueDispatcher;
     
     open var count:Int {
         get {

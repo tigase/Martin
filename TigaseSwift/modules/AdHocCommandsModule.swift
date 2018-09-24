@@ -23,17 +23,17 @@ import Foundation
 
 open class AdHocCommandsModule: XmppModule, ContextAware {
     
-    open static let COMMANDS_XMLNS = "http://jabber.org/protocol/commands";
+    public static let COMMANDS_XMLNS = "http://jabber.org/protocol/commands";
     
-    open static let ID = COMMANDS_XMLNS;
+    public static let ID = COMMANDS_XMLNS;
     
-    open let id = ID;
+    public let id = ID;
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
     open var context: Context!;
     
-    open let features = [String]();
+    public let features = [String]();
     
     public init() {
     }

@@ -66,8 +66,8 @@ extension ScramSaltedPasswordCacheProtocol {
 
 open class DefaultScramSaltedPasswordCache: ScramSaltedPasswordCacheProtocol {
 
-    open static let SALTED_ID_KEY = "scramSaltedId";
-    open static let SALTED_PASSWORD_KEY = "scramSaltedPassword";
+    public static let SALTED_ID_KEY = "scramSaltedId";
+    public static let SALTED_PASSWORD_KEY = "scramSaltedPassword";
     
     public init() {
     }

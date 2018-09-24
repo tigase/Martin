@@ -24,15 +24,15 @@ import Foundation
 open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
     
     /// Namespace used by Message Carbons
-    open static let XMLNS = "urn:xmpp:receipts";
+    public static let XMLNS = "urn:xmpp:receipts";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = XMLNS;
+    public static let ID = XMLNS;
     
-    open let id = XMLNS;
+    public let id = XMLNS;
     
-    open let criteria = Criteria.name("message").add(Criteria.xmlns(XMLNS));
+    public let criteria = Criteria.name("message").add(Criteria.xmlns(XMLNS));
     
-    open let features = [XMLNS];
+    public let features = [XMLNS];
     
     open var context: Context!
     
@@ -72,15 +72,15 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
     /// Event fired when message delivery confirmation is received
     open class ReceiptEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ReceiptEvent();
+        public static let TYPE = ReceiptEvent();
         
-        open let type = "MessageDeliveryReceiptReceivedEvent";
+        public let type = "MessageDeliveryReceiptReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Received message
-        open let message:Message!;
+        public let message:Message!;
         /// ID of confirmed message
-        open let messageId: String!;
+        public let messageId: String!;
         
         
         fileprivate init() {

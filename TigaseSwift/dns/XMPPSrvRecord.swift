@@ -32,7 +32,7 @@ open class XMPPSrvRecord: NSObject, NSCoding {
     let target:String!;
 
     open override var description: String {
-        return "port: \(port), weight: \(weight), priority: \(priority), target: \(target!)";
+        return "port: \(String(describing: port)), weight: \(weight!), priority: \(String(describing: priority)), target: \(target!)";
     }
     
     init(port:Int, weight:Int, priority:Int, target:String) {

@@ -29,22 +29,22 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      Key in `SessionObject` to store custom validator for SSL certificates 
      provided by servers
      */
-    open static let SSL_CERTIFICATE_VALIDATOR = "sslCertificateValidator";
+    public static let SSL_CERTIFICATE_VALIDATOR = "sslCertificateValidator";
     /**
      Key in `SessionObject` to store host to which we should reconnect
      after receiving see-other-host error.
      */
-    open static let SEE_OTHER_HOST_KEY = "seeOtherHost";
+    public static let SEE_OTHER_HOST_KEY = "seeOtherHost";
     /**
      Key in `SessionObject` to store host to which XMPP client should
      try to connect to.
      */
-    open static let SERVER_HOST = "serverHost";
+    public static let SERVER_HOST = "serverHost";
     /**
      Key in `SessionObject` to store server port to which XMPP client
      should try to connect to.
      */
-    open static let SERVER_PORT = "serverPort";
+    public static let SERVER_PORT = "serverPort";
     
     fileprivate static var QUEUE_TAG = "xmpp_socket_queue";
     
@@ -233,8 +233,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
 //            log("failed to enabled background connection feature", r1, r2);
 //        }
         
-        self.inStream!.schedule(in: RunLoop.main, forMode: RunLoopMode.defaultRunLoopMode)
-        self.outStream!.schedule(in: RunLoop.main, forMode: RunLoopMode.defaultRunLoopMode)
+        self.inStream!.schedule(in: RunLoop.main, forMode: RunLoop.Mode.default)
+        self.outStream!.schedule(in: RunLoop.main, forMode: RunLoop.Mode.default)
         
         self.inStream!.open();
         self.outStream!.open();
@@ -310,8 +310,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         inStream.open();
         outStream.open();
         
-        inStream.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
-        outStream.schedule(in: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
+        inStream.schedule(in: RunLoop.current, forMode: RunLoop.Mode.default);
+        outStream.schedule(in: RunLoop.current, forMode: RunLoop.Mode.default);
             
         self.context.sessionObject.setProperty(SessionObject.STARTTLS_ACTIVE, value: true, scope: SessionObject.Scope.stream);
     }
@@ -441,7 +441,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         switch eventCode {
         case Stream.Event.errorOccurred:
             // may happen if cannot connect to server or if connection was broken
-            log("stream event: ErrorOccurred: \(aStream.streamError)");
+            log("stream event: ErrorOccurred: \(String(describing: aStream.streamError))");
             if (aStream == self.inStream) {
                 // this is intentional - we need to execute onStreamTerminate()
                 // on main queue, but after all task are executed by our serial queueła
@@ -589,8 +589,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         self.outStreamBuffer = nil;
         inStream?.close();
         outStream?.close();
-        inStream?.remove(from: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
-        outStream?.remove(from: RunLoop.current, forMode: RunLoopMode.defaultRunLoopMode);
+        inStream?.remove(from: RunLoop.current, forMode: RunLoop.Mode.default);
+        outStream?.remove(from: RunLoop.current, forMode: RunLoop.Mode.default);
         sslCertificateValidated = false;
     }
     
@@ -598,11 +598,11 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     open class ConnectedEvent: Event {
         
         /// identified of event which should be used during registration of `EventHandler`
-        open static let TYPE = ConnectedEvent();
+        public static let TYPE = ConnectedEvent();
         
-        open let type = "connectorConnected";
+        public let type = "connectorConnected";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         
         init() {
             sessionObject = nil;
@@ -618,13 +618,13 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     open class DisconnectedEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = DisconnectedEvent();
+        public static let TYPE = DisconnectedEvent();
         
-        open let type = "connectorDisconnected";
+        public let type = "connectorDisconnected";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// If is `true` then XMPP client was properly closed, in other case it may be broken
-        open let clean:Bool;
+        public let clean:Bool;
         
         init() {
             sessionObject = nil;
@@ -642,13 +642,13 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     open class CertificateErrorEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = CertificateErrorEvent();
+        public static let TYPE = CertificateErrorEvent();
         
-        open let type = "certificateError";
+        public let type = "certificateError";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Instance of SecTrust - contains data related to certificate
-        open let trust: SecTrust!;
+        public let trust: SecTrust!;
         
         init() {
             sessionObject = nil;

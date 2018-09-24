@@ -25,13 +25,13 @@ import Foundation
  */
 open class MessageModule: XmppModule, ContextAware, Initializable {
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = "message";
+    public static let ID = "message";
     
-    open let id = ID;
+    public let id = ID;
     
-    open let criteria = Criteria.name("message", types:[StanzaType.chat, StanzaType.normal, nil, StanzaType.headline, StanzaType.error]);
+    public let criteria = Criteria.name("message", types:[StanzaType.chat, StanzaType.normal, nil, StanzaType.headline, StanzaType.error]);
     
-    open let features = [String]();
+    public let features = [String]();
     
     /// Instance of `ChatManager`
     open var chatManager:ChatManager!;
@@ -118,13 +118,13 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     /// Event fired when Chat is created/opened
     open class ChatCreatedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ChatCreatedEvent();
+        public static let TYPE = ChatCreatedEvent();
         
-        open let type = "ChatCreatedEvent";
+        public let type = "ChatCreatedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Instance of opened chat
-        open let chat:Chat!;
+        public let chat:Chat!;
         
         fileprivate init() {
             self.sessionObject = nil;
@@ -140,13 +140,13 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     /// Event fired when Chat is closed
     open class ChatClosedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ChatClosedEvent();
+        public static let TYPE = ChatClosedEvent();
         
-        open let type = "ChatClosedEvent";
+        public let type = "ChatClosedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Instance of closed chat
-        open let chat:Chat!;
+        public let chat:Chat!;
         
         fileprivate init() {
             self.sessionObject = nil;
@@ -162,15 +162,15 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     /// Event fired when message is received
     open class MessageReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = MessageReceivedEvent();
+        public static let TYPE = MessageReceivedEvent();
         
-        open let type = "MessageReceivedEvent";
+        public let type = "MessageReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Instance of chat to which this message belongs
-        open let chat:Chat?;
+        public let chat:Chat?;
         /// Received message
-        open let message:Message!;
+        public let message:Message!;
         
         fileprivate init() {
             self.sessionObject = nil;

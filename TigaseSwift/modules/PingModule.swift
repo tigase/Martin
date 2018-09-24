@@ -30,15 +30,15 @@ open class PingModule: AbstractIQModule, ContextAware {
     /// Namespace used by XMPP ping
     fileprivate static let PING_XMLNS = "urn:xmpp:ping";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = PING_XMLNS;
+    public static let ID = PING_XMLNS;
     
-    open let id = ID;
+    public let id = ID;
     
     open var context: Context!;
     
-    open let criteria = Criteria.name("iq").add(Criteria.name("ping", xmlns: PING_XMLNS));
+    public let criteria = Criteria.name("iq").add(Criteria.name("ping", xmlns: PING_XMLNS));
     
-    open let features = [PING_XMLNS];
+    public let features = [PING_XMLNS];
     
     public init() {
         

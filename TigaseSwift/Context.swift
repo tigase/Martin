@@ -28,11 +28,11 @@ import Foundation
 open class Context {
     
     // Instance of `SessionObject` with properties for particular connection/client
-    open let sessionObject: SessionObject;
+    public let sessionObject: SessionObject;
     // Instance of `EventBus` which processes events for particular connection/client
-    open let eventBus: EventBus;
+    public let eventBus: EventBus;
     // Instance of `XmppModuleManager` which keeps instances of every registered module for this connection/client
-    open let modulesManager: XmppModulesManager;
+    public let modulesManager: XmppModulesManager;
     // Instance of `PacketWriter` to use for sending stanzas
     open var writer: PacketWriter?;
     

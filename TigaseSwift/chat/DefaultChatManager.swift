@@ -28,8 +28,8 @@ import Foundation
  */
 open class DefaultChatManager: ChatManager {
     
-    open let chatStore:ChatStore;
-    open let context:Context;
+    public let chatStore:ChatStore;
+    public let context:Context;
     
     open var count:Int {
         get {

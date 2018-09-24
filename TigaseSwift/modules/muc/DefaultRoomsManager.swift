@@ -36,7 +36,7 @@ open class DefaultRoomsManager: ContextAware {
     
     fileprivate var rooms = [BareJID:Room]();
     
-    open let dispatcher: QueueDispatcher;
+    public let dispatcher: QueueDispatcher;
     
     public init(dispatcher: QueueDispatcher? = nil) {
         self.dispatcher = dispatcher ?? QueueDispatcher(queue: DispatchQueue(label: "room_manager_queue", attributes: DispatchQueue.Attributes.concurrent), queueTag: DispatchSpecificKey<DispatchQueue?>());
@@ -125,7 +125,7 @@ open class DefaultRoomsManager: ContextAware {
      - parameter room: room instance to remove
      */
     open func remove(room: Room) {
-        dispatcher.sync(flags: .barrier) {
+        _ = dispatcher.sync(flags: .barrier) {
             self.rooms.removeValue(forKey: room.roomJid);
         }
     }

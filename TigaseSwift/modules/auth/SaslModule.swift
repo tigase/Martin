@@ -30,19 +30,19 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     /// Namespace used SASL negotiation and authentication
     static let SASL_XMLNS = "urn:ietf:params:xml:ns:xmpp-sasl";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = SASL_XMLNS;
+    public static let ID = SASL_XMLNS;
     
     fileprivate static let SASL_MECHANISM = "saslMechanism";
     
-    open let id = SASL_XMLNS;
+    public let id = SASL_XMLNS;
 
-    open let criteria = Criteria.or(
+    public let criteria = Criteria.or(
         Criteria.name("success", xmlns: SASL_XMLNS),
         Criteria.name("failure", xmlns: SASL_XMLNS),
         Criteria.name("challenge", xmlns: SASL_XMLNS)
     );
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context:Context!;
     
@@ -112,10 +112,10 @@ open class SaslModule: Logger, XmppModule, ContextAware {
                 break;
             }
         } catch ClientSaslException.badChallenge(let msg) {
-            log("Received bad challenge from server: \(msg)");
+            log("Received bad challenge from server: \(String(describing: msg))");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.genericError(let msg) {
-            log("Generic error happened: \(msg)");
+            log("Generic error happened: \(String(describing: msg))");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.invalidServerSignature {
             log("Received answer from server with invalid server signature!");
@@ -225,13 +225,13 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     /// Event fired when SASL authentication fails
     open class SaslAuthFailedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = SaslAuthFailedEvent();
+        public static let TYPE = SaslAuthFailedEvent();
         
-        open let type = "SaslAuthFailedEvent";
+        public let type = "SaslAuthFailedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Error which occurred
-        open let error:SaslError!;
+        public let error:SaslError!;
         
         init() {
             sessionObject = nil;
@@ -247,13 +247,13 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     /// Event fired when SASL authentication begins
     open class SaslAuthStartEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = SaslAuthStartEvent();
+        public static let TYPE = SaslAuthStartEvent();
         
-        open let type = "SaslAuthStartEvent";
+        public let type = "SaslAuthStartEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Mechanism used during authentication
-        open let mechanism:String!;
+        public let mechanism:String!;
         
         init() {
             sessionObject = nil;
@@ -269,11 +269,11 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     /// Event fired after successful authentication
     open class SaslAuthSuccessEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = SaslAuthSuccessEvent();
+        public static let TYPE = SaslAuthSuccessEvent();
         
-        open let type = "SaslAuthSuccessEvent";
+        public let type = "SaslAuthSuccessEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         
         init() {
             sessionObject = nil;

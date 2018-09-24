@@ -28,12 +28,12 @@ import Foundation
  */
 open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = "auth";
-    open static let AUTHORIZED = "authorized";
-    open static let CREDENTIALS_CALLBACK = "credentialsCallback";
-    open static let LOGIN_USER_NAME_KEY = "LOGIN_USER_NAME";
+    public static let ID = "auth";
+    public static let AUTHORIZED = "authorized";
+    public static let CREDENTIALS_CALLBACK = "credentialsCallback";
+    public static let LOGIN_USER_NAME_KEY = "LOGIN_USER_NAME";
     
-    open let id = ID;
+    public let id = ID;
     
     fileprivate var _context:Context!;
     open var context:Context! {
@@ -50,9 +50,9 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         }
     }
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var inProgress: Bool {
         return context.sessionObject.getProperty("AUTH_IN_PROGRESS", defValue: false);
@@ -104,13 +104,13 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
     /// Event fired on authentication failure
     open class AuthFailedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = AuthFailedEvent();
+        public static let TYPE = AuthFailedEvent();
         
-        open let type = "AuthFailedEvent";
+        public let type = "AuthFailedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Error returned by server during authentication
-        open let error:SaslError!;
+        public let error:SaslError!;
         
         init() {
             sessionObject = nil;
@@ -126,11 +126,11 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
     /// Event fired on start of authentication process
     open class AuthStartEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = AuthStartEvent();
+        public static let TYPE = AuthStartEvent();
         
-        open let type = "AuthStartEvent";
+        public let type = "AuthStartEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         
         init() {
             sessionObject = nil;
@@ -143,11 +143,11 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
     
     open class AuthFinishExpectedEvent: Event {
         
-        open static let TYPE = AuthFinishExpectedEvent();
+        public static let TYPE = AuthFinishExpectedEvent();
         
-        open let type = "AuthFinishExpectedEvent";
+        public let type = "AuthFinishExpectedEvent";
         
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         
         init() {
             sessionObject = nil;
@@ -162,11 +162,11 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
     /// Event fired when after sucessful authentication
     open class AuthSuccessEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = AuthSuccessEvent();
+        public static let TYPE = AuthSuccessEvent();
         
-        open let type = "AuthSuccessEvent";
+        public let type = "AuthSuccessEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         
         init() {
             sessionObject = nil;

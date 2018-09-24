@@ -31,13 +31,13 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
     /// Namespace used by vcard-temp feature
     fileprivate static let VCARD_XMLNS = "vcard-temp";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = VCARD_XMLNS;
+    public static let ID = VCARD_XMLNS;
     
-    open let id = VCARD_XMLNS;
+    public let id = VCARD_XMLNS;
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
-    open let features = [VCARD_XMLNS];
+    public let features = [VCARD_XMLNS];
     
     open var context: Context!
     
@@ -301,8 +301,8 @@ extension VCard {
         vcardTemp.addChildren(impps.filter({(it) in return !it.isEmpty}).filter({(impp)->Bool in
             return impp.uri!.hasPrefix("xmpp:");
         }).map({(impp) in
-            let jabberid = impp.uri!.substring(from: impp.uri!.index(impp.uri!.startIndex, offsetBy: 5));
-            return Element(name: "JABBERID", cdata: jabberid);
+            let jabberid = impp.uri!.suffix(from: impp.uri!.index(impp.uri!.startIndex, offsetBy: 5));
+            return Element(name: "JABBERID", cdata: String(jabberid));
         }));
         vcardTemp.addChildren(organizations.filter({(it) in return !it.isEmpty}).map({(org) in
             let el = Element(name: "ORG");

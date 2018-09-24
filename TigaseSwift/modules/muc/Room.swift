@@ -51,7 +51,7 @@ open class Room: ChatProtocol, ContextAware {
             }) 
         }
     }
-    open let allowFullJid: Bool = false;
+    public let allowFullJid: Bool = false;
     
     // specific variables
     open var context: Context!;

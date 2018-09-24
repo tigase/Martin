@@ -26,23 +26,23 @@ import Foundation
  */
 open class SessionObject: Logger {
     
-    open static let DOMAIN_NAME = "domainName";
+    public static let DOMAIN_NAME = "domainName";
     
-    open static let NICKNAME = "nickname";
+    public static let NICKNAME = "nickname";
     
-    open static let PASSWORD = "password";
+    public static let PASSWORD = "password";
     
-    open static let RESOURCE = "resource";
+    public static let RESOURCE = "resource";
     
-    open static let USER_BARE_JID = "userBareJid";
+    public static let USER_BARE_JID = "userBareJid";
     
-    open static let STARTTLS_ACTIVE = "starttls#active";
+    public static let STARTTLS_ACTIVE = "starttls#active";
     
-    open static let STARTTLS_DISLABLED = "starttls#disabled";
+    public static let STARTTLS_DISLABLED = "starttls#disabled";
     
-    open static let COMPRESSION_ACTIVE = "compression#active";
+    public static let COMPRESSION_ACTIVE = "compression#active";
     
-    open static let COMPRESSION_DISABLED = "compression#disabled";
+    public static let COMPRESSION_DISABLED = "compression#disabled";
     
     /**
      Possible scopes of properties stored in SessionObject instance:
@@ -184,13 +184,13 @@ open class SessionObject: Logger {
     /// Event fired when `SessionObject` instance is being cleared
     open class ClearedEvent: Event {
         /// Identified of event which should be used during registration of `EventHandler`
-        open static let TYPE = ClearedEvent();
+        public static let TYPE = ClearedEvent();
         
-        open let type = "ClearedEvent";
+        public let type = "ClearedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// scopes which were cleared
-        open let scopes:[Scope]!;
+        public let scopes:[Scope]!;
         
         fileprivate init() {
             self.sessionObject = nil;

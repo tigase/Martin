@@ -31,14 +31,14 @@ import Foundation
 open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHandler {
     
     /// Key used to cache verification string in `SessionObject`
-    open static let VERIFICATION_STRING_KEY = "XEP115VerificationString";
+    public static let VERIFICATION_STRING_KEY = "XEP115VerificationString";
     
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = "caps";
+    public static let ID = "caps";
     
-    open let id = ID;
-    open let criteria = Criteria.empty();
-    open let features = ["http://jabber.org/protocol/caps"];
+    public let id = ID;
+    public let criteria = Criteria.empty();
+    public let features = ["http://jabber.org/protocol/caps"];
     
     open var context: Context! {
         willSet {

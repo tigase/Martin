@@ -29,8 +29,8 @@ open class EventBus: Logger, LocalQueueDispatcher {
     
     fileprivate var handlersByEvent:[String:[EventHandler]];
     
-    open let queueTag: DispatchSpecificKey<DispatchQueue?>;
-    open let queue: DispatchQueue;
+    public let queueTag: DispatchSpecificKey<DispatchQueue?>;
+    public let queue: DispatchQueue;
     
     public convenience override init() {
         self.init(dispatchQueue: nil);

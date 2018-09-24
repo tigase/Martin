@@ -48,7 +48,7 @@ public func ==(lhs:[Event], rhs:[Event]) -> Bool {
     }
     
     for le in lhs {
-        if let idx = rhs.index(where: {(re) -> Bool in
+        if rhs.contains(where: {(re) -> Bool in
             return le == re;
         }) {
             // this is ok

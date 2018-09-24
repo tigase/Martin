@@ -27,12 +27,12 @@ import Foundation
 open class Timer: NSObject {
     
     /// Interval set for this timer
-    open let timeout: TimeInterval;
+    public let timeout: TimeInterval;
     fileprivate var timer: Foundation.Timer?
     /// Callback execute when timer is fired
-    open var callback: ((Void) ->Void)?
+    open var callback: (() ->Void)?
     /// True if timer is repeating execution many times
-    open let repeats:Bool;
+    public let repeats:Bool;
     
     /**
      Creates instance of Timer
@@ -40,7 +40,7 @@ open class Timer: NSObject {
      - parameter repeats: true if timer should be fired many times
      - parameter callback: executed when timer is fired
      */
-    public init(delayInSeconds: TimeInterval, repeats: Bool, callback: @escaping (Void)->Void) {
+    public init(delayInSeconds: TimeInterval, repeats: Bool, callback: @escaping ()->Void) {
         self.timeout = delayInSeconds;
         self.callback = callback;
         self.repeats = repeats;
@@ -51,7 +51,7 @@ open class Timer: NSObject {
     /**
      Method fire by NSTimer internally
      */
-    open func execute() {
+    @objc open func execute() {
         callback?();
         if !repeats {
             cancel();

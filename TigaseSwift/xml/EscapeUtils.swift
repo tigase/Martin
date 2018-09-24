@@ -33,7 +33,7 @@ open class EscapeUtils {
      - parameter value: string to unescape
      - returns: unescaped string
      */
-    open static func unescape(_ value:String) -> String {
+    public static func unescape(_ value:String) -> String {
         if !value.contains("&") {
             return value;
         }
@@ -54,7 +54,7 @@ open class EscapeUtils {
      - parameter value: string to escape
      - returns: escaped string
      */
-    open static func escape(_ value:String) -> String {
+    public static func escape(_ value:String) -> String {
         var result = value;
         var i=0;
         while i < ENTITIES.count {

@@ -23,7 +23,7 @@ import Foundation
 
 open class JabberDataElementFieldAware {
     
-    open let element: Element;
+    public let element: Element;
     
     open var fieldNames: [String] {
         var names = [String]();
@@ -181,7 +181,7 @@ open class JabberDataElement: JabberDataElementFieldAware {
 
 open class Field {
     
-    open let element: Element;
+    public let element: Element;
     
     open var name: String {
         return element.getAttribute("var")!;
@@ -235,7 +235,7 @@ open class Field {
         self.element = from;
     }
     
-    open static func createFieldElement(name: String, type: String?, label: String? = nil, desc: String? = nil, required: Bool = false) -> Element {
+    public static func createFieldElement(name: String, type: String?, label: String? = nil, desc: String? = nil, required: Bool = false) -> Element {
         let elem = Element(name: "field");
         elem.setAttribute("var", value: name);
         elem.setAttribute("type", value: type);
@@ -251,7 +251,7 @@ open class Field {
 }
 
 open class Reported {
-    open let element: Element;
+    public let element: Element;
     fileprivate let parent: Element;
     
     open var rows: [Row] {

@@ -171,7 +171,7 @@ open class VCard {
                 if uri == nil {
                     return nil;
                 } else {
-                    return uri!.hasPrefix("tel:") ? uri!.substring(from: uri!.index(uri!.startIndex, offsetBy: 7)) : uri
+                    return uri!.hasPrefix("tel:") ? String(uri!.suffix(from: uri!.index(uri!.startIndex, offsetBy: 4))) : uri
                 }
             }
             set {

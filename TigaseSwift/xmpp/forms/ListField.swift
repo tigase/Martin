@@ -51,8 +51,8 @@ public extension ListField {
 }
 
 open class ListFieldOption {
-    open let label: String?;
-    open let value: String;
+    public let label: String?;
+    public let value: String;
     
     public init(value: String, label: String? = nil) {
         self.value = value;

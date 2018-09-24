@@ -30,13 +30,13 @@ import Foundation
  */
 open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = "InBandRegistrationModule";
+    public static let ID = "InBandRegistrationModule";
     
-    open let id = ID;
+    public let id = ID;
     
     open var context: Context!;
-    open let features = [String]();
-    open let criteria = Criteria.empty();
+    public let features = [String]();
+    public let criteria = Criteria.empty();
     
     public init() {
         
@@ -167,7 +167,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         return InBandRegistrationModule.isRegistrationAvailable(featuresElement);
     }
     
-    open static func isRegistrationAvailable(_ featuresElement: Element?) -> Bool {
+    public static func isRegistrationAvailable(_ featuresElement: Element?) -> Bool {
         return featuresElement?.findChild(name: "register", xmlns: "http://jabber.org/features/iq-register") != nil;
     }
     

@@ -27,13 +27,13 @@ import Foundation
 open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     
     /// Local part
-    open let localPart:String?;
+    public let localPart:String?;
     /// Domain part
-    open let domain:String;
+    public let domain:String;
     /// String representation
-    open let stringValue:String;
+    public let stringValue:String;
     
-    open let hashValue: Int;
+    public let hashValue: Int;
     
     /**
      Create instance
@@ -65,15 +65,19 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
      - parameter jid: string representation of bare JID
      */
     public init(_ jid: String) {
-        var idx = jid.characters.index(of: "/");
-        let bareJid = (idx == nil) ? jid : jid.substring(to: idx!);
-        idx = bareJid.characters.index(of: "@");
-        localPart = (idx == nil) ? nil : bareJid.substring(to: idx!);
-        domain = (idx == nil) ? bareJid : bareJid.substring(from: bareJid.characters.index(after: idx!));
+        let resourceIdx = jid.firstIndex(of: "/") ?? jid.endIndex;
+        if let domainIdx = jid.firstIndex(of: "@") {
+            localPart = String(jid.prefix(upTo: domainIdx));
+            let suffixIdx = jid.index(after: domainIdx);
+            domain = String((resourceIdx == jid.endIndex) ? jid.suffix(from: suffixIdx) : jid[suffixIdx..<resourceIdx]);
+        } else {
+            localPart = nil;
+            domain = (jid.endIndex == resourceIdx) ? jid : String(jid.prefix(upTo: resourceIdx))
+        }
         self.stringValue = BareJID.toString(localPart, domain);
         self.hashValue = stringValue.lowercased().hashValue;
     }
-    
+        
     /**
      Convenience constructor which allows nil as parameter
      - parameter jid: string representation of bare JID

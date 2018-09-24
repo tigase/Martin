@@ -25,16 +25,16 @@ import Foundation
  */
 open class ScramMechanism: Logger, SaslMechanism {
 
-    open static let SCRAM_SASL_DATA_KEY = "SCRAM_SASL_DATA_KEY";
+    public static let SCRAM_SASL_DATA_KEY = "SCRAM_SASL_DATA_KEY";
     
-    open static let SCRAM_SALTED_PASSWORD_CACHE = "SCRAM_SALTED_PASSWORD_CACHE";
+    public static let SCRAM_SALTED_PASSWORD_CACHE = "SCRAM_SALTED_PASSWORD_CACHE";
     
     fileprivate static let ALPHABET = [Character]("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     
     fileprivate static let SERVER_FIRST_MESSAGE = try! NSRegularExpression(pattern: "^(m=[^\\000=]+,)?r=([\\x21-\\x2B\\x2D-\\x7E]+),s=([a-zA-Z0-9/+=]+),i=(\\d+)(?:,.*)?$", options: NSRegularExpression.Options(rawValue: 0));
     fileprivate static let SERVER_LAST_MESSAGE = try! NSRegularExpression(pattern: "^(?:e=([^,]+)|v=([a-zA-Z0-9/+=]+)(?:,.*)?)$", options: NSRegularExpression.Options(rawValue: 0));
 
-    open static func ScramSha256() -> ScramMechanism {
+    public static func ScramSha256() -> ScramMechanism {
         var data = "Client Key".data(using: String.Encoding.utf8)!;
         var clientKey = Array<UInt8>(repeating: 0, count: data.count);
         (data as NSData).getBytes(&clientKey, length: data.count);
@@ -44,7 +44,7 @@ open class ScramMechanism: Logger, SaslMechanism {
         return ScramMechanism(mechanismName: "SCRAM-SHA-256", algorithm: Digest.sha256, clientKey: clientKey, serverKey: serverKey);
     }
 
-    open static func ScramSha1() -> ScramMechanism {
+    public static func ScramSha1() -> ScramMechanism {
         var data = "Client Key".data(using: String.Encoding.utf8)!;
         var clientKey = Array<UInt8>(repeating: 0, count: data.count);
         (data as NSData).getBytes(&clientKey, length: data.count);
@@ -54,12 +54,12 @@ open class ScramMechanism: Logger, SaslMechanism {
         return ScramMechanism(mechanismName: "SCRAM-SHA-1", algorithm: Digest.sha1, clientKey: clientKey, serverKey: serverKey);
     }
     
-    open static func setSaltedPasswordCache(_ cache: ScramSaltedPasswordCacheProtocol?, sessionObject: SessionObject) {
+    public static func setSaltedPasswordCache(_ cache: ScramSaltedPasswordCacheProtocol?, sessionObject: SessionObject) {
         sessionObject.setUserProperty(ScramMechanism.SCRAM_SALTED_PASSWORD_CACHE, value: cache);
     }
     
     /// Name of mechanism
-    open let name: String;
+    public let name: String;
     
     fileprivate let algorithm: Digest;
     
@@ -282,7 +282,7 @@ open class ScramMechanism: Logger, SaslMechanism {
             return nil;
         }
         
-        let r = m.rangeAt(group);
+        let r = m.range(at: group);
         guard r.length != 0 else {
             return "";
         }

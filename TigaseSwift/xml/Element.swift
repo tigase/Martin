@@ -26,7 +26,7 @@ import Foundation
  */
 open class Element : Node, ElementProtocol {
     /// Element name
-    open let name:String
+    public let name:String
     var defxmlns:String?
     fileprivate var attributes_:[String:String];
     fileprivate var nodes = Array<Node>()
@@ -388,7 +388,7 @@ open class Element : Node, ElementProtocol {
             result += ">\n"
             for child in nodes {
                 let str = child.toPrettyString();
-                result += str + ((child is Element && str.characters.last != "\n") ? "\n" : "")
+                result += str + ((child is Element && str.last != "\n") ? "\n" : "")
             }
             result += "</\(self.name)>"
         } else {
@@ -402,7 +402,7 @@ open class Element : Node, ElementProtocol {
      - parameter string: string with XML to parse
      - returns: parsed Element if any
      */
-    open static func from(string toParse: String) -> Element? {
+    public static func from(string toParse: String) -> Element? {
         class Holder: XMPPStreamDelegate {
             var parsed:Element?;
             fileprivate func onError(msg: String?) {

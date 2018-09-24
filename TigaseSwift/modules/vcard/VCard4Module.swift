@@ -31,13 +31,13 @@ open class VCard4Module: XmppModule, ContextAware, VCardModuleProtocol {
     /// Namespace used by vcard-temp feature
     fileprivate static let VCARD_XMLNS = "urn:ietf:params:xml:ns:vcard-4.0";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = VCARD_XMLNS;
+    public static let ID = VCARD_XMLNS;
     
-    open let id = VCARD_XMLNS;
+    public let id = VCARD_XMLNS;
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
-    open let features = [VCARD_XMLNS];
+    public let features = [VCARD_XMLNS];
     
     open var context: Context!
     

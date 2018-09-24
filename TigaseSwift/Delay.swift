@@ -45,9 +45,9 @@ open class Delay {
     })();
     
     /// Holds timestamp when delay started. In most cases it is very close to time when stanza was sent.
-    open let stamp:Date?;
+    public let stamp:Date?;
     /// JID of entity responsible for delay
-    open let from:JID?;
+    public let from:JID?;
     
     public init(element:Element) {
         if let stampStr = element.getAttribute("stamp") {

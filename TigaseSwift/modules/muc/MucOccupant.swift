@@ -26,11 +26,11 @@ import Foundation
  */
 open class MucOccupant {
     
-    open let affiliation: MucAffiliation;
-    open let role: MucRole;
-    open let jid: JID?;
-    open let presence: Presence;
-    open let nickname: String;
+    public let affiliation: MucAffiliation;
+    public let role: MucRole;
+    public let jid: JID?;
+    public let presence: Presence;
+    public let nickname: String;
     
     public init(occupant: MucOccupant? = nil, presence: Presence) {
         nickname = presence.from!.resource!;

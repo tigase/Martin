@@ -26,15 +26,15 @@ import Foundation
  */
 open class RosterItem: RosterItemProtocol, CustomStringConvertible {
     
-    open let jid: JID;
-    open let name: String?;
-    open let subscription: Subscription;
-    open let ask: Bool;
-    open let groups: [String];
+    public let jid: JID;
+    public let name: String?;
+    public let subscription: Subscription;
+    public let ask: Bool;
+    public let groups: [String];
     
     open var description: String {
         get {
-            return "RosterItem{ jid=\(jid), name=\(name), subscription=\(subscription), groups=\(groups)}"
+            return "RosterItem{ jid=\(jid), name=\(String(describing: name)), subscription=\(subscription), groups=\(groups)}"
         }
     }
     

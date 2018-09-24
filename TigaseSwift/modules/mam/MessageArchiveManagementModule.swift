@@ -36,15 +36,15 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
         return f;
     })();
     // namespace used by XEP-0313
-    open static let MAM_XMLNS = "urn:xmpp:mam:1";
+    public static let MAM_XMLNS = "urn:xmpp:mam:1";
     // ID of a module for a lookup in `XmppModulesManager`
-    open static let ID = "mam";
+    public static let ID = "mam";
     
-    open let id = ID;
+    public let id = ID;
     
-    open let criteria: Criteria = Criteria.name("message").add(Criteria.xmlns(MessageArchiveManagementModule.MAM_XMLNS));
+    public let criteria: Criteria = Criteria.name("message").add(Criteria.xmlns(MessageArchiveManagementModule.MAM_XMLNS));
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context: Context!;
     
@@ -308,19 +308,19 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
     /// Event fired when message from archive is retrieved
     open class ArchivedMessageReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ArchivedMessageReceivedEvent();
+        public static let TYPE = ArchivedMessageReceivedEvent();
         
-        open let type = "ArchivedMessageReceivedEvent";
+        public let type = "ArchivedMessageReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         /// Timestamp of a message
-        open let timestamp: Date!;
+        public let timestamp: Date!;
         /// Forwarded message
-        open let message: Message!;
+        public let message: Message!;
         /// Message ID
-        open let messageId: String!;
+        public let messageId: String!;
         /// Chat for which this forwarded message belongs to
-        open let chat: Chat?;
+        public let chat: Chat?;
         
         init() {
             self.sessionObject = nil;

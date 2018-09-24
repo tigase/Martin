@@ -94,7 +94,7 @@ open class Chat: ChatProtocol {
         }
     }
     /// Is it possible to open many chats with same bare JID?
-    open let allowFullJid = true;
+    public let allowFullJid = true;
 
     // class specific variables
     /// Thread ID of message exchange

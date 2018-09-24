@@ -24,8 +24,8 @@ import SystemConfiguration
 
 open class Reachability {
     
-    open static let CONNECTIVITY_CHANGED = Notification.Name("messengerConnectivityChanged");
-    open static let NETWORK_CHANGED = Notification.Name("networkChanged");
+    public static let CONNECTIVITY_CHANGED = Notification.Name("messengerConnectivityChanged");
+    public static let NETWORK_CHANGED = Notification.Name("networkChanged");
     
     fileprivate var previousFlags: SCNetworkReachabilityFlags?;
     fileprivate let reachability: SCNetworkReachability;
@@ -63,7 +63,7 @@ open class Reachability {
         SCNetworkReachabilitySetCallback(reachability, { (reachability, flags, info) in
             Reachability.reachabilityCallback(reachability: reachability, flags: flags, info: info);
         }, &context);
-        SCNetworkReachabilityScheduleWithRunLoop(self.reachability, RunLoop.current.getCFRunLoop(), RunLoopMode.defaultRunLoopMode as CFString);
+        SCNetworkReachabilityScheduleWithRunLoop(self.reachability, RunLoop.current.getCFRunLoop(), RunLoop.Mode.default as CFString);
         
         reachabilityChanged();
     }

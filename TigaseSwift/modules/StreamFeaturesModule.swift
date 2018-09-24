@@ -28,12 +28,12 @@ import Foundation
  */
 open class StreamFeaturesModule: XmppModule, ContextAware {
 
-    open static let ID = "stream:features";
-    open static let STREAM_FEATURES_KEY = "stream:features";
+    public static let ID = "stream:features";
+    public static let STREAM_FEATURES_KEY = "stream:features";
     
-    open let id = ID;
-    open let criteria = Criteria.name("features", xmlns: "http://etherx.jabber.org/streams");
-    open let features = [String]();
+    public let id = ID;
+    public let criteria = Criteria.name("features", xmlns: "http://etherx.jabber.org/streams");
+    public let features = [String]();
     
     open var context: Context!;
 
@@ -42,7 +42,7 @@ open class StreamFeaturesModule: XmppModule, ContextAware {
      - parameter sessionObject: instance of `SessionObject` to retrieve cached stream features element
      - returns: element with stream features
      */
-    open static func getStreamFeatures(_ sessionObject:SessionObject) -> Element? {
+    public static func getStreamFeatures(_ sessionObject:SessionObject) -> Element? {
         return sessionObject.getProperty(STREAM_FEATURES_KEY);
     }
     
@@ -73,13 +73,13 @@ open class StreamFeaturesModule: XmppModule, ContextAware {
 open class StreamFeaturesReceivedEvent: Event {
     
     /// Identifier of event which should be used during registration of `EventHandler`
-    open static let TYPE = StreamFeaturesReceivedEvent();
+    public static let TYPE = StreamFeaturesReceivedEvent();
     
-    open let type = "StreamFeaturesReceivedEvent";
+    public let type = "StreamFeaturesReceivedEvent";
     /// Context of XMPP connection which received this event
-    open let context:Context!;
+    public let context:Context!;
     /// Element with stream features
-    open let featuresElement:Element!;
+    public let featuresElement:Element!;
     
     init() {
         context = nil;

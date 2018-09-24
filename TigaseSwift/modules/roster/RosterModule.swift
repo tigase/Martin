@@ -28,11 +28,11 @@ import Foundation
  */
 open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, Initializable {
     
-    open static let ROSTER_STORE_KEY = "rosterStore";
+    public static let ROSTER_STORE_KEY = "rosterStore";
     /// ID of module for looup in `XmppModulesManager`
-    open static let ID = "roster";
+    public static let ID = "roster";
     
-    open let id = ID;
+    public let id = ID;
     
     open var context:Context! {
         didSet {
@@ -45,9 +45,9 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         }
     }
     
-    open let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:roster"));
+    public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:roster"));
     
-    open let features = [String]();
+    public let features = [String]();
     /// Roster cache versio provider
     open var versionProvider:RosterCacheProvider?;
     /// Roster store
@@ -60,7 +60,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         }
     }
     
-    open static func getRosterStore(_ sessionObject:SessionObject) -> RosterStore {
+    public static func getRosterStore(_ sessionObject:SessionObject) -> RosterStore {
         let rosterStore:RosterStore? = sessionObject.getProperty(ROSTER_STORE_KEY);
         return rosterStore!;
     }
@@ -269,17 +269,17 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
     /// Event fired when roster item is updated
     open class ItemUpdatedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ItemUpdatedEvent();
+        public static let TYPE = ItemUpdatedEvent();
         
-        open let type = "ItemUpdatedEvent";
+        public let type = "ItemUpdatedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Changed roster item
-        open let rosterItem:RosterItem?;
+        public let rosterItem:RosterItem?;
         /// Action done to roster item
-        open let action:Action!;
+        public let action:Action!;
         /// Groups which were modified
-        open let modifiedGroups:[String]?;
+        public let modifiedGroups:[String]?;
         
         fileprivate init() {
             self.sessionObject = nil;

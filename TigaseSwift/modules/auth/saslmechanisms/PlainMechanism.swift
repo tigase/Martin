@@ -26,7 +26,7 @@ import Foundation
  */
 open class PlainMechanism: SaslMechanism {
     /// Name of mechanism
-    open let name = "PLAIN";
+    public let name = "PLAIN";
 
     /**
      Process input data to generate response

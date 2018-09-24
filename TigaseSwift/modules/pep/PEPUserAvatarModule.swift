@@ -23,15 +23,15 @@ import Foundation
 
 open class PEPUserAvatarModule: AbstractPEPModule {
 
-    open static let METADATA_XMLNS = ID + ":metadata";
-    open static let DATA_XMLNS = ID + ":data";
+    public static let METADATA_XMLNS = ID + ":metadata";
+    public static let DATA_XMLNS = ID + ":data";
     
-    open static let ID = "urn:xmpp:avatar";
+    public static let ID = "urn:xmpp:avatar";
     
-    open static let FEATURES_NOTIFY = [ METADATA_XMLNS + "+notify" ];
-    open static let FEATURES_NONE = [String]();
+    public static let FEATURES_NOTIFY = [ METADATA_XMLNS + "+notify" ];
+    public static let FEATURES_NONE = [String]();
     
-    open let id = ID;
+    public let id = ID;
     
     open var context: Context! {
         didSet {
@@ -44,7 +44,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         }
     }
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
     open var listenForAvatarChanges: Bool = true;
     
@@ -166,14 +166,14 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     }
     
     open class AvatarChangedEvent: Event {
-        open static let TYPE = AvatarChangedEvent();
+        public static let TYPE = AvatarChangedEvent();
         
-        open let type = "PEPAvatarChanged";
+        public let type = "PEPAvatarChanged";
         
-        open let sessionObject: SessionObject!;
-        open let jid: JID!
-        open let itemId: String!;
-        open let info: [PEPUserAvatarModule.Info]!;
+        public let sessionObject: SessionObject!;
+        public let jid: JID!
+        public let itemId: String!;
+        public let info: [PEPUserAvatarModule.Info]!;
         
         init() {
             self.sessionObject = nil;

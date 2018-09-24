@@ -32,34 +32,34 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      Property name under which category of XMPP entity is hold for returning
      to remote clients on query
      */
-    open static let IDENTITY_CATEGORY_KEY = "discoveryIdentityCategory";
+    public static let IDENTITY_CATEGORY_KEY = "discoveryIdentityCategory";
     /** 
      Property name under which type of XMPP entity is hold for returning 
      to remote clients on query
      */
-    open static let IDENTITY_TYPE_KEY = "discoveryIdentityType";
+    public static let IDENTITY_TYPE_KEY = "discoveryIdentityType";
     /// Namespace used by service discovery
-    open static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
+    public static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
     /// Namespace used by service discovery
-    open static let INFO_XMLNS = "http://jabber.org/protocol/disco#info";
+    public static let INFO_XMLNS = "http://jabber.org/protocol/disco#info";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = "discovery";
+    public static let ID = "discovery";
     
-    open static let SERVER_IDENTITY_TYPES_KEY = "serverIdentityTypes";
-    open static let SERVER_FEATURES_KEY = "serverFeatures";
+    public static let SERVER_IDENTITY_TYPES_KEY = "serverIdentityTypes";
+    public static let SERVER_FEATURES_KEY = "serverFeatures";
     
-    open let id = ID;
+    public let id = ID;
     
     open var context:Context!;
     
-    open let criteria = Criteria.name("iq").add(
+    public let criteria = Criteria.name("iq").add(
         Criteria.or(
             Criteria.name("query", xmlns: DiscoveryModule.ITEMS_XMLNS),
             Criteria.name("query", xmlns: DiscoveryModule.INFO_XMLNS)
         )
     );
     
-    open let features = [ DiscoveryModule.ITEMS_XMLNS, DiscoveryModule.INFO_XMLNS ];
+    public let features = [ DiscoveryModule.ITEMS_XMLNS, DiscoveryModule.INFO_XMLNS ];
     
     fileprivate var callbacks = [String:NodeDetailsEntry]();
     
@@ -297,9 +297,9 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
      discovery for particular node
      */
     open class NodeDetailsEntry {
-        open let identity: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> Identity?
-        open let features: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [String]?
-        open let items: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [Item]?
+        public let identity: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> Identity?
+        public let features: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [String]?
+        public let items: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [Item]?
         
         public init(identity: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> Identity?, features: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [String]?, items: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [Item]?) {
             self.identity = identity;
@@ -310,9 +310,9 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     
     open class Identity: CustomStringConvertible {
         
-        open let category: String;
-        open let type: String;
-        open let name: String?;
+        public let category: String;
+        public let type: String;
+        public let name: String?;
         
         public init(category: String, type: String, name: String? = nil) {
             self.category = category;
@@ -322,16 +322,16 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         
         open var description: String {
             get {
-                return "Identity(category=\(category), type=\(type), name=\(name))";
+                return "Identity(category=\(category), type=\(type), name=\(String(describing: name)))";
             }
         }
     }
     
     open class Item: CustomStringConvertible {
         
-        open let jid:JID;
-        open let node:String?;
-        open let name:String?;
+        public let jid:JID;
+        public let node:String?;
+        public let name:String?;
         
         public init(jid: JID, node: String? = nil, name: String? = nil) {
             self.jid = jid;
@@ -341,7 +341,7 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         
         open var description: String {
             get {
-                return "Item(jid=\(jid), node=\(node), name=\(name))";
+                return "Item(jid=\(jid), node=\(String(describing: node)), name=\(String(describing: name)))";
             }
         }
     }
@@ -349,13 +349,13 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     /// Event fired when server features are retrieved
     open class ServerFeaturesReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ServerFeaturesReceivedEvent();
+        public static let TYPE = ServerFeaturesReceivedEvent();
         
-        open let type = "ServerFeaturesReceivedEvent";
+        public let type = "ServerFeaturesReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         /// Array of available server features
-        open let features: [String]!;
+        public let features: [String]!;
         
         init() {
             self.sessionObject = nil;

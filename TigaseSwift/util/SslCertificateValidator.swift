@@ -23,17 +23,17 @@ import Foundation
 
 open class SslCertificateValidator {
     
-    open static let ACCEPTED_SSL_CERTIFICATE_FINGERPRINT = "SslCertificateValidator#AcceptedFingerprint";
+    public static let ACCEPTED_SSL_CERTIFICATE_FINGERPRINT = "SslCertificateValidator#AcceptedFingerprint";
  
-    open static func registerSslCertificateValidator(_ sessionObject: SessionObject) {
+    public static func registerSslCertificateValidator(_ sessionObject: SessionObject) {
         sessionObject.setUserProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR, value: SslCertificateValidator.validateSslCertificate);
     }
     
-    open static func setAcceptedSslCertificate(_ sessionObject: SessionObject, fingerprint: String?) {
+    public static func setAcceptedSslCertificate(_ sessionObject: SessionObject, fingerprint: String?) {
         sessionObject.setUserProperty(SslCertificateValidator.ACCEPTED_SSL_CERTIFICATE_FINGERPRINT, value: fingerprint);
     }
     
-    open static func validateSslCertificate(_ sessionObject: SessionObject, trust: SecTrust) -> Bool {
+    public static func validateSslCertificate(_ sessionObject: SessionObject, trust: SecTrust) -> Bool {
         let policy = SecPolicyCreateSSL(false, sessionObject.userBareJid?.domain as CFString?);
         var secTrustResultType = SecTrustResultType.invalid;
         SecTrustSetPolicies(trust, policy);

@@ -31,13 +31,13 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
     
     static let HTTP_FILE_UPLOAD_XMLNS = "urn:xmpp:http:upload:0";
     
-    open static let ID = HTTP_FILE_UPLOAD_XMLNS;
+    public static let ID = HTTP_FILE_UPLOAD_XMLNS;
     
-    open let id = HTTP_FILE_UPLOAD_XMLNS;
+    public let id = HTTP_FILE_UPLOAD_XMLNS;
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context: Context!;
     
@@ -150,9 +150,9 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
     
     open class Slot {
         
-        open let getUri: String;
-        open let putUri: String;
-        open let putHeaders: [String: String];
+        public let getUri: String;
+        public let putUri: String;
+        public let putHeaders: [String: String];
         
         public init(getUri: String, putUri: String, putHeaders: [String:String]) {
             self.getUri = getUri;

@@ -28,17 +28,17 @@ import Foundation
  */
 open class MessageCarbonsModule: XmppModule, ContextAware {
     /// Namespace used by Message Carbons
-    open static let MC_XMLNS = "urn:xmpp:carbons:2";
+    public static let MC_XMLNS = "urn:xmpp:carbons:2";
     /// Namepsace used for forwarding messages
     fileprivate static let SF_XMLNS = "urn:xmpp:forward:0";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = MC_XMLNS;
+    public static let ID = MC_XMLNS;
     
-    open let id = MC_XMLNS;
+    public let id = MC_XMLNS;
     
-    open let criteria = Criteria.name("message").add(Criteria.xmlns(MC_XMLNS));
+    public let criteria = Criteria.name("message").add(Criteria.xmlns(MC_XMLNS));
     
-    open let features = [MC_XMLNS];
+    public let features = [MC_XMLNS];
     
     open var context: Context!
     
@@ -129,17 +129,17 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     /// Event fired when Message Carbon is received
     open class CarbonReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = CarbonReceivedEvent();
+        public static let TYPE = CarbonReceivedEvent();
         
-        open let type = "MessageCarbonReceivedEvent";
+        public let type = "MessageCarbonReceivedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         /// Action due to which this carbon was created
-        open let action: Action!;
+        public let action: Action!;
         /// Forwarded message
-        open let message: Message!;
+        public let message: Message!;
         /// Chat for which this forwarded message belongs to
-        open let chat: Chat?;
+        public let chat: Chat?;
         
         init() {
             self.sessionObject = nil;

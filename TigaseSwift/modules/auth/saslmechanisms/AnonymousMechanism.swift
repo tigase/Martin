@@ -27,7 +27,7 @@ import Foundation
 
 open class AnonymousMechanism: SaslMechanism {
     
-    open let name = "ANONYMOUS";
+    public let name = "ANONYMOUS";
     
     public init() {
         

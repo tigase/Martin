@@ -25,7 +25,7 @@ import Foundation
 open class UIDGenerator {
     
     /// Returns next valid unique id to use
-    open static var nextUid:String {
+    public static var nextUid:String {
         get {
             return UUID().uuidString;
         }

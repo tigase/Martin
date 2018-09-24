@@ -35,13 +35,13 @@ open class ResourceBinderModule: XmppModule, ContextAware {
     static let BINDED_RESOURCE_JID = "BINDED_RESOURCE_JID";
     
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = BIND_XMLNS;
+    public static let ID = BIND_XMLNS;
     
-    open let id = BIND_XMLNS;
+    public let id = BIND_XMLNS;
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context:Context!;
     
@@ -50,7 +50,7 @@ open class ResourceBinderModule: XmppModule, ContextAware {
      - parameter sessionObject: instance of `SessionObject` to retrieve from
      - returns: binded JID
      */
-    open static func getBindedJid(_ sessionObject:SessionObject) -> JID? {
+    public static func getBindedJid(_ sessionObject:SessionObject) -> JID? {
         return sessionObject.getProperty(ResourceBinderModule.BINDED_RESOURCE_JID);
     }
     
@@ -99,13 +99,13 @@ open class ResourceBinderModule: XmppModule, ContextAware {
     open class ResourceBindErrorEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ResourceBindErrorEvent();
+        public static let TYPE = ResourceBindErrorEvent();
         
-        open let type = "ResourceBindErrorEvent";
+        public let type = "ResourceBindErrorEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Error condition returned by server
-        open let errorCondition:ErrorCondition?;
+        public let errorCondition:ErrorCondition?;
         
         fileprivate init() {
             self.sessionObject = nil;
@@ -121,13 +121,13 @@ open class ResourceBinderModule: XmppModule, ContextAware {
     /// Event fired when resource is binded
     open class ResourceBindSuccessEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ResourceBindSuccessEvent();
+        public static let TYPE = ResourceBindSuccessEvent();
         
-        open let type = "ResourceBindSuccessEvent";
+        public let type = "ResourceBindSuccessEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Full JID with binded resource
-        open let bindedJid:JID!;
+        public let bindedJid:JID!;
         
         fileprivate init() {
             self.sessionObject = nil;

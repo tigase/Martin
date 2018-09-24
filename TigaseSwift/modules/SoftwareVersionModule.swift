@@ -28,31 +28,31 @@ import Foundation
  */
 open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
-    open static let DEFAULT_NAME_VAL = "Tigase based software";
+    public static let DEFAULT_NAME_VAL = "Tigase based software";
     
     /**
      Property under which name of software is stored in `SessionObject`
      */
-    open static let NAME_KEY = "softwareVersionName";
+    public static let NAME_KEY = "softwareVersionName";
     /**
      Property under which name of operation system is stored in `SessionObject`
      */
-    open static let OS_KEY = "softwareVersionOS";
+    public static let OS_KEY = "softwareVersionOS";
     /**
      Property under which version of software is stored in `SessionObject`
      */
-    open static let VERSION_KEY = "softwareVersionVersion";
+    public static let VERSION_KEY = "softwareVersionVersion";
     
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = "softwareVersion";
+    public static let ID = "softwareVersion";
     
-    open let id = ID;
+    public let id = ID;
     
     open var context:Context!;
     
-    open let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:version"));
+    public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:version"));
     
-    open let features = [ "jabber:iq:version" ];
+    public let features = [ "jabber:iq:version" ];
 
     public init() {
         

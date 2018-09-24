@@ -24,7 +24,7 @@ import Foundation
 
 open class RSM {
     
-    open static let XMLNS = "http://jabber.org/protocol/rsm";
+    public static let XMLNS = "http://jabber.org/protocol/rsm";
     
     open class Query {
         

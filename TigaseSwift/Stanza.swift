@@ -36,7 +36,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Keeps instance of root XML element
-    open let element:Element;
+    public let element:Element;
     
     /// Returns information about delay in delivery of stanza
     open var delay:Delay? {
@@ -206,7 +206,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         - Iq: for elements named 'iq'
         - Stanza: for any other elements not matching above rules
      */
-    open static func from(element elem:Element) -> Stanza {
+    public static func from(element elem:Element) -> Stanza {
         switch elem.name {
         case "message":
             return Message(elem:elem);

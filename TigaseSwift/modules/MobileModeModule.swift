@@ -27,15 +27,15 @@ import Foundation
 open class MobileModeModule: XmppModule, ContextAware, EventHandler {
     
     /// Base part of namespace used by Mobile Optimizations
-    open static let MM_XMLNS = "http://tigase.org/protocol/mobile";
+    public static let MM_XMLNS = "http://tigase.org/protocol/mobile";
     /// ID of module to lookup for in `XmppModulesManager`
-    open static let ID = MM_XMLNS;
+    public static let ID = MM_XMLNS;
     
-    open let id = MM_XMLNS;
+    public let id = MM_XMLNS;
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context:Context! {
         didSet {

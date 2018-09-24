@@ -29,12 +29,12 @@ import Foundation
 open class Criteria {
     
     /// Creates empty criteria - will never match
-    open static func empty() -> Criteria {
+    public static func empty() -> Criteria {
         return Criteria(defValue:false);
     }
     
     /// Creates criteria which will match if any of passed criterias will match
-    open static func or(_ criteria: Criteria...) -> Criteria {
+    public static func or(_ criteria: Criteria...) -> Criteria {
         return OrImpl(criteria: criteria);
     }
     
@@ -46,7 +46,7 @@ open class Criteria {
      - parameter types: list of allowed values for `type` attribute
      - parameter containsAttribute: checks if passed attribute is set
      */
-    open static func name(_ name: String, xmlns: String? = nil, types:[String?]? = nil, containsAttribute: String? = nil) -> Criteria {
+    public static func name(_ name: String, xmlns: String? = nil, types:[String?]? = nil, containsAttribute: String? = nil) -> Criteria {
         return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil, containsAttribute: containsAttribute);
     }
 
@@ -58,7 +58,7 @@ open class Criteria {
      - parameter types: list of allowed values for `type` attribute
      - parameter containsAttribute: checks if passed attribute is set
      */
-    open static func name(_ name: String, xmlns: String? = nil, types:[StanzaType?], containsAttribute: String? = nil) -> Criteria {
+    public static func name(_ name: String, xmlns: String? = nil, types:[StanzaType?], containsAttribute: String? = nil) -> Criteria {
         let typesStr = types.map { (type) -> String? in
             return type?.rawValue;
         }
@@ -71,7 +71,7 @@ open class Criteria {
      - parameter name: name of element
      - parameter attributes: dictionary of attributes and values which needs to match
      */
-    open static func name(_ name:String?, attributes:[String:String]) -> Criteria {
+    public static func name(_ name:String?, attributes:[String:String]) -> Criteria {
         return ElementCriteria(name: name, attributes: attributes);
     }
     
@@ -81,7 +81,7 @@ open class Criteria {
      - parameter xmlns: xmlns of element
      - parameter containsAttribute: checks if passed attribute is set
      */
-    open static func xmlns(_ xmlns:String, containsAttribute: String? = nil) -> Criteria {
+    public static func xmlns(_ xmlns:String, containsAttribute: String? = nil) -> Criteria {
         return ElementCriteria(xmlns: xmlns, attributes: nil, containsAttribute: containsAttribute);
     }
     

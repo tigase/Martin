@@ -29,15 +29,15 @@ import Foundation
 open class ClientStateIndicationModule: XmppModule, ContextAware, EventHandler {
     
     /// Client State Indication XMLNS
-    open static let CSI_XMLNS = "urn:xmpp:csi:0";
+    public static let CSI_XMLNS = "urn:xmpp:csi:0";
     /// ID of module to lookup for in `XmppModulesManager`
-    open static let ID = CSI_XMLNS;
+    public static let ID = CSI_XMLNS;
     
-    open let id = CSI_XMLNS;
+    public let id = CSI_XMLNS;
     
-    open let criteria = Criteria.empty();
+    public let criteria = Criteria.empty();
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context:Context! {
         didSet {

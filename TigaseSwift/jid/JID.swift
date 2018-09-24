@@ -27,11 +27,11 @@ import Foundation
 open class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
     
     /// BareJID part of JID
-    open let bareJid:BareJID;
+    public let bareJid:BareJID;
     /// Resouce part
-    open let resource:String?;
+    public let resource:String?;
     /// String representation of JID
-    open let stringValue:String;
+    public let stringValue:String;
     /// Local part
     open var localPart:String? {
         return self.bareJid.localPart;
@@ -79,8 +79,8 @@ open class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
      Create instance from string representation of `JID`
      */
     public init(_ jid: String) {
-        let idx = jid.characters.index(of: "/");
-        self.resource = (idx == nil) ? nil : jid.substring(from: jid.characters.index(after: idx!));
+        let idx = jid.firstIndex(of: "/");
+        self.resource = (idx == nil) ? nil : String(jid.suffix(from: jid.index(after: idx!)));
         self.bareJid = BareJID(jid);
         self.stringValue = JID.toString(bareJid, resource);
     }

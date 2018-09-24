@@ -23,10 +23,10 @@ import Foundation
 
 open class SslCertificateInfo {
 
-    open let details: Entry;
-    open let issuer: Entry?;
+    public let details: Entry;
+    public let issuer: Entry?;
     
-    open static func calculateSha1Fingerprint(certificate: SecCertificate) -> String? {
+    public static func calculateSha1Fingerprint(certificate: SecCertificate) -> String? {
         let data = SecCertificateCopyData(certificate) as Data;
         return Digest.sha1.digest(toHex: data);
     }
@@ -42,8 +42,8 @@ open class SslCertificateInfo {
         
             // on first cert got 03469208e5d8e580f65799497d73b2d3098e8c8a
             // while openssl reports: SHA1 Fingerprint=03:46:92:08:E5:D8:E5:80:F6:57:99:49:7D:73:B2:D3:09:8E:8C:8A
-            let summary = (SecCertificateCopySubjectSummary(cert!) as NSString?) as? String;
-            print("cert", cert!, "SUMMARY:", summary, "fingerprint:", fingerprint);
+            let summary = (SecCertificateCopySubjectSummary(cert!) as NSString?) as String?;
+            print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any);
             
             switch i {
             case 0:
@@ -61,8 +61,8 @@ open class SslCertificateInfo {
         
     open class Entry {
     
-        open let name: String?;
-        open let fingerprintSha1: String?;
+        public let name: String?;
+        public let fingerprintSha1: String?;
         
         public init(name: String?, fingerprintSha1: String?) {
             self.name = name;

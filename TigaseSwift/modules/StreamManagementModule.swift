@@ -32,13 +32,13 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     static let SM_XMLNS = "urn:xmpp:sm:3";
     
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = SM_XMLNS;
+    public static let ID = SM_XMLNS;
     
-    open let id = SM_XMLNS;
+    public let id = SM_XMLNS;
     
-    open let criteria = Criteria.xmlns(SM_XMLNS);
+    public let criteria = Criteria.xmlns(SM_XMLNS);
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context: Context! {
         didSet {
@@ -365,15 +365,15 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     /// Event fired when Stream Management is enabled
     open class EnabledEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = EnabledEvent();
+        public static let TYPE = EnabledEvent();
         
-        open let type = "StreamManagementEnabledEvent";
+        public let type = "StreamManagementEnabledEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Is resumption enabled?
-        open let resume: Bool;
+        public let resume: Bool;
         /// ID of stream for resumption
-        open let resumeId:String?;
+        public let resumeId:String?;
         
         init() {
             sessionObject = nil;
@@ -392,13 +392,13 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     /// Event fired when Stream Management fails
     open class FailedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = FailedEvent();
+        public static let TYPE = FailedEvent();
         
-        open let type = "StreamManagementFailedEvent";
+        public let type = "StreamManagementFailedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Received error condition
-        open let errorCondition:ErrorCondition!;
+        public let errorCondition:ErrorCondition!;
         
         init() {
             sessionObject = nil;
@@ -414,15 +414,15 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     
     open class ResumedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ResumedEvent();
+        public static let TYPE = ResumedEvent();
         
-        open let type = "StreamManagementResumedEvent";
+        public let type = "StreamManagementResumedEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Value of H attribute
-        open let newH: UInt32?;
+        public let newH: UInt32?;
         /// ID of resumed stream
-        open let resumeId:String?;
+        public let resumeId:String?;
         
         init() {
             sessionObject = nil;

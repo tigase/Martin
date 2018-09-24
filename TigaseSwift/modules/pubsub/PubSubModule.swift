@@ -28,23 +28,23 @@ import Foundation
  */
 open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, PubSubModulePublisherExtension, PubSubModuleSubscriberExtension {
     
-    open static let PUBSUB_XMLNS = "http://jabber.org/protocol/pubsub";
+    public static let PUBSUB_XMLNS = "http://jabber.org/protocol/pubsub";
     
-    open static let PUBSUB_ERROR_XMLNS = PUBSUB_XMLNS + "#error";
+    public static let PUBSUB_ERROR_XMLNS = PUBSUB_XMLNS + "#error";
     
-    open static let PUBSUB_EVENT_XMLNS = PUBSUB_XMLNS + "#event";
+    public static let PUBSUB_EVENT_XMLNS = PUBSUB_XMLNS + "#event";
     
-    open static let PUBSUB_OWNER_XMLNS = PUBSUB_XMLNS + "#owner";
+    public static let PUBSUB_OWNER_XMLNS = PUBSUB_XMLNS + "#owner";
     /// ID of module for lookup in `XmppModulesManager`
-    open static let ID = PUBSUB_XMLNS;
+    public static let ID = PUBSUB_XMLNS;
     
-    open let id = PUBSUB_XMLNS;
+    public let id = PUBSUB_XMLNS;
     
     open var context: Context!;
     
-    open let criteria = Criteria.name("message").add(Criteria.name("event", xmlns: PUBSUB_EVENT_XMLNS));
+    public let criteria = Criteria.name("message").add(Criteria.name("event", xmlns: PUBSUB_EVENT_XMLNS));
     
-    open let features = [String]();
+    public let features = [String]();
     
     public init() {
         
@@ -127,23 +127,23 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
     /// Event fired when received message with PubSub notification/event with items
     open class NotificationReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = NotificationReceivedEvent();
+        public static let TYPE = NotificationReceivedEvent();
         
-        open let type = "PubSubNotificationReceivedEvent"
+        public let type = "PubSubNotificationReceivedEvent"
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         /// Received message with notification
-        open let message: Message!;
+        public let message: Message!;
         /// Name of node which sent notification
-        open let nodeName: String?;
+        public let nodeName: String?;
         /// Id of item
-        open let itemId: String?;
+        public let itemId: String?;
         /// Type of item (action)
-        open let itemType: String!;
+        public let itemType: String!;
         /// Item content - payload
-        open let payload: Element?;
+        public let payload: Element?;
         /// Timestamp of event (may not be current if delivery was delayed on server side)
-        open let timestamp: Date!;
+        public let timestamp: Date!;
         
         init() {
             self.sessionObject = nil;
@@ -169,21 +169,21 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
     
     open class NotificationCollectionChildrenChangedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = NotificationCollectionChildrenChangedEvent();
+        public static let TYPE = NotificationCollectionChildrenChangedEvent();
 
-        open let type = "NotificationCollectionChildrenChangedEvent"
+        public let type = "NotificationCollectionChildrenChangedEvent"
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         /// Received message with notification
-        open let message: Message!;
+        public let message: Message!;
         /// Name of node which sent notification
-        open let nodeName: String!;
+        public let nodeName: String!;
         /// Name of child node
-        open let childNodeName: String!;
+        public let childNodeName: String!;
         /// Action
-        open let action: Action!;
+        public let action: Action!;
         /// Timestamp of event (may not be current if delivery was delayed on server side)
-        open let timestamp: Date!;
+        public let timestamp: Date!;
 
         init() {
             self.sessionObject = nil;
@@ -211,15 +211,15 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
     
     open class NotificationNodeDeletedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = NotificationNodeDeletedEvent();
+        public static let TYPE = NotificationNodeDeletedEvent();
         
-        open let type = "NotificationNodeDeletedEvent"
+        public let type = "NotificationNodeDeletedEvent"
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         /// Received message with notification
-        open let message: Message!;
+        public let message: Message!;
         /// Name of node which sent notification
-        open let nodeName: String!;
+        public let nodeName: String!;
         
         init() {
             self.sessionObject = nil;
@@ -239,9 +239,9 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
     open class Item: CustomStringConvertible {
         
         /// Item id
-        open let id: String;
+        public let id: String;
         /// Item payload
-        open let payload: Element;
+        public let payload: Element;
         
         open var description: String {
             return "[id: " + id + ", payload: " + payload.stringValue + "]";

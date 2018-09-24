@@ -95,16 +95,16 @@ import Foundation
  */
 open class XMPPClient: Logger, EventHandler {
     
-    open let sessionObject:SessionObject;
-    open let connectionConfiguration:ConnectionConfiguration!;
+    public let sessionObject:SessionObject;
+    public let connectionConfiguration:ConnectionConfiguration!;
     open var socketConnector:SocketConnector? {
         willSet {
             sessionLogic?.unbind();
         }
     }
-    open let modulesManager:XmppModulesManager!;
-    open let eventBus:EventBus;
-    open let context:Context!;
+    public let modulesManager:XmppModulesManager!;
+    public let eventBus:EventBus;
+    public let context:Context!;
     fileprivate var sessionLogic:XmppSessionLogic?;
     fileprivate let responseManager:ResponseManager;
     
@@ -171,7 +171,7 @@ open class XMPPClient: Logger, EventHandler {
             
             keepaliveTimer?.cancel();
             if keepaliveTimeout > 0 {
-                keepaliveTimer = Timer(delayInSeconds: keepaliveTimeout, repeats: true, callback: { Void->Void in self.keepalive() });
+                keepaliveTimer = Timer(delayInSeconds: keepaliveTimeout, repeats: true, callback: { self.keepalive() });
             } else {
                 keepaliveTimer = nil;
             }

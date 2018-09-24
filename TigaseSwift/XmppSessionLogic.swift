@@ -71,8 +71,8 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         return s;
     }
     
-    open let queueTag: DispatchSpecificKey<DispatchQueue?>;
-    open let queue: DispatchQueue;
+    public let queueTag: DispatchSpecificKey<DispatchQueue?>;
+    public let queue: DispatchQueue;
     
     public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queue: DispatchQueue, queueTag: DispatchSpecificKey<DispatchQueue?>) {
         self.queue = queue;
@@ -335,13 +335,13 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     open class ErrorEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = ErrorEvent();
+        public static let TYPE = ErrorEvent();
         
-        open let type = "errorEvent";
+        public let type = "errorEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject:SessionObject!;
+        public let sessionObject:SessionObject!;
         /// Type of stream error which was received - may be nil if it is not known
-        open let streamError:StreamError?;
+        public let streamError:StreamError?;
         
         init() {
             sessionObject = nil;

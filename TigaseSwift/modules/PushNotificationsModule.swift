@@ -23,15 +23,15 @@ import Foundation
 
 open class PushNotificationsModule: XmppModule, ContextAware {
     
-    open static let PUSH_NOTIFICATIONS_XMLNS = "urn:xmpp:push:0";
+    public static let PUSH_NOTIFICATIONS_XMLNS = "urn:xmpp:push:0";
     
-    open static let ID = PUSH_NOTIFICATIONS_XMLNS;
+    public static let ID = PUSH_NOTIFICATIONS_XMLNS;
     
-    open let id = PUSH_NOTIFICATIONS_XMLNS;
+    public let id = PUSH_NOTIFICATIONS_XMLNS;
     
-    open let criteria = Criteria.name("message").add(Criteria.name("pubsub", xmlns: PubSubModule.PUBSUB_XMLNS).add(Criteria.name("affiliation")));
+    public let criteria = Criteria.name("message").add(Criteria.name("pubsub", xmlns: PubSubModule.PUBSUB_XMLNS).add(Criteria.name("affiliation")));
     
-    open let features = [String]();
+    public let features = [String]();
     
     open var context:Context!;
     
@@ -159,15 +159,15 @@ open class PushNotificationsModule: XmppModule, ContextAware {
     
     open class NotificationsDisabledEvent : Event {
         /// Identifier of event which should be used during registration of `EventHandler`
-        open static let TYPE = NotificationsDisabledEvent();
+        public static let TYPE = NotificationsDisabledEvent();
         
-        open let type = "PushNotificationsDisabledEvent"
+        public let type = "PushNotificationsDisabledEvent"
         /// Instance of `SessionObject` allows to tell from which connection event was fired
-        open let sessionObject: SessionObject!;
+        public let sessionObject: SessionObject!;
         /// JID of disabled service
-        open let serviceJid: JID!;
+        public let serviceJid: JID!;
         /// Node of disable service
-        open let serviceNode: String!;
+        public let serviceNode: String!;
         
         
         init() {
