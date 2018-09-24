@@ -554,13 +554,18 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
     }
     
-    fileprivate func parseXml(data: Data) {
+    fileprivate func parseXml(data: Data, tryNo: Int = 0) {
         do {
             try self.parser?.parse(data: data);
-        } catch XmlParserError.xmlDeclarationInside(_, let position) {
+        } catch XmlParserError.xmlDeclarationInside(let errorCode, let position) {
             self.parser = XMLParser(delegate: self.parserDelegate!);
             log("got XML declaration within XML, restarting XML parser...");
-            self.parseXml(data: data[position..<data.count]);
+            let nextTry = tryNo + 1;
+            guard tryNo < 4 else {
+                self.onError(msg: "XML stream parsing error, code: \(errorCode)");
+                return;
+            }
+            self.parseXml(data: data[position..<data.count], tryNo: nextTry);
         } catch XmlParserError.unknown(let errorCode) {
             self.onError(msg: "XML stream parsing error, code: \(errorCode)");
         } catch {
