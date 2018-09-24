@@ -471,46 +471,10 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         }
     }
     
-    /// Event fired when room occupant changes nickname
-    open class OccupantChangedNickEvent: Event {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = OccupantChangedNickEvent();
+    open class AbstractOccupantEvent: Event {
         
-        public let type = "MucModuleOccupantChangedNickEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
-        /// Presence of occupant
-        public let presence: Presence!;
-        /// Room in which occupant changed nickname
-        public let room: Room!;
-        /// Occupant
-        public let occupant: MucOccupant!;
-        /// Nickname of occupant
-        public let nickname: String?;
+        public let type: String;
         
-        init() {
-            self.sessionObject = nil;
-            self.presence = nil;
-            self.room = nil;
-            self.occupant = nil;
-            self.nickname = nil;
-        }
-        
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?) {
-            self.sessionObject = sessionObject;
-            self.presence = presence;
-            self.room = room;
-            self.occupant = occupant;
-            self.nickname = nickname;
-        }
-    }
-
-    /// Event fired when room occupant changes presence
-    open class OccupantChangedPresenceEvent: Event {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = OccupantChangedPresenceEvent();
-        
-        public let type = "MucModuleOccupantChangedPresenceEvent";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject: SessionObject!;
         /// New presence
@@ -524,99 +488,73 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         /// Additional informations from new presence
         public let xUser: XMucUserElement?;
         
-        init() {
-            self.sessionObject = nil;
-            self.presence = nil;
-            self.room = nil;
-            self.occupant = nil;
-            self.nickname = nil;
-            self.xUser = nil;
-        }
-        
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+        init(type: String, sessionObject: SessionObject?, presence: Presence?, room: Room?, occupant: MucOccupant?, nickname: String?, xUser: XMucUserElement? = nil) {
+            self.type = type;
             self.sessionObject = sessionObject;
             self.presence = presence;
             self.room = room;
             self.occupant = occupant;
             self.nickname = nickname;
             self.xUser = xUser;
+        }
+    }
+    
+    /// Event fired when room occupant changes nickname
+    open class OccupantChangedNickEvent: AbstractOccupantEvent {
+        /// Identifier of event which should be used during registration of `EventHandler`
+        public static let TYPE = OccupantChangedNickEvent();
+        
+        init() {
+            super.init(type: "MucModuleOccupantChangedNickEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
+        }
+        
+        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?) {
+            super.init(type: "MucModuleOccupantChangedNickEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: nil);
+        }
+    }
+    
+    /// Event fired when room occupant changes presence
+    open class OccupantChangedPresenceEvent: AbstractOccupantEvent {
+        /// Identifier of event which should be used during registration of `EventHandler`
+        public static let TYPE = OccupantChangedPresenceEvent();
+        
+        init() {
+            super.init(type: "MucModuleOccupantChangedPresenceEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
+        }
+        
+        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+            super.init(type: "MucModuleOccupantChangedPresenceEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
     }
     
     /// Event fired when occupant enters room
-    open class OccupantComesEvent: Event {
+    open class OccupantComesEvent: AbstractOccupantEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = OccupantComesEvent();
         
-        public let type = "MucModuleOccupantComesEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
-        /// Occupant presence
-        public let presence: Presence!;
-        /// Room to which occupant entered
-        public let room: Room!;
-        /// Occupant
-        public let occupant: MucOccupant!;
-        /// Occupant nickname
-        public let nickname: String?;
-        /// Additonal informations about occupant
-        public let xUser: XMucUserElement?;
-        
         init() {
-            self.sessionObject = nil;
-            self.presence = nil;
-            self.room = nil;
-            self.occupant = nil;
-            self.nickname = nil;
-            self.xUser = nil;
+            super.init(type: "MucModuleOccupantComesEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
         }
         
         public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
-            self.sessionObject = sessionObject;
-            self.presence = presence;
-            self.room = room;
-            self.occupant = occupant;
-            self.nickname = nickname;
-            self.xUser = xUser;
+            super.init(type: "MucModuleOccupantComesEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
+        
     }
     
     /// Event fired when occupant leaves room
-    open class OccupantLeavedEvent: Event {
+    open class OccupantLeavedEvent: AbstractOccupantEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = OccupantLeavedEvent();
         
-        public let type = "MucModuleOccupantLeavedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
-        /// Occupant presence
-        public let presence: Presence!;
-        /// Room which occupant left
-        public let room: Room!;
-        /// Occupant
-        public let occupant: MucOccupant!;
-        /// Nickname of occupant
-        public let nickname: String?;
-        /// Additional informations about occupant
-        public let xUser: XMucUserElement?;
-        
         init() {
-            self.sessionObject = nil;
-            self.presence = nil;
-            self.room = nil;
-            self.occupant = nil;
-            self.nickname = nil;
-            self.xUser = nil;
+            super.init(type: "MucModuleOccupantLeavedEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
         }
         
         public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
-            self.sessionObject = sessionObject;
-            self.presence = presence;
-            self.room = room;
-            self.occupant = occupant;
-            self.nickname = nickname;
-            self.xUser = xUser;
+            super.init(type: "MucModuleOccupantLeavedEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
+        
     }
     
     /// Event fired when we receive presence of type error from MUC room
@@ -804,5 +742,39 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             super.init(sessionObject: sessionObject, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
         }
         
+    }
+    
+    public enum RoomError {
+        case nicknameLockedDown
+        case invalidPassword
+        case registrationRequired
+        case banned
+        case nicknameConflict
+        case maxUsersExceeded
+        case roomLocked
+        
+        public static func from(presence: Presence) -> RoomError? {
+            guard let type = presence.type, type == .error, let error = presence.errorCondition else {
+                return nil;
+            }
+            switch error {
+            case .not_acceptable:
+                return .nicknameLockedDown;
+            case .not_authorized:
+                return .invalidPassword;
+            case .registration_required:
+                return .registrationRequired;
+            case .forbidden:
+                return .banned;
+            case .conflict:
+                return .nicknameConflict;
+            case .service_unavailable:
+                return .maxUsersExceeded;
+            case .item_not_found:
+                return .roomLocked;
+            default:
+                return nil;
+            }
+        }
     }
 }

@@ -32,7 +32,7 @@ public extension ListField {
     var options: [ListFieldOption] {
         get {
             return element.mapChildren(transform: { (elem) -> ListFieldOption in
-                return ListFieldOption(value: elem.findChild(name: "value")!.value!, label: elem.getAttribute("label"));
+                return ListFieldOption(value: elem.findChild(name: "value")?.value ?? "", label: elem.getAttribute("label"));
                 }, filter: { (elem) -> Bool in
                     return elem.name == "option";
             });
