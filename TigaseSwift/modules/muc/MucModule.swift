@@ -173,6 +173,67 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         });
     }
     
+    open func getRoomAffiliations(from room: Room, with affiliation: MucAffiliation, completionHandler: @escaping ([RoomAffiliation]?, ErrorCondition?)->Void) {
+        let userRole = (room.presences[room.nickname]?.role ?? .none);
+        guard userRole == .participant || userRole == .moderator else {
+            completionHandler(nil, ErrorCondition.forbidden);
+            return;
+        };
+        
+        let iq = Iq();
+        iq.to = room.jid;
+        iq.type = StanzaType.get;
+        
+        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin");
+        iq.addChild(query);
+        query.addChild(Element(name: "item", attributes: ["affiliation": affiliation.rawValue]));
+        
+        context.writer?.write(iq, callback: { (stanza: Stanza?) in
+            let type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                let affiliations = stanza?.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.mapChildren(transform: { el in
+                    return RoomAffiliation(from: el);
+                }, filter: { el -> Bool in return el.name == "item"}) ?? [];
+                completionHandler(affiliations, nil);
+            default:
+                completionHandler(nil, stanza?.errorCondition ?? ErrorCondition.remote_server_timeout);
+                break;
+            }
+        });
+    }
+    
+    open func setRoomAffiliations(to room: Room, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (ErrorCondition?)->Void) {
+        let userAffiliation = (room.presences[room.nickname]?.affiliation ?? .none);
+        guard userAffiliation == .admin || userAffiliation == .owner else {
+            completionHandler(ErrorCondition.forbidden);
+            return;
+        };
+
+        let iq = Iq();
+        iq.to = room.jid;
+        iq.type = StanzaType.set;
+        
+        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin");
+        iq.addChild(query);
+        query.addChildren(affiliations.map({ aff -> Element in
+            let el = Element(name: "item");
+            el.setAttribute("jid", value: aff.jid.stringValue);
+            el.setAttribute("affiliation", value: aff.affiliation.rawValue);
+            return el;
+        }));
+        
+        context.writer?.write(iq, callback: { (stanza: Stanza?) in
+            let type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                completionHandler(nil);
+            default:
+                completionHandler(stanza?.errorCondition ?? ErrorCondition.remote_server_timeout);
+            }
+        });
+    }
+    
     /**
      Invite user to MUC room
      - parameter room: room for invitation
@@ -775,6 +836,28 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             default:
                 return nil;
             }
+        }
+    }
+    
+    open class RoomAffiliation {
+        
+        public let jid: JID;
+        public let affiliation: MucAffiliation;
+        public let nickname: String?;
+        public let role: MucRole?;
+        
+        public convenience init?(from el: Element) {
+            guard let jid = JID(el.getAttribute("jid")), let affiliation = MucAffiliation(rawValue: el.getAttribute("affiliation") ?? "") else {
+                return nil;
+            }
+            self.init(jid: jid, affiliation: affiliation, nickname: el.getAttribute("nick"), role: MucRole(rawValue: el.getAttribute("role") ?? ""));
+        }
+        
+        public init(jid: JID, affiliation: MucAffiliation, nickname: String? = nil, role: MucRole? = nil) {
+            self.jid = jid;
+            self.affiliation = affiliation;
+            self.nickname = nickname;
+            self.role = role;
         }
     }
 }
