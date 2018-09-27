@@ -32,7 +32,7 @@ open class Node:Equatable, StringValue {
     }
     
     /// returns serialized value in form easier to read
-    open func toPrettyString() -> String {
+    open func toPrettyString(secure: Bool) -> String {
         return "Node";
     }
 }

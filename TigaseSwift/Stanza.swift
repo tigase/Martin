@@ -32,7 +32,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     fileprivate let defStanzaType:StanzaType?;
     
     open var description: String {
-        return String("Stanza : \(element.stringValue)")
+        return String("Stanza : \(element)")
     }
     
     /// Keeps instance of root XML element
@@ -329,7 +329,7 @@ open class Message: Stanza {
     }
     
     open override var description: String {
-        return String("Message : \(element.stringValue)")
+        return String("Message : \(element)")
     }
     
     public init() {
@@ -377,7 +377,7 @@ open class Presence: Stanza {
     }
     
     open override var description: String {
-        return String("Presence : \(element.stringValue)")
+        return String("Presence : \(element)")
     }
 
     /// Suggested nickname to use
@@ -469,7 +469,7 @@ open class Presence: Stanza {
 open class Iq: Stanza {
 
     open override var description: String {
-        return String("Iq : \(element.stringValue)")
+        return String("Iq : \(element)")
     }
     
     public init() {

@@ -24,7 +24,7 @@ import Foundation
 /**
  Common protocol for classes representing `Element`
  */
-public protocol ElementProtocol {
+public protocol ElementProtocol: CustomStringConvertible {
     
     /// Name of element
     var name:String { get }

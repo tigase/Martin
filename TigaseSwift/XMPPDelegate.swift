@@ -36,7 +36,7 @@ open class XMPPDelegate : NSObject, XMPPStreamDelegate {
     }
     
     open func process(element packet: Element) {
-        log("got packet:  " + packet.stringValue)
+        //log("got packet:  " + packet.stringValue)
     }
     
 }

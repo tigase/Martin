@@ -31,6 +31,10 @@ open class Element : Node, ElementProtocol {
     fileprivate var attributes_:[String:String];
     fileprivate var nodes = Array<Node>()
     
+    open var description: String {
+        return toPrettyString(secure: true);
+    }
+    
     /// Attributes of XML element
     open var attributes:[String:String] {
         get {
@@ -378,17 +382,26 @@ open class Element : Node, ElementProtocol {
         
     }
     
-    override open func toPrettyString() -> String {
+    override open func toPrettyString(secure: Bool) -> String {
         var result = "<\(self.name)"
         for (k,v) in attributes_ {
             let val = EscapeUtils.escape(v);
             result += " \(k)='\(val)'"
         }
         if (!nodes.isEmpty) {
-            result += ">\n"
+            result += ">"
+            if nodes.first is Element {
+                result += "\n";
+            }
+            var prevNode: Node? = nil;
             for child in nodes {
-                let str = child.toPrettyString();
-                result += str + ((child is Element && str.last != "\n") ? "\n" : "")
+                if secure && (prevNode is CData && child is CData) {
+                    prevNode = child;
+                } else {
+                    prevNode = child;
+                    let str = child.toPrettyString(secure: secure);
+                    result += str + ((child is Element && str.last != "\n") ? "\n" : "")
+                }
             }
             result += "</\(self.name)>"
         } else {

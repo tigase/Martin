@@ -37,7 +37,10 @@ open class CData : Node {
         return EscapeUtils.escape(value);
     }
     
-    override open func toPrettyString() -> String {
+    override open func toPrettyString(secure: Bool) -> String {
+        if secure && value.count > 100 {
+            return EscapeUtils.escape(String(value.prefix(100))) + "...";
+        }
         return EscapeUtils.escape(value);
     }
     

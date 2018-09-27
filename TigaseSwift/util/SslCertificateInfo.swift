@@ -21,14 +21,22 @@
 
 import Foundation
 
-open class SslCertificateInfo {
-
+open class SslCertificateInfo: NSObject, NSCoding {
+    
     public let details: Entry;
     public let issuer: Entry?;
     
     public static func calculateSha1Fingerprint(certificate: SecCertificate) -> String? {
         let data = SecCertificateCopyData(certificate) as Data;
         return Digest.sha1.digest(toHex: data);
+    }
+    
+    public required init?(coder aDecoder: NSCoder) {
+        guard let details = Entry(name: aDecoder.decodeObject(forKey: "details-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "details-fingerprint-sha1") as? String) else {
+            return nil;
+        }
+        self.details = details;
+        self.issuer = Entry(name: aDecoder.decodeObject(forKey: "issuer-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "issuer-fingerprint-sha1") as? String)
     }
     
     public init(trust: SecTrust) {
@@ -58,15 +66,25 @@ open class SslCertificateInfo {
         self.details = details!;
         self.issuer = issuer;
     }
-        
+    
+    open func encode(with aCoder: NSCoder) {
+        aCoder.encode(details.name, forKey: "details-name");
+        aCoder.encode(details.fingerprintSha1, forKey: "details-fingerprint-sha1");
+        aCoder.encode(issuer?.name, forKey: "issuer-name");
+        aCoder.encode(issuer?.fingerprintSha1, forKey: "issuer-fingerprint-sha1");
+    }
+
     open class Entry {
     
-        public let name: String?;
-        public let fingerprintSha1: String?;
+        public let name: String;
+        public let fingerprintSha1: String;
         
-        public init(name: String?, fingerprintSha1: String?) {
-            self.name = name;
-            self.fingerprintSha1 = fingerprintSha1;
+        public init?(name: String?, fingerprintSha1: String?) {
+            guard name != nil && fingerprintSha1 != nil else {
+                return nil;
+            }
+            self.name = name!;
+            self.fingerprintSha1 = fingerprintSha1!;
         }
         
     }

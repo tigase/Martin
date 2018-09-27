@@ -194,7 +194,7 @@ open class XMLParser: Logger {
      - parameter data: instance of Data to process
      */
     open func parse(data: Data) throws {
-        log("parsing data:", data.count, String(data: data, encoding: String.Encoding.utf8));
+//        log("parsing data:", data.count, String(data: data, encoding: String.Encoding.utf8));
         try data.withUnsafeBytes { (ptr: UnsafePointer<CChar>) -> Void in
             let err = xmlParseChunk(ctx, ptr, Int32(data.count), 0);
             if err > 0 {
