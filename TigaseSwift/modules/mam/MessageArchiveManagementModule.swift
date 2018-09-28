@@ -48,6 +48,13 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
     
     open var context: Context!;
     
+    open var isAvailable: Bool {
+        guard let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) else {
+            return false;
+        }
+        return serverFeatures.contains(MessageArchiveManagementModule.MAM_XMLNS);
+    }
+    
     public init() {}
     
     open func process(stanza: Stanza) throws {
