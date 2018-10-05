@@ -175,10 +175,10 @@ open class VCard {
                 }
             }
             set {
-                if number == nil {
+                if newValue == nil {
                     uri = nil;
                 } else {
-                    uri = "tel:\(number!)"
+                    uri = "tel:\(newValue!)"
                 }
             }
         }

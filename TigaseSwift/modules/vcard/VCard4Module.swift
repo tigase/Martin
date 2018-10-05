@@ -131,7 +131,7 @@ extension VCard {
         self.fn = vcard4!.findChild(name: "fn")?.findChild(name: "text")?.value;
         if let n = vcard4!.findChild(name: "n") {
             self.surname = n.findChild(name: "surname")?.value;
-            self.givenName = n.findChild(name: "givem")?.value;
+            self.givenName = n.findChild(name: "given")?.value;
             self.additionalName = n.mapChildren(transform: {(el) in
                 return el.value!;
             }, filter: {(el)->Bool in
