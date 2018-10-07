@@ -106,6 +106,9 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
             
             let decline = Element(name: "decline");
+            if let inviter = invitation.inviter {
+                decline.setAttribute("to", value: inviter.stringValue)
+            }
             if reason != nil {
                 decline.addChild(Element(name: "reason", cdata: reason));
             }
@@ -411,7 +414,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         let x = message.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         let invite = x?.findChild(name: "invite");
         
-        let invitation = MediatedInvitation(sessionObject: context.sessionObject, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.stringValue), reason: invite?.getAttribute("reason"), password: x?.getAttribute("password"));
+        let invitation = MediatedInvitation(sessionObject: context.sessionObject, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.getAttribute("from")), reason: invite?.getAttribute("reason"), password: x?.getAttribute("password"));
         
         context.eventBus.fire(InvitationReceivedEvent(sessionObject: context.sessionObject, invitation: invitation));
     }
@@ -427,7 +430,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         let reason = decline?.findChild(name: "reason")?.stringValue;
         let invitee = decline?.getAttribute("from");
         
-        context.eventBus.fire(InvitationDeclinedEvent(sessionObject: context.sessionObject, message: message, room: room!, invitee: invitee == nil ? nil : JID(invitee!), reason: reason));
+        context.eventBus.fire(InvitationDeclinedEvent(sessionObject: context.sessionObject, message: message, room: room!, invitee: JID(invitee), reason: reason));
     }
 
     fileprivate func markRoomsAsNotJoined() {
