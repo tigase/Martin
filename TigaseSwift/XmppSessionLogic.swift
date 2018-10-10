@@ -45,6 +45,8 @@ public protocol XmppSessionLogic: class {
     func onStreamClose(completionHandler: @escaping ()->Void);
     /// Called when stream error happens
     func onStreamError(_ streamError:Element);
+    /// Called when stream is terminated abnormally
+    func onStreamTerminate();
     /// Using properties set decides which name use to connect to XMPP server
     func serverToConnect() -> String;
 }
@@ -106,6 +108,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     open func serverToConnect() -> String {
         let domain = context.sessionObject.domainName!;
         let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
+        
         return streamManagementModule?.resumptionLocation ?? context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
     }
     
@@ -131,6 +134,15 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         let errorName = streamErrorEl.findChild(xmlns: "urn:ietf:params:xml:ns:xmpp-streams")?.name;
         let streamError = errorName == nil ? nil : StreamError(rawValue: errorName!);
         context.eventBus.fire(ErrorEvent.init(sessionObject: context.sessionObject, streamError: streamError));
+    }
+    
+    open func onStreamTerminate() {
+        // we may need to adjust those condition....
+        if self.connector.state == .connecting {
+            let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
+            
+            streamManagementModule?.reset();
+        }
     }
     
     open func receivedIncomingStanza(_ stanza:Stanza) {

@@ -355,6 +355,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     
     override open func onStreamTerminate() {
         log("onStreamTerminate called... state:", state);
+        sessionLogic?.onStreamTerminate();
         switch state {
         case .disconnecting:
             closeSocket(newState: State.disconnected);
