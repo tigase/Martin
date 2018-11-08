@@ -75,6 +75,7 @@
 		FE752D611DA50D45006884B9 /* PEPUserAvatarModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */; };
 		FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */; };
 		FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */; };
+		FE7F92462192214D00F2FF3C /* EntityTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F92452192214D00F2FF3C /* EntityTime.swift */; };
 		FE7F9301200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F9300200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift */; };
 		FE7F930520121E69004C6195 /* DNSSrvResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930420121E69004C6195 /* DNSSrvResolver.swift */; };
 		FE7F930720121F4C004C6195 /* DNSSrvResolverWithCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */; };
@@ -224,6 +225,7 @@
 		FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PEPUserAvatarModule.swift; sourceTree = "<group>"; };
 		FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapabilitiesModule.swift; sourceTree = "<group>"; };
 		FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultCapabilitiesCache.swift; sourceTree = "<group>"; };
+		FE7F92452192214D00F2FF3C /* EntityTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityTime.swift; sourceTree = "<group>"; };
 		FE7F9300200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScramSaltedPasswordCacheProcotol.swift; sourceTree = "<group>"; };
 		FE7F930420121E69004C6195 /* DNSSrvResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolver.swift; sourceTree = "<group>"; };
 		FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolverWithCache.swift; sourceTree = "<group>"; };
@@ -337,34 +339,35 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
-				FEF8C2341F2CE9F30089C096 /* vcard */,
-				FEB1BAAE1F1F567800F10238 /* mam */,
-				FE752D5F1DA50D35006884B9 /* pep */,
-				FEDCBF6C1D9D688300AE9129 /* pubsub */,
-				FE7F64551D28173600B9DF56 /* caps */,
-				FEC514101CE9C3EC003AF765 /* muc */,
-				FE94E50D1CCA303900FAE755 /* chat */,
-				FE94E5081CC90C4A00FAE755 /* presence */,
-				FE94E4FB1CC7AFF900FAE755 /* roster */,
-				FE2EFD861CB58066000D254E /* auth */,
-				FE2EFD991CB66DA9000D254E /* StreamFeaturesModule.swift */,
-				FE2EFD9D1CB67145000D254E /* ContextAware.swift */,
-				FE2EFDB61CBD1DE7000D254E /* ResourceBinderModule.swift */,
-				FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */,
-				FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */,
-				FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */,
 				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
-				FE30242D1CDDF53500466497 /* StreamManagementModule.swift */,
+				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
+				FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */,
+				FE2EFD9D1CB67145000D254E /* ContextAware.swift */,
+				FE9A1ED71CC66DCF00D0509D /* DiscoveryModule.swift */,
+				FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */,
+				FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */,
 				FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */,
+				FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */,
 				FEA554871CE3A55B00676608 /* MobileModeModule.swift */,
 				FE596F781CF1C35B0079E22B /* PingModule.swift */,
-				FEDE939C1D0C747100CA60A9 /* InBandRegistrationModule.swift */,
-				FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */,
 				FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */,
-				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
-				FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */,
-				FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */,
+				FE2EFDB61CBD1DE7000D254E /* ResourceBinderModule.swift */,
+				FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */,
+				FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */,
+				FE2EFD991CB66DA9000D254E /* StreamFeaturesModule.swift */,
 				FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */,
+				FE30242D1CDDF53500466497 /* StreamManagementModule.swift */,
+				FE2EFD861CB58066000D254E /* auth */,
+				FE7F64551D28173600B9DF56 /* caps */,
+				FE94E50D1CCA303900FAE755 /* chat */,
+				FEB1BAAE1F1F567800F10238 /* mam */,
+				FEC514101CE9C3EC003AF765 /* muc */,
+				FE752D5F1DA50D35006884B9 /* pep */,
+				FE94E5081CC90C4A00FAE755 /* presence */,
+				FEDCBF6C1D9D688300AE9129 /* pubsub */,
+				FE94E4FB1CC7AFF900FAE755 /* roster */,
+				FEF8C2341F2CE9F30089C096 /* vcard */,
+				FE7F92452192214D00F2FF3C /* EntityTime.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -879,6 +882,7 @@
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
 				FEC5141A1CE9CC2A003AF765 /* MucOccupant.swift in Sources */,
 				FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */,
+				FE7F92462192214D00F2FF3C /* EntityTime.swift in Sources */,
 				FEDCBF871D9EC77300AE9129 /* BooleanField.swift in Sources */,
 				FE2EFDBF1CBEB0BA000D254E /* SessionEstablishmentModule.swift in Sources */,
 				FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */,
