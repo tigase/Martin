@@ -10,6 +10,7 @@
 		FE00157B2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */; };
 		FE01ADA51E2243DD00FA7E65 /* PushNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */; };
 		FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */; };
+		FE0D3DD9219498C7009B189B /* ChatStateNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0D3DD8219498C7009B189B /* ChatStateNotificationsModule.swift */; };
 		FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFD401CAED46B000D254E /* SessionObject.swift */; };
 		FE2EFD431CAED89A000D254E /* ConnectionConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFD421CAED89A000D254E /* ConnectionConfiguration.swift */; };
 		FE2EFD631CB29B28000D254E /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FE2EFD621CB29B28000D254E /* libresolv.tbd */; };
@@ -156,6 +157,7 @@
 		FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamFeaturesModuleWithPipelining.swift; sourceTree = "<group>"; };
 		FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PushNotificationsModule.swift; sourceTree = "<group>"; };
 		FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdHocCommandsModule.swift; sourceTree = "<group>"; };
+		FE0D3DD8219498C7009B189B /* ChatStateNotificationsModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStateNotificationsModule.swift; sourceTree = "<group>"; };
 		FE2EFD401CAED46B000D254E /* SessionObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionObject.swift; sourceTree = "<group>"; };
 		FE2EFD421CAED89A000D254E /* ConnectionConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConnectionConfiguration.swift; sourceTree = "<group>"; };
 		FE2EFD621CB29B28000D254E /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
@@ -368,6 +370,7 @@
 				FE94E4FB1CC7AFF900FAE755 /* roster */,
 				FEF8C2341F2CE9F30089C096 /* vcard */,
 				FE7F92452192214D00F2FF3C /* EntityTime.swift */,
+				FE0D3DD8219498C7009B189B /* ChatStateNotificationsModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -771,6 +774,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE0D3DD9219498C7009B189B /* ChatStateNotificationsModule.swift in Sources */,
 				FEF8C23A1F2CEA1E0089C096 /* VCard.swift in Sources */,
 				FEDCBF971D9EEB1D00AE9129 /* PubSubSubscription.swift in Sources */,
 				FEC514181CE9C9AE003AF765 /* MucAffiliation.swift in Sources */,

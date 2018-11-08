@@ -120,13 +120,9 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
             return;
         }
         
-        guard let c = e.presence.findChild(name: "c", xmlns: "http://jabber.org/protocol/caps") else {
+        guard let nodeName = e.presence.capsNode else {
             return;
         }
-        guard let node = c.getAttribute("node"), let ver = c.getAttribute("ver") else {
-            return;
-        }
-        let nodeName = node + "#" + ver;
         
         cache!.isCached(node: nodeName) { cached in
             guard let discoveryModule: DiscoveryModule = self.context.modulesManager.getModule(DiscoveryModule.ID) else {
@@ -236,6 +232,14 @@ public protocol CapabilitiesCache {
     func isCached(node: String, handler: @escaping (Bool)->Void);
     
     /**
+     Check if feature is supported for node in cache.
+     - parameter for: node to check
+     - parameter feature: feature to check support
+     - returns: true if feature is supported by this node
+     */
+    func isSupported(for node: String, feature: String) -> Bool;
+    
+    /**
      Store data in cache
      - parameter node: node for which we store data
      - parameter identitity: XMPP client identity
@@ -243,4 +247,18 @@ public protocol CapabilitiesCache {
      */
     func store(node: String, identity: DiscoveryModule.Identity?, features: [String]);
     
+}
+
+extension Presence {
+    var capsNode: String? {
+        get {
+            guard let c = element.findChild(name: "c", xmlns: "http://jabber.org/protocol/caps") else {
+                return nil;
+            }
+            guard let node = c.getAttribute("node"), let ver = c.getAttribute("ver") else {
+                return nil;
+            }
+            return node + "#" + ver;
+        }
+    }
 }

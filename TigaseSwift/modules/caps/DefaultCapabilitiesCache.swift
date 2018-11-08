@@ -71,6 +71,10 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         }
     }
     
+    open func isSupported(for node: String, feature: String) -> Bool {
+        return getFeatures(for: node)?.contains(feature) ?? false;
+    }
+    
     open func store(node: String, identity: DiscoveryModule.Identity?, features: [String]) {
         queue.async(flags: .barrier, execute: {
             self.identities[node] = identity;
