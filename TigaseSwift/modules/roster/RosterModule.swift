@@ -133,7 +133,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         let groups:[String] = item.mapChildren(transform: {(g:Element) -> String in
                 return g.value!;
             }, filter: {(e:Element) -> Bool in
-                return e.name == "group";
+                return e.name == "group" && e.value != nil;
             });
         
         var currentItem = rosterStore.get(for: jid);

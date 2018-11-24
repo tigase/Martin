@@ -40,8 +40,11 @@ extension PubSubModulePublisherExtension {
      */
     public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         let callback = createCallback(onSuccess: { (stanza) in
-            let publishEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)!.findChild(name: "publish")!;
-            let node = publishEl.getAttribute("node")!;
+            guard let publishEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "publish"), let node = publishEl.getAttribute("node") else {
+                onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
+                return;
+            }
+            
             let itemId = publishEl.findChild(name: "item")?.getAttribute("id");
             
             onSuccess?(stanza, node, itemId);

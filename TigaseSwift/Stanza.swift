@@ -228,7 +228,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     open func errorResult(errorType:String?, errorCondition:String, errorText:String? = nil, xmlns:String = "urn:ietf:params:xml:ns:xmpp-stanzas") -> Stanza {
-        let elem = element;
+        let elem = Element(element: element);
         let response = Stanza.from(element: elem);
         response.type = StanzaType.error;
         response.to = self.from;
