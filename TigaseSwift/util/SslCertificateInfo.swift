@@ -39,6 +39,11 @@ open class SslCertificateInfo: NSObject, NSCoding {
         self.issuer = Entry(name: aDecoder.decodeObject(forKey: "issuer-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "issuer-fingerprint-sha1") as? String)
     }
     
+    public init(sslCertificateInfo: SslCertificateInfo) {
+        self.details = sslCertificateInfo.details;
+        self.issuer = sslCertificateInfo.issuer;
+    }
+    
     public init(trust: SecTrust) {
         let certCount = SecTrustGetCertificateCount(trust);
         var details: Entry? = nil;

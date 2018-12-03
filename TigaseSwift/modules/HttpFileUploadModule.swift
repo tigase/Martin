@@ -138,7 +138,11 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
                     }
                 })
                 if (getUri != nil && putUri != nil) {
-                    onSuccess(Slot(getUri: getUri!, putUri: putUri!, putHeaders: putHeaders));
+                    if let slot = Slot(getUri: getUri!, putUri: putUri!, putHeaders: putHeaders) {
+                        onSuccess(slot);
+                    } else {
+                        onError(ErrorCondition.not_acceptable, "Invalid GET or PUT url!");
+                    }
                 } else {
                     onError(ErrorCondition.undefined_condition, nil);
                 }
@@ -150,11 +154,18 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
     
     open class Slot {
         
-        public let getUri: String;
-        public let putUri: String;
+        public let getUri: URL;
+        public let putUri: URL;
         public let putHeaders: [String: String];
         
-        public init(getUri: String, putUri: String, putHeaders: [String:String]) {
+        public convenience init?(getUri getUriStr: String, putUri putUriStr: String, putHeaders: [String:String]) {
+            guard let getUri = URL(string: getUriStr.replacingOccurrences(of: " ", with: "%20")), let putUri = URL(string: putUriStr.replacingOccurrences(of: " ", with: "%20")) else {
+                return nil;
+            }
+            self.init(getUri: getUri, putUri: putUri, putHeaders: putHeaders);
+        }
+        
+        public init(getUri: URL, putUri: URL, putHeaders: [String:String]) {
             self.getUri = getUri;
             self.putUri = putUri;
             self.putHeaders = putHeaders;

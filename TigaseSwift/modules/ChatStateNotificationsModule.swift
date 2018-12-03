@@ -93,7 +93,7 @@ public enum ChatState: String {
 
 extension Message {
     
-    var chatState: ChatState? {
+    open var chatState: ChatState? {
         get {
             return ChatState(from: self.element.findChild(name: nil, xmlns: ChatStateNotificationsModule.XMLNS)?.name);
         }
