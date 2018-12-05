@@ -40,7 +40,11 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
     
     public init(jid:JID, name: String?, subscription: Subscription, groups: [String] = [String](), ask: Bool = false) {
         self.jid = jid;
-        self.name = name;
+        if name?.trimmingCharacters(in: .whitespaces).isEmpty ?? true {
+            self.name = nil;
+        } else {
+            self.name = name;
+        }
         self.subscription = subscription;
         self.groups = groups;
         self.ask = ask;

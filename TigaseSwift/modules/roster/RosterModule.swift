@@ -209,7 +209,9 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         
         let item = Element(name: "item");
         item.setAttribute("jid", value: jid.stringValue);
-        item.setAttribute("name", value: name);
+        if !(name?.isEmpty ?? true) {
+            item.setAttribute("name", value: name);
+        }
         groups.forEach({(group:String)->Void in
             item.addChild(Element(name:"group", cdata:group));
         });
