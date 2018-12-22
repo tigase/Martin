@@ -250,7 +250,7 @@ public protocol CapabilitiesCache {
 }
 
 extension Presence {
-    var capsNode: String? {
+    open var capsNode: String? {
         get {
             guard let c = element.findChild(name: "c", xmlns: "http://jabber.org/protocol/caps") else {
                 return nil;
