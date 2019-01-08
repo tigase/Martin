@@ -104,6 +104,8 @@
 		FEA370C01F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */; };
 		FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */; };
 		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
+		FEA7BF5621E3A6C700D9E36C /* Jingle.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA7BF5421E3A6C700D9E36C /* Jingle.swift */; };
+		FEA7BF5721E3A6C700D9E36C /* JingleModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA7BF5521E3A6C700D9E36C /* JingleModule.swift */; };
 		FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */; };
 		FEB1BAB01F1F567800F10238 /* MessageArchiveManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */; };
 		FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */; };
@@ -255,6 +257,8 @@
 		FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageDeliveryReceiptsModule.swift; sourceTree = "<group>"; };
 		FEA554851CE3480B00676608 /* MessageCarbonsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCarbonsModule.swift; sourceTree = "<group>"; };
 		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
+		FEA7BF5421E3A6C700D9E36C /* Jingle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Jingle.swift; sourceTree = "<group>"; };
+		FEA7BF5521E3A6C700D9E36C /* JingleModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JingleModule.swift; sourceTree = "<group>"; };
 		FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModuleProtocol.swift; sourceTree = "<group>"; };
 		FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageArchiveManagementModule.swift; sourceTree = "<group>"; };
 		FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractPEPModule.swift; sourceTree = "<group>"; };
@@ -341,6 +345,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FEA7BF5321E3A6AF00D9E36C /* jingle */,
 				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
 				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
 				FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */,
@@ -566,6 +571,15 @@
 				FE689CFA1FFA6171007AFB17 /* Reachability.swift */,
 			);
 			path = util;
+			sourceTree = "<group>";
+		};
+		FEA7BF5321E3A6AF00D9E36C /* jingle */ = {
+			isa = PBXGroup;
+			children = (
+				FEA7BF5521E3A6C700D9E36C /* JingleModule.swift */,
+				FEA7BF5421E3A6C700D9E36C /* Jingle.swift */,
+			);
+			path = jingle;
 			sourceTree = "<group>";
 		};
 		FEB1BAAE1F1F567800F10238 /* mam */ = {
@@ -800,6 +814,7 @@
 				FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */,
 				FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */,
 				FE2EFD831CB57D25000D254E /* Node.swift in Sources */,
+				FEA7BF5621E3A6C700D9E36C /* Jingle.swift in Sources */,
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
 				FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */,
@@ -817,6 +832,7 @@
 				FEC514161CE9C702003AF765 /* MucRole.swift in Sources */,
 				FE689CFB1FFA6171007AFB17 /* Reachability.swift in Sources */,
 				FE9A1EDA1CC6993000D0509D /* ElementProtocol.swift in Sources */,
+				FEA7BF5721E3A6C700D9E36C /* JingleModule.swift in Sources */,
 				FEDCBF811D9EC64A00AE9129 /* JidSingleField.swift in Sources */,
 				FE94E5131CCA3E9700FAE755 /* DefaultChatManager.swift in Sources */,
 				FE94E5071CC8E95200FAE755 /* Initializable.swift in Sources */,
