@@ -116,7 +116,8 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
      - parameter event: event fired when `Presence` is received
      */
     func onReceivedPresence(event e: PresenceModule.ContactPresenceChanged) {
-        guard cache != nil && e.presence != nil, let from = e.presence.from else {
+        let type = (e.presence.type ?? .available);
+        guard cache != nil && e.presence != nil, let from = e.presence.from, type == .available else {
             return;
         }
         

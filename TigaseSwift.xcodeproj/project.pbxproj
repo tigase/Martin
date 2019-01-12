@@ -106,6 +106,7 @@
 		FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA554871CE3A55B00676608 /* MobileModeModule.swift */; };
 		FEA7BF5621E3A6C700D9E36C /* Jingle.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA7BF5421E3A6C700D9E36C /* Jingle.swift */; };
 		FEA7BF5721E3A6C700D9E36C /* JingleModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA7BF5521E3A6C700D9E36C /* JingleModule.swift */; };
+		FEA7BF5F21E50D3900D9E36C /* SDP.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA7BF5E21E50D3900D9E36C /* SDP.swift */; };
 		FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */; };
 		FEB1BAB01F1F567800F10238 /* MessageArchiveManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */; };
 		FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */; };
@@ -259,6 +260,7 @@
 		FEA554871CE3A55B00676608 /* MobileModeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MobileModeModule.swift; sourceTree = "<group>"; };
 		FEA7BF5421E3A6C700D9E36C /* Jingle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Jingle.swift; sourceTree = "<group>"; };
 		FEA7BF5521E3A6C700D9E36C /* JingleModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JingleModule.swift; sourceTree = "<group>"; };
+		FEA7BF5E21E50D3900D9E36C /* SDP.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SDP.swift; sourceTree = "<group>"; };
 		FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModuleProtocol.swift; sourceTree = "<group>"; };
 		FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageArchiveManagementModule.swift; sourceTree = "<group>"; };
 		FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractPEPModule.swift; sourceTree = "<group>"; };
@@ -576,6 +578,7 @@
 		FEA7BF5321E3A6AF00D9E36C /* jingle */ = {
 			isa = PBXGroup;
 			children = (
+				FEA7BF5E21E50D3900D9E36C /* SDP.swift */,
 				FEA7BF5521E3A6C700D9E36C /* JingleModule.swift */,
 				FEA7BF5421E3A6C700D9E36C /* Jingle.swift */,
 			);
@@ -869,6 +872,7 @@
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
 				FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */,
 				FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */,
+				FEA7BF5F21E50D3900D9E36C /* SDP.swift in Sources */,
 				FE2EFDA01CB671C7000D254E /* Context.swift in Sources */,
 				FEDCBF9D1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift in Sources */,
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
