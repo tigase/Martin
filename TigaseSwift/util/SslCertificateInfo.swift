@@ -32,11 +32,11 @@ open class SslCertificateInfo: NSObject, NSCoding {
     }
     
     public required init?(coder aDecoder: NSCoder) {
-        guard let details = Entry(name: aDecoder.decodeObject(forKey: "details-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "details-fingerprint-sha1") as? String) else {
+        guard let details = Entry(name: aDecoder.decodeObject(forKey: "details-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "details-fingerprint-sha1") as? String, validFrom: aDecoder.decodeObject(forKey: "details-valid-from") as? Date, validTo: aDecoder.decodeObject(forKey: "details-valid-to") as? Date) else {
             return nil;
         }
         self.details = details;
-        self.issuer = Entry(name: aDecoder.decodeObject(forKey: "issuer-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "issuer-fingerprint-sha1") as? String)
+        self.issuer = Entry(name: aDecoder.decodeObject(forKey: "issuer-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "issuer-fingerprint-sha1") as? String, validFrom: nil, validTo: nil);
     }
     
     public init(sslCertificateInfo: SslCertificateInfo) {
@@ -56,13 +56,18 @@ open class SslCertificateInfo: NSObject, NSCoding {
             // on first cert got 03469208e5d8e580f65799497d73b2d3098e8c8a
             // while openssl reports: SHA1 Fingerprint=03:46:92:08:E5:D8:E5:80:F6:57:99:49:7D:73:B2:D3:09:8E:8C:8A
             let summary = (SecCertificateCopySubjectSummary(cert!) as NSString?) as String?;
-            print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any);
+            
+            let values = SecCertificateCopyValues(cert!, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
+            let validFrom = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
+            let validTo = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
+            
+            print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any, validFrom as Any, validTo as Any);
             
             switch i {
             case 0:
-                details = Entry(name: summary, fingerprintSha1: fingerprint);
+                details = Entry(name: summary, fingerprintSha1: fingerprint, validFrom: validFrom, validTo: validTo);
             case 1:
-                issuer = Entry(name: summary, fingerprintSha1: fingerprint);
+                issuer = Entry(name: summary, fingerprintSha1: fingerprint, validFrom: validFrom, validTo: validTo);
             default:
                 break;
             }
@@ -75,6 +80,8 @@ open class SslCertificateInfo: NSObject, NSCoding {
     open func encode(with aCoder: NSCoder) {
         aCoder.encode(details.name, forKey: "details-name");
         aCoder.encode(details.fingerprintSha1, forKey: "details-fingerprint-sha1");
+        aCoder.encode(details.validFrom, forKey: "details-valid-from");
+        aCoder.encode(details.validTo, forKey: "details-valid-to");
         aCoder.encode(issuer?.name, forKey: "issuer-name");
         aCoder.encode(issuer?.fingerprintSha1, forKey: "issuer-fingerprint-sha1");
     }
@@ -83,14 +90,28 @@ open class SslCertificateInfo: NSObject, NSCoding {
     
         public let name: String;
         public let fingerprintSha1: String;
+        public let validFrom: Date?;
+        public let validTo: Date?;
         
-        public init?(name: String?, fingerprintSha1: String?) {
+        public init?(name: String?, fingerprintSha1: String?, validFrom: Date?, validTo: Date?) {
             guard name != nil && fingerprintSha1 != nil else {
                 return nil;
             }
             self.name = name!;
             self.fingerprintSha1 = fingerprintSha1!;
+            self.validFrom = validFrom;
+            self.validTo = validTo;
         }
         
+    }
+    
+    fileprivate static func extractDate(from values: [String: [String: AnyObject]], key: CFString) -> Date? {
+        let value = values[key as String]?[kSecPropertyKeyValue as String];
+        let time = (value as? NSNumber)?.doubleValue;
+        if time == nil {
+            return nil;
+        } else {
+            return Date(timeIntervalSinceReferenceDate: time!);
+        }
     }
 }
