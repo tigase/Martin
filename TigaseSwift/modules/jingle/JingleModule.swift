@@ -131,6 +131,8 @@ open class JingleModule: XmppModule, ContextAware {
         });
         
         context.eventBus.fire(JingleEvent(sessionObject: context.sessionObject, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));//, session: session));
+        
+        context.writer?.write(stanza.makeResult(type: .result));
     }
     
     public func initiateSession(to jid: JID, sid: String, initiator: JID, contents: [Jingle.Content], bundle: [String]?, callback: @escaping (ErrorCondition?)->Void) {
