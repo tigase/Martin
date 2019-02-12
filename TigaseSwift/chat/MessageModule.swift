@@ -90,7 +90,7 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
             return nil;
         }
         
-        if message.body != nil {
+        if message.body != nil && (message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || !context.modulesManager.hasModule(MucModule.ID) == nil) {
             return chatManager.getChatOrCreate(with: interlocutorJid!, thread: message.thread);
         } else {
             return chatManager.getChat(with: interlocutorJid!, thread: message.thread);
