@@ -80,6 +80,11 @@ open class XmppModulesManager : ContextAware {
         return modulesById[id] as? T;
     }
     
+    // Returns true if there is an instance of `XmppModule` registered for passed id
+    open func hasModule(_ id: String) -> Bool {
+        return modulesById[id] != nil;
+    }
+    
     open func initIfRequired() {
         initializationRequired.forEach { (module) in
             module.initialize();
