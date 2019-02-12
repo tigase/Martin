@@ -57,11 +57,17 @@ open class SslCertificateInfo: NSObject, NSCoding {
             // while openssl reports: SHA1 Fingerprint=03:46:92:08:E5:D8:E5:80:F6:57:99:49:7D:73:B2:D3:09:8E:8C:8A
             let summary = (SecCertificateCopySubjectSummary(cert!) as NSString?) as String?;
             
-            let values = SecCertificateCopyValues(cert!, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
-            let validFrom = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
-            let validTo = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
+            #if os(macOS)
+                let values = SecCertificateCopyValues(cert!, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
+                let validFrom = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
+                let validTo = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
+                print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any, validFrom as Any, validTo as Any);
+            #else
+                let validFrom: Date? = nil;
+                let validTo: Date? = nil;
+                print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any);
+            #endif
             
-            print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any, validFrom as Any, validTo as Any);
             
             switch i {
             case 0:
@@ -104,7 +110,7 @@ open class SslCertificateInfo: NSObject, NSCoding {
         }
         
     }
-    
+    #if os(macOS)
     fileprivate static func extractDate(from values: [String: [String: AnyObject]], key: CFString) -> Date? {
         let value = values[key as String]?[kSecPropertyKeyValue as String];
         let time = (value as? NSNumber)?.doubleValue;
@@ -114,4 +120,5 @@ open class SslCertificateInfo: NSObject, NSCoding {
             return Date(timeIntervalSinceReferenceDate: time!);
         }
     }
+    #endif
 }

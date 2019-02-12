@@ -158,6 +158,12 @@ open class SessionObject: Logger {
         return result;
     }
     
+    open func removeProperty<T>(_ prop: String) -> T? {
+        return queue.sync {
+            return self.properties.removeValue(forKey: prop)?.value as? T;
+        }
+    }
+    
     /**
      Set property value to passed value for particular scope (`stream` by default)
      - parameter prop: property name

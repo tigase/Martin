@@ -26,32 +26,35 @@ import Foundation
  */
 open class XMPPSrvRecord: NSObject, NSCoding {
     
-    let port:Int!;
-    let weight:Int!;
-    let priority:Int!;
-    let target:String!;
+    let port:Int;
+    let weight:Int;
+    let priority:Int;
+    let target:String;
+    let directTls: Bool;
 
     open override var description: String {
-        return "port: \(String(describing: port)), weight: \(weight!), priority: \(String(describing: priority)), target: \(target!)";
+        return "[port: \(String(describing: port)), weight: \(weight), priority: \(String(describing: priority)), target: \(target), directTls: \(directTls)]";
     }
     
-    init(port:Int, weight:Int, priority:Int, target:String) {
+    init(port:Int, weight:Int, priority:Int, target:String, directTls: Bool) {
         self.port = port;
         self.weight = weight;
         self.priority = priority;
         self.target = target;
+        self.directTls = directTls;
     }
     
     public required convenience init?(coder aDecoder: NSCoder) {
+        let port = aDecoder.decodeInteger(forKey: "port");
+        let weight = aDecoder.decodeInteger(forKey: "weight");
+        let priority = aDecoder.decodeInteger(forKey: "priority");
         guard
-            let port = aDecoder.decodeObject(forKey: "port") as? Int,
-            let weight = aDecoder.decodeObject(forKey: "weight") as? Int,
-            let priority = aDecoder.decodeObject(forKey: "priority") as? Int,
             let target = aDecoder.decodeObject(forKey: "target") as? String else {
                 return nil;
         }
         
-        self.init(port: port, weight: weight, priority: priority, target: target);
+        let directTls = aDecoder.decodeBool(forKey: "directTls");
+        self.init(port: port, weight: weight, priority: priority, target: target, directTls: directTls);
     }
 
     public func encode(with aCoder: NSCoder) {
@@ -59,6 +62,7 @@ open class XMPPSrvRecord: NSObject, NSCoding {
         aCoder.encode(weight, forKey: "weight");
         aCoder.encode(priority, forKey: "priority");
         aCoder.encode(target, forKey: "target");
+        aCoder.encode(directTls, forKey: "directTls");
     }
 
 }

@@ -45,6 +45,11 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      should try to connect to.
      */
     public static let SERVER_PORT = "serverPort";
+    /**
+     Key in `SessionObject` to store information if server port is
+     a direct TLS port.
+     */
+    public static let DIRECT_TLS = "serverDirectTls";
     
     fileprivate static var QUEUE_TAG = "xmpp_socket_queue";
     
@@ -163,14 +168,15 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
         queue.async {
             self.state = .connecting;
-            guard let server:String = serverToConnect ?? self.sessionLogic?.serverToConnect() else {
+            let tmpDetails = SocketConnector.preprocessConnectionDetails(string: serverToConnect ?? self.sessionLogic?.serverToConnect());
+            guard let server:String = tmpDetails?.0 else {
                 self.state = .disconnected;
                 return;
             }
-        
-            if let port: Int = self.context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
+            
+            if let port: Int = tmpDetails?.1 ?? self.context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
                 self.log("connecting to server:", server, "on port:", port);
-                self.connect(addr: server, port: port, ssl: false);
+                self.connect(addr: server, port: port, ssl: self.context.sessionObject.getProperty(SocketConnector.DIRECT_TLS, defValue: false));
             } else {
                 self.log("connecting to server:", server);
                 if let dnsResolver = self.context.sessionObject.dnsSrvResolver {
@@ -188,6 +194,19 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
     }
     
+    fileprivate static func preprocessConnectionDetails(string: String?) -> (String, Int?)? {
+        guard let tmp = string else {
+            return nil;
+        }
+        guard tmp.last != "]" else {
+            return (tmp, nil);
+        }
+        guard let idx = tmp.lastIndex(of: ":") else {
+            return (tmp, nil);
+        }
+        return (String(tmp[tmp.startIndex..<idx]), Int(tmp[tmp.index(after: idx)...tmp.endIndex]));
+    }
+    
     func connect(dnsName: String, srvRecords: [XMPPSrvRecord]?) {
         guard state == .connecting else {
             log("connect(dns) - stopping connetion as state is not connecting", state);
@@ -196,12 +215,14 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         log("got dns records:", srvRecords);
         queue.async {
             var records = srvRecords ?? [XMPPSrvRecord]();
+            let lastConnectionDetails: (Int,Bool)? = self.sessionObject.removeProperty("lastConnectionDetails");
             if (records.isEmpty) {
-                records.append(XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: dnsName));
+                records.append(XMPPSrvRecord(port: lastConnectionDetails?.0 ?? 5222, weight: 0, priority: 0, target: dnsName, directTls: lastConnectionDetails?.1 ?? false));
             }
         
             let rec:XMPPSrvRecord = records[0];
-            self.connect(addr: rec.target, port: rec.port, ssl: false);
+            self.sessionObject.setUserProperty("lastConnectionDetails", value: (rec.port, rec.directTls));
+            self.connect(addr: rec.target, port: rec.port, ssl: rec.directTls);
         }
     }
     
@@ -235,12 +256,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         
         self.inStream!.schedule(in: RunLoop.main, forMode: RunLoop.Mode.default)
         self.outStream!.schedule(in: RunLoop.main, forMode: RunLoop.Mode.default)
-        
-        self.inStream!.open();
-        self.outStream!.open();
-        
+                
         if (ssl) {
-            configureTLS()
+            configureTLS(directTls: true);
+        } else {
+            self.inStream!.open();
+            self.outStream!.open();
         }
         
         parserDelegate = XMPPParserDelegate();
@@ -287,7 +308,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         closeSocket(newState: State.disconnected);
     }
     
-    func configureTLS() {
+    func configureTLS(directTls: Bool = false) {
         log("configuring TLS");
 
         guard let inStream = self.inStream, let outStream = self.outStream else {
@@ -299,7 +320,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         let domain = self.sessionObject.domainName!;
         
         sslCertificateValidated = nil;
-        let settings:NSDictionary = NSDictionary(objects: [StreamSocketSecurityLevel.negotiatedSSL, domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
+        let settings:NSDictionary = NSDictionary(objects: [StreamSocketSecurityLevel.negotiatedSSL, 
+                                                           domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
                 kCFStreamSSLPeerName as NSString,
                 kCFStreamSSLValidatesCertificateChain as NSString])
         let started = CFReadStreamSetProperty(inStream as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef)
@@ -307,6 +329,14 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             self.log("could not start STARTTLS");
         }
         CFWriteStreamSetProperty(outStream as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef);
+        
+        if #available(iOSApplicationExtension 11.0, macOSApplicationExtension 10.13, *) {
+            let sslContext: SSLContext = outStream.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLContext as String)) as! SSLContext;
+            SSLSetALPNProtocols(sslContext, ["xmpp-client"] as CFArray)
+        } else {
+            // Fallback on earlier versions
+        };
+
         inStream.open();
         outStream.open();
         

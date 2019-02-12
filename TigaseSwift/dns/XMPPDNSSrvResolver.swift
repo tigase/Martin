@@ -28,6 +28,8 @@ import Foundation
  */
 open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
     
+    var directTlsEnabled: Bool = true;
+    
     /**
      Resolve XMPP SRV records for domain
      - parameter domain: domain name to resolve
@@ -39,9 +41,48 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
             return;
         }
         
-        let ctx = DNSCtx(completionHandler: completionHandler);
+        if self.directTlsEnabled {
+            self.resolveXmppSRV(domain: domain, service: "_xmpps-client", proto: "_tcp") { (result1) in
+                self.resolveXmppSRV(domain: domain, service: "_xmpp-client", proto: "_tcp") { (result2) in
+                    guard result1 != nil || result2 != nil else {
+                        completionHandler(nil);
+                        return;
+                    }
+                    
+                    var result = [XMPPSrvRecord]();
+                    if (result1 != nil) {
+                        result.append(contentsOf: result1!);
+                    }
+                    if (result2 != nil) {
+                        result.append(contentsOf: result2!);
+                    }
+                    completionHandler(result.sorted { (a,b) -> Bool in
+                            if (a.priority < b.priority) {
+                                return true;
+                            } else if (a.priority > b.priority) {
+                                return false;
+                            } else {
+                                return a.weight > b.weight;
+                            }
+                    });
+                }
+            }
+        } else {
+            self.resolveXmppSRV(domain: domain, service: "_xmpp-client", proto: "_tcp") { (result2) in
+                completionHandler(result2);
+            }
+        }
+    }
+    
+    open func resolveXmppSRV(domain: String, service: String, proto: String, completionHandler: @escaping ([XMPPSrvRecord]?)->Void) {
+        guard !domain.hasSuffix(".local") else {
+            completionHandler([XMPPSrvRecord]());
+            return;
+        }
         
-        let err = DNSQuerySRVRecord("_xmpp-client._tcp." + domain + ".", XMPPDNSSrvResolver.bridge(ctx), { (record:UnsafeMutablePointer<DNSSrvRecord>?, ctxPtr:UnsafeMutableRawPointer?) -> Void in
+        let ctx = DNSCtx(service: service, completionHandler: completionHandler);
+        
+        let err = DNSQuerySRVRecord("\(service).\(proto).\(domain).", XMPPDNSSrvResolver.bridge(ctx), { (record:UnsafeMutablePointer<DNSSrvRecord>?, ctxPtr:UnsafeMutableRawPointer?) -> Void in
             let r = record!.pointee;
             let port = Int(r.port);
             let weight = Int(r.weight);
@@ -50,15 +91,15 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                 return;
             }
             Log.log("received: ", r.priority, r.weight, r.port, target);
-            let rec = XMPPSrvRecord(port: port, weight: weight, priority: priority, target: target);
             let dnsCtx: DNSCtx = XMPPDNSSrvResolver.bridge(ctxPtr!);
+            let rec = XMPPSrvRecord(port: port, weight: weight, priority: priority, target: target, directTls: dnsCtx.service.starts(with: "_xmpps-"));
             dnsCtx.srvRecords.append(rec);
         }, { (err:Int32, ctxPtr:UnsafeMutableRawPointer?) -> Void in
             let dnsCtx: DNSCtx = XMPPDNSSrvResolver.bridge(ctxPtr!);
             dnsCtx.finished(err);
         });
-        log("dns returned code: ", err, "for _xmpp-client._tcp. at", domain);
-
+        log("dns returned code: ", err, "for \(service).\(proto). at", domain);
+        
         if err != 0 {
             ctx.finished(err);
         }
@@ -108,10 +149,12 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
     }
 
     class DNSCtx {
+        let service: String;
         var srvRecords = [XMPPSrvRecord]();
         var completionHandler: ([XMPPSrvRecord]?) -> Void;
         
-        init(completionHandler: @escaping ([XMPPSrvRecord]?) -> Void) {
+        init(service: String, completionHandler: @escaping ([XMPPSrvRecord]?) -> Void) {
+            self.service = service;
             self.completionHandler = completionHandler;
         }
         
@@ -120,6 +163,14 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                 completionHandler(nil);
                 return;
             }
+            
+            if #available(iOSApplicationExtension 11.0, *) {
+            } else {
+                srvRecords = srvRecords.filter({ (rec) -> Bool in
+                    return rec.directTls == false;
+                });
+            }
+            
             srvRecords.sort { (a,b) -> Bool in
                 if (a.priority < b.priority) {
                     return true;
