@@ -62,39 +62,43 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
     open class DiskCache: DNSSrvResolverCache {
         
         fileprivate let fileManager: FileManager;
-        fileprivate let path: String;
+        fileprivate let pathUrl: URL;
         
         public init(cacheDirectoryName: String = "dns_cache") {
             fileManager = FileManager.default;
             let url = try! fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true);
-            path = url.appendingPathComponent(cacheDirectoryName, isDirectory: true).path;
+            pathUrl = url.appendingPathComponent(cacheDirectoryName, isDirectory: true);//.path;
             createDirectory();
         }
         
         open func getRecords(for domain: String) -> [XMPPSrvRecord]? {
-            let filePath = path + "/" + domain;
-            guard fileManager.fileExists(atPath: filePath) else {
+            let fileUrl = pathUrl.appendingPathComponent(domain);
+            guard fileManager.fileExists(atPath: fileUrl.path) else {
                 return nil;
             }
-            
-            return NSKeyedUnarchiver.unarchiveObject(withFile: filePath) as? [XMPPSrvRecord];
+            guard let data = try? Data(contentsOf: fileUrl) else {
+                return nil;
+            }
+            return try? JSONDecoder().decode([XMPPSrvRecord].self, from: data);
         }
         
         open func store(for domain: String, records: [XMPPSrvRecord]?) {
-            let filePath = path + "/" + domain;
+            let fileUrl = pathUrl.appendingPathComponent(domain);
             if records != nil {
-                NSKeyedArchiver.archiveRootObject(records!, toFile: filePath);
+                if let data = try? JSONEncoder().encode(records!) {
+                    try? data.write(to: fileUrl);
+                }
             } else {
-                try? fileManager.removeItem(atPath: filePath);
+                try? fileManager.removeItem(atPath: fileUrl.path);
             }
         }
         
         fileprivate func createDirectory() {
-            guard !fileManager.fileExists(atPath: path) else {
+            guard !fileManager.fileExists(atPath: pathUrl.path) else {
                 return;
             }
             
-            try! fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil);
+            try! fileManager.createDirectory(atPath: pathUrl.path, withIntermediateDirectories: true, attributes: nil);
         }
     }
 }

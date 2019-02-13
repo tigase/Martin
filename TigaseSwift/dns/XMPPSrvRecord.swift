@@ -24,7 +24,7 @@ import Foundation
 /**
  Class holds informations for single SRV record of DNS entries
  */
-open class XMPPSrvRecord: NSObject, NSCoding {
+open class XMPPSrvRecord: Codable {
     
     let port:Int;
     let weight:Int;
@@ -32,7 +32,7 @@ open class XMPPSrvRecord: NSObject, NSCoding {
     let target:String;
     let directTls: Bool;
 
-    open override var description: String {
+    open var description: String {
         return "[port: \(String(describing: port)), weight: \(weight), priority: \(String(describing: priority)), target: \(target), directTls: \(directTls)]";
     }
     
@@ -44,25 +44,4 @@ open class XMPPSrvRecord: NSObject, NSCoding {
         self.directTls = directTls;
     }
     
-    public required convenience init?(coder aDecoder: NSCoder) {
-        let port = aDecoder.decodeInteger(forKey: "port");
-        let weight = aDecoder.decodeInteger(forKey: "weight");
-        let priority = aDecoder.decodeInteger(forKey: "priority");
-        guard
-            let target = aDecoder.decodeObject(forKey: "target") as? String else {
-                return nil;
-        }
-        
-        let directTls = aDecoder.decodeBool(forKey: "directTls");
-        self.init(port: port, weight: weight, priority: priority, target: target, directTls: directTls);
-    }
-
-    public func encode(with aCoder: NSCoder) {
-        aCoder.encode(port, forKey: "port");
-        aCoder.encode(weight, forKey: "weight");
-        aCoder.encode(priority, forKey: "priority");
-        aCoder.encode(target, forKey: "target");
-        aCoder.encode(directTls, forKey: "directTls");
-    }
-
 }
