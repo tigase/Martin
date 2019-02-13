@@ -28,6 +28,15 @@ public protocol AbstractPEPModule: XmppModule, ContextAware, EventHandler {
 extension AbstractPEPModule {
     
     public var isPepAvailable: Bool {
+        if let identities: [DiscoveryModule.Identity] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_IDENTITY_TYPES_KEY) {
+            if identities.first(where: { (it) -> Bool in
+                return it.category == "pubsub" && it.type == "pep";
+            }) != nil {
+                return true;
+            }
+        }
+
+        // TODO: fallback to handle previous behavior - remove it later on...
         if let identities: [DiscoveryModule.Identity] = context.sessionObject.getProperty(DiscoveryModule.SERVER_IDENTITY_TYPES_KEY) {
             return identities.first(where: { (it) -> Bool in
                 return it.category == "pubsub" && it.type == "pep";

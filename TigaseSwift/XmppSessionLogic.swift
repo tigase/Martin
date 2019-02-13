@@ -269,6 +269,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         log("session binded and established");
         if let discoveryModule:DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) {
             discoveryModule.discoverServerFeatures(onInfoReceived: nil, onError: nil);
+            discoveryModule.discoverAccountFeatures(onInfoReceived: nil, onError: nil);
         }
         
         if let streamManagementModule:StreamManagementModule = context.modulesManager.getModule(StreamManagementModule.ID) {

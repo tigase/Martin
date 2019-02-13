@@ -49,10 +49,17 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
     open var context: Context!;
     
     open var isAvailable: Bool {
-        guard let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) else {
-            return false;
+        if let accountFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+            if accountFeatures.contains(MessageArchiveManagementModule.MAM_XMLNS) {
+                return true;
+            }
         }
-        return serverFeatures.contains(MessageArchiveManagementModule.MAM_XMLNS);
+        
+        // TODO: fallback to handle previous behavior - remove it later on...
+        if let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) {
+            return serverFeatures.contains(MessageArchiveManagementModule.MAM_XMLNS);
+        }
+        return false;
     }
     
     public init() {}

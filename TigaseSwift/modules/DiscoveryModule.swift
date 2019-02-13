@@ -48,6 +48,9 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     public static let SERVER_IDENTITY_TYPES_KEY = "serverIdentityTypes";
     public static let SERVER_FEATURES_KEY = "serverFeatures";
     
+    public static let ACCOUNT_IDENTITY_TYPES_KEY = "accountIdentityTypes";
+    public static let ACCOUNT_FEATURES_KEY = "accountFeatures";
+    
     public let id = ID;
     
     open var context:Context!;
@@ -94,6 +97,22 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
                 self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
                 onInfoReceived?(node, identities, features);
                 }, onError: onError);
+        }
+    }
+    
+    /**
+     Method sends query to the account bare jid to discover server features handled on behalf of the user
+     - parameter onInfoReceived: called when info will be available
+     - parameter onError: called when received error or request timed out
+     */
+    open func discoverAccountFeatures(onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+        if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
+            getInfo(for: jid.withoutResource, onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
+                self.context.sessionObject.setProperty(DiscoveryModule.ACCOUNT_IDENTITY_TYPES_KEY, value: identities);
+                self.context.sessionObject.setProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY, value: features)
+                self.context.eventBus.fire(AccountFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
+                onInfoReceived?(node, identities, features);
+            }, onError: onError);
         }
     }
     
@@ -367,4 +386,27 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             self.features = features;
         }
     }
+
+    /// Event fired when account features are retrieved
+    open class AccountFeaturesReceivedEvent: Event {
+        /// Identifier of event which should be used during registration of `EventHandler`
+        public static let TYPE = AccountFeaturesReceivedEvent();
+        
+        public let type = "AccountFeaturesReceivedEvent";
+        /// Instance of `SessionObject` allows to tell from which connection event was fired
+        public let sessionObject: SessionObject!;
+        /// Array of available server features
+        public let features: [String]!;
+        
+        init() {
+            self.sessionObject = nil;
+            self.features = nil;
+        }
+        
+        public init(sessionObject: SessionObject, features: [String]) {
+            self.sessionObject = sessionObject;
+            self.features = features;
+        }
+    }
+
 }

@@ -36,9 +36,19 @@ open class PushNotificationsModule: XmppModule, ContextAware {
     open var context:Context!;
     
     open var isAvailable: Bool {
-        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) {
-            return features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
+        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+            if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
+                return true;
+            }
         }
+        
+        // TODO: fallback to handle previous behavior - remove it later on...
+        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) {
+            if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
+                return true;
+            }
+        }
+        
         return false;
     }
     
