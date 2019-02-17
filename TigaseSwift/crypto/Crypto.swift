@@ -153,7 +153,7 @@ public enum Digest: DigestProtocol {
     }
     
     public func hmac(keyBytes: UnsafeRawPointer, keyLength: Int, bytes: UnsafeRawPointer, length: Int) -> [UInt8] {
-        let ctx = UnsafeMutablePointer<CCHmacContext>.allocate(capacity: 1);
+//        let ctx = UnsafeMutablePointer<CCHmacContext>.allocate(capacity: 1);
         var algorithm: Int;
         var hmacLength: Int;
         switch (self) {
@@ -167,11 +167,16 @@ public enum Digest: DigestProtocol {
             algorithm = kCCHmacAlgSHA256;
             hmacLength = Int(CC_SHA256_DIGEST_LENGTH);
         }
-        CCHmacInit(ctx, CCHmacAlgorithm(algorithm), keyBytes, keyLength);
-        CCHmacUpdate(ctx, bytes, length);
         
         var digest = Array<UInt8>(repeating: 0, count: hmacLength);
-        CCHmacFinal(ctx, &digest);
+        CCHmac(CCHmacAlgorithm(algorithm), keyBytes, keyLength, bytes, length, &digest)
+        
+//        CCHmacInit(ctx, CCHmacAlgorithm(algorithm), keyBytes, keyLength);
+//        CCHmacUpdate(ctx, bytes, length);
+//
+//        var digest = Array<UInt8>(repeating: 0, count: hmacLength);
+//        CCHmacFinal(ctx, &digest);
+//        ctx.deallocate();
         
         return digest;
     }
