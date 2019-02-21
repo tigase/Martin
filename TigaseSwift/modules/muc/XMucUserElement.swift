@@ -24,8 +24,8 @@ import Foundation
 /// Class holds additional information about occupant which are sent in presence from MUC room
 open class XMucUserElement {
     
-    public static func extract(from presence: Presence?) -> XMucUserElement? {
-        let elem = presence?.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
+    public static func extract(from stanza: Stanza?) -> XMucUserElement? {
+        let elem = stanza?.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         return elem == nil ? nil : XMucUserElement(element: elem!);
     }
     

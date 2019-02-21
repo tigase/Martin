@@ -266,13 +266,43 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
      - parameter password: password for room if needed
      - returns: instance of Room
      */
-    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil) -> Room {
+    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, ifCreated: ((Room)->Void)? = nil) -> Room {
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
         return roomsManager.getRoomOrCreate(for: roomJid, nickname: nickname, password: password, onCreate: { (room) in
+            room.onRoomCreated = ifCreated;
             let presence = room.rejoin();
             self.context.eventBus.fire(JoinRequestedEvent(sessionObject: self.context.sessionObject, presence: presence, room: room, nickname: nickname));
         });
+    }
+    
+    /**
+     Destroy MUC room
+     - parameter room: room to destroy
+     */
+    @discardableResult
+    open func destroy(room: Room) -> Bool {
+        guard room.state == .joined && room.presences[room.nickname]?.affiliation == .owner else {
+            return false;
+        }
+        
+        let iq = Iq();
+        iq.type = .set;
+        iq.to = room.jid;
+
+        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
+        query.addChild(Element(name: "destroy"));
+        
+        iq.addChild(query);
+        
+        context.writer?.write(iq);
+        
+        roomsManager.remove(room: room);
+        
+        room._state = .destroyed;
+        context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
+        
+        return true;
     }
     
     /**
@@ -357,6 +387,9 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         } else if room.state != .joined && xUser?.statuses.index(of: 110) != nil {
             room._state = .joined;
             room.add(occupant: occupant!);
+            if xUser?.statuses.index(of: 201) == nil {
+                room.onRoomCreated = nil;
+            }
             context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname));
         } else if (presenceOld == nil || presenceOld?.type == StanzaType.unavailable) && type == nil {
             if let tmp = room.removeTemp(nickname: nickname!) {
@@ -375,6 +408,11 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         }
         
         if xUser != nil && xUser?.statuses.index(of: 201) != nil {
+            if let onRoomCreated = room.onRoomCreated {
+                room.onRoomCreated = nil;
+                onRoomCreated(room);
+            }
+
             context.eventBus.fire(NewRoomCreatedEvent(sessionObject: context.sessionObject, presence: presence, room: room));
         }
     }

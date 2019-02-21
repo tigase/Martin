@@ -108,7 +108,7 @@ open class PresenceStore {
     fileprivate func findBestPresence(for jid:BareJID) -> Presence? {
         var result:Presence? = nil;
         self.presencesMapByBareJid[jid]?.values.forEach({ (p) in
-            if (result == nil || (p.priority >= result!.priority && p.type == nil)) {
+            if (result == nil || (result!.type ?? .available != .available && p.type ?? .available == .available) || (p.priority >= result!.priority && p.type ?? .available == .available)) {
                 result = p;
             }
         });

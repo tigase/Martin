@@ -134,6 +134,8 @@ open class Room: ChatProtocol, ContextAware {
         return _state;
     }
     
+    open var onRoomCreated: ((Room)->Void)? = nil;
+    
     fileprivate static let queue = DispatchQueue(label: "room_queue", attributes: DispatchQueue.Attributes.concurrent);
     
     fileprivate var _tempOccupants = [String:MucOccupant]();
