@@ -67,6 +67,8 @@
 		FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */; };
 		FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */; };
 		FE3F33FE1CA1CF25001A5CD6 /* SocketConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */; };
+		FE4D21342221A6D20058B662 /* Bookmarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4D21332221A6D20058B662 /* Bookmarks.swift */; };
+		FE4D21362221C54F0058B662 /* PEPBookmarksModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4D21352221C54F0058B662 /* PEPBookmarksModule.swift */; };
 		FE56288F1F35CD4D00452C73 /* HttpFileUploadModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */; };
 		FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE596F781CF1C35B0079E22B /* PingModule.swift */; };
 		FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */; };
@@ -221,6 +223,8 @@
 		FE3F33F31CA1CE8E001A5CD6 /* XMPPDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XMPPDelegate.swift; sourceTree = "<group>"; };
 		FE3F33F51CA1CEBC001A5CD6 /* Criteria.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Criteria.swift; sourceTree = "<group>"; };
 		FE3F33FD1CA1CF25001A5CD6 /* SocketConnector.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SocketConnector.swift; sourceTree = "<group>"; };
+		FE4D21332221A6D20058B662 /* Bookmarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bookmarks.swift; sourceTree = "<group>"; };
+		FE4D21352221C54F0058B662 /* PEPBookmarksModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PEPBookmarksModule.swift; sourceTree = "<group>"; };
 		FE56288E1F35CD4D00452C73 /* HttpFileUploadModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HttpFileUploadModule.swift; sourceTree = "<group>"; };
 		FE596F781CF1C35B0079E22B /* PingModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PingModule.swift; sourceTree = "<group>"; };
 		FE597A151D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ClientStateIndicationModule.swift; sourceTree = "<group>"; };
@@ -378,6 +382,7 @@
 				FEF8C2341F2CE9F30089C096 /* vcard */,
 				FE7F92452192214D00F2FF3C /* EntityTime.swift */,
 				FE0D3DD8219498C7009B189B /* ChatStateNotificationsModule.swift */,
+				FE4D21332221A6D20058B662 /* Bookmarks.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -514,6 +519,7 @@
 			children = (
 				FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */,
 				FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */,
+				FE4D21352221C54F0058B662 /* PEPBookmarksModule.swift */,
 			);
 			path = pep;
 			sourceTree = "<group>";
@@ -812,6 +818,7 @@
 				FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */,
 				FE2EFD781CB57C70000D254E /* XMPPDNSSrvResolver.swift in Sources */,
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,
+				FE4D21342221A6D20058B662 /* Bookmarks.swift in Sources */,
 				FE3F33F01CA1CE22001A5CD6 /* XmppModule.swift in Sources */,
 				FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */,
 				FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */,
@@ -902,6 +909,7 @@
 				FE7361D01D2A4F8B00EFEA64 /* AnonymousMechanism.swift in Sources */,
 				FE2EFDAD1CB80E7A000D254E /* EventHandler.swift in Sources */,
 				FE2EFDB91CBD231B000D254E /* ResponseManager.swift in Sources */,
+				FE4D21362221C54F0058B662 /* PEPBookmarksModule.swift in Sources */,
 				FEDCBF791D9E9C6F00AE9129 /* TextSingleField.swift in Sources */,
 				FE3F33F61CA1CEBC001A5CD6 /* Criteria.swift in Sources */,
 				FEC5141A1CE9CC2A003AF765 /* MucOccupant.swift in Sources */,

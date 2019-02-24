@@ -270,7 +270,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
         return roomsManager.getRoomOrCreate(for: roomJid, nickname: nickname, password: password, onCreate: { (room) in
-            room.onRoomCreated = ifCreated;
+            room.onRoomCreated = ifCreated;            
             let presence = room.rejoin();
             self.context.eventBus.fire(JoinRequestedEvent(sessionObject: self.context.sessionObject, presence: presence, room: room, nickname: nickname));
         });
