@@ -83,6 +83,9 @@ open class PEPBookmarksModule: AbstractPEPModule {
     public func handle(event: Event) {
         switch event {
         case let e as PubSubModule.NotificationReceivedEvent:
+            guard let from = e.message.from?.bareJid, from == e.sessionObject.userBareJid! else {
+                return;
+            }
             if let bookmarks = Bookmarks(from: e.payload) {
                 self.currentBookmarks = bookmarks;
                 context.eventBus.fire(BookmarksChangedEvent(sessionObject: e.sessionObject, bookmarks: bookmarks));
