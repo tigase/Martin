@@ -257,7 +257,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                     return;
                 }
                 
-                guard compressionActive || context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+                guard compressionActive || context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
                     return;
                 }
                 
@@ -475,7 +475,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 return false;
             }
             
-            guard compressionActive || client.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+            guard compressionActive || client.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
                 return false;
             }
             return true;

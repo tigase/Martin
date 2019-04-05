@@ -33,8 +33,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     /// String representation
     public let stringValue:String;
     
-    public let hashValue: Int;
-    
     /**
      Create instance
      - parameter localPart: local part of JID
@@ -44,7 +42,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
         self.localPart = localPart;
         self.domain = domain;
         self.stringValue = BareJID.toString(localPart, domain);
-        self.hashValue = stringValue.lowercased().hashValue;
     }
     
     /**
@@ -57,7 +54,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
         self.localPart = jid.localPart
         self.domain = jid.domain
         self.stringValue = BareJID.toString(localPart, domain);
-        self.hashValue = stringValue.lowercased().hashValue;
     }
     
     /**
@@ -75,7 +71,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
             domain = (jid.endIndex == resourceIdx) ? jid : String(jid.prefix(upTo: resourceIdx))
         }
         self.stringValue = BareJID.toString(localPart, domain);
-        self.hashValue = stringValue.lowercased().hashValue;
     }
         
     /**
@@ -97,11 +92,14 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
         self.domain = jid.domain
         self.localPart = jid.localPart
         self.stringValue = jid.bareJid.stringValue;
-        self.hashValue = jid.bareJid.hashValue;
     }
     
     open var description : String {
         return stringValue;
+    }
+    
+    open func hash(into hasher: inout Hasher) {
+        hasher.combine(stringValue.lowercased());
     }
     
     fileprivate static func toString(_ localPart:String?, _ domain:String) -> String {

@@ -83,8 +83,8 @@ public enum Digest: DigestProtocol {
         guard data != nil else {
             return nil;
         }
-        return data!.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> [UInt8] in
-            return digest(bytes: bytes, length: data!.count);
+        return data!.withUnsafeBytes { (bytes) -> [UInt8] in
+            return digest(bytes: bytes.baseAddress!, length: data!.count);
         }
      }
     
@@ -103,25 +103,25 @@ public enum Digest: DigestProtocol {
         switch self {
         case .md5:
             var hash = Data.init(count: Int(CC_MD5_DIGEST_LENGTH));
-            data?.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                hash.withUnsafeMutableBytes { (hashPtr: UnsafeMutablePointer<UInt8>) -> Void in
-                    CC_MD5(bytes, length, hashPtr);
+            data!.withUnsafeBytes { (bytes) -> Void in
+                return hash.withUnsafeMutableBytes { (hashPtr) -> Void in
+                    CC_MD5(bytes.baseAddress!, length, hashPtr.baseAddress!.assumingMemoryBound(to: UInt8.self));
                 }
             }
             return hash;
         case .sha1:
             var hash = Data.init(count: Int(CC_SHA1_DIGEST_LENGTH));
-            data?.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                hash.withUnsafeMutableBytes { (hashPtr: UnsafeMutablePointer<UInt8>) -> Void in
-                    CC_SHA1(bytes, length, hashPtr);
+            data!.withUnsafeBytes { (bytes) -> Void in
+                hash.withUnsafeMutableBytes { (hashPtr) -> Void in
+                    CC_SHA1(bytes.baseAddress!, length, hashPtr.baseAddress!.assumingMemoryBound(to: UInt8.self));
                 }
             }
             return hash;
         case .sha256:
             var hash = Data.init(count: Int(CC_SHA256_DIGEST_LENGTH));
-            data?.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                hash.withUnsafeMutableBytes { (hashPtr: UnsafeMutablePointer<UInt8>) -> Void in
-                    CC_SHA256(bytes, length, hashPtr);
+            data!.withUnsafeBytes { (bytes) -> Void in
+                hash.withUnsafeMutableBytes { (hashPtr) -> Void in
+                    CC_SHA256(bytes.baseAddress!, length, hashPtr.baseAddress!.assumingMemoryBound(to: UInt8.self));
                 }
             }
             return hash;
@@ -186,8 +186,8 @@ public enum Digest: DigestProtocol {
     }
 
     public func hmac(keyData: Data, data: inout [UInt8]) -> [UInt8] {
-        return keyData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> [UInt8] in
-            return hmac(keyBytes: bytes, keyLength: keyData.count, bytes: &data, length: data.count);
+        return keyData.withUnsafeBytes { (bytes) -> [UInt8] in
+            return hmac(keyBytes: bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), keyLength: keyData.count, bytes: &data, length: data.count);
         }
     }
     

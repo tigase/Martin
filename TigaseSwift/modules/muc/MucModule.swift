@@ -380,14 +380,14 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         let presenceOld = occupant?.presence;
         occupant = MucOccupant(occupant: occupant, presence: presence);
         
-        if (presenceOld != nil && presenceOld!.type == nil) && type == StanzaType.unavailable && xUser?.statuses.index(of: 303) != nil {
+        if (presenceOld != nil && presenceOld!.type == nil) && type == StanzaType.unavailable && xUser?.statuses.firstIndex(of: 303) != nil {
             let newNickName = xUser?.nick;
             room.remove(occupant: occupant!);
             room.addTemp(nickname: newNickName!, occupant: occupant!);
-        } else if room.state != .joined && xUser?.statuses.index(of: 110) != nil {
+        } else if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
             room._state = .joined;
             room.add(occupant: occupant!);
-            if xUser?.statuses.index(of: 201) == nil {
+            if xUser?.statuses.firstIndex(of: 201) == nil {
                 room.onRoomCreated = nil;
             }
             context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname));
@@ -407,7 +407,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             context.eventBus.fire(OccupantChangedPresenceEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         }
         
-        if xUser != nil && xUser?.statuses.index(of: 201) != nil {
+        if xUser != nil && xUser?.statuses.firstIndex(of: 201) != nil {
             if let onRoomCreated = room.onRoomCreated {
                 room.onRoomCreated = nil;
                 onRoomCreated(room);

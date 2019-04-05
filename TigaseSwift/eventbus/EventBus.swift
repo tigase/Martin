@@ -70,7 +70,7 @@ open class EventBus: Logger, LocalQueueDispatcher {
                 if handlers == nil {
                     handlers = [EventHandler]();
                 }
-                if (handlers!.index(where: { $0 === handler }) == nil) {
+                if (handlers!.firstIndex(where: { $0 === handler }) == nil) {
                     handlers!.append(handler);
                 }
                 self.handlersByEvent[type] = handlers;
@@ -97,7 +97,7 @@ open class EventBus: Logger, LocalQueueDispatcher {
             for event in events {
                 let type = event.type;
                 if var handlers = self.handlersByEvent[type] {
-                    if let idx = handlers.index(where: { $0 === handler }) {
+                    if let idx = handlers.firstIndex(where: { $0 === handler }) {
                         handlers.remove(at: idx);
                     }
                     self.handlersByEvent[type] = handlers;

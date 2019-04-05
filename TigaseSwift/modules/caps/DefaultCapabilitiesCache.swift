@@ -57,7 +57,7 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
     open func getNodes(withFeature feature: String) -> [String] {
         var result = Set<String>();
         for (node, features) in self.features {
-            if features.index(of: feature) != nil {
+            if features.firstIndex(of: feature) != nil {
                 result.insert(node);
             }
         }

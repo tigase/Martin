@@ -103,7 +103,7 @@ open class SessionObject: Logger {
         log("removing properties for scopes", scopes);
         queue.sync(flags: .barrier, execute: {
             for (k,v) in self.properties {
-                if (scopes.index(where: { $0 == v.scope }) != nil) {
+                if (scopes.firstIndex(where: { $0 == v.scope }) != nil) {
                     self.properties.removeValue(forKey: k);
                 }
             }

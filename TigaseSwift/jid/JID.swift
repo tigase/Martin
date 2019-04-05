@@ -41,15 +41,6 @@ open class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
         return self.bareJid.domain;
     }
     
-    open var hashValue: Int {
-        get {
-            guard resource != nil else {
-                return bareJid.hashValue;
-            }
-            return bareJid.hashValue ^ resource!.hashValue;
-        }
-    }
-    
     open var withoutResource: JID {
         return JID(bareJid);
     }
@@ -97,6 +88,13 @@ open class JID : CustomStringConvertible, Hashable, Equatable, StringValue {
     
     open var description : String {
         return self.stringValue;
+    }
+    
+    open func hash(into hasher: inout Hasher) {
+        hasher.combine(bareJid);
+        if resource != nil {
+            hasher.combine(resource);
+        }
     }
     
     fileprivate static func toString(_ bareJid:BareJID, _ resource:String?) -> String {

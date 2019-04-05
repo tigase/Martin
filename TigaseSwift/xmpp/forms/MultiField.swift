@@ -33,7 +33,7 @@ public protocol MultiField: class, ValidatableField {
 
 public extension MultiField {
     
-    public var rawValue: [String] {
+    var rawValue: [String] {
         get {
             return element.mapChildren(transform: { (elem) -> String in return elem.value!}, filter: { (elem) -> Bool in return elem.name == "value"});
         }
@@ -45,7 +45,7 @@ public extension MultiField {
         }
     }
  
-    public var valid: Bool {
+    var valid: Bool {
         return (!self.required) || !rawValue.isEmpty;
     }
 }

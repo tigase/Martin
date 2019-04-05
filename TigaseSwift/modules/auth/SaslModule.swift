@@ -66,11 +66,11 @@ open class SaslModule: Logger, XmppModule, ContextAware {
             var value = newValue;
             for name in newValue {
                 if mechanisms[name] == nil {
-                    value.remove(at: value.index(of: name)!);
+                    value.remove(at: value.firstIndex(of: name)!);
                 }
             }
             for name in mechanisms.keys {
-                if value.index(of: name) == nil {
+                if value.firstIndex(of: name) == nil {
                     mechanisms.removeValue(forKey: name);
                 }
             }

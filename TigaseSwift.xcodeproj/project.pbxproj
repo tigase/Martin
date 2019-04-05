@@ -733,7 +733,7 @@
 					FE3F33D21CA1CBB9001A5CD6 = {
 						CreatedOnToolsVersion = 7.3;
 						DevelopmentTeam = YBEYW6E35C;
-						LastSwiftMigration = 1000;
+						LastSwiftMigration = 1020;
 					};
 					FE3F33DC1CA1CBB9001A5CD6 = {
 						CreatedOnToolsVersion = 7.3;
@@ -743,10 +743,11 @@
 			};
 			buildConfigurationList = FE3F33CD1CA1CBB9001A5CD6 /* Build configuration list for PBXProject "TigaseSwift" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = FE3F33C91CA1CBB9001A5CD6;
 			productRefGroup = FE3F33D41CA1CBB9001A5CD6 /* Products */;
@@ -1096,8 +1097,7 @@
 				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/CommonCrypto";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_SWIFT3_OBJC_INFERENCE = Default;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
 			};
@@ -1134,8 +1134,7 @@
 				SWIFT_INCLUDE_PATHS = "$(SRCROOT)/CommonCrypto";
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_SWIFT3_OBJC_INFERENCE = Default;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "i386 x86_64 armv7s armv7 arm64";
 			};

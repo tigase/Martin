@@ -33,7 +33,7 @@ public protocol SingleField: class, ValidatableField {
 
 public extension SingleField {
     
-    public var rawValue: String? {
+    var rawValue: String? {
         get {
             return element.findChild(name: "value")?.value;
         }
@@ -51,7 +51,7 @@ public extension SingleField {
         }
     }
     
-    public var valid: Bool {
+    var valid: Bool {
         return (!self.required) || rawValue != nil;
     }
 }

@@ -195,8 +195,8 @@ open class XMLParser: Logger {
      */
     open func parse(data: Data) throws {
 //        log("parsing data:", data.count, String(data: data, encoding: String.Encoding.utf8));
-        try data.withUnsafeBytes { (ptr: UnsafePointer<CChar>) -> Void in
-            let err = xmlParseChunk(ctx, ptr, Int32(data.count), 0);
+        try data.withUnsafeBytes { (ptr) -> Void in
+            let err = xmlParseChunk(ctx, ptr.baseAddress!.assumingMemoryBound(to: CChar.self), Int32(data.count), 0);
             if err > 0 {
                 if err == 64 {
                     if let position = data.range(of: "<?xml ".data(using: .utf8)!)?.lowerBound {

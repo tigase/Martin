@@ -155,7 +155,7 @@ open class Criteria {
             }
             if (types != nil) {
                 let type = elem.getAttribute("type");
-                match = match && (types?.index(where: { (v: String?) -> Bool in
+                match = match && (types?.firstIndex(where: { (v: String?) -> Bool in
                     return v == type;
                 }) != nil);
             }

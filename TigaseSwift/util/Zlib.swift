@@ -145,13 +145,14 @@ open class Zlib {
          - parameter flush: type of flush
          - returns: compressed data as array of bytes (may not contain all data depending on `flush` parameter)
          */
-        public func compress(data: Data, flush: Flush = .partial) -> Data {
-            return data.withUnsafeBytes { (bytes: UnsafePointer<Bytef>) -> Data in
+        public func compress(data tmp: Data, flush: Flush = .partial) -> Data {
+            var t = tmp;
+            return t.withUnsafeMutableBytes { [count = t.count] (bytes) -> Data in
                 var result = Data();
-                stream.avail_in = CUnsignedInt(data.count);
-                stream.next_in = UnsafeMutablePointer<Bytef>(mutating: bytes);
+                stream.avail_in = CUnsignedInt(count);
+                stream.next_in = bytes.baseAddress!.assumingMemoryBound(to: Bytef.self);
 
-                var out = [UInt8](repeating: 0, count: data.count + (data.count / 100) + 13);
+                var out = [UInt8](repeating: 0, count: count + (count / 100) + 13);
                 repeat {
                     stream.avail_out = CUnsignedInt(out.count);
                     stream.next_out = &out + 0;
@@ -216,10 +217,11 @@ open class Zlib {
          - returns: decompressed data as array of bytes
          */
         public func decompress(data: Data, flush: Flush = .partial) -> Data {
-            return data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
+            var t = data;
+            return t.withUnsafeMutableBytes { [count = t.count] (bytes) -> Data in
                 var result = Data();
-                stream.avail_in = CUnsignedInt(data.count);
-                stream.next_in = UnsafeMutablePointer<Bytef>(mutating: bytes);
+                stream.avail_in = CUnsignedInt(count);
+                stream.next_in = bytes.baseAddress!.assumingMemoryBound(to: Bytef.self);
             
                 var out = [UInt8](repeating: 0, count: 50);
                 repeat {

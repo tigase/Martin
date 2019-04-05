@@ -99,7 +99,7 @@ open class DefaultChatStore: ChatStore {
     open func getChat<T>(with jid:BareJID, filter: @escaping (T)->Bool) -> T? {
         return dispatcher.sync {
             if let chats = self.chatsByBareJid[jid] {
-                if let idx = chats.index(where: {
+                if let idx = chats.firstIndex(where: {
                     if let item:T = $0 as? T {
                         return filter(item);
                     }
@@ -159,7 +159,7 @@ open class DefaultChatStore: ChatStore {
         var result = false;
         dispatcher.sync(flags: .barrier, execute: {
             if var chats = self.chatsByBareJid[bareJid] {
-                if let idx = chats.index(where: { (c) -> Bool in
+                if let idx = chats.firstIndex(where: { (c) -> Bool in
                     c === chat;
                 }) {
                     chats.remove(at: idx);

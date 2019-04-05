@@ -123,7 +123,7 @@ open class PresenceStore {
     open func isAvailable(jid:BareJID) -> Bool {
         var result = false;
         dispatch_sync_local_queue() {
-            result = self.presencesMapByBareJid[jid]?.values.index(where: { (p) -> Bool in
+            result = self.presencesMapByBareJid[jid]?.values.firstIndex(where: { (p) -> Bool in
                 return p.type == nil || p.type == StanzaType.available;
             }) != nil;
         }

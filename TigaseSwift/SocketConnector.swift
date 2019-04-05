@@ -321,7 +321,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         
         sslCertificateValidated = nil;
         let settings:NSDictionary = NSDictionary(objects: [StreamSocketSecurityLevel.negotiatedSSL, 
-                                                           domain, kCFBooleanFalse], forKeys: [kCFStreamSSLLevel as NSString,
+                                                           domain, kCFBooleanFalse as Any], forKeys: [kCFStreamSSLLevel as NSString,
                 kCFStreamSSLPeerName as NSString,
                 kCFStreamSSLValidatesCertificateChain as NSString])
         let started = CFReadStreamSetProperty(inStream as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef)
@@ -716,8 +716,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             }
             let remainingLength = data!.count - position;
             
-            let sent = data!.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> Int in
-                return outputStream!.write(ptr + position, maxLength: remainingLength);
+            let sent = data!.withUnsafeBytes { (ptr) -> Int in
+                return outputStream!.write(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self) + position, maxLength: remainingLength);
             }
             
             if sent < 0 {

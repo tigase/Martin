@@ -256,7 +256,7 @@ open class Reported {
     
     open var rows: [Row] {
         let children = parent.getChildren();
-        var idx = children.index(of: element)!.advanced(by: 1);
+        var idx = children.firstIndex(of: element)!.advanced(by: 1);
         var result: [Row] = [];
         while children.count > idx && children[idx].name == "item" {
             if let row = Row(from: children[idx]) {
@@ -283,7 +283,7 @@ open class Reported {
     
     open var count: Int {
         let children = parent.getChildren();
-        let start = children.index(of: element)!.advanced(by: 1);
+        let start = children.firstIndex(of: element)!.advanced(by: 1);
         var end = start;
         while children.count > end && children[end].name == "item" {
             end = end.advanced(by: 1);

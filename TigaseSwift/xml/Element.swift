@@ -325,7 +325,7 @@ open class Element : Node, ElementProtocol {
      Removes node from children
      */
     open func removeNode(_ child: Node) {
-        if let idx = self.nodes.index(of: child) {
+        if let idx = self.nodes.firstIndex(of: child) {
             self.nodes.remove(at: idx);
         }
     }

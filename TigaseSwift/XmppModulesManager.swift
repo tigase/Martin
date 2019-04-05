@@ -119,16 +119,16 @@ open class XmppModulesManager : ContextAware {
      */
     open func unregister<T:XmppModule>(_ module:T) -> T {
         modulesById.removeValue(forKey: module.id)
-        if let idx = self.modules.index(where: { $0 === module}) {
+        if let idx = self.modules.firstIndex(where: { $0 === module}) {
             self.modules.remove(at: idx);
         }
         if let initModule = module as? Initializable {
-            if let idx = self.initializationRequired.index(where: { $0 === initModule }) {
+            if let idx = self.initializationRequired.firstIndex(where: { $0 === initModule }) {
                 self.initializationRequired.remove(at: idx);
             }
         }
         if let filter = module as? XmppStanzaFilter {
-            if let idx = self.filters.index(where: { $0 === filter }) {
+            if let idx = self.filters.firstIndex(where: { $0 === filter }) {
                 self.filters.remove(at: idx);
             }
         }

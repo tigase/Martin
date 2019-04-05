@@ -328,7 +328,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     
     func isZlibAvailable() -> Bool {
         let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
-        return (featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").index(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) != nil;
+        return (featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) != nil;
     }
     
     open func startStream() {
