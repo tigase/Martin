@@ -37,7 +37,7 @@ open class XmppModulesManager : ContextAware {
     fileprivate var initializationRequired = [Initializable]();
     
     /// List of registered modules
-    fileprivate var modules = [XmppModule]();
+    fileprivate(set) var modules = [XmppModule]();
     /// Map of registered modules where module id is key - used for fast retrieval of module instances
     fileprivate var modulesById = [String:XmppModule]();
     

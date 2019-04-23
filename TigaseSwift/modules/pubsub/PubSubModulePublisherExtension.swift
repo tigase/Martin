@@ -35,10 +35,11 @@ extension PubSubModulePublisherExtension {
      - parameter to: node name
      - parameter itemId: id of item
      - parameter payload: item payload
+     - parameter publishOptions: publish options
      - parameter onSuccess: called when request succeeds - passes instance of response stanza, node name and item id
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, publishOptions: JabberDataElement? = nil, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         let callback = createCallback(onSuccess: { (stanza) in
             guard let publishEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "publish"), let node = publishEl.getAttribute("node") else {
                 onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
@@ -50,7 +51,7 @@ extension PubSubModulePublisherExtension {
             onSuccess?(stanza, node, itemId);
         }, onError: onError);
     
-        self.publishItem(at: pubSubJid, to: nodeName, payload: payload, callback: callback);
+        self.publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions, callback: callback);
     }
     
     /**
@@ -59,9 +60,10 @@ extension PubSubModulePublisherExtension {
      - parameter to: node name
      - parameter itemId: id of item
      - parameter payload: item payload
+     - parameter publishOptions: publish options
      - parameter callback: called when response is received or request times out
      */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, callback: ((Stanza?)->Void)?) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, publishOptions: JabberDataElement? = nil, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
         if pubSubJid != nil {
@@ -80,6 +82,12 @@ extension PubSubModulePublisherExtension {
         publish.addChild(item);
         
         item.addChild(payload);
+        
+        if publishOptions != nil {
+            let publishOptionsEl = Element(name: "publish-options");
+            publishOptionsEl.addChild(publishOptions!.submitableElement(type: .submit));
+            pubsub.addChild(publishOptionsEl);
+        }
         
         context.writer?.write(iq, callback: callback);
     }

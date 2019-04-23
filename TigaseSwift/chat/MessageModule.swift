@@ -63,7 +63,7 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
         _ = processMessage(message, interlocutorJid: message.from);
     }
     
-    func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
+    open func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
         let chat = getOrCreateChatForProcessing(message: message, interlocutorJid: interlocutorJid);
         
         if chat == nil {

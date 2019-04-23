@@ -121,7 +121,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
             return;
         }
         
-        pubsubModule.retriveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: [itemId], onSuccess: { (stanza,node,items,rsm) in
+        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: [itemId], onSuccess: { (stanza,node,items,rsm) in
             var data: Data? = nil;
             if let cdata = items.first?.payload.value {
                 data = Data(base64Encoded: cdata, options: NSData.Base64DecodingOptions(rawValue: 0))

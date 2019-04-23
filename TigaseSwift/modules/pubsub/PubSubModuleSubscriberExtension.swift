@@ -263,7 +263,7 @@ extension PubSubModuleSubscriberExtension {
      - parameter onSuccess: called when request succeeds - passes response stanza, node name, array of retrieved items and result set informations
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
-    public func retriveItems(from pubSubJid: BareJID, for nodeName: String, rsm: RSM.Query? = nil, lastItems: Int? = nil, itemIds: [String]? = nil, onSuccess: ((Stanza,String,[PubSubModule.Item],RSM.Result?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, rsm: RSM.Query? = nil, lastItems: Int? = nil, itemIds: [String]? = nil, onSuccess: ((Stanza,String,[PubSubModule.Item],RSM.Result?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         let callback = createCallback(onSuccess: { (stanza) in
             let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
             let itemsEl = pubsubEl?.findChild(name: "items");
@@ -277,7 +277,7 @@ extension PubSubModuleSubscriberExtension {
             onSuccess?(stanza, itemsEl?.getAttribute("node") ?? nodeName, items, rsm);
             }, onError: onError);
         
-        retriveItems(from: pubSubJid, for: nodeName, rsm: rsm, lastItems: lastItems, itemIds: itemIds, callback: callback);
+        retrieveItems(from: pubSubJid, for: nodeName, rsm: rsm, lastItems: lastItems, itemIds: itemIds, callback: callback);
     }
     
     /**
@@ -289,7 +289,7 @@ extension PubSubModuleSubscriberExtension {
      - parameter itemIds: array of item ids to retrieve
      - parameter callback: called when response is received or request times out
      */
-    public func retriveItems(from pubSubJid: BareJID, for nodeName: String, rsm: RSM.Query? = nil, lastItems: Int? = nil, itemIds: [String]? = nil, callback: ((Stanza?)->Void)?) {
+    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, rsm: RSM.Query? = nil, lastItems: Int? = nil, itemIds: [String]? = nil, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
