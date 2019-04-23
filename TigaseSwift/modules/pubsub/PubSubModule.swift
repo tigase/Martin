@@ -64,7 +64,7 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
      - parameter message: message to process
      */
     open func process(message: Message) throws {
-        guard let event = message.findChild(name: "event", xmlns: PubSubModule.PUBSUB_EVENT_XMLNS) else {
+        guard message.type != StanzaType.error, let event = message.findChild(name: "event", xmlns: PubSubModule.PUBSUB_EVENT_XMLNS) else {
             return;
         }
 
