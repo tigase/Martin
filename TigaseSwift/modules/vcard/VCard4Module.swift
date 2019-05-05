@@ -196,7 +196,7 @@ extension VCard {
         }
         
         vcard4!.forEachChild(name: "photo") { (el) in
-            if let uri = el.findChild(name: "uri")?.value {
+            if let uri = el.findChild(name: "uri")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
                 let photo = Photo(uri: uri);
                 VCard.convertVCard4ParamtersToTypes(el: el, entry: photo);
                 self.photos.append(photo);

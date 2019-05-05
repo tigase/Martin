@@ -204,10 +204,10 @@ extension VCard {
         }
         
         vcardTemp!.forEachChild(name: "PHOTO") { (el) in
-            if let type = el.findChild(name: "TYPE")?.value, let binval = el.findChild(name: "BINVAL")?.value {
+            if let type = el.findChild(name: "TYPE")?.value, let binval = el.findChild(name: "BINVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
                 self.photos.append(Photo(type: type, binval: binval));
             }
-            if let extval = el.findChild(name: "EXTVAL")?.value {
+            if let extval = el.findChild(name: "EXTVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
                 self.photos.append(Photo(uri: extval));
             }
         }
