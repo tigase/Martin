@@ -436,7 +436,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      */
     func send(stanza:Stanza) {
         sessionLogic?.sendingOutgoingStanza(stanza);
-        self.send(data: stanza.element.stringValue)
+        queue.async {
+            self.sendSync(stanza.element.stringValue)
+            if let logger = self.streamLogger {
+                logger.outgoing(element: stanza.element);
+            }
+        }
     }
     
     open func keepAlive() {
@@ -446,9 +451,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     /**
      Methods prepares data to be sent using `dispatch_async()` to send data using other thread.
      */
-    func send(data:String) {
+    open func send(data:String) {
         queue.async {
             self.sendSync(data);
+            if let logger = self.streamLogger {
+                logger.outgoing(data);
+            }
         }
     }
     

@@ -100,6 +100,7 @@ open class XMPPClient: Logger, EventHandler {
     open var socketConnector:SocketConnector? {
         willSet {
             sessionLogic?.unbind();
+            newValue?.streamLogger = streamLogger;
         }
     }
     public let modulesManager:XmppModulesManager!;
@@ -110,6 +111,12 @@ open class XMPPClient: Logger, EventHandler {
     
     fileprivate var keepaliveTimer: Timer?;
     open var keepaliveTimeout: TimeInterval = (3 * 60) - 5;
+    
+    open weak var streamLogger: StreamLogger? {
+        didSet {
+            socketConnector?.streamLogger = streamLogger;
+        }
+    }
     
     open var state:SocketConnector.State {
         var value:SocketConnector.State = .disconnected;

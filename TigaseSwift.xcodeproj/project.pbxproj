@@ -82,6 +82,7 @@
 		FE7F9301200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F9300200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift */; };
 		FE7F930520121E69004C6195 /* DNSSrvResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930420121E69004C6195 /* DNSSrvResolver.swift */; };
 		FE7F930720121F4C004C6195 /* DNSSrvResolverWithCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */; };
+		FE87C773228485AB00B0B64C /* StreamLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE87C772228485AB00B0B64C /* StreamLogger.swift */; };
 		FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
@@ -238,6 +239,7 @@
 		FE7F9300200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScramSaltedPasswordCacheProcotol.swift; sourceTree = "<group>"; };
 		FE7F930420121E69004C6195 /* DNSSrvResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolver.swift; sourceTree = "<group>"; };
 		FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolverWithCache.swift; sourceTree = "<group>"; };
+		FE87C772228485AB00B0B64C /* StreamLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamLogger.swift; sourceTree = "<group>"; };
 		FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalQueueDispatcher.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
@@ -500,6 +502,7 @@
 				FE9A1ECE1CC51CE000D0509D /* StreamError.swift */,
 				FE94E5061CC8E95200FAE755 /* Initializable.swift */,
 				FE3024231CDD1C6B00466497 /* Delay.swift */,
+				FE87C772228485AB00B0B64C /* StreamLogger.swift */,
 			);
 			path = TigaseSwift;
 			sourceTree = "<group>";
@@ -859,6 +862,7 @@
 				FEDCBF991D9FB79800AE9129 /* PubSubAffiliation.swift in Sources */,
 				FE94E5011CC7C26300FAE755 /* DefaultRosterStore.swift in Sources */,
 				FE2EFD9A1CB66DA9000D254E /* StreamFeaturesModule.swift in Sources */,
+				FE87C773228485AB00B0B64C /* StreamLogger.swift in Sources */,
 				FE2EFD7A1CB57C70000D254E /* BareJID.swift in Sources */,
 				FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */,
 				FEDCBF831D9EC72900AE9129 /* TextPrivateField.swift in Sources */,
