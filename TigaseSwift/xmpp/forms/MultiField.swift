@@ -35,7 +35,7 @@ public extension MultiField {
     
     var rawValue: [String] {
         get {
-            return element.mapChildren(transform: { (elem) -> String in return elem.value!}, filter: { (elem) -> Bool in return elem.name == "value"});
+            return element.mapChildren(transform: { (elem) -> String in return elem.value!}, filter: { (elem) -> Bool in return elem.name == "value" && elem.value != nil});
         }
         set {
             element.removeChildren(where: { (elem) -> Bool in return elem.name == "value" });
