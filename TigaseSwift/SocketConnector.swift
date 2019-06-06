@@ -484,8 +484,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             if (aStream == self.inStream) {
                 // this is intentional - we need to execute onStreamTerminate()
                 // on main queue, but after all task are executed by our serial queueła
-                queue.async {
-                    self.onStreamTerminate();
+                queue.async { [weak self] in
+                    self?.onStreamTerminate();
                 }
             }
         case Stream.Event.openCompleted:
@@ -527,8 +527,11 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         case Stream.Event.hasBytesAvailable:
             log("stream event: HasBytesAvailable");
             if aStream == self.inStream {
-                queue.async {
-                    guard let inStream = self.inStream else {
+                queue.async { [weak self] in
+                    guard let that = self else {
+                        return;
+                    }
+                    guard let inStream = that.inStream else {
                         return;
                     }
                     
@@ -540,11 +543,11 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                         }
                         
                         let data = Data(bytes: &buffer, count: read);
-                        if self.zlib != nil {
-                            let decompressedData = self.zlib!.decompress(data: data);
-                            self.parseXml(data: decompressedData);
+                        if let zlib = that.zlib {
+                            let decompressedData = zlib.decompress(data: data);
+                            that.parseXml(data: decompressedData);
                         } else {
-                            self.parseXml(data: data);
+                            that.parseXml(data: data);
                         }
                     }
                 }
