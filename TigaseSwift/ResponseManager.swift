@@ -159,9 +159,11 @@ open class ResponseManager: Logger {
     open func stop() {
         timer?.cancel();
         timer = nil;
-        for (id,handler) in handlers {
-            handlers.removeValue(forKey: id);
-            handler.callback(nil);
+        queue.sync {
+            for (id,handler) in self.handlers {
+                self.handlers.removeValue(forKey: id);
+                handler.callback(nil);
+            }
         }
     }
     

@@ -45,7 +45,9 @@ open class Timer: NSObject {
         self.callback = callback;
         self.repeats = repeats;
         super.init();
-        self.timer = Foundation.Timer.scheduledTimer(timeInterval: delayInSeconds, target: self, selector: #selector(Timer.execute), userInfo: nil, repeats: repeats);
+        DispatchQueue.main.async {
+            self.timer = Foundation.Timer.scheduledTimer(timeInterval: delayInSeconds, target: self, selector: #selector(Timer.execute), userInfo: nil, repeats: repeats);
+        }
     }
     
     /**
@@ -63,7 +65,9 @@ open class Timer: NSObject {
      */
     open func cancel() {
         callback = nil;
-        timer?.invalidate()
-        timer = nil;
+        DispatchQueue.main.async {
+            self.timer?.invalidate()
+            self.timer = nil;
+        }
     }
 }
