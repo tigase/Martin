@@ -100,7 +100,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
     
     open func processSet(stanza: Stanza) throws {
         let bindedJid = ResourceBinderModule.getBindedJid(context.sessionObject);
-        if (stanza.from != nil && stanza.from != bindedJid) {
+        if (stanza.from != nil && stanza.from != bindedJid && (stanza.from?.bareJid != bindedJid?.bareJid)) {
             throw ErrorCondition.not_allowed;
         }
         
