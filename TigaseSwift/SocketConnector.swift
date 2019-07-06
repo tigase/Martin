@@ -194,7 +194,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
     }
     
-    fileprivate static func preprocessConnectionDetails(string: String?) -> (String, Int?)? {
+    public static func preprocessConnectionDetails(string: String?) -> (String, Int?)? {
         guard let tmp = string else {
             return nil;
         }
@@ -204,7 +204,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         guard let idx = tmp.lastIndex(of: ":") else {
             return (tmp, nil);
         }
-        return (String(tmp[tmp.startIndex..<idx]), Int(tmp[tmp.index(after: idx)...tmp.endIndex]));
+        return (String(tmp[tmp.startIndex..<idx]), Int(tmp[tmp.index(after: idx)..<tmp.endIndex]));
     }
     
     func connect(dnsName: String, srvRecords: [XMPPSrvRecord]?) {
