@@ -159,7 +159,7 @@ open class SessionObject: Logger {
     }
     
     open func removeProperty<T>(_ prop: String) -> T? {
-        return queue.sync {
+        return queue.sync(flags: .barrier) {
             return self.properties.removeValue(forKey: prop)?.value as? T;
         }
     }

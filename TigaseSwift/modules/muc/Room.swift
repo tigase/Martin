@@ -127,6 +127,10 @@ open class Room: ChatProtocol, ContextAware {
                     // context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, ))
                 }
             }
+            if _state == .joined, let tmp = onRoomJoined {
+                onRoomJoined = nil;
+                tmp(self);
+            }
         }
     }
     /// State of room
@@ -135,6 +139,7 @@ open class Room: ChatProtocol, ContextAware {
     }
     
     open var onRoomCreated: ((Room)->Void)? = nil;
+    open var onRoomJoined: ((Room)->Void)? = nil;
     
     fileprivate static let queue = DispatchQueue(label: "room_queue", attributes: DispatchQueue.Attributes.concurrent);
     
@@ -180,8 +185,11 @@ open class Room: ChatProtocol, ContextAware {
      - parameter body: text to send
      - parameter additionalElement: additional elements to add to message
      */
-    open func sendMessage(_ body: String?, additionalElements: [Element]? = nil) {
+    open func sendMessage(_ body: String?, url: String? = nil, additionalElements: [Element]? = nil) {
         let msg = createMessage(body);
+        if url != nil {
+            msg.oob = url;
+        }
         if additionalElements != nil {
             for elem in additionalElements! {
                 msg.addChild(elem);
@@ -296,6 +304,58 @@ open class Room: ChatProtocol, ContextAware {
             result = self._tempOccupants.removeValue(forKey: nickname);
         }) 
         return result;
+    }
+    
+    open func checkTigasePushNotificationRegistrationStatus(completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
+        guard let regModule: InBandRegistrationModule = context?.modulesManager.getModule(InBandRegistrationModule.ID) else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        };
+        
+        regModule.retrieveRegistrationForm(from: self.jid, onSuccess: { (isForm, form) in
+            if isForm, let field: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline") {
+                completionHandler(.success(field.value));
+            } else {
+                completionHandler(.failure(ErrorCondition.feature_not_implemented));
+            }
+        }, onError: { (err, msg) in
+            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+        })
+    }
+    
+    open func registerForTigasePushNotification(_ value: Bool, completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
+        guard let regModule: InBandRegistrationModule = context?.modulesManager.getModule(InBandRegistrationModule.ID) else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        };
+        
+        regModule.retrieveRegistrationForm(from: self.jid, onSuccess: { (isForm, form) in
+            if isForm, let valueField: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline"), let nicknameField: TextSingleField = form.getField(named: "muc#register_roomnick") {
+                if valueField.value == value {
+                    completionHandler(.success(value));
+                } else {
+                    if value {
+                        valueField.value = value;
+                        nicknameField.value = self.nickname;
+                        regModule.submitRegistrationForm(to: self.jid, form: form, onSuccess: {
+                            completionHandler(.success(value));
+                        }, onError: { (err, msg) in
+                            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+                        })
+                    } else {
+                        regModule.unregister(from: self.jid, onSuccess: {
+                            completionHandler(.success(value));
+                        }, onError: { (err, msg) in
+                            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+                        });
+                    }
+                }
+            } else {
+                completionHandler(.failure(ErrorCondition.feature_not_implemented));
+            }
+        }, onError: { (err, msg) in
+            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+        })
     }
     
     /**

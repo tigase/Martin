@@ -146,16 +146,28 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
      Unregisters currently connected and authenticated user
      - parameter callback: called when user is unregistrated
      */
-    open func unregister(_ callback: @escaping (Stanza?)->Void) {
+    open func unregister(from: JID? = nil, _ callback: @escaping (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = ResourceBinderModule.getBindedJid(context.sessionObject);
+        iq.to = from ?? ResourceBinderModule.getBindedJid(context.sessionObject);
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(Element(name: "remove"));
         iq.addChild(query);
         
         context.writer?.write(iq, callback: callback);
+    }
+    
+    open func unregister(from: JID? = nil, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?,String?)->Void) {
+        unregister(from: from) { (response) in
+            let type = response?.type ?? .error;
+            switch type {
+            case .result:
+                onSuccess();
+            default:
+                onError(response?.errorCondition, response?.findChild(name: "error")?.findChild(name: "text")?.value);
+            }
+        }
     }
     
     /**
