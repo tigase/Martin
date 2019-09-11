@@ -33,10 +33,10 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
         self.automaticRefresh = withAutomaticRefresh;
     }
     
-    open func resolve(domain: String, completionHandler: @escaping ([XMPPSrvRecord]?) -> Void) {
+    open func resolve(domain: String, completionHandler: @escaping (_ dnsResult: XMPPSrvResult?) -> Void) {
         let records = cache.getRecords(for: domain)
         if records != nil {
-            log("loaded DNS records from cache");
+            log("loaded DNS records for domain: \(domain) from cache \(records!.records)");
             completionHandler(records);
             guard automaticRefresh else {
                 return;
@@ -45,18 +45,80 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
 
         if records == nil {
             self.resolver.resolve(domain: domain, completionHandler: { records in
-                self.cache.store(for: domain, records: records);
+                self.save(for: domain, result: records);
                 completionHandler(records);
             });
         } else {
             DispatchQueue.global(qos: .utility).async {
-                self.resolver.resolve(domain: domain, completionHandler: { records in
+                self.resolver.resolve(domain: domain) { records in
                     if records != nil {
-                        self.cache.store(for: domain, records: records);
+                        self.save(for: domain, result: records);
                     }
-                });
+                };
             }
         }
+    }
+    
+    public func markAsInvalid(for domain: String, record: XMPPSrvRecord, for period: TimeInterval) {
+        self.resolver.markAsInvalid(for: domain, record: record, for: period);
+        self.cache.markAsInvalid(for: domain, record: record, for: period);
+    }
+    
+    fileprivate func save(for domain: String, result: XMPPSrvResult?) {
+        guard let current = cache.getRecords(for: domain) else {
+            cache.store(for: domain, result: result);
+            return;
+        }
+        guard current.update(fromQuery: result?.records ?? []) else {
+            return;
+        }
+        cache.store(for: domain, result: current);
+    }
+    
+    open class InMemoryCache: DNSSrvResolverCache {
+        
+        private let store: DNSSrvResolverCache?;
+        
+        private let cache = NSCache<NSString, XMPPSrvResult>();
+        
+        public init(store: DNSSrvResolverCache?) {
+            self.store = store;
+        }
+        
+        public func getRecords(for domain: String) -> XMPPSrvResult? {
+            let key = NSString(string: domain);
+            if let records = cache.object(forKey: key) {
+                return records;
+            }
+            if let records = store?.getRecords(for: domain) {
+                cache.setObject(records, forKey: key);
+                return records;
+            }
+            return nil;
+        }
+        
+        public func markAsInvalid(for domain: String, record: XMPPSrvRecord, for period: TimeInterval) {
+            guard let current = getRecords(for: domain) else {
+                return;
+            }
+            current.markAsInvalid(record: record, for: period);
+            self.save(for: domain, result: current);
+        }
+        
+        public func store(for domain: String, result: XMPPSrvResult?) {
+            self.save(for: domain, result: result);
+        }
+        
+        private func save(for domain: String, result: XMPPSrvResult?) {
+            let key = NSString(string: domain);
+            if let r = result {
+                cache.setObject(r, forKey: key)
+            } else {
+                cache.removeObject(forKey: key);
+            }
+            store?.store(for: domain, result: result);
+        }
+        
     }
     
     open class DiskCache: DNSSrvResolverCache {
@@ -71,7 +133,7 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
             createDirectory();
         }
         
-        open func getRecords(for domain: String) -> [XMPPSrvRecord]? {
+        open func getRecords(for domain: String) -> XMPPSrvResult? {
             let fileUrl = pathUrl.appendingPathComponent(domain);
             guard fileManager.fileExists(atPath: fileUrl.path) else {
                 return nil;
@@ -79,13 +141,28 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
             guard let data = try? Data(contentsOf: fileUrl) else {
                 return nil;
             }
-            return try? JSONDecoder().decode([XMPPSrvRecord].self, from: data);
+            guard let result = try? JSONDecoder().decode(XMPPSrvResult.self, from: data), result.hasValid else {
+                return nil;
+            }
+            return result;
+        }
+     
+        open func markAsInvalid(for domain: String, record: XMPPSrvRecord, for period: TimeInterval) {
+            guard let current = getRecords(for: domain) else {
+                return;
+            }
+            current.markAsInvalid(record: record, for: period);
+            self.save(for: domain, result: current);
         }
         
-        open func store(for domain: String, records: [XMPPSrvRecord]?) {
+        open func store(for domain: String, result: XMPPSrvResult?) {
+            self.save(for: domain, result: result);
+        }
+        
+        fileprivate func save(for domain: String, result: XMPPSrvResult?) {
             let fileUrl = pathUrl.appendingPathComponent(domain);
-            if records != nil {
-                if let data = try? JSONEncoder().encode(records!) {
+            if result != nil {
+                if let data = try? JSONEncoder().encode(result!) {
                     try? data.write(to: fileUrl);
                 }
             } else {
@@ -103,10 +180,12 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
     }
 }
 
-public protocol DNSSrvResolverCache {
+public protocol DNSSrvResolverCache: class {
     
-    func getRecords(for domain: String) -> [XMPPSrvRecord]?;
+    func getRecords(for domain: String) -> XMPPSrvResult?;
     
-    func store(for domain: String, records: [XMPPSrvRecord]?);
+    func markAsInvalid(for domain: String, record: XMPPSrvRecord, for period: TimeInterval);
+    
+    func store(for domain: String, result: XMPPSrvResult?);
     
 }

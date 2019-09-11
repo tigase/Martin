@@ -97,6 +97,9 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     fileprivate let queue: DispatchQueue;
     fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
     
+    fileprivate var server: String?;
+    fileprivate var lastConnectionDetails: XMPPSrvRecord?;
+    
     fileprivate var state_:State = State.disconnected;
     open var state:State {
         get {
@@ -186,8 +189,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                     self.dnsResolver = XMPPDNSSrvResolver();
                 }
                 DispatchQueue.global().async {
-                    self.dnsResolver!.resolve(domain: server) { dnsRecords in
-                        self.connect(dnsName: server, srvRecords: dnsRecords);
+                    self.dnsResolver!.resolve(domain: server) { dnsResult in
+                        if let record = dnsResult?.record() ?? self.lastConnectionDetails {
+                            self.connect(dnsName: server, srvRecord: record);
+                        } else {
+                            self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
+                        }
                     }
                 }
             }
@@ -207,22 +214,16 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         return (String(tmp[tmp.startIndex..<idx]), Int(tmp[tmp.index(after: idx)..<tmp.endIndex]));
     }
     
-    func connect(dnsName: String, srvRecords: [XMPPSrvRecord]?) {
+    func connect(dnsName: String, srvRecord: XMPPSrvRecord) {
         guard state == .connecting else {
             log("connect(dns) - stopping connetion as state is not connecting", state);
             return;
         }
-        log("got dns records:", srvRecords);
+        log("got dns record to connect to:", srvRecord);
         queue.async {
-            var records = srvRecords ?? [XMPPSrvRecord]();
-            let lastConnectionDetails: (Int,Bool)? = self.sessionObject.removeProperty("lastConnectionDetails");
-            if (records.isEmpty) {
-                records.append(XMPPSrvRecord(port: lastConnectionDetails?.0 ?? 5222, weight: 0, priority: 0, target: dnsName, directTls: lastConnectionDetails?.1 ?? false));
-            }
-        
-            let rec:XMPPSrvRecord = records[0];
-            self.sessionObject.setUserProperty("lastConnectionDetails", value: (rec.port, rec.directTls));
-            self.connect(addr: rec.target, port: rec.port, ssl: rec.directTls);
+            self.server = dnsName;
+            self.lastConnectionDetails = srvRecord;
+            self.connect(addr: srvRecord.target, port: srvRecord.port, ssl: srvRecord.directTls);
         }
     }
     
@@ -485,6 +486,9 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 // this is intentional - we need to execute onStreamTerminate()
                 // on main queue, but after all task are executed by our serial queueła
                 queue.async { [weak self] in
+                    if let state = self?.state, state == .connecting, let domain = self?.server, let lastConnectionDetails = self?.lastConnectionDetails {
+                        self?.dnsResolver?.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
+                    }
                     self?.onStreamTerminate();
                 }
             }
