@@ -49,6 +49,7 @@ public protocol XmppSessionLogic: class {
     func onStreamTerminate();
     /// Using properties set decides which name use to connect to XMPP server
     func serverToConnect() -> String;
+    func serverToConnectDetails() -> XMPPSrvRecord?;
 }
 
 /** 
@@ -105,11 +106,16 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         connector.sessionLogic = nil;
     }
     
-    open func serverToConnect() -> String {
-        let domain = context.sessionObject.domainName!;
+    open func serverToConnectDetails() -> XMPPSrvRecord? {
+        if let redirect: XMPPSrvRecord = self.context.sessionObject.removeProperty(SocketConnector.SEE_OTHER_HOST_KEY) {
+            return redirect;
+        }
         let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
-        
-        return streamManagementModule?.resumptionLocation ?? context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? domain;
+        return streamManagementModule?.resumptionLocation;
+    }
+    
+    open func serverToConnect() -> String {
+        return context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? context.sessionObject.domainName!;
     }
     
     open func onStreamClose(completionHandler: @escaping () -> Void) {
@@ -123,12 +129,13 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     }
     
     open func onStreamError(_ streamErrorEl: Element) {
-        if let seeOtherHost = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams") {
+        if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value), let lastConnectionDetails: XMPPSrvRecord = self.context.sessionObject.getProperty(SocketConnector.CURRENT_CONNECTION_DETAILS) {
             if let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining = modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID) {
                 streamFeaturesWithPipelining.connectionRestarted();
             }
             
-            connector.reconnect(newHost: seeOtherHost.value!)
+            self.context.sessionObject.setUserProperty(SocketConnector.SEE_OTHER_HOST_KEY, value: XMPPSrvRecord(port: seeOtherHost.1 ?? lastConnectionDetails.port, weight: 1, priority: 1, target: seeOtherHost.0, directTls: lastConnectionDetails.directTls));
+            connector.reconnect();
             return;
         }
         let errorName = streamErrorEl.findChild(xmlns: "urn:ietf:params:xml:ns:xmpp-streams")?.name;

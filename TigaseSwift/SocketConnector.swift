@@ -51,6 +51,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      */
     public static let DIRECT_TLS = "serverDirectTls";
     
+    public static let CURRENT_CONNECTION_DETAILS = "currentConnectionDetails";
+    
     fileprivate static var QUEUE_TAG = "xmpp_socket_queue";
     
     /**
@@ -98,7 +100,14 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
     
     fileprivate var server: String?;
-    fileprivate var lastConnectionDetails: XMPPSrvRecord?;
+    fileprivate var lastConnectionDetails: XMPPSrvRecord? {
+        get {
+            return self.sessionObject.getProperty(SocketConnector.CURRENT_CONNECTION_DETAILS);
+        }
+        set {
+            self.sessionObject.setProperty(SocketConnector.CURRENT_CONNECTION_DETAILS, value: newValue);
+        }
+    }
     
     fileprivate var state_:State = State.disconnected;
     open var state:State {
@@ -118,7 +127,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 let oldState = self.state_;
                 self.state_ = newValue
                 if oldState != State.disconnected && newValue == State.disconnected {
-                    self.context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject, clean: State.disconnecting == oldState));
+                    self.context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject, connectionDetails: self.lastConnectionDetails, clean: State.disconnecting == oldState));
                 }
                 if oldState == State.connecting && newValue == State.connected {
                     self.context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
@@ -164,36 +173,37 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      
      - parameter serverToConnect: used internally to force connection to particular XMPP server (ie. one of many in cluster)
      */
-    open func start(serverToConnect:String? = nil) {
+    open func start() {
         guard state == .disconnected else {
             log("start() - stopping connetion as state is not connecting", state);
             return;
         }
         queue.async {
             self.state = .connecting;
-            let tmpDetails = SocketConnector.preprocessConnectionDetails(string: serverToConnect ?? self.sessionLogic?.serverToConnect());
-            guard let server:String = tmpDetails?.0 else {
-                self.state = .disconnected;
+            if let srvRecord = self.sessionLogic?.serverToConnectDetails() {
+                self.connect(dnsName: srvRecord.target, srvRecord: srvRecord);
                 return;
-            }
-            
-            if let port: Int = tmpDetails?.1 ?? self.context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
-                self.log("connecting to server:", server, "on port:", port);
-                self.connect(addr: server, port: port, ssl: self.context.sessionObject.getProperty(SocketConnector.DIRECT_TLS, defValue: false));
             } else {
-                self.log("connecting to server:", server);
-                if let dnsResolver = self.context.sessionObject.dnsSrvResolver {
-                    self.dnsResolver = dnsResolver;
+                guard let server = self.sessionLogic?.serverToConnect() else {
+                    return;
                 }
-                if self.dnsResolver == nil {
-                    self.dnsResolver = XMPPDNSSrvResolver();
-                }
-                DispatchQueue.global().async {
-                    self.dnsResolver!.resolve(domain: server) { dnsResult in
-                        if let record = dnsResult?.record() ?? self.lastConnectionDetails {
-                            self.connect(dnsName: server, srvRecord: record);
-                        } else {
-                            self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
+                if let port: Int = self.context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
+                    self.connect(addr: server, port: port, ssl: self.context.sessionObject.getProperty(SocketConnector.DIRECT_TLS) ?? false);
+                } else {
+                    self.log("connecting to server:", server);
+                    if let dnsResolver = self.context.sessionObject.dnsSrvResolver {
+                        self.dnsResolver = dnsResolver;
+                    }
+                    if self.dnsResolver == nil {
+                        self.dnsResolver = XMPPDNSSrvResolver();
+                    }
+                    DispatchQueue.global().async {
+                        self.dnsResolver!.resolve(domain: server) { dnsResult in
+                            if let record = dnsResult?.record() ?? self.lastConnectionDetails {
+                                self.connect(dnsName: server, srvRecord: record);
+                            } else {
+                                self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
+                            }
                         }
                     }
                 }
@@ -412,7 +422,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      
      [see-other-host]: http://xmpp.org/rfcs/rfc6120.html#streams-error-conditions-see-other-host
      */
-    open func reconnect(newHost:String) {
+    open func reconnect() {
         dispatch_sync_local_queue() {
             self.log("closing socket before reconnecting using see-other-host!")
             self.state_ = .disconnecting;
@@ -420,8 +430,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             self.state_ = .disconnected;
         }
         queue.async {
-            self.log("reconnecting to new host:", newHost);
-            self.start(serverToConnect: newHost);
+            self.log("reconnecting to new host");
+            self.start();
         }
     }
     
@@ -674,16 +684,19 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         public let type = "connectorDisconnected";
         /// Instance of `SessionObject` allows to tell from which connection event was fired
         public let sessionObject:SessionObject!;
+        public let connectionDetails: XMPPSrvRecord?;
         /// If is `true` then XMPP client was properly closed, in other case it may be broken
         public let clean:Bool;
         
         init() {
             sessionObject = nil;
+            connectionDetails = nil;
             clean = false;
         }
         
-        public init(sessionObject: SessionObject, clean: Bool) {
+        public init(sessionObject: SessionObject, connectionDetails: XMPPSrvRecord?, clean: Bool) {
             self.sessionObject = sessionObject;
+            self.connectionDetails = connectionDetails;
             self.clean = clean;
         }
         

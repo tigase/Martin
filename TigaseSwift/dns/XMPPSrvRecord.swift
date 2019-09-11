@@ -48,7 +48,7 @@ open class XMPPSrvRecord: Codable, Equatable, CustomStringConvertible {
         return "[port: \(String(describing: port)), weight: \(weight), priority: \(String(describing: priority)), target: \(target), directTls: \(directTls), isValid: \(isValid)]";
     }
     
-    init(port:Int, weight:Int, priority:Int, target:String, directTls: Bool, invalid: Date? = nil) {
+    public init(port:Int, weight:Int, priority:Int, target:String, directTls: Bool, invalid: Date? = nil) {
         self.port = port;
         self.weight = weight;
         self.priority = priority;
@@ -57,7 +57,7 @@ open class XMPPSrvRecord: Codable, Equatable, CustomStringConvertible {
         self.invalid = invalid;
     }
     
-    func markAsInvalid(for period: TimeInterval) {
+    open func markAsInvalid(for period: TimeInterval) {
         self.invalid = Date().addingTimeInterval(period);
     }
 }
@@ -72,18 +72,18 @@ open class XMPPSrvResult: Codable {
         }) != nil;
     }
     
-    init(domain: String, records: [XMPPSrvRecord]) {
+    public init(domain: String, records: [XMPPSrvRecord]) {
         self.domain = domain;
         self.records = records;
     }
     
-    func record() -> XMPPSrvRecord? {
+    open func record() -> XMPPSrvRecord? {
         return records.first { (rec) -> Bool in
             return rec.isValid;
         }
     }
     
-    func update(fromQuery records: [XMPPSrvRecord]) -> Bool {
+    open func update(fromQuery records: [XMPPSrvRecord]) -> Bool {
         var tmp = self.records;
         var changed: Bool = false;
         let count = tmp.count;
