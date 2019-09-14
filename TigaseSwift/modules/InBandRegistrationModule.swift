@@ -170,6 +170,34 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         }
     }
     
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String, ErrorCondition>)->Void) {
+        changePassword(for: serviceJid, newPassword: newPassword, callback: { (response) in
+            let type = response?.type ?? .error;
+            switch type {
+            case .result:
+                completionHandler(.success(newPassword));
+            default:
+                completionHandler(.failure(response?.errorCondition ?? ErrorCondition.remote_server_timeout));
+            }
+        });
+    }
+    
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String, callback: @escaping (Stanza?)->Void) {
+        guard let username = self.context.sessionObject.userBareJid?.localPart else {
+            return;
+        }
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        iq.to = serviceJid ?? ResourceBinderModule.getBindedJid(context.sessionObject);
+        
+        let query = Element(name: "query", xmlns: "jabber:iq:register");
+        query.addChild(Element(name: "username", cdata: username));
+        query.addChild(Element(name: "password", cdata: newPassword));
+        iq.addChild(query);
+        
+        context.writer?.write(iq, callback: callback);
+    }
+    
     /**
      Check if server supports in-band registration
      - returns: true - if in-band registration is supported
