@@ -120,25 +120,21 @@ open class XMPPClient: Logger, EventHandler {
     
     open var state:SocketConnector.State {
         var value:SocketConnector.State = .disconnected;
-        queue.sync {
+        dispatcher.sync {
             value = sessionLogic?.state ?? socketConnector?.state ?? .disconnected;
         }
         return value;
     }
 
     /// Internal processing queue
-    fileprivate let queue: DispatchQueue;
-    fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
+    fileprivate let dispatcher: QueueDispatcher;
     
     public convenience override init() {
         self.init(eventBus: nil);
     }
     
     public init(eventBus: EventBus?) {
-        self.queue = DispatchQueue(label: "xmpp_queue", attributes: []);
-        self.queueTag = DispatchSpecificKey<DispatchQueue?>();
-        queue.setSpecific(key: queueTag, value: queue);
-        
+        dispatcher = QueueDispatcher(label: "xmpp_queue")
         if eventBus == nil {
             self.eventBus = EventBus();
         } else {
@@ -157,7 +153,6 @@ open class XMPPClient: Logger, EventHandler {
     
     deinit {
         eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
-        queue.setSpecific(key: queueTag, value: nil);
     }
     
     /**
@@ -169,10 +164,10 @@ open class XMPPClient: Logger, EventHandler {
             return;
         }
         log("starting connection......");
-        queue.sync {
+        dispatcher.sync {
             socketConnector = SocketConnector(context: context);
-            context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queue: queue);
-            sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queue: queue, queueTag: queueTag);
+            context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queueDispatcher: dispatcher);
+            sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queueDispatcher: dispatcher);
             sessionLogic!.bind();
             modulesManager.initIfRequired();
             
@@ -231,32 +226,12 @@ open class XMPPClient: Logger, EventHandler {
                 context.sessionObject.clear(scopes: SessionObject.Scope.stream);
             }
             sessionLogic?.unbind();
-            queue.sync {
+            dispatcher.sync {
                 sessionLogic = nil;
             }
             log("connection stopped......");
         default:
             log("received unhandled event:", event);
-        }
-    }
-    
-    fileprivate func dispatch_sync_local_queue(_ block: ()->()) {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
-            block();
-        } else {
-            queue.sync(execute: block);
-        }
-    }
-    
-    fileprivate func dispatch_sync_with_result_local_queue<T>(_ block: ()-> T) -> T {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
-            return block();
-        } else {
-            var result: T!;
-            queue.sync {
-                result = block();
-            }
-            return result;
         }
     }
     
@@ -267,12 +242,12 @@ open class XMPPClient: Logger, EventHandler {
         
         let connector: SocketConnector;
         let responseManager: ResponseManager;
-        let queue: DispatchQueue;
+        let dispatcher: QueueDispatcher;
         
-        init(connector: SocketConnector, responseManager: ResponseManager, queue: DispatchQueue) {
+        init(connector: SocketConnector, responseManager: ResponseManager, queueDispatcher: QueueDispatcher) {
             self.connector = connector;
             self.responseManager = responseManager;
-            self.queue = queue;
+            self.dispatcher = queueDispatcher;
         }
         
         override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: ((Stanza?) -> Void)?) {
@@ -291,13 +266,13 @@ open class XMPPClient: Logger, EventHandler {
         }
 
         override func write(_ stanza: Stanza) {
-            queue.async {
+            dispatcher.async {
                 self.connector.send(stanza: stanza);
             }
         }
         
         override func execAfterWrite(handler: @escaping () -> Void) {
-            queue.async {
+            dispatcher.async {
                 handler();
             }
         }

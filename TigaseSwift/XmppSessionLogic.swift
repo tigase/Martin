@@ -56,7 +56,7 @@ public protocol XmppSessionLogic: class {
  Implementation of XmppSessionLogic protocol which is resposible for
  following XMPP session logic for socket connections.
  */
-open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueueDispatcher {
+open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     
     var quickstart: Bool = true;
     
@@ -74,12 +74,10 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
         return s;
     }
     
-    public let queueTag: DispatchSpecificKey<DispatchQueue?>;
-    public let queue: DispatchQueue;
+    private let dispatcher: QueueDispatcher;
     
-    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queue: DispatchQueue, queueTag: DispatchSpecificKey<DispatchQueue?>) {
-        self.queue = queue;
-        self.queueTag = queueTag;
+    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queueDispatcher: QueueDispatcher) {
+        self.dispatcher = queueDispatcher;
         self.connector = connector;
         self.context = context;
         self.modulesManager = modulesManager;
@@ -123,7 +121,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
             streamManagementModule.request();
             streamManagementModule.sendAck();
         }
-        queue.async {
+        dispatcher.async {
             completionHandler();
         }
     }
@@ -153,7 +151,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     }
     
     open func receivedIncomingStanza(_ stanza:Stanza) {
-        queue.async {
+        dispatcher.async {
             do {
                 for filter in self.modulesManager.filters {
                     if filter.processIncoming(stanza: stanza) {
@@ -192,7 +190,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler, LocalQueu
     }
     
     open func sendingOutgoingStanza(_ stanza: Stanza) {
-        dispatch_sync_local_queue() {
+        dispatcher.sync {
             for filter in self.modulesManager.filters {
                 filter.processOutgoing(stanza: stanza);
             }

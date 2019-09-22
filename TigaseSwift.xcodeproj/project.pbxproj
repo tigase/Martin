@@ -83,7 +83,7 @@
 		FE7F930520121E69004C6195 /* DNSSrvResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930420121E69004C6195 /* DNSSrvResolver.swift */; };
 		FE7F930720121F4C004C6195 /* DNSSrvResolverWithCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */; };
 		FE87C773228485AB00B0B64C /* StreamLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE87C772228485AB00B0B64C /* StreamLogger.swift */; };
-		FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */; };
+		FE8AA16D1D490A5A00992088 /* QueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* QueueDispatcher.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
 		FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */; };
@@ -240,7 +240,7 @@
 		FE7F930420121E69004C6195 /* DNSSrvResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolver.swift; sourceTree = "<group>"; };
 		FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolverWithCache.swift; sourceTree = "<group>"; };
 		FE87C772228485AB00B0B64C /* StreamLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamLogger.swift; sourceTree = "<group>"; };
-		FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalQueueDispatcher.swift; sourceTree = "<group>"; };
+		FE8AA16C1D490A5A00992088 /* QueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QueueDispatcher.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
 		FE94E4FE1CC7B67900FAE755 /* RosterStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterStore.swift; sourceTree = "<group>"; };
@@ -576,7 +576,7 @@
 				FE9A1ED11CC5387700D0509D /* Timer.swift */,
 				FE94E5161CCB961000FAE755 /* UIDGenerator.swift */,
 				FE3A45D21CE7289600C36264 /* Zlib.swift */,
-				FE8AA16C1D490A5A00992088 /* LocalQueueDispatcher.swift */,
+				FE8AA16C1D490A5A00992088 /* QueueDispatcher.swift */,
 				FE3DCCE91FE14A85008B6C8B /* SslCertificateValidator.swift */,
 				FE3DCCEB1FE158D7008B6C8B /* SslCertificateInfo.swift */,
 				FE689CFA1FFA6171007AFB17 /* Reachability.swift */,
@@ -867,7 +867,7 @@
 				FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */,
 				FEDCBF831D9EC72900AE9129 /* TextPrivateField.swift in Sources */,
 				FEDCBF9F1D9FDDD100AE9129 /* RSM.swift in Sources */,
-				FE8AA16D1D490A5A00992088 /* LocalQueueDispatcher.swift in Sources */,
+				FE8AA16D1D490A5A00992088 /* QueueDispatcher.swift in Sources */,
 				FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */,
 				FE2EFDA21CB67366000D254E /* XmppModulesManager.swift in Sources */,
 				FEDCBF6E1D9D689300AE9129 /* PubSubModule.swift in Sources */,

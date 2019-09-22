@@ -1,5 +1,5 @@
 //
-// LocalQueueDispatcher.swift
+// QueueDispatcher.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -24,41 +24,22 @@ import Foundation
 /**
  Helper protocol for classes using internal dispatch queues
  */
-public protocol LocalQueueDispatcher {
-    
-    var queueTag: DispatchSpecificKey<DispatchQueue?> { get}
-    var queue: DispatchQueue { get }
-
-}
-
-extension LocalQueueDispatcher {
-
-    public func dispatch_sync_local_queue(_ block: ()->()) {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
-            block();
-        } else {
-            queue.sync(execute: block);
-        }
-    }
-
-    public func dispatch_sync_with_result_local_queue<T>(_ block: ()-> T) -> T {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
-            return block();
-        } else {
-            var result: T!;
-            queue.sync {
-                result = block();
-            }
-            return result;
-        }
-    }
-
-}
-
 public class QueueDispatcher {
     
-    fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
-    fileprivate var queue: DispatchQueue;
+    struct QueueIdentity {
+        let label: String;
+    }
+    
+    private let queueKey: DispatchSpecificKey<QueueIdentity>;
+    private let queue: DispatchQueue;
+    
+    private var currentQueueIdentity: QueueIdentity? {
+        return self.queue.getSpecific(key: self.queueKey);
+    }
+    
+    private var execOnCurrentQueue: Bool {
+        return self.currentQueueIdentity?.label == queue.label;
+    }
     
     public convenience init(label: String, attributes: DispatchQueue.Attributes? = nil) {
         let queue = attributes == nil ? DispatchQueue(label: label) : DispatchQueue(label: label, attributes: attributes!);
@@ -67,16 +48,12 @@ public class QueueDispatcher {
     
     public init(queue: DispatchQueue, queueTag: DispatchSpecificKey<DispatchQueue?>) {
         self.queue = queue;
-        self.queueTag = queueTag;
-        self.queue.setSpecific(key: queueTag, value: self.queue)
+        self.queueKey = DispatchSpecificKey<QueueIdentity>();
+        self.queue.setSpecific(key: queueKey, value: QueueIdentity(label: queue.label));
     }
-    
-    deinit {
-        queue.setSpecific(key: queueTag, value: nil);
-    }
-    
+        
     open func sync<T>(flags: DispatchWorkItemFlags, execute: () throws -> T) rethrows -> T {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+        if (execOnCurrentQueue) {
             return try execute();
         } else {
             return try queue.sync(flags: flags, execute: execute)
@@ -84,7 +61,7 @@ public class QueueDispatcher {
     }
 
     open func sync(flags: DispatchWorkItemFlags, execute: () throws -> Void) rethrows {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+        if (execOnCurrentQueue) {
             try execute();
         } else {
             try queue.sync(flags: flags, execute: execute);
@@ -92,7 +69,7 @@ public class QueueDispatcher {
     }
 
     open func sync<T>(execute: () throws -> T) rethrows -> T {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+        if (execOnCurrentQueue) {
             return try execute();
         } else {
             return try queue.sync(execute: execute);
@@ -100,7 +77,7 @@ public class QueueDispatcher {
     }
 
     open func sync(execute: () throws -> Void) rethrows {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
+        if (execOnCurrentQueue) {
             try execute();
         } else {
             try queue.sync(execute: execute);
