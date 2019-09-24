@@ -36,7 +36,7 @@ public class QueueDispatcher {
     private let queue: DispatchQueue;
     
     private var currentQueueIdentity: QueueIdentity? {
-        return self.queue.getSpecific(key: self.queueKey);
+        return DispatchQueue.getSpecific(key: self.queueKey);
     }
     
     private var execOnCurrentQueue: Bool {
