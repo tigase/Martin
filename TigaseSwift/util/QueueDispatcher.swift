@@ -30,6 +30,8 @@ public class QueueDispatcher {
         let label: String;
     }
     
+    private static var usedQueueNames: [String] = [];
+    
     private let queueKey: DispatchSpecificKey<QueueIdentity>;
     private let queue: DispatchQueue;
     
@@ -41,17 +43,13 @@ public class QueueDispatcher {
         return self.currentQueueIdentity?.label == queue.label;
     }
     
-    public convenience init(label: String, attributes: DispatchQueue.Attributes? = nil) {
-        let queue = attributes == nil ? DispatchQueue(label: label) : DispatchQueue(label: label, attributes: attributes!);
-        self.init(queue: queue, queueTag: DispatchSpecificKey<DispatchQueue?>());
-    }
-    
-    public init(queue: DispatchQueue, queueTag: DispatchSpecificKey<DispatchQueue?>) {
-        self.queue = queue;
+    public init(label prefix: String, attributes: DispatchQueue.Attributes? = nil) {
+        let label = "\(prefix) \(UUID().uuidString)";
+        self.queue = attributes == nil ? DispatchQueue(label: label) : DispatchQueue(label: label, attributes: attributes!);
         self.queueKey = DispatchSpecificKey<QueueIdentity>();
         self.queue.setSpecific(key: queueKey, value: QueueIdentity(label: queue.label));
     }
-        
+    
     open func sync<T>(flags: DispatchWorkItemFlags, execute: () throws -> T) rethrows -> T {
         if (execOnCurrentQueue) {
             return try execute();

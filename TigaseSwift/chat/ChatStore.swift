@@ -93,7 +93,7 @@ open class DefaultChatStore: ChatStore {
     }
 
     public init(dispatcher: QueueDispatcher? = nil) {
-        self.dispatcher = dispatcher ?? QueueDispatcher(queue: DispatchQueue(label: "chat_store_queue", attributes: DispatchQueue.Attributes.concurrent), queueTag: DispatchSpecificKey<DispatchQueue?>());
+        self.dispatcher = dispatcher ?? QueueDispatcher(label: "chat_store_queue", attributes: DispatchQueue.Attributes.concurrent);
     }
     
     open func getChat<T>(with jid:BareJID, filter: @escaping (T)->Bool) -> T? {

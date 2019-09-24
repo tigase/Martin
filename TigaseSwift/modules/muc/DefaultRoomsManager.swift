@@ -39,7 +39,7 @@ open class DefaultRoomsManager: ContextAware {
     public let dispatcher: QueueDispatcher;
     
     public init(dispatcher: QueueDispatcher? = nil) {
-        self.dispatcher = dispatcher ?? QueueDispatcher(queue: DispatchQueue(label: "room_manager_queue", attributes: DispatchQueue.Attributes.concurrent), queueTag: DispatchSpecificKey<DispatchQueue?>());
+        self.dispatcher = dispatcher ?? QueueDispatcher(label: "room_manager_queue", attributes: DispatchQueue.Attributes.concurrent);
     }
     
     /**
