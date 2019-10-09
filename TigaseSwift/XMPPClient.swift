@@ -189,16 +189,16 @@ open class XMPPClient: Logger, EventHandler {
      
      [XEP-0198: Stream Management - Resumption]: http://xmpp.org/extensions/xep-0198.html#resumption
      */
-    open func disconnect(_ force: Bool = false) -> Void {
+    open func disconnect(_ force: Bool = false, completionHandler: (()->Void)? = nil) -> Void {
         guard state == SocketConnector.State.connected || state == SocketConnector.State.connecting else {
             log("XMPP in state:", state, " - not stopping connection");
             return;
         }
         
         if force {
-            socketConnector?.forceStop();
+            socketConnector?.forceStop(completionHandler: completionHandler);
         } else {
-            socketConnector?.stop();
+            socketConnector?.stop(completionHandler: completionHandler);
         }
     }
     
