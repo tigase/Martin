@@ -392,6 +392,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
                 room.onRoomCreated = nil;
             }
             context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname));
+            context.eventBus.fire(OccupantComesEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         } else if (presenceOld == nil || presenceOld?.type == StanzaType.unavailable) && type == nil {
             if let tmp = room.removeTemp(nickname: nickname!) {
                 let oldNickname = tmp.nickname;
