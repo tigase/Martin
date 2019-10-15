@@ -328,6 +328,18 @@ open class Message: Stanza {
         }
     }
     
+    open var hints: [ProcessingHint] {
+        get {
+            return ProcessingHint.from(message: self);
+        }
+        set {
+            element.removeChildren(where: { (el) -> Bool in
+                return el.xmlns == "urn:xmpp:hints";
+            });
+            element.addChildren(newValue.map({ $0.element() }));
+        }
+    }
+    
     open override var description: String {
         return String("Message : \(element)")
     }
@@ -340,6 +352,51 @@ open class Message: Stanza {
         super.init(elem: elem, defStanzaType: StanzaType.normal);
     }
 
+    public enum ProcessingHint {
+        case noPermanentStore
+        case noCopy
+        case noStore
+        case store
+        
+        var elemName: String {
+            switch self {
+            case .noPermanentStore:
+                return "no-permanent-store";
+            case .noStore:
+                return "no-store";
+            case .noCopy:
+                return "no-copy";
+            case .store:
+                return "store";
+            }
+        }
+        
+        public func element() -> Element {
+            return Element(name: elemName, xmlns: "urn:xmpp:hints");
+        }
+        
+        public static func from(element el: Element) -> ProcessingHint? {
+            guard el.xmlns == "urn:xmpp:hints" else {
+                return nil;
+            }
+            switch el.name {
+            case "no-permanent-store":
+                return .noPermanentStore;
+            case "no-store":
+                return .noStore;
+            case "no-copy":
+                return .noCopy;
+            case "store":
+                return .store;
+            default:
+                return nil;
+            }
+        }
+                
+        public static func from(message: Message) -> [ProcessingHint] {
+            return message.element.mapChildren(transform: ProcessingHint.from(element:));
+        }
+    }
 }
 
 /// Extenstion of `Stanza` class with specific features existing only in `presence' elements.

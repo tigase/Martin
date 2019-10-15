@@ -60,6 +60,7 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
             let response = Message();
             response.to = message.from;
             response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
+            response.hints = [.store];
             context.writer?.write(response);
             break;
         case .received(let id):
