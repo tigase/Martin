@@ -430,6 +430,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             self.state_ = .disconnecting;
             self.closeSocket(newState: nil);
             self.state_ = .disconnected;
+            self.sessionObject.clear();
         }
         queue.async {
             self.log("reconnecting to new host");
