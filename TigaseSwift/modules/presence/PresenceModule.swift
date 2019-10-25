@@ -58,7 +58,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
             return context.sessionObject.getProperty(PresenceModule.INITIAL_PRESENCE_ENABLED_KEY, defValue: true);
         }
         set {
-            context.sessionObject.setProperty(PresenceModule.INITIAL_PRESENCE_ENABLED_KEY, value: newValue);
+            context.sessionObject.setUserProperty(PresenceModule.INITIAL_PRESENCE_ENABLED_KEY, value: newValue);
         }
     }
     
