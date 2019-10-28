@@ -237,6 +237,19 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         });
     }
     
+    open func setRoomSubject(roomJid: BareJID, newSubject: String?) {
+        let message = Message();
+        message.id = UUID().uuidString;
+        message.to = JID(roomJid);
+        message.type = .groupchat;
+        message.subject = newSubject;
+        if newSubject == nil {
+            message.element.addChild(Element(name: "subject"));
+        }
+        context.writer?.write(message)
+    }
+    
+    
     /**
      Invite user to MUC room
      - parameter room: room for invitation

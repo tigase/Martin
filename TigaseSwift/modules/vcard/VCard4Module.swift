@@ -54,8 +54,11 @@ open class VCard4Module: XmppModule, ContextAware, VCardModuleProtocol {
      - parameter vcard: vcard to publish
      - parameter callback: called on result or failure
      */
-    open func publishVCard(_ vcard: VCard, callback: ((Stanza?) -> Void)? = nil) {
+    open func publishVCard(_ vcard: VCard, to jid: BareJID?, callback: ((Stanza?) -> Void)? = nil) {
         let iq = Iq();
+        if jid != nil {
+            iq.to = JID(jid!);
+        }
         iq.type = StanzaType.set;
         iq.addChild(vcard.toVCard4());
         
@@ -68,8 +71,8 @@ open class VCard4Module: XmppModule, ContextAware, VCardModuleProtocol {
      - parameter onSuccess: called after successful publication
      - parameter onError: called on failure or timeout
      */
-    open func publishVCard(_ vcard: VCard, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?) {
-        publishVCard(vcard) { (stanza) in
+    open func publishVCard(_ vcard: VCard, to jid: BareJID?, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?) {
+        publishVCard(vcard, to: jid) { (stanza) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:

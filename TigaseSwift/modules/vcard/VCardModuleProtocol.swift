@@ -23,11 +23,23 @@ import Foundation
 
 public protocol VCardModuleProtocol {
     
-    func publishVCard(_ vcard: VCard, callback: ((Stanza?) -> Void)?);
+    func publishVCard(_ vcard: VCard, to: BareJID?, callback: ((Stanza?) -> Void)?);
     
-    func publishVCard(_ vcard: VCard, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?);
-    
+    func publishVCard(_ vcard: VCard, to: BareJID?, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?);
+
     func retrieveVCard(from jid: JID?, callback: @escaping (Stanza?) -> Void);
     
     func retrieveVCard(from jid: JID?, onSuccess: @escaping (_ vcard: VCard)->Void, onError: @escaping (_ errorCondition: ErrorCondition?)->Void);
+}
+
+public extension VCardModuleProtocol {
+
+    func publishVCard(_ vcard: VCard, callback: ((Stanza?) -> Void)?) {
+        publishVCard(vcard, to: nil, callback: callback);
+    }
+    
+    func publishVCard(_ vcard: VCard, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?) {
+        publishVCard(vcard, to: nil, onSuccess: onSuccess, onError: onError);
+    }
+
 }
