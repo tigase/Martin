@@ -52,17 +52,21 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         return false;
     }
     
-    open var pushServiceJid: JID?;
+    open func isSupported(extension type: PushNotificationsModuleExtension.Type) -> Bool {
+        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+            return features.contains(type.XMLNS);
+        }
+        return false;
+    }
+    
+//    open var pushServiceJid: JID?;
     
     public init() {
         
     }
     
     open func process(stanza: Stanza) throws {
-        guard pushServiceJid != nil && stanza.from != nil && pushServiceJid! == stanza.from! else {
-            return;
-        }
-        guard let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS) else {
+        guard let from = stanza.from, let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS) else {
             return;
         }
         guard let affiliationEl = pubsubEl.findChild(name: "affiliation"), let node = pubsubEl.getAttribute("node") else {
@@ -75,17 +79,17 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             return;
         }
         
-        context.eventBus.fire(NotificationsDisabledEvent(sessionObject: context.sessionObject, service: pushServiceJid!, node: node));
+        context.eventBus.fire(NotificationsDisabledEvent(sessionObject: context.sessionObject, service: from, node: node));
     }
     
-    open func enable(serviceJid: JID, node: String, enableForAway: Bool = false, publishOptions: JabberDataElement? = nil, onSuccess: @escaping (Stanza)->Void, onError: @escaping (ErrorCondition?)->Void) {
+    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil, completionHandler: @escaping (Result<Stanza,ErrorCondition>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
         enable.setAttribute("jid", value: serviceJid.stringValue);
         enable.setAttribute("node", value: node);
-        if enableForAway {
-            enable.setAttribute("away", value: "true");
+        for ext in extensions {
+            ext.apply(to: enable);
         }
         if publishOptions != nil {
             enable.addChild(publishOptions!.submitableElement(type: .submit));
@@ -96,7 +100,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             if let type = stanza?.type {
                 switch type {
                 case .result:
-                    onSuccess(stanza!);
+                    completionHandler(.success(stanza!));
                     return;
                 default:
                     if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
@@ -104,11 +108,11 @@ open class PushNotificationsModule: XmppModule, ContextAware {
                     }
                 }
             }
-            onError(errorCondition);
+            completionHandler(.failure(errorCondition ?? .undefined_condition));
         }
     }
     
-    open func disable(serviceJid: JID, node: String, onSuccess: @escaping (Stanza)->Void, onError: @escaping (ErrorCondition?)->Void) {
+    open func disable(serviceJid: JID, node: String, completionHandler: ((Result<Stanza,ErrorCondition>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let disable = Element(name: "disable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
@@ -121,7 +125,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             if let type = stanza?.type {
                 switch type {
                 case .result:
-                    onSuccess(stanza!);
+                    completionHandler?(.success(stanza!));
                     return;
                 default:
                     if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
@@ -129,42 +133,8 @@ open class PushNotificationsModule: XmppModule, ContextAware {
                     }
                 }
             }
-            onError(errorCondition);
+            completionHandler?(.failure(errorCondition ?? .undefined_condition));
         }
-    }
-    
-    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, onSuccess: @escaping (String)->Void, onError: @escaping (ErrorCondition?)->Void) {
-        guard let adhocModule: AdHocCommandsModule = context.modulesManager.getModule(AdHocCommandsModule.ID) else {
-            onError(ErrorCondition.undefined_condition);
-            return;
-        }
-        
-        let data = JabberDataElement(type: .submit);
-        data.addField(TextSingleField(name: "provider", value: provider));
-        data.addField(TextSingleField(name: "device-token", value: deviceId));
-        
-        adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data, onSuccess: { (stanza, resultData) in
-            guard let node = (resultData?.getField(named: "node") as? TextSingleField)?.value else {
-                onError(ErrorCondition.undefined_condition);
-                return;
-            }
-            onSuccess(node);
-        }, onError: onError);
-    }
-    
-    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?)->Void) {
-        guard let adhocModule: AdHocCommandsModule = context.modulesManager.getModule(AdHocCommandsModule.ID) else {
-            onError(ErrorCondition.undefined_condition);
-            return;
-        }
-        
-        let data = JabberDataElement(type: .submit);
-        data.addField(TextSingleField(name: "provider", value: provider));
-        data.addField(TextSingleField(name: "device-token", value: deviceId));
-        
-        adhocModule.execute(on: serviceJid, command: "unregister-device", action: .execute, data: data, onSuccess: { (stanza, resultData) in
-            onSuccess();
-        }, onError: onError);
     }
     
     open class NotificationsDisabledEvent : Event {
@@ -192,4 +162,22 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             self.serviceNode = node;
         }
     }
+    
+}
+
+public protocol PushNotificationsModuleExtension {
+    
+    static var XMLNS: String { get }
+ 
+    func apply(to enableEl: Element);
+
+    func hash(into hasher: inout Hasher);
+}
+
+extension PushNotificationsModuleExtension {
+
+    static func isSupported(features: [String]) -> Bool {
+        return features.contains(XMLNS);
+    }
+    
 }

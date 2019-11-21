@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		FE00157B2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */; };
-		FE01ADA51E2243DD00FA7E65 /* PushNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */; };
 		FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */; };
 		FE0D3DD9219498C7009B189B /* ChatStateNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0D3DD8219498C7009B189B /* ChatStateNotificationsModule.swift */; };
 		FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2EFD401CAED46B000D254E /* SessionObject.swift */; };
@@ -76,6 +75,8 @@
 		FE689CFB1FFA6171007AFB17 /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE689CFA1FFA6171007AFB17 /* Reachability.swift */; };
 		FE7361D01D2A4F8B00EFEA64 /* AnonymousMechanism.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */; };
 		FE752D611DA50D45006884B9 /* PEPUserAvatarModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */; };
+		FE75A00B2375DBFF001E78D9 /* PushNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE75A00A2375DBFF001E78D9 /* PushNotificationsModule.swift */; };
+		FE75A00D2375DC0F001E78D9 /* TigasePushNotificationsModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE75A00C2375DC0F001E78D9 /* TigasePushNotificationsModule.swift */; };
 		FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */; };
 		FE7F64591D28176700B9DF56 /* DefaultCapabilitiesCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */; };
 		FE7F92462192214D00F2FF3C /* EntityTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F92452192214D00F2FF3C /* EntityTime.swift */; };
@@ -161,7 +162,6 @@
 
 /* Begin PBXFileReference section */
 		FE00157A2013823E00490340 /* StreamFeaturesModuleWithPipelining.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamFeaturesModuleWithPipelining.swift; sourceTree = "<group>"; };
-		FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PushNotificationsModule.swift; sourceTree = "<group>"; };
 		FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdHocCommandsModule.swift; sourceTree = "<group>"; };
 		FE0D3DD8219498C7009B189B /* ChatStateNotificationsModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStateNotificationsModule.swift; sourceTree = "<group>"; };
 		FE2EFD401CAED46B000D254E /* SessionObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionObject.swift; sourceTree = "<group>"; };
@@ -233,6 +233,8 @@
 		FE689CFA1FFA6171007AFB17 /* Reachability.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reachability.swift; sourceTree = "<group>"; };
 		FE7361CF1D2A4F8B00EFEA64 /* AnonymousMechanism.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnonymousMechanism.swift; sourceTree = "<group>"; };
 		FE752D601DA50D45006884B9 /* PEPUserAvatarModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PEPUserAvatarModule.swift; sourceTree = "<group>"; };
+		FE75A00A2375DBFF001E78D9 /* PushNotificationsModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PushNotificationsModule.swift; sourceTree = "<group>"; };
+		FE75A00C2375DC0F001E78D9 /* TigasePushNotificationsModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TigasePushNotificationsModule.swift; sourceTree = "<group>"; };
 		FE7F64561D28173600B9DF56 /* CapabilitiesModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CapabilitiesModule.swift; sourceTree = "<group>"; };
 		FE7F64581D28176700B9DF56 /* DefaultCapabilitiesCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultCapabilitiesCache.swift; sourceTree = "<group>"; };
 		FE7F92452192214D00F2FF3C /* EntityTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityTime.swift; sourceTree = "<group>"; };
@@ -353,6 +355,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FE75A0092375DBFF001E78D9 /* push */,
 				FEA7BF5321E3A6AF00D9E36C /* jingle */,
 				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
 				FE01ADA61E22463F00FA7E65 /* AdHocCommandsModule.swift */,
@@ -365,7 +368,6 @@
 				FEA370BF1F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift */,
 				FEA554871CE3A55B00676608 /* MobileModeModule.swift */,
 				FE596F781CF1C35B0079E22B /* PingModule.swift */,
-				FE01ADA41E2243DD00FA7E65 /* PushNotificationsModule.swift */,
 				FE2EFDB61CBD1DE7000D254E /* ResourceBinderModule.swift */,
 				FE2EFDBE1CBEB0BA000D254E /* SessionEstablishmentModule.swift */,
 				FEE0EF0D1CC6A05A0077B8CE /* SoftwareVersionModule.swift */,
@@ -525,6 +527,15 @@
 				FE4D21352221C54F0058B662 /* PEPBookmarksModule.swift */,
 			);
 			path = pep;
+			sourceTree = "<group>";
+		};
+		FE75A0092375DBFF001E78D9 /* push */ = {
+			isa = PBXGroup;
+			children = (
+				FE75A00A2375DBFF001E78D9 /* PushNotificationsModule.swift */,
+				FE75A00C2375DC0F001E78D9 /* TigasePushNotificationsModule.swift */,
+			);
+			path = push;
 			sourceTree = "<group>";
 		};
 		FE7F64551D28173600B9DF56 /* caps */ = {
@@ -818,7 +829,6 @@
 				FE2EFDB11CB91549000D254E /* PacketWriter.swift in Sources */,
 				FEDCBF891D9EC7FB00AE9129 /* FixedField.swift in Sources */,
 				FE7F930520121E69004C6195 /* DNSSrvResolver.swift in Sources */,
-				FE01ADA51E2243DD00FA7E65 /* PushNotificationsModule.swift in Sources */,
 				FE597A161D1FEF4E0090F1A8 /* ClientStateIndicationModule.swift in Sources */,
 				FE2EFD781CB57C70000D254E /* XMPPDNSSrvResolver.swift in Sources */,
 				FE2EFDA61CB6941D000D254E /* StringValue.swift in Sources */,
@@ -882,6 +892,7 @@
 				FE3DCCEA1FE14A85008B6C8B /* SslCertificateValidator.swift in Sources */,
 				FEA370C01F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift in Sources */,
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
+				FE75A00B2375DBFF001E78D9 /* PushNotificationsModule.swift in Sources */,
 				FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */,
 				FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */,
 				FEA7BF5F21E50D3900D9E36C /* SDP.swift in Sources */,
@@ -906,6 +917,7 @@
 				FE2EFD691CB4339D000D254E /* XMPPClient.swift in Sources */,
 				FE752D611DA50D45006884B9 /* PEPUserAvatarModule.swift in Sources */,
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,
+				FE75A00D2375DC0F001E78D9 /* TigasePushNotificationsModule.swift in Sources */,
 				FE56288F1F35CD4D00452C73 /* HttpFileUploadModule.swift in Sources */,
 				FE2EFD761CB57C70000D254E /* DNSSrv.c in Sources */,
 				FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */,

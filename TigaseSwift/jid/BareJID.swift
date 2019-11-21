@@ -24,7 +24,7 @@ import Foundation
 /**
  XMPP entity address for `localpart@domainpart`
  */
-open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
+open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, StringValue {
     
     /// Local part
     public let localPart:String?;
@@ -32,6 +32,10 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     public let domain:String;
     /// String representation
     public let stringValue:String;
+    
+    required public convenience init(from decoder: Decoder) throws {
+        self.init(try decoder.singleValueContainer().decode(String.self));
+    }
     
     /**
      Create instance
@@ -96,6 +100,11 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, StringValue {
     
     open var description : String {
         return stringValue;
+    }
+    
+    open func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer();
+        try container.encode(self.stringValue);
     }
     
     open func hash(into hasher: inout Hasher) {
