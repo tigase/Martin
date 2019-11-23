@@ -113,6 +113,7 @@
 		FEA7BF5F21E50D3900D9E36C /* SDP.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA7BF5E21E50D3900D9E36C /* SDP.swift */; };
 		FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */; };
 		FEB1BAB01F1F567800F10238 /* MessageArchiveManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */; };
+		FEB4B7B62386B27500426527 /* BlockingCommandModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB4B7B52386B27500426527 /* BlockingCommandModule.swift */; };
 		FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */; };
 		FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514111CE9C3FB003AF765 /* MucModule.swift */; };
 		FEC514141CE9C4CA003AF765 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514131CE9C4CA003AF765 /* Room.swift */; };
@@ -271,6 +272,7 @@
 		FEA7BF5E21E50D3900D9E36C /* SDP.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SDP.swift; sourceTree = "<group>"; };
 		FEA8D65E1F30C2F40077C12F /* VCardModuleProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VCardModuleProtocol.swift; sourceTree = "<group>"; };
 		FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageArchiveManagementModule.swift; sourceTree = "<group>"; };
+		FEB4B7B52386B27500426527 /* BlockingCommandModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingCommandModule.swift; sourceTree = "<group>"; };
 		FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractPEPModule.swift; sourceTree = "<group>"; };
 		FEC514111CE9C3FB003AF765 /* MucModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucModule.swift; sourceTree = "<group>"; };
 		FEC514131CE9C4CA003AF765 /* Room.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
@@ -387,6 +389,7 @@
 				FE7F92452192214D00F2FF3C /* EntityTime.swift */,
 				FE0D3DD8219498C7009B189B /* ChatStateNotificationsModule.swift */,
 				FE4D21332221A6D20058B662 /* Bookmarks.swift */,
+				FEB4B7B52386B27500426527 /* BlockingCommandModule.swift */,
 			);
 			path = modules;
 			sourceTree = "<group>";
@@ -822,6 +825,7 @@
 				FE2EFDAB1CB80E51000D254E /* Event.swift in Sources */,
 				FE94E5111CCA39C800FAE755 /* ChatManager.swift in Sources */,
 				FE9A1ED41CC53C5C00D0509D /* Log.swift in Sources */,
+				FEB4B7B62386B27500426527 /* BlockingCommandModule.swift in Sources */,
 				FE2EFD901CB59D3A000D254E /* PlainMechanism.swift in Sources */,
 				FE2EFD891CB58088000D254E /* SaslModule.swift in Sources */,
 				FE2EFDAF1CB825D0000D254E /* XmppSessionLogic.swift in Sources */,
