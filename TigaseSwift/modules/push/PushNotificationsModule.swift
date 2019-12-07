@@ -59,6 +59,12 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         return false;
     }
     
+    open func isSupported(feature: String) -> Bool {
+        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+            return features.contains(feature);
+        }
+        return false;
+    }
 //    open var pushServiceJid: JID?;
     
     public init() {

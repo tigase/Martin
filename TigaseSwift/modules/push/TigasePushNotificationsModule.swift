@@ -152,17 +152,22 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     
     public struct Encryption: PushNotificationsModuleExtension, Hashable {
         
+        public static let AES_128_GCM = "tigase:push:encrypt:aes-128-gcm";
+        
         public static let XMLNS = "tigase:push:encrypt:0";
         
+        public let algorithm: String;
         public let key: Data;
         
-        public init(key: Data) {
+        public init(algorithm: String, key: Data) {
             self.key = key;
+            self.algorithm = algorithm;
         }
         
         public func apply(to enableEl: Element) {
-            enableEl.addChild(Element(name: "encrypt", cdata: key.base64EncodedString(), attributes: ["xmlns": Encryption.XMLNS, "alg": "aes-gcm"]))
+            enableEl.addChild(Element(name: "encrypt", cdata: key.base64EncodedString(), attributes: ["xmlns": Encryption.XMLNS, "alg": algorithm]))
         }
+        
     }
     
     public struct Priority: PushNotificationsModuleExtension, Hashable {
@@ -179,7 +184,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     
     public struct GroupchatFilter: PushNotificationsModuleExtension, Hashable {
 
-        public static let XMLNS = "tigase:push:muc:0";
+        public static let XMLNS = "tigase:push:filter:groupchat:0";
         
         public let rules: [Rule];
         
@@ -193,11 +198,11 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             for rule in rules {
                 switch rule {
                 case .always(let room):
-                    muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "when": "always"]));
+                    muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "allow": "always"]));
                 case .never(let room):
                     break;
                 case .mentioned(let room, let nickname):
-                    muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "when": "mentioned", "nick": nickname]));
+                    muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "allow": "mentioned", "nick": nickname]));
                 }
             }
             
@@ -213,7 +218,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     
     public struct IgnoreUnknown: PushNotificationsModuleExtension, Hashable {
         
-        public static let XMLNS = "tigase:push:ignore-unknown:0";
+        public static let XMLNS = "tigase:push:filter:ignore-unknown:0";
         
         public init() {}
         
@@ -225,7 +230,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     
     public struct Muted: PushNotificationsModuleExtension, Hashable {
         
-        public static let XMLNS = "tigase:push:muted:0";
+        public static let XMLNS = "tigase:push:filter:muted:0";
                
         let jids: [BareJID];
         
@@ -238,7 +243,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                 return;
             }
             let muted = Element(name: "muted", xmlns: Muted.XMLNS, children: jids.map({ (jid) -> Element in
-                return Element(name: "jid", cdata: jid.stringValue);
+                return Element(name: "item", attributes: ["jid": jid.stringValue]);
             }));
             enableEl.addChild(muted);
         }
