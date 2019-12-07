@@ -64,36 +64,30 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     }
     
     open func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
-        let chat = getOrCreateChatForProcessing(message: message, interlocutorJid: interlocutorJid);
-        
-        if chat == nil {
+        guard let jid = interlocutorJid, let chat = getOrCreateChatForProcessing(message: message, interlocutorJid: jid) else {
             fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: nil, message: message));
             return nil;
         }
         
-        if chat!.jid != interlocutorJid {
-            chat!.jid = interlocutorJid!;
+        if chat.jid != jid {
+            chat.jid = jid;
         }
-        if chat!.thread != message.thread {
-            chat!.thread = message.thread;
+        if chat.thread != message.thread {
+            chat.thread = message.thread;
         }
         
-        if chat != nil &&  fireEvents {
+        if fireEvents {
             fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: chat, message: message));
         }
         
         return chat;
     }
     
-    fileprivate func getOrCreateChatForProcessing(message: Message, interlocutorJid: JID?) -> Chat? {
-        guard interlocutorJid != nil else {
-            return nil;
-        }
-        
+    fileprivate func getOrCreateChatForProcessing(message: Message, interlocutorJid: JID) -> Chat? {
         if message.body != nil && (message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || !context.modulesManager.hasModule(MucModule.ID)) {
-            return chatManager.getChatOrCreate(with: interlocutorJid!, thread: message.thread);
+            return chatManager.getChatOrCreate(with: interlocutorJid, thread: message.thread);
         } else {
-            return chatManager.getChat(with: interlocutorJid!, thread: message.thread);
+            return chatManager.getChat(with: interlocutorJid, thread: message.thread);
         }
     }
     

@@ -72,27 +72,25 @@ open class DefaultChatManager: ChatManager {
     }
     
     open func getChat(with jid: JID, thread: String?) -> Chat? {
-        var chat:Chat? = nil;
-        
         if thread != nil {
-            chat = chatStore.getChat(with: jid.bareJid, filter:{ (c) -> Bool in
+            if let chat: Chat = chatStore.getChat(with: jid.bareJid, filter:{ (c) -> Bool in
                 return c.thread == thread;
-            });
+            }) {
+                return chat;
+            }
         }
         
-        if chat == nil && jid.resource != nil {
-            chat = chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
+        if jid.resource != nil {
+            if let chat: Chat = chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
                 return c.jid == jid;
-            });
+            }) {
+                return chat;
+            }
         }
         
-        if chat == nil {
-            chat = chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
-                return c.jid.bareJid == jid.bareJid;
-            });
-        }
-        
-        return chat;
+        return chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
+            return c.jid.bareJid == jid.bareJid;
+        });
     }
     
     open func getChats() -> [Chat] {
