@@ -112,6 +112,8 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
                 if let vcardEl = stanza?.findChild(name: "vCard", xmlns: VCardTempModule.VCARD_XMLNS) {
                     let vcard = VCard(vcardTemp: vcardEl)!;
                     onSuccess(vcard);
+                } else {
+                    onSuccess(VCard());
                 }
             default:
                 let errorCondition = stanza?.errorCondition;
