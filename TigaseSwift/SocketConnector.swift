@@ -53,6 +53,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     
     public static let CURRENT_CONNECTION_DETAILS = "currentConnectionDetails";
     
+    public static let CONNECTION_TIMEOUT = "connectionTimeout";
+    
     fileprivate static var QUEUE_TAG = "xmpp_socket_queue";
     
     /**
@@ -108,6 +110,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
     }
     
+    private var connectionTimer: Foundation.Timer?;
     fileprivate var state_:State = State.disconnected;
     open var state:State {
         get {
@@ -120,7 +123,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
         set {
             dispatch_sync_local_queue() {
+                print("connection state changed:", state);
                 if newValue == State.disconnecting && self.state_ == State.disconnected {
+                    DispatchQueue.main.async {
+                        self.connectionTimer?.invalidate();
+                        self.connectionTimer = nil;
+                    }
                     return;
                 }
                 let oldState = self.state_;
@@ -130,6 +138,12 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 }
                 if oldState == State.connecting && newValue == State.connected {
                     self.context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
+                }
+                if newValue == .connecting, let timeout: Double = sessionObject.getProperty(SocketConnector.CONNECTION_TIMEOUT) {
+                    print("scheduling timer for:", timeout);
+                    DispatchQueue.main.async {
+                        self.connectionTimer = Foundation.Timer.scheduledTimer(timeInterval: timeout, target: self, selector: #selector(self.connectionTimedOut), userInfo: nil, repeats: false)
+                    }
                 }
             }
         }
@@ -428,6 +442,10 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         dispatch_sync_local_queue() {
             self.log("closing socket before reconnecting using see-other-host!")
             self.state_ = .disconnecting;
+            DispatchQueue.main.async {
+                self.connectionTimer?.invalidate();
+                self.connectionTimer = nil;
+            }
             self.closeSocket(newState: nil);
             self.state_ = .disconnected;
             self.sessionObject.clear();
@@ -487,6 +505,20 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         } else {
             outStreamBuffer?.append(data: buf, completionHandler: completionHandler);
             outStreamBuffer?.writeData(to: self.outStream);
+        }
+    }
+    
+    @objc private func connectionTimedOut() {
+        queue.async {
+            print("connection timed out at:", self.state);
+            guard self.state == .connecting else {
+                return;
+            }
+            print("establishing connection to:", self.server ?? "unknown", "timed out!");
+            if let domain = self.server, let lastConnectionDetails = self.lastConnectionDetails {
+                self.dnsResolver?.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
+            }
+            self.onStreamTerminate();
         }
     }
     
