@@ -283,12 +283,8 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     
     /// Process ACK request from server
     func processAckRequest(_ stanza: Stanza) {
-        let oldValue = self.ackH.incomingCounter;
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let value = self.ackH.incomingCounter;
-            guard oldValue == value else {
-                return;
-            }
             self.lastSentH = value;
             
             let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
