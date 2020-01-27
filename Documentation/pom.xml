@@ -79,6 +79,7 @@
 							<!-- Since 1.5.0-alpha.9 PDF back-end can use 'rouge' as well as 'coderay'
 							source highlighting -->
 							<outputDirectory>${guide_path}/pdf</outputDirectory>
+							<outputFile>${guide_path}/pdf/${guide_name}_Guide.pdf</outputFile>
 							<sourceHighlighter>rouge</sourceHighlighter>
 							<attributes>
 								<icons>font</icons>
@@ -89,10 +90,6 @@
 								<idseparator>-</idseparator>
 								<imagesdir>.</imagesdir>
 							</attributes>
-							<postProcess>
-                                    				<move failonerror="false" file="${guide_path}/pdf/index.pdf"
-                                          				tofile="${guide_path}/pdf/${guide_name}_Guide.pdf"/>
-                                			</postProcess>
 						</configuration>
 					</execution>
 
