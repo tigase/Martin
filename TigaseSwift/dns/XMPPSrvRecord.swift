@@ -92,6 +92,13 @@ open class XMPPSrvResult: Codable {
         };
         changed = changed || (count != tmp.count);
         
+        if !tmp.contains(where: { rec in rec.invalid == nil }) {
+            tmp.forEach { (rec) in
+                rec.invalid = nil;
+            }
+            changed = true;
+        }
+        
         records.forEach { (rec) in
             guard let found = tmp.first(where: { (oldRec) -> Bool in
                 return oldRec == rec;

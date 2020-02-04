@@ -43,7 +43,7 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
             }
         }
 
-        if records == nil {
+        if records == nil || !records!.hasValid {
             self.resolver.resolve(domain: domain, completionHandler: { records in
                 self.save(for: domain, result: records);
                 completionHandler(records);
