@@ -125,18 +125,22 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             dispatch_sync_local_queue() {
                 print("connection state changed:", state);
                 if newValue == State.disconnecting && self.state_ == State.disconnected {
-                    DispatchQueue.main.async {
-                        self.connectionTimer?.invalidate();
-                        self.connectionTimer = nil;
-                    }
                     return;
                 }
                 let oldState = self.state_;
                 self.state_ = newValue
                 if oldState != State.disconnected && newValue == State.disconnected {
+                    DispatchQueue.main.async {
+                        self.connectionTimer?.invalidate();
+                        self.connectionTimer = nil;
+                    }
                     self.context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject, connectionDetails: self.lastConnectionDetails, clean: State.disconnecting == oldState));
                 }
                 if oldState == State.connecting && newValue == State.connected {
+                    DispatchQueue.main.async {
+                        self.connectionTimer?.invalidate();
+                        self.connectionTimer = nil;
+                    }
                     self.context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
                 }
                 if newValue == .connecting, let timeout: Double = sessionObject.getProperty(SocketConnector.CONNECTION_TIMEOUT) {
@@ -192,6 +196,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
             return;
         }
         queue.async {
+            let start = Date();
+            let timeout: Double? = self.sessionObject.getProperty(SocketConnector.CONNECTION_TIMEOUT);
             self.state = .connecting;
             if let srvRecord = self.sessionLogic?.serverToConnectDetails() {
                 self.connect(dnsName: srvRecord.target, srvRecord: srvRecord);
@@ -212,6 +218,13 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                     }
                     DispatchQueue.global().async {
                         self.dnsResolver!.resolve(domain: server) { dnsResult in
+                            if timeout != nil {
+                                // if timeout was set, do not try to connect after timeout was fired!
+                                // another event will take care of that
+                                guard Date().timeIntervalSince(start) < timeout! else {
+                                    return;
+                                }
+                            }
                             if let record = dnsResult?.record() ?? self.lastConnectionDetails {
                                 self.connect(dnsName: server, srvRecord: record);
                             } else {

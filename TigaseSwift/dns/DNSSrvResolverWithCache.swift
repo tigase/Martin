@@ -51,6 +51,7 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
         } else {
             DispatchQueue.global(qos: .utility).async {
                 self.resolver.resolve(domain: domain) { records in
+                    print("dns resolution finished:", records);
                     if records != nil {
                         self.save(for: domain, result: records);
                     }
