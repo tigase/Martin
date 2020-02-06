@@ -119,7 +119,7 @@ open class Bookmarks {
             
             let joinStr = el?.getAttribute("autojoin") ?? "false";
 
-            self.init(name: name, jid: jid, autojoin: joinStr == "true" || joinStr == "1", nick: el?.getAttribute("nick"), password: el?.getAttribute("password"));
+            self.init(name: name, jid: jid, autojoin: joinStr == "true" || joinStr == "1", nick: el?.findChild(name: "nick")?.value, password: el?.getAttribute("password"));
         }
         
         public init(name: String, jid: JID, autojoin: Bool, nick: String? = nil, password: String? = nil) {
@@ -136,7 +136,9 @@ open class Bookmarks {
             if autojoin {
                 el.setAttribute("autojoin", value: "true");
             }
-            el.setAttribute("nick", value: nick);
+            if let nick = self.nick {
+                el.addChild(Element(name: "nick", cdata: nick));
+            }
             el.setAttribute("password", value: password);
             return el;
         }

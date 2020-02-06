@@ -94,7 +94,7 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             getInfo(for: JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
                 self.context.sessionObject.setProperty(DiscoveryModule.SERVER_IDENTITY_TYPES_KEY, value: identities);
                 self.context.sessionObject.setProperty(DiscoveryModule.SERVER_FEATURES_KEY, value: features)
-                self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
+                self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features, identities: identities));
                 onInfoReceived?(node, identities, features);
                 }, onError: onError);
         }
@@ -375,15 +375,18 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         public let sessionObject: SessionObject!;
         /// Array of available server features
         public let features: [String]!;
+        public let identities: [Identity]!;
         
         init() {
             self.sessionObject = nil;
             self.features = nil;
+            self.identities = nil;
         }
         
-        public init(sessionObject: SessionObject, features: [String]) {
+        public init(sessionObject: SessionObject, features: [String], identities: [Identity]) {
             self.sessionObject = sessionObject;
             self.features = features;
+            self.identities = identities;
         }
     }
 

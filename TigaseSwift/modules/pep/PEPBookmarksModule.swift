@@ -36,10 +36,10 @@ open class PEPBookmarksModule: AbstractPEPModule {
     open var context: Context! {
         didSet {
             if oldValue != nil {
-                oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE);
             }
             if context != nil {
-                context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
+                context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE);
             }
         }
     }
@@ -82,6 +82,29 @@ open class PEPBookmarksModule: AbstractPEPModule {
     
     public func handle(event: Event) {
         switch event {
+        case let e as DiscoveryModule.ServerFeaturesReceivedEvent:
+            if e.identities.contains(where: { (identity) -> Bool in
+                if let name = identity.name, "ejabberd" == name {
+                    // ejabberd has buggy PEP support, we need to request Bookmarks on our own!!
+                    return true;
+                }
+                return false;
+            }) {
+                // requesting Bookmarks!!
+                guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+                    return;
+                }
+                let pepJID = context.sessionObject.userBareJid!;
+                pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, rsm: nil, lastItems: 1, itemIds: nil, onSuccess: { (stanza, node, items, rsm) in
+                    if let item = items.first {
+                        if let bookmarks = Bookmarks(from: item.payload) {
+                            self.currentBookmarks = bookmarks;
+                            self.context.eventBus.fire(BookmarksChangedEvent(sessionObject: e.sessionObject, bookmarks: bookmarks));
+                        }
+                    }
+                }, onError: nil);
+            }
+            
         case let e as PubSubModule.NotificationReceivedEvent:
             guard let from = e.message.from?.bareJid, from == e.sessionObject.userBareJid! else {
                 return;
