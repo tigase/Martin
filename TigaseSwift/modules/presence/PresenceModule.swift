@@ -173,10 +173,13 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
      Request subscription
      - parameter to: jid to request subscription
      */
-    open func subscribe(to jid:JID) {
+    open func subscribe(to jid:JID, preauth: String? = nil) {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribe;
+        if preauth != nil {
+            presence.addChild(Element(name: "preauth", attributes: ["xmlns": "urn:xmpp:pars:0", "token": preauth!]));
+        }
         
         context.writer?.write(presence);
     }

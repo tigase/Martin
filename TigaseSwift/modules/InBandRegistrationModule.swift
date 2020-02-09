@@ -369,7 +369,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
         var acceptedCertificate: SslCertificateInfo? = nil;
         
-        public init(client: XMPPClient? = nil, domainName: String, onForm: @escaping (JabberDataElement, InBandRegistrationModule.AccountRegistrationTask)->Void, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void, sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil) {
+        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (JabberDataElement, InBandRegistrationModule.AccountRegistrationTask)->Void, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void, sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil) {
             self.setClient(client: client ?? XMPPClient());
             self.onForm = onForm;
             self.onSuccess = onSuccess;
@@ -377,7 +377,9 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             
             _ = self.client?.modulesManager.register(StreamFeaturesModule());
             self.inBandRegistrationModule = self.client!.modulesManager.register(InBandRegistrationModule());
+            self.client?.sessionObject.setUserProperty("urn:xmpp:invite#preauth", value: preauth);
             
+            self.client?.sessionObject.setUserProperty(SessionObject.COMPRESSION_DISABLED, value: true);
             self.client?.connectionConfiguration.setDomain(self.client!.sessionObject.domainName ?? domainName);
             self.client?.sessionObject.setUserProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR, value: sslCertificateValidator);
             self.onCertificateValidationError = onCertificateValidationError;
@@ -439,47 +441,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 guard isStreamReady() else {
                     return;
                 }
-                let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
-                guard InBandRegistrationModule.isRegistrationAvailable(featuresElement) else {
-                    onErrorFn(errorCondition: ErrorCondition.feature_not_implemented, message: nil);
-                    return;
-                }
-                
-                inBandRegistrationModule.retrieveRegistrationForm(onSuccess: {(usesDataForm, serverForm) in
-                    self.usesDataForm = usesDataForm;
-                    let form = serverForm;
-                    if self.formToSubmit == nil {
-                        self.onForm?(form, self);
-                    } else {
-                        var sameForm = true;
-                        var labelsChanged = false;
-                        form.fieldNames.forEach({(name) in
-                            let newField = form.getField(named: name);
-                            let oldField = self.formToSubmit!.getField(named: name);
-                            if newField != nil && oldField != nil {
-                                labelsChanged = newField?.label != oldField?.label;
-                                if labelsChanged {
-                                    oldField?.label = newField?.label;
-                                    oldField?.element.removeChildren(where: { (el) -> Bool in
-                                        el.name == "value";
-                                    })
-                                }
-                            } else {
-                                sameForm = false;
-                            }
-                        });
-                        DispatchQueue.global().async {
-                            if (!sameForm) {
-                                self.onForm?(form, self);
-                            } else if (labelsChanged) {
-                                self.onForm?(self.formToSubmit!, self);
-                            } else {
-                                self.submit(form: self.formToSubmit!);
-                            }
-                            self.formToSubmit = nil;
-                        }
-                    }
-                }, onError: self.onErrorFn);
+                startIBR();
             case is SocketConnector.DisconnectedEvent:
                 if !serverAvailable {
                     onErrorFn(errorCondition: ErrorCondition.service_unavailable, message: nil);
@@ -487,6 +449,50 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             default:
                 break;
             }
+        }
+        
+        private func startIBR() {
+            let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
+            guard InBandRegistrationModule.isRegistrationAvailable(featuresElement) else {
+                onErrorFn(errorCondition: ErrorCondition.feature_not_implemented, message: nil);
+                return;
+            }
+            
+            inBandRegistrationModule.retrieveRegistrationForm(onSuccess: {(usesDataForm, serverForm) in
+                self.usesDataForm = usesDataForm;
+                let form = serverForm;
+                if self.formToSubmit == nil {
+                    self.onForm?(form, self);
+                } else {
+                    var sameForm = true;
+                    var labelsChanged = false;
+                    form.fieldNames.forEach({(name) in
+                        let newField = form.getField(named: name);
+                        let oldField = self.formToSubmit!.getField(named: name);
+                        if newField != nil && oldField != nil {
+                            labelsChanged = newField?.label != oldField?.label;
+                            if labelsChanged {
+                                oldField?.label = newField?.label;
+                                oldField?.element.removeChildren(where: { (el) -> Bool in
+                                    el.name == "value";
+                                })
+                            }
+                        } else {
+                            sameForm = false;
+                        }
+                    });
+                    DispatchQueue.global().async {
+                        if (!sameForm) {
+                            self.onForm?(form, self);
+                        } else if (labelsChanged) {
+                            self.onForm?(self.formToSubmit!, self);
+                        } else {
+                            self.submit(form: self.formToSubmit!);
+                        }
+                        self.formToSubmit = nil;
+                    }
+                }
+            }, onError: self.onErrorFn);
         }
         
         public func getAcceptedCertificate() -> SslCertificateInfo? {
@@ -516,6 +522,26 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             }
             
             guard compressionActive || client.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+                return false;
+            }
+            
+            let preauthSupported: Bool = StreamFeaturesModule.getStreamFeatures(client.sessionObject)?.findChild(name: "register", xmlns: "urn:xmpp:invite") != nil;
+            if preauthSupported && !client.sessionObject.getProperty("urn:xmpp:invite#preauth_done", defValue: false), let preauth: String = client.sessionObject.getProperty("urn:xmpp:invite#preauth") {
+                let iq = Iq();
+                iq.type = .set;
+                if let domain: String = client.sessionObject.getProperty(SessionObject.DOMAIN_NAME) {
+                    iq.to = JID(domain);
+                }
+                iq.addChild(Element(name: "preauth", attributes: ["token": preauth, "xmlns": "urn:xmpp:pars:0"]));
+                client.context.writer?.write(iq, callback: { result in
+                    if result?.type ?? .error == .result {
+                        self.client.sessionObject.setProperty("urn:xmpp:invite#preauth_done", value: true);
+                        self.startIBR();
+                    } else {
+                        let error: ErrorCondition = result?.errorCondition ?? ErrorCondition.remote_server_timeout;
+                        self.onErrorFn(errorCondition: error, message: result?.errorText ?? (error == ErrorCondition.item_not_found ? "The provided token is invalid or expired" : nil));
+                    }
+                })
                 return false;
             }
             return true;
