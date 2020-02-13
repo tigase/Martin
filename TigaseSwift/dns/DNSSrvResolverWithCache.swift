@@ -23,6 +23,7 @@ import Foundation
 
 open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {    
     
+    private let dispatcher = QueueDispatcher(label: "DnsSrvResolverWithCache");
     fileprivate let resolver: DNSSrvResolver;
     fileprivate let cache: DNSSrvResolverCache;
     fileprivate let automaticRefresh: Bool;
@@ -33,36 +34,45 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
         self.automaticRefresh = withAutomaticRefresh;
     }
     
-    open func resolve(domain: String, completionHandler: @escaping (_ dnsResult: XMPPSrvResult?) -> Void) {
-        let records = cache.getRecords(for: domain)
-        if records != nil {
-            log("loaded DNS records for domain: \(domain) from cache \(records!.records)");
-            completionHandler(records);
-            guard automaticRefresh else {
-                return;
-            }
-        }
-
-        if records == nil || !records!.hasValid {
-            self.resolver.resolve(domain: domain, completionHandler: { records in
-                self.save(for: domain, result: records);
-                completionHandler(records);
-            });
-        } else {
-            DispatchQueue.global(qos: .utility).async {
-                self.resolver.resolve(domain: domain) { records in
-                    print("dns resolution finished:", records);
-                    if records != nil {
+    open func resolve(domain: String, for jid: BareJID, completionHandler: @escaping (_ result: Result<XMPPSrvResult,DNSError>) -> Void) {
+        self.dispatcher.async {
+            if let records = self.cache.getRecords(for: domain), records.hasValid {
+                self.log("loaded DNS records for domain: \(domain) from cache \(records.records)");
+                completionHandler(.success(records));
+                
+                guard self.automaticRefresh else {
+                    return;
+                }
+                
+                self.resolver.resolve(domain: domain, for: jid) { dnsResult in
+                    print("dns resolution finished:", dnsResult);
+                    switch dnsResult {
+                    case .success(let records):
                         self.save(for: domain, result: records);
+                    default:
+                        // nothing to do..
+                        break;
                     }
                 };
+            } else {
+                self.resolver.resolve(domain: domain, for: jid, completionHandler: { dnsResult in
+                    switch dnsResult {
+                    case .success(let records):
+                        self.save(for: domain, result: records);
+                    default:
+                        break;
+                    }
+                    completionHandler(dnsResult);
+                });
             }
         }
     }
     
     public func markAsInvalid(for domain: String, record: XMPPSrvRecord, for period: TimeInterval) {
-        self.resolver.markAsInvalid(for: domain, record: record, for: period);
-        self.cache.markAsInvalid(for: domain, record: record, for: period);
+        self.dispatcher.async {
+            self.resolver.markAsInvalid(for: domain, record: record, for: period);
+            self.cache.markAsInvalid(for: domain, record: record, for: period);
+        }
     }
     
     fileprivate func save(for domain: String, result: XMPPSrvResult?) {

@@ -33,7 +33,7 @@ public class QueueDispatcher {
     private static var usedQueueNames: [String] = [];
     
     private let queueKey: DispatchSpecificKey<QueueIdentity>;
-    private let queue: DispatchQueue;
+    let queue: DispatchQueue;
     
     private var currentQueueIdentity: QueueIdentity? {
         return DispatchQueue.getSpecific(key: self.queueKey);

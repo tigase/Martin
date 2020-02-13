@@ -23,10 +23,16 @@ import Foundation
 
 public protocol DNSSrvResolver {
     
-    func resolve(domain: String, completionHandler: @escaping (_ dnsResult: XMPPSrvResult?) -> Void);
+    func resolve(domain: String, for: BareJID, completionHandler: @escaping (_ result: Result<XMPPSrvResult,DNSError>) -> Void);
  
     func markAsInvalid(for domain: String, record: XMPPSrvRecord, for: TimeInterval);
     
+}
+
+public enum DNSError: Error {
+    case timeout
+    case internalError
+    case unknownError
 }
 
 extension SessionObject {

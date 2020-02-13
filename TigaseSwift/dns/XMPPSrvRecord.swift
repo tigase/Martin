@@ -20,6 +20,8 @@
 //
 
 import Foundation
+import dnssd
+import DNS_Util
 
 /**
  Class holds informations for single SRV record of DNS entries
@@ -48,6 +50,49 @@ open class XMPPSrvRecord: Codable, Equatable, CustomStringConvertible {
         return "[port: \(String(describing: port)), weight: \(weight), priority: \(String(describing: priority)), target: \(target), directTls: \(directTls), isValid: \(isValid)]";
     }
     
+    public convenience init?(parse: UnsafePointer<UInt8>?, length: UInt16?) {
+        guard let rdata = parse, let rdlen = length else {
+            return nil;
+        }
+        
+        let rrDataLen = 1+2+2+4+2+Int(rdlen);
+        var rrData = Data(capacity: rrDataLen);
+        
+        var u8: UInt8 = 0;
+        var u16: UInt16 = 0;
+        var u32: UInt32 = 0;
+        rrData.append(UnsafeBufferPointer(start: &u8, count: 1));
+        u16 = UInt16(kDNSServiceType_SRV).bigEndian;
+        rrData.append(UnsafeBufferPointer(start: &u16, count: 1));
+        u16 = UInt16(kDNSServiceClass_IN).bigEndian;
+        rrData.append(UnsafeBufferPointer(start: &u16, count: 1));
+        u32 = UInt32(666).bigEndian;
+        rrData.append(UnsafeBufferPointer(start: &u32, count: 1));
+        u16 = rdlen.bigEndian;
+        rrData.append(UnsafeBufferPointer(start: &u16, count: 1));
+        rrData.append(rdata, count: Int(rdlen));
+        
+        guard let (port, weight, priority, target) = rrData.withUnsafeBytes({ (bytes) -> (Int, Int, Int, String)? in
+            if let rr: UnsafeMutablePointer<dns_resource_record_t> = dns_parse_resource_record(bytes.baseAddress!.assumingMemoryBound(to: Int8.self), UInt32(rrData.count)) {
+                defer {
+                    dns_free_resource_record(rr);
+                }
+                if let target = String(cString: rr.pointee.data.SRV.pointee.target, encoding: .ascii) {
+                    let priority = rr.pointee.data.SRV.pointee.priority;
+                    let weight = rr.pointee.data.SRV.pointee.weight;
+                    let port = rr.pointee.data.SRV.pointee.port;
+                    
+                    return (Int(port), Int(weight), Int(priority), target);
+                }
+            }
+            return nil;
+        }) else {
+            return nil;
+        }
+        
+        self.init(port: port, weight: weight, priority: priority, target: target, directTls: false);
+    }
+    
     public init(port:Int, weight:Int, priority:Int, target:String, directTls: Bool, invalid: Date? = nil) {
         self.port = port;
         self.weight = weight;
@@ -55,6 +100,10 @@ open class XMPPSrvRecord: Codable, Equatable, CustomStringConvertible {
         self.target = target;
         self.directTls = directTls;
         self.invalid = invalid;
+    }
+    
+    open func with(directTLS: Bool) -> XMPPSrvRecord {
+        return XMPPSrvRecord(port: port, weight: weight, priority: priority, target: target, directTls: directTLS);
     }
     
     open func markAsInvalid(for period: TimeInterval) {

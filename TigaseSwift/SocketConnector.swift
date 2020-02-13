@@ -216,20 +216,23 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                     if self.dnsResolver == nil {
                         self.dnsResolver = XMPPDNSSrvResolver();
                     }
-                    DispatchQueue.global().async {
-                        self.dnsResolver!.resolve(domain: server) { dnsResult in
-                            if timeout != nil {
-                                // if timeout was set, do not try to connect after timeout was fired!
-                                // another event will take care of that
-                                guard Date().timeIntervalSince(start) < timeout! else {
-                                    return;
-                                }
+                    self.dnsResolver!.resolve(domain: server, for: self.sessionObject.userBareJid ?? BareJID(domain: server)) { result in
+                        if timeout != nil {
+                            // if timeout was set, do not try to connect after timeout was fired!
+                            // another event will take care of that
+                            guard Date().timeIntervalSince(start) < timeout! else {
+                                return;
                             }
-                            if let record = dnsResult?.record() ?? self.lastConnectionDetails {
+                        }
+                        switch result {
+                        case .success(let dnsResult):
+                            if let record = dnsResult.record() ?? self.lastConnectionDetails {
                                 self.connect(dnsName: server, srvRecord: record);
                             } else {
                                 self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
                             }
+                        case .failure(let dnsError):
+                            self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
                         }
                     }
                 }

@@ -27,4 +27,4 @@
 
 // In this header, you should import all the public headers of your framework using statements like #import <TigaseSwift/PublicHeader.h>
 
-#include "DNSSrv.h"
+//#include "DNSSrv.h"
