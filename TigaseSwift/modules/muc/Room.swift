@@ -211,6 +211,15 @@ open class Room: ChatProtocol, ContextAware {
         return msg;
     }
     
+    open func createPrivateMessage(_ body: String?, recipientNickname: String) -> Message {
+        let msg = Message();
+        msg.to = JID(roomJid, resource: recipientNickname);
+        msg.type = StanzaType.chat;
+        msg.body = body;
+        msg.addChild(Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user"));
+        return msg;
+    }
+    
     /**
      Send invitation
      - parameter invitee: user to invite

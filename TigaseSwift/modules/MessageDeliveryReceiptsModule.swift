@@ -58,6 +58,7 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
             }
             // need to send response/ack
             let response = Message();
+            response.type = message.type;
             response.to = message.from;
             response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
             response.hints = [.store];
