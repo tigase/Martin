@@ -51,11 +51,13 @@ open class DefaultChatManager: ChatManager {
     }
     
     open func createChat(with jid: JID, thread: String? = nil) -> Chat? {
-        let chat:Chat? = chatStore.open(chat: Chat(jid: jid, thread: thread));
-        if chat != nil {
-            context.eventBus.fire(MessageModule.ChatCreatedEvent(sessionObject: context.sessionObject, chat:chat!));
+        switch chatStore.createChat(jid: jid, thread: thread) {
+        case .success(let chat):
+            context.eventBus.fire(MessageModule.ChatCreatedEvent(sessionObject: context.sessionObject, chat: chat));
+            return chat;
+        case .failure(let err):
+            return nil;
         }
-        return chat;
     }
     
     open func getChatOrCreate(with jid:JID, thread:String? = nil) -> Chat? {
@@ -73,7 +75,7 @@ open class DefaultChatManager: ChatManager {
     
     open func getChat(with jid: JID, thread: String?) -> Chat? {
         if thread != nil {
-            if let chat: Chat = chatStore.getChat(with: jid.bareJid, filter:{ (c) -> Bool in
+            if let chat: Chat = chatStore.chat(with: jid.bareJid, filter:{ (c) -> Bool in
                 return c.thread == thread;
             }) {
                 return chat;
@@ -81,20 +83,20 @@ open class DefaultChatManager: ChatManager {
         }
         
         if jid.resource != nil {
-            if let chat: Chat = chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
+            if let chat: Chat = chatStore.chat(with: jid.bareJid, filter: { (c) -> Bool in
                 return c.jid == jid;
             }) {
                 return chat;
             }
         }
         
-        return chatStore.getChat(with: jid.bareJid, filter: { (c) -> Bool in
+        return chatStore.chat(with: jid.bareJid, filter: { (c) -> Bool in
             return c.jid.bareJid == jid.bareJid;
         });
     }
     
     open func getChats() -> [Chat] {
-        return chatStore.getAllChats();
+        return chatStore.chats;
     }
     
     open func isChatOpen(with jid: BareJID) -> Bool {

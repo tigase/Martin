@@ -82,6 +82,15 @@
 		FE7F930520121E69004C6195 /* DNSSrvResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930420121E69004C6195 /* DNSSrvResolver.swift */; };
 		FE7F930720121F4C004C6195 /* DNSSrvResolverWithCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */; };
 		FE87C773228485AB00B0B64C /* StreamLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE87C772228485AB00B0B64C /* StreamLogger.swift */; };
+		FE890D2223FFDC5800107437 /* MixModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D2123FFDC5800107437 /* MixModule.swift */; };
+		FE890D2423FFDFBA00107437 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D2323FFDFBA00107437 /* Channel.swift */; };
+		FE890D2623FFE13C00107437 /* ChannelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D2523FFE13C00107437 /* ChannelManager.swift */; };
+		FE890D2823FFE4C000107437 /* Message+Mix.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D2723FFE4C000107437 /* Message+Mix.swift */; };
+		FE890D2A23FFF8E200107437 /* MixParticipant.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D2923FFF8E200107437 /* MixParticipant.swift */; };
+		FE890D322400519F00107437 /* DefaultChannelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D312400519F00107437 /* DefaultChannelManager.swift */; };
+		FE890D3424005A8600107437 /* ChannelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D3324005A8600107437 /* ChannelStore.swift */; };
+		FE890D362401364A00107437 /* RoomStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D352401364A00107437 /* RoomStore.swift */; };
+		FE890D3C24018F2A00107437 /* DefaultChannelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D3B24018F2A00107437 /* DefaultChannelStore.swift */; };
 		FE8AA16D1D490A5A00992088 /* QueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* QueueDispatcher.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
@@ -239,6 +248,15 @@
 		FE7F930420121E69004C6195 /* DNSSrvResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolver.swift; sourceTree = "<group>"; };
 		FE7F930620121F4C004C6195 /* DNSSrvResolverWithCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSrvResolverWithCache.swift; sourceTree = "<group>"; };
 		FE87C772228485AB00B0B64C /* StreamLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamLogger.swift; sourceTree = "<group>"; };
+		FE890D2123FFDC5800107437 /* MixModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixModule.swift; sourceTree = "<group>"; };
+		FE890D2323FFDFBA00107437 /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
+		FE890D2523FFE13C00107437 /* ChannelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelManager.swift; sourceTree = "<group>"; };
+		FE890D2723FFE4C000107437 /* Message+Mix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Message+Mix.swift"; sourceTree = "<group>"; };
+		FE890D2923FFF8E200107437 /* MixParticipant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixParticipant.swift; sourceTree = "<group>"; };
+		FE890D312400519F00107437 /* DefaultChannelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultChannelManager.swift; sourceTree = "<group>"; };
+		FE890D3324005A8600107437 /* ChannelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelStore.swift; sourceTree = "<group>"; };
+		FE890D352401364A00107437 /* RoomStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomStore.swift; sourceTree = "<group>"; };
+		FE890D3B24018F2A00107437 /* DefaultChannelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultChannelStore.swift; sourceTree = "<group>"; };
 		FE8AA16C1D490A5A00992088 /* QueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QueueDispatcher.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
@@ -351,6 +369,7 @@
 		FE2EFD751CB57C70000D254E /* modules */ = {
 			isa = PBXGroup;
 			children = (
+				FE890D2023FFDC4C00107437 /* mix */,
 				FE75A0092375DBFF001E78D9 /* push */,
 				FEA7BF5321E3A6AF00D9E36C /* jingle */,
 				FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */,
@@ -544,6 +563,21 @@
 			path = caps;
 			sourceTree = "<group>";
 		};
+		FE890D2023FFDC4C00107437 /* mix */ = {
+			isa = PBXGroup;
+			children = (
+				FE890D2323FFDFBA00107437 /* Channel.swift */,
+				FE890D2123FFDC5800107437 /* MixModule.swift */,
+				FE890D2523FFE13C00107437 /* ChannelManager.swift */,
+				FE890D2723FFE4C000107437 /* Message+Mix.swift */,
+				FE890D2923FFF8E200107437 /* MixParticipant.swift */,
+				FE890D312400519F00107437 /* DefaultChannelManager.swift */,
+				FE890D3324005A8600107437 /* ChannelStore.swift */,
+				FE890D3B24018F2A00107437 /* DefaultChannelStore.swift */,
+			);
+			path = mix;
+			sourceTree = "<group>";
+		};
 		FE94E4FB1CC7AFF900FAE755 /* roster */ = {
 			isa = PBXGroup;
 			children = (
@@ -620,6 +654,7 @@
 				FEC514191CE9CC2A003AF765 /* MucOccupant.swift */,
 				FEC5141B1CE9CD8F003AF765 /* XMucUserElement.swift */,
 				FEC5141D1CE9E012003AF765 /* DefaultRoomsManager.swift */,
+				FE890D352401364A00107437 /* RoomStore.swift */,
 			);
 			path = muc;
 			sourceTree = "<group>";
@@ -810,6 +845,7 @@
 			files = (
 				FE0D3DD9219498C7009B189B /* ChatStateNotificationsModule.swift in Sources */,
 				FEF8C23A1F2CEA1E0089C096 /* VCard.swift in Sources */,
+				FE890D2223FFDC5800107437 /* MixModule.swift in Sources */,
 				FEDCBF971D9EEB1D00AE9129 /* PubSubSubscription.swift in Sources */,
 				FEC514181CE9C9AE003AF765 /* MucAffiliation.swift in Sources */,
 				FE94E50C1CC90C6400FAE755 /* PresenceStore.swift in Sources */,
@@ -835,16 +871,19 @@
 				FEA8D65F1F30C2F40077C12F /* VCardModuleProtocol.swift in Sources */,
 				FE94E4FF1CC7B67900FAE755 /* RosterStore.swift in Sources */,
 				FE2EFD831CB57D25000D254E /* Node.swift in Sources */,
+				FE890D2A23FFF8E200107437 /* MixParticipant.swift in Sources */,
 				FEA7BF5621E3A6C700D9E36C /* Jingle.swift in Sources */,
 				FE2EFD811CB57D25000D254E /* CData.swift in Sources */,
 				FE2EFD961CB66BAA000D254E /* CredentialsCallback.swift in Sources */,
 				FE597A181D23C8DC0090F1A8 /* ScramMechanism.swift in Sources */,
 				FEC5141E1CE9E012003AF765 /* DefaultRoomsManager.swift in Sources */,
+				FE890D2823FFE4C000107437 /* Message+Mix.swift in Sources */,
 				FE2EFD411CAED46B000D254E /* SessionObject.swift in Sources */,
 				FEA554861CE3480B00676608 /* MessageCarbonsModule.swift in Sources */,
 				FE30242C1CDDF52400466497 /* XmppStanzaFilter.swift in Sources */,
 				FE3024351CE20C2300466497 /* Crypto.swift in Sources */,
 				FE2EFD841CB57D25000D254E /* XMPPParserDelegate.swift in Sources */,
+				FE890D362401364A00107437 /* RoomStore.swift in Sources */,
 				FE2EFD8B1CB580B6000D254E /* SaslMechanism.swift in Sources */,
 				FEDCBF8D1D9EC97100AE9129 /* ListField.swift in Sources */,
 				FEDCBF771D9E9C5C00AE9129 /* JabberDataElement.swift in Sources */,
@@ -868,11 +907,15 @@
 				FE94E5051CC8DE5A00FAE755 /* RosterCacheProvider.swift in Sources */,
 				FEDCBF991D9FB79800AE9129 /* PubSubAffiliation.swift in Sources */,
 				FE94E5011CC7C26300FAE755 /* DefaultRosterStore.swift in Sources */,
+				FE890D3424005A8600107437 /* ChannelStore.swift in Sources */,
+				FE890D2423FFDFBA00107437 /* Channel.swift in Sources */,
 				FE2EFD9A1CB66DA9000D254E /* StreamFeaturesModule.swift in Sources */,
 				FE87C773228485AB00B0B64C /* StreamLogger.swift in Sources */,
 				FE2EFD7A1CB57C70000D254E /* BareJID.swift in Sources */,
+				FE890D3C24018F2A00107437 /* DefaultChannelStore.swift in Sources */,
 				FE94E5031CC7D3D000FAE755 /* RosterModule.swift in Sources */,
 				FEDCBF831D9EC72900AE9129 /* TextPrivateField.swift in Sources */,
+				FE890D2623FFE13C00107437 /* ChannelManager.swift in Sources */,
 				FEDCBF9F1D9FDDD100AE9129 /* RSM.swift in Sources */,
 				FE8AA16D1D490A5A00992088 /* QueueDispatcher.swift in Sources */,
 				FE2EFDBB1CBD3727000D254E /* StanzaType.swift in Sources */,
@@ -916,6 +959,7 @@
 				FE2EFD821CB57D25000D254E /* Element.swift in Sources */,
 				FE75A00D2375DC0F001E78D9 /* TigasePushNotificationsModule.swift in Sources */,
 				FE56288F1F35CD4D00452C73 /* HttpFileUploadModule.swift in Sources */,
+				FE890D322400519F00107437 /* DefaultChannelManager.swift in Sources */,
 				FE3F33F41CA1CE8E001A5CD6 /* XMPPDelegate.swift in Sources */,
 				FE7F930720121F4C004C6195 /* DNSSrvResolverWithCache.swift in Sources */,
 				FE7F64571D28173600B9DF56 /* CapabilitiesModule.swift in Sources */,

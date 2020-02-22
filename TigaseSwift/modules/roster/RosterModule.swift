@@ -139,6 +139,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         var currentItem = rosterStore.get(for: jid);
         var action = Action.other;
         var modifiedGroups:[String]? = nil;
+        var annotations: [RosterItemAnnotation] = processRosterItemForAnnotations(item: item);
         if (subscription == .remove && currentItem != nil) {
             rosterStore.removeItem(for: jid);
             action = .removed;
@@ -165,12 +166,22 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
                     return !currentItem!.groups.contains(gname);
                 }));
             }
-            currentItem = currentItem != nil ? currentItem!.update(name: name, subscription: subscription, groups: groups, ask: ask) : RosterItem(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask);
+            currentItem = currentItem != nil ? currentItem!.update(name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations) : RosterItem(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
             
             rosterStore.addItem(currentItem!);
             
         }
         fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
+    }
+    
+    fileprivate func processRosterItemForAnnotations(item: Element) -> [RosterItemAnnotation] {
+        return context.modulesManager.modules.map({ (module) -> RosterItemAnnotation? in
+            if let aware = (module as? RosterAnnotationAwareProtocol) {
+                return aware.process(rosterItemElem: item);
+            } else {
+                return nil;
+            }
+        }).filter({ $0 != nil}).map({ $0! });
     }
     
     /**
@@ -180,6 +191,10 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         let iq = Iq();
         iq.type = .get;
         let query = Element(name:"query", xmlns:"jabber:iq:roster");
+        
+        for module in context.modulesManager.modules {
+            (module as? RosterAnnotationAwareProtocol)?.prepareRosterGetRequest(queryElem: query);
+        }
         
         if isRosterVersioningAvailable() {
             var x = versionProvider?.getCachedVersion(context.sessionObject) ?? "";
@@ -327,4 +342,13 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
             self.rosterModule.loadFromCache();
         }
     }
+    
+}
+
+protocol RosterAnnotationAwareProtocol {
+    
+    func prepareRosterGetRequest(queryElem el: Element);
+    
+    func process(rosterItemElem el: Element) -> RosterItemAnnotation?;
+    
 }

@@ -31,6 +31,7 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
     public let subscription: Subscription;
     public let ask: Bool;
     public let groups: [String];
+    public let annotations: [RosterItemAnnotation];
     
     open var description: String {
         get {
@@ -38,7 +39,7 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
         }
     }
     
-    public init(jid:JID, name: String?, subscription: Subscription, groups: [String] = [String](), ask: Bool = false) {
+    public init(jid:JID, name: String?, subscription: Subscription, groups: [String] = [String](), ask: Bool = false, annotations: [RosterItemAnnotation]) {
         self.jid = jid;
         if name?.trimmingCharacters(in: .whitespaces).isEmpty ?? true {
             self.name = nil;
@@ -48,11 +49,12 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
         self.subscription = subscription;
         self.groups = groups;
         self.ask = ask;
+        self.annotations = annotations;
     }
     
     
-    open func update(name: String?, subscription: Subscription, groups: [String], ask: Bool) -> RosterItem {
-        return RosterItem(jid: self.jid, name: name, subscription: subscription, groups: groups, ask: ask);
+    open func update(name: String?, subscription: Subscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) -> RosterItem {
+        return RosterItem(jid: self.jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
     }
 //    public func updateName(name: String?, )
     
@@ -93,4 +95,9 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
 
 public protocol RosterItemProtocol: class {
     var jid:JID { get };
+}
+
+public struct RosterItemAnnotation: Codable {
+    var type: String;
+    var values: [String:String];
 }

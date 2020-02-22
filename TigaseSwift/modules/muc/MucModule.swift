@@ -41,7 +41,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             if oldValue != nil {
                 oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
             }
-            roomsManager?.context = context;
+            roomsManager.context = context;
             if context != nil {
                 context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
             }
@@ -59,24 +59,14 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     public let features = [String]();
     
     /// Instance of DefautRoomManager
-    open var roomsManager: DefaultRoomsManager! {
-        didSet {
-            oldValue?.context = nil;
-            if roomsManager != nil {
-                roomsManager.context = context;
-            }
-        }
-    }
+    public let roomsManager: DefaultRoomsManager;
     
-    public override init() {
+    public init(roomsManager: DefaultRoomsManager) {
+        self.roomsManager = roomsManager;
         super.init();
     }
     
     open func initialize() {
-        if roomsManager == nil {
-            roomsManager = DefaultRoomsManager();
-        }
-        roomsManager.context = context;
         roomsManager.initialize();
     }
     
@@ -282,12 +272,18 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, ifCreated: ((Room)->Void)? = nil, onJoined: ((Room)->Void)? = nil) -> Room {
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
-        return roomsManager.getRoomOrCreate(for: roomJid, nickname: nickname, password: password, onCreate: { (room) in
+        let result = roomsManager.getRoomOrCreate(for: roomJid, nickname: nickname, password: password, onCreate: { (room) in
             room.onRoomCreated = ifCreated;
             room.onRoomJoined = onJoined;
             let presence = room.rejoin();
             self.context.eventBus.fire(JoinRequestedEvent(sessionObject: self.context.sessionObject, presence: presence, room: room, nickname: nickname));
         });
+        switch result {
+        case .success(let room):
+            return room;
+        default:
+            return nil!;
+        }
     }
     
     /**
@@ -311,7 +307,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         
         context.writer?.write(iq);
         
-        roomsManager.remove(room: room);
+        roomsManager.close(room: room);
         
         room._state = .destroyed;
         context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
@@ -333,7 +329,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             context.writer?.write(presence);
         }
         
-        roomsManager.remove(room: room);
+        roomsManager.close(room: room);
         
         room._state = .destroyed;
         context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));

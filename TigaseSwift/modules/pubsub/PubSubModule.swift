@@ -145,6 +145,14 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         /// Timestamp of event (may not be current if delivery was delayed on server side)
         public let timestamp: Date!;
         
+        public var item: Item? {
+            if let id = itemId, let payload = payload {
+                return Item(id: id, payload: payload);
+            } else {
+                return nil;
+            }
+        }
+        
         init() {
             self.sessionObject = nil;
             self.message = nil;

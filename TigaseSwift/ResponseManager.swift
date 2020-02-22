@@ -107,6 +107,38 @@ open class ResponseManager: Logger {
      Method registers callback for stanza for time
      - parameter stanza: stanza for which to wait for response
      - parameter timeout: maximal time for which should wait for response
+     - parameter callback: callback to execute on response or timeout
+     */
+    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, callback:((AsyncResult<Stanza>)->Void)?) {
+        guard let callback = callback else {
+            return;
+        }
+        
+        var id = stanza.id;
+        if id == nil {
+            id = nextUid();
+            stanza.id = id;
+        }
+        
+        queue.async {
+            self.handlers[id!] = Entry(jid: stanza.to, callback: { response in
+                if response == nil {
+                    callback(.failure(errorCondition: .remote_server_timeout, response: response));
+                } else {
+                    if response!.type == .error {
+                        callback(.failure(errorCondition: response!.errorCondition ?? ErrorCondition.undefined_condition, response: response));
+                    } else {
+                        callback(.success(response: response!));
+                    }
+                }
+            }, timeout: timeout);
+        }
+    }
+    
+    /**
+     Method registers callback for stanza for time
+     - parameter stanza: stanza for which to wait for response
+     - parameter timeout: maximal time for which should wait for response
      - parameter onSuccess: callback to execute on successful response
      - parameter onError: callback to execute on failure or timeout
      */

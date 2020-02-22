@@ -252,7 +252,41 @@ extension PubSubModuleSubscriberExtension {
         
         context.writer?.write(iq, callback: callback);
     }
-    
+
+    /**
+     Retrieve items from node
+     - parameter from: jid of PubSub service
+     - parameter for: node name
+     - parameter rsm: result set information
+     - parameter lastItem: number of last items to return
+     - parameter itemIds: array of item ids to retrieve
+     - parameter completionHandler: called when result is available
+     */
+    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, rsm: RSM.Query? = nil, lastItems: Int? = nil, itemIds: [String]? = nil, completionHandler: @escaping (PubSubRetrieveItemsResult)->Void) {
+        retrieveItems(from: pubSubJid, for: nodeName, rsm: rsm, lastItems: lastItems, itemIds: itemIds, callback: { response in
+            guard let stanza = response else {
+                completionHandler(.failure(errorCondition: .remote_server_timeout, response: nil))
+                return;
+            }
+            
+            guard stanza.type != StanzaType.error else {
+                let pubsubErrorElem = stanza.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+                completionHandler(.failure(errorCondition: stanza.errorCondition ?? ErrorCondition.undefined_condition, pubsubErrorCondition: PubSubErrorCondition(rawValue: pubsubErrorElem?.name ?? ""), response: response));
+                return;
+            }
+            
+            let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
+            let itemsEl = pubsubEl?.findChild(name: "items");
+            var items = Array<PubSubModule.Item>();
+            itemsEl?.forEachChild { (elem) in
+                if let id = elem.getAttribute("id"), let payload = elem.firstChild() {
+                    items.append(PubSubModule.Item(id: id, payload: payload));
+                }
+            }
+            let rsm = RSM.Result(from: pubsubEl?.findChild(name: "set", xmlns: RSM.XMLNS));
+            completionHandler(.success(response: stanza, node: itemsEl?.getAttribute("node") ?? nodeName, items: items, rsm: rsm));
+        });
+    }
     /**
      Retrieve items from node
      - parameter from: jid of PubSub service
@@ -264,20 +298,15 @@ extension PubSubModuleSubscriberExtension {
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
     public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, rsm: RSM.Query? = nil, lastItems: Int? = nil, itemIds: [String]? = nil, onSuccess: ((Stanza,String,[PubSubModule.Item],RSM.Result?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: { (stanza) in
-            let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-            let itemsEl = pubsubEl?.findChild(name: "items");
-            var items = Array<PubSubModule.Item>();
-            itemsEl?.forEachChild { (elem) in
-                if let id = elem.getAttribute("id"), let payload = elem.firstChild() {
-                    items.append(PubSubModule.Item(id: id, payload: payload));
-                }
+    
+        self.retrieveItems(from: pubSubJid, for: nodeName, rsm: rsm, lastItems: lastItems, itemIds: itemIds, completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let items, let rsm):
+                onSuccess?(response, node, items, rsm);
+            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                onError?(errorCondition, pubsubErrorCondition);
             }
-            let rsm = RSM.Result(from: pubsubEl?.findChild(name: "set", xmlns: RSM.XMLNS));
-            onSuccess?(stanza, itemsEl?.getAttribute("node") ?? nodeName, items, rsm);
-            }, onError: onError);
-        
-        retrieveItems(from: pubSubJid, for: nodeName, rsm: rsm, lastItems: lastItems, itemIds: itemIds, callback: callback);
+        })
     }
     
     /**
@@ -358,4 +387,9 @@ extension PubSubModuleSubscriberExtension {
         self.retrieveAffiliations(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS, callback: callback);
     }
 
+}
+
+public enum PubSubRetrieveItemsResult {
+    case success(response: Stanza, node: String, items: [PubSubModule.Item], rsm: RSM.Result?)
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
 }

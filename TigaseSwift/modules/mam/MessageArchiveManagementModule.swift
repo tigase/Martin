@@ -79,6 +79,12 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
             guard let timestamp = Delay(element: delayEl).stamp else {
                 return;
             }
+            
+            if message.to == nil {
+                // some services, ie. MIX may not set "to" attribute. In this case it would be reasonable to assume that "we" received this messages
+                message.to = stanza.to;
+            }
+            
             // there is no point in retrieval of chat as it will only open new chat which may not be desired behavior
 //            if let messageModule: MessageModule = context.modulesManager.getModule(MessageModule.ID) {
 //                var from = message.from;

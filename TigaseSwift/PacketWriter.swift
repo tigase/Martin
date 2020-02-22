@@ -45,7 +45,16 @@ open class PacketWriter {
      */
     open func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: ((Stanza?)->Void)?) {
     }
-    
+
+    /**
+     Write packet to stream
+     - parameter stanza: stanza to write
+     - parameter timeout: timeout to wait for response
+     - parameter callback: called when response is received or request timed out
+     */
+    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, completionHandler: ((AsyncResult<Stanza>)->Void)?) {
+    }
+
     /**
      Write packet to stream
      - parameter stanza: stanza to write
@@ -71,3 +80,9 @@ open class PacketWriter {
     }
 }
 
+public enum AsyncResult<T> {
+    
+    case success(response: T);
+    case failure(errorCondition: ErrorCondition, response: T?);
+    
+}

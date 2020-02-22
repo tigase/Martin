@@ -259,6 +259,11 @@ open class XMPPClient: Logger, EventHandler {
             responseManager.registerResponseHandler(for: stanza, timeout: timeout, onSuccess: onSuccess, onError: onError, onTimeout: onTimeout);
             self.write(stanza);
         }
+        
+        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, completionHandler: ((AsyncResult<Stanza>) -> Void)?) {
+            responseManager.registerResponseHandler(for: stanza, timeout: timeout, callback: completionHandler);
+            self.write(stanza);
+        }
 
         override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: AsyncCallback) {
             responseManager.registerResponseHandler(for: stanza, timeout: timeout, callback: callback);

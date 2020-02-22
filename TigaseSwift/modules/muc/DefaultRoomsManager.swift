@@ -36,10 +36,10 @@ open class DefaultRoomsManager: ContextAware {
     
     fileprivate var rooms = [BareJID:Room]();
     
-    public let dispatcher: QueueDispatcher;
-    
-    public init(dispatcher: QueueDispatcher? = nil) {
-        self.dispatcher = dispatcher ?? QueueDispatcher(label: "room_manager_queue", attributes: DispatchQueue.Attributes.concurrent);
+    public let store: RoomStore;
+        
+    public init(store: RoomStore) {
+        self.store = store;
     }
     
     /**
@@ -47,21 +47,7 @@ open class DefaultRoomsManager: ContextAware {
      - parameter roomJid: jid of room
      */
     open func contains(roomJid: BareJID) -> Bool {
-        return dispatcher.sync {
-            return self.rooms[roomJid] != nil;
-        }
-    }
-    
-    /**
-     Create instance of room
-     - parameter roomJid: jid of room
-     - parameter nickname: nickname
-     - parameter password: password for room
-     */
-    open func createRoomInstance(roomJid: BareJID, nickname: String, password: String?) -> Room {
-        let room = Room(context: context, roomJid: roomJid, nickname: nickname);
-        room.password = password;
-        return room;
+        return store.room(for: roomJid) != nil;
     }
     
     /**
@@ -70,9 +56,7 @@ open class DefaultRoomsManager: ContextAware {
      - returns: instance of Room if created
      */
     open func getRoom(for roomJid: BareJID) -> Room? {
-        return dispatcher.sync {
-            return self.rooms[roomJid];
-        }
+        return store.room(for: roomJid);
     }
     
     /**
@@ -80,18 +64,21 @@ open class DefaultRoomsManager: ContextAware {
      - parameter roomJid: jid of room
      - returns: instance of Room if created
      */
-    open func getRoomOrCreate(for roomJid: BareJID, nickname: String, password: String?, onCreate: @escaping (Room)->Void) -> Room {
-        return dispatcher.sync(flags: .barrier) {
-            if let room = getRoom(for: roomJid) {
-                return room;
+    open func getRoomOrCreate(for roomJid: BareJID, nickname: String, password: String?, onCreate: @escaping (Room)->Void) -> Result<Room,ErrorCondition> {
+        return store.dispatcher.sync {
+            if let room = store.room(for: roomJid) {
+                return .success(room);
             }
-            
-            let room = createRoomInstance(roomJid: roomJid, nickname: nickname, password: password);
-            self.register(room: room);
-            DispatchQueue.global().async {
-                onCreate(room);
+            let result = store.createRoom(roomJid: roomJid, nickname: nickname, password: password);
+            switch result {
+            case .success(let room):
+                DispatchQueue.global().async {
+                    onCreate(room);
+                }
+            default:
+                break
             }
-            return room;
+            return result;
         }
     }
 
@@ -101,32 +88,18 @@ open class DefaultRoomsManager: ContextAware {
      - returns: array of rooms
      */
     open func getRooms() -> [Room] {
-        return dispatcher.sync {
-            return Array(self.rooms.values);
-        }
+        return store.rooms;
     }
     
     open func initialize() {
         
     }
-    
-    /**
-     Register room instance in RoomManager
-     - parameter room: room instance to register
-     */
-    open func register(room: Room) {
-        dispatcher.sync(flags: .barrier, execute: {
-            self.rooms[room.roomJid]  = room;
-        }) 
-    }
-    
+        
     /**
      Remove room instance
      - parameter room: room instance to remove
      */
-    open func remove(room: Room) {
-        _ = dispatcher.sync(flags: .barrier) {
-            self.rooms.removeValue(forKey: room.roomJid);
-        }
+    open func close(room: Room) {
+        _ = store.close(room: room);
     }
 }
