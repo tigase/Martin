@@ -106,7 +106,7 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }
             
         case let e as PubSubModule.NotificationReceivedEvent:
-            guard let from = e.message.from?.bareJid, from == e.sessionObject.userBareJid! else {
+            guard let from = e.message.from?.bareJid, let account = e.sessionObject.userBareJid, from == account else {
                 return;
             }
             if let bookmarks = Bookmarks(from: e.payload) {

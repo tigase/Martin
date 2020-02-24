@@ -91,6 +91,7 @@
 		FE890D3424005A8600107437 /* ChannelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D3324005A8600107437 /* ChannelStore.swift */; };
 		FE890D362401364A00107437 /* RoomStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D352401364A00107437 /* RoomStore.swift */; };
 		FE890D3C24018F2A00107437 /* DefaultChannelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D3B24018F2A00107437 /* DefaultChannelStore.swift */; };
+		FE890D3E24019A9000107437 /* Message+StanzaID.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE890D3D24019A9000107437 /* Message+StanzaID.swift */; };
 		FE8AA16D1D490A5A00992088 /* QueueDispatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE8AA16C1D490A5A00992088 /* QueueDispatcher.swift */; };
 		FE94E4FA1CC79C9300FAE755 /* AbstractIQModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */; };
 		FE94E4FD1CC7B0B900FAE755 /* RosterItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */; };
@@ -257,6 +258,7 @@
 		FE890D3324005A8600107437 /* ChannelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelStore.swift; sourceTree = "<group>"; };
 		FE890D352401364A00107437 /* RoomStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomStore.swift; sourceTree = "<group>"; };
 		FE890D3B24018F2A00107437 /* DefaultChannelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultChannelStore.swift; sourceTree = "<group>"; };
+		FE890D3D24019A9000107437 /* Message+StanzaID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Message+StanzaID.swift"; sourceTree = "<group>"; };
 		FE8AA16C1D490A5A00992088 /* QueueDispatcher.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QueueDispatcher.swift; sourceTree = "<group>"; };
 		FE94E4F91CC79C9300FAE755 /* AbstractIQModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractIQModule.swift; sourceTree = "<group>"; };
 		FE94E4FC1CC7B0B900FAE755 /* RosterItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RosterItem.swift; sourceTree = "<group>"; };
@@ -678,6 +680,7 @@
 			children = (
 				FEDCBF751D9E9C1100AE9129 /* forms */,
 				FEDCBF9E1D9FDDD100AE9129 /* RSM.swift */,
+				FE890D3D24019A9000107437 /* Message+StanzaID.swift */,
 			);
 			path = xmpp;
 			sourceTree = "<group>";
@@ -978,6 +981,7 @@
 				FEA554881CE3A55B00676608 /* MobileModeModule.swift in Sources */,
 				FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */,
 				FE94E5171CCB961000FAE755 /* UIDGenerator.swift in Sources */,
+				FE890D3E24019A9000107437 /* Message+StanzaID.swift in Sources */,
 				FEF8C2381F2CEA120089C096 /* VCard4Module.swift in Sources */,
 				FEE0EF0E1CC6A05A0077B8CE /* SoftwareVersionModule.swift in Sources */,
 				FE30242E1CDDF53500466497 /* StreamManagementModule.swift in Sources */,

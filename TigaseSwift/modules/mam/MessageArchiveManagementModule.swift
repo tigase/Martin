@@ -26,7 +26,7 @@ import Foundation
  
  [XEP-0313: Message Archive Management]: http://xmpp.org/extensions/xep-0313.html
  */
-open class MessageArchiveManagementModule: XmppModule, ContextAware {
+open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandler {
     
     fileprivate static let stampFormatter = ({()-> DateFormatter in
         var f = DateFormatter();
@@ -37,36 +37,57 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
     })();
     // namespace used by XEP-0313
     public static let MAM_XMLNS = "urn:xmpp:mam:1";
+    public static let MAM2_XMLNS = "urn:xmpp:mam:2";
     // ID of a module for a lookup in `XmppModulesManager`
     public static let ID = "mam";
     
     public let id = ID;
     
-    public let criteria: Criteria = Criteria.name("message").add(Criteria.xmlns(MessageArchiveManagementModule.MAM_XMLNS));
+    public let criteria: Criteria = Criteria.name("message").add(Criteria.or(Criteria.xmlns(MessageArchiveManagementModule.MAM_XMLNS), Criteria.xmlns(MessageArchiveManagementModule.MAM2_XMLNS)));
     
     public let features = [String]();
+
+    private let dispatcher = QueueDispatcher(label: "MAMQueries");
+    private var queries: [String: Query] = [:];
     
-    open var context: Context!;
+    open var context: Context! {
+        didSet {
+            oldValue?.eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
+            context?.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
+        }
+    }
     
     open var isAvailable: Bool {
+        return availableVersion != nil;
+    }
+    
+    open var availableVersion: Version? {
         if let accountFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
-            if accountFeatures.contains(MessageArchiveManagementModule.MAM_XMLNS) {
-                return true;
-            }
+            return Version.values.first(where: { version in accountFeatures.contains(version.rawValue) });
         }
-        
-        // TODO: fallback to handle previous behavior - remove it later on...
         if let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) {
-            return serverFeatures.contains(MessageArchiveManagementModule.MAM_XMLNS);
+            return Version.values.first(where: { version in serverFeatures.contains(version.rawValue) });
         }
-        return false;
+        return nil;
     }
     
     public init() {}
     
+    open func handle(event: Event) {
+        switch event {
+        case is SocketConnector.DisconnectedEvent:
+            // invalidate all existing queries..
+            self.dispatcher.async {
+                self.queries.removeAll();
+            }
+        default:
+            break;
+        }
+    }
+    
     open func process(stanza: Stanza) throws {
         stanza.element.forEachChild(xmlns: MessageArchiveManagementModule.MAM_XMLNS) { (result) in
-            guard let messageId = result.getAttribute("id"), let queryId = result.getAttribute("queryid"), let forwardedEl = result.findChild(name: "forwarded", xmlns: "urn:xmpp:forward:0") else {
+            guard let messageId = result.getAttribute("id"), let queryId = result.getAttribute("queryid"), let forwardedEl = result.findChild(name: "forwarded", xmlns: "urn:xmpp:forward:0"), let query = dispatcher.sync(execute: { return self.queries[queryId]; }) else {
                 return;
             }
             guard let message: Message = forwardedEl.mapChildren(transform: { (el) -> Message in
@@ -94,26 +115,35 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
 //                let chat = messageModule.processMessage(message, interlocutorJid: from, fireEvents: false)
 //            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: chat));
 //            }
-            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: nil));
+            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from!.bareJid, message: message, timestamp: timestamp));
         }
+    }
+    
+    public enum QueryResult {
+        case success(queryId: String, complete: Bool, rsm: RSM.Result?)
+        case failure(errorCondition: ErrorCondition, response: Stanza?)
     }
     
     /**
      Query archived messages
      - parameter componentJid: jid of an archiving component
      - parameter node: PubSub node to query (if querying PubSub component)
-     - parameter with: chat participant 
+     - parameter with: chat participant
      - parameter start: start date of a querying period
      - parameter end: end date of a querying period
      - parameter queryId: id of a query
      - parameter rsm: instance defining result set Management
-     - parameter onSuccess: callback called when query results with a onSuccess
-     - parameter onError: callback called when query fails
+     - parameter completionHandler: callback called when query results
      */
-    open func queryItems(componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, onSuccess: @escaping (String,Bool,RSM.Result?)->Void, onError: @escaping (ErrorCondition?, Stanza?)->Void) {
+    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (QueryResult)->Void) {
+        guard let version = version ?? self.availableVersion else {
+            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            return;
+        }
+        
         let query = JabberDataElement(type: .submit);
         let formTypeField = HiddenField(name: "FORM_TYPE");
-        formTypeField.value = "urn:xmpp:mam:1";
+        formTypeField.value = version.rawValue;
         query.addField(formTypeField);
         if with != nil {
             let withField = JidSingleField(name: "with");
@@ -130,7 +160,8 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
             endField.value = MessageArchiveManagementModule.stampFormatter.string(from: end!);
             query.addField(endField);
         }
-        queryItems(componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, onSuccess: onSuccess, onError: onError);
+
+        self.queryItems(version: version, componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, completionHandler: completionHandler);
     }
     
     /**
@@ -140,25 +171,53 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
      - parameter query: instace of `JabberDataElement` with a query form
      - parameter queryId: id of a query
      - parameter rsm: instance defining result set Management
-     - parameter onSuccess: callback called when query results with a onSuccess
-     - parameter onError: callback called when query fails
+     - parameter completionHandler: callback called when query results
      */
-    open func queryItems(componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, onSuccess: @escaping (String,Bool,RSM.Result?)->Void, onError: @escaping (ErrorCondition?, Stanza?)->Void) {
-        queryItems(componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm) { (stanza: Stanza?) -> Void in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                guard let fin = stanza?.findChild(name: "fin", xmlns: MessageArchiveManagementModule.MAM_XMLNS) else {
-                    onError(ErrorCondition.bad_request, stanza);
+    open func queryItems(version: Version? = nil,componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (QueryResult)->Void)
+    {
+        guard let version = version ?? self.availableVersion else {
+            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil))
+            return;
+        }
+
+        self.dispatcher.async {
+            self.queries[queryId] = Query(id: queryId, version: version);
+        }
+        
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        iq.to = componentJid;
+        
+        let queryEl = Element(name: "query", xmlns: version.rawValue);
+        iq.addChild(queryEl);
+        
+        queryEl.setAttribute("queryid", value: queryId);
+        queryEl.setAttribute("node", value: node);
+        
+        queryEl.addChild(query.submitableElement(type: .submit));
+        
+        if (rsm != nil) {
+            queryEl.addChild(rsm!.element);
+        }
+        
+        context.writer?.write(iq, completionHandler: { (result: AsyncResult<Stanza>) in
+            self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
+                self.queries.removeValue(forKey: queryId);
+            });
+            switch result {
+            case .success(let response):
+                guard let fin = response.findChild(name: "fin", xmlns: version.rawValue) else {
+                    completionHandler(.failure(errorCondition: .bad_request, response: response));
                     return;
                 }
-                onSuccess(queryId, "true" == fin.getAttribute("complete"), RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm")));
-            default:
-                onError(stanza?.errorCondition, stanza);
+                
+                completionHandler(.success(queryId: queryId, complete: "true" == fin.getAttribute("complete"), rsm: RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"))));
+            case .failure(let errorCondition, let response):
+                completionHandler(.failure(errorCondition: errorCondition, response: response));
             }
-        }
+        });
     }
-    
+
     /**
      Query archived messages
      - parameter componentJid: jid of an archiving component
@@ -168,13 +227,13 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
      - parameter rsm: instance defining result set Management
      - parameter callback: callback called when response for a query is received
      */
-    open func queryItems(componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, callback: ((Stanza?)->Void)?)
+    open func queryItems(version: Version = Version.MAM1, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, callback: ((Stanza?)->Void)?)
     {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = componentJid;
         
-        let queryEl = Element(name: "query", xmlns: MessageArchiveManagementModule.MAM_XMLNS);
+        let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
         
         queryEl.setAttribute("queryid", value: queryId);
@@ -189,28 +248,29 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
+    public enum RetrieveFormResult {
+        case success(form: JabberDataElement)
+        case failure(errorCondition: ErrorCondition, response: Stanza?)
+    }
     /**
      Retrieve query form a for querying archvived messages
      - parameter componentJid: jid of an archiving component
-     - parameter onSuccess: called when form was sucessfully retrieved
-     - parameter onError: called if there was an error during form retrieval
+     - parameter completionHandler: called with result
      */
-    open func retrieveForm(componentJid: JID? = nil, onSuccess: @escaping (JabberDataElement?)->Void, onError: @escaping (ErrorCondition?,Stanza?)->Void) {
-        retieveForm(componentJid: componentJid) { (stanza: Stanza?) in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                guard let query = stanza?.findChild(name: "query", xmlns: MessageArchiveManagementModule.MAM_XMLNS) else {
-                    onError(ErrorCondition.bad_request, stanza);
-                    return;
+    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (RetrieveFormResult)->Void) {
+        guard let version = version ?? availableVersion else {
+            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            return;
+        }
+        retieveForm(version: version, componentJid: componentJid) { (stanza: Stanza?) in
+            if let stanza = stanza {
+                if stanza.type == .result, let query = stanza.findChild(name: "query", xmlns: version.rawValue), let x = query.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: x) {
+                    completionHandler(.success(form: form));
+                } else {
+                    completionHandler(.failure(errorCondition: stanza.errorCondition ?? .undefined_condition, response: stanza));
                 }
-                guard let x = query.findChild(name: "x", xmlns: "jabber:x:data") else {
-                    onError(ErrorCondition.bad_request, stanza);
-                    return;
-                }
-                onSuccess(JabberDataElement(from: x));
-            default:
-                onError(stanza?.errorCondition, stanza);
+            } else {
+                completionHandler(.failure(errorCondition: .remote_server_timeout, response: nil));
             }
         }
     }
@@ -220,34 +280,42 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
      - parameter componentJid: jid of an archiving component
      - parameter callback: called when response for a query is received
      */
-    open func retieveForm(componentJid: JID? = nil, callback: ((Stanza?)->Void)?) {
+    open func retieveForm(version: Version = Version.MAM1, componentJid: JID? = nil, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = componentJid;
         
-        let queryEl = Element(name: "query", xmlns: MessageArchiveManagementModule.MAM_XMLNS);
+        let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
      
         context.writer?.write(iq, callback: callback);
     }
     
+    public enum SettingsResult {
+        case success(defValue: DefaultValue, always: [JID], never: [JID])
+        case failure(errorCondition: ErrorCondition, response: Stanza?)
+    }
+    
     /**
      Retrieve message archiving settings
-     - parameter onSuccess: called when settings were retrieved
-     - parameter onError: called when settings retrieval failed
+     - parameter completionHandler: called with result
      */
-    open func retrieveSettings(onSuccess: @escaping (DefaultValue,[JID],[JID])->Void, onError: @escaping (ErrorCondition?,Stanza?)->Void) {
-        retrieveSettings(callback: prepareSettingsCallback(onSuccess: onSuccess, onError: onError));
+    open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (SettingsResult)->Void) {
+        guard let version = version ?? availableVersion else {
+            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            return;
+        }
+        retrieveSettings(version: version, callback: prepareSettingsCallback(version: version, completionHandler: completionHandler));
     }
     
     /**
      Retrieve message archiving settings
      - parameter callback: called when response is received
      */
-    open func retrieveSettings(callback: ((Stanza?)->Void)?) {
+    open func retrieveSettings(version: Version = Version.MAM1, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.get;
-        iq.addChild(Element(name: "prefs", xmlns: MessageArchiveManagementModule.MAM_XMLNS));
+        iq.addChild(Element(name: "prefs", xmlns: version.rawValue));
         
         context.writer?.write(iq, callback: callback);
     }
@@ -256,11 +324,14 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
      - parameter defaultValue: default value for archiving messages
      - parameter always: list of jids for which messages should be always archived
      - parameter never: list of jids for which messages should not be archived
-     - parameter onSuccess: called when change was sucessful
-     - parameter onError: called when error occurred
+     - parameter completionHandler: called with result
      */
-    open func updateSettings(defaultValue: DefaultValue, always: [JID], never: [JID], onSuccess: @escaping (DefaultValue, [JID], [JID])->Void, onError: @escaping (ErrorCondition?,Stanza?)->Void) {
-        updateSettings(defaultValue: defaultValue, always: always, never: never, callback: prepareSettingsCallback(onSuccess: onSuccess, onError: onError));
+    open func updateSettings(version: Version? = nil, defaultValue: DefaultValue, always: [JID], never: [JID], completionHandler: @escaping (SettingsResult)->Void) {
+        guard let version = version ?? availableVersion else {
+            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            return;
+        }
+        updateSettings(version: version, defaultValue: defaultValue, always: always, never: never, callback: prepareSettingsCallback(version: version, completionHandler: completionHandler));
     }
     
     /**
@@ -269,10 +340,10 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
      - parameter never: list of jids for which messages should not be archived
      - parameter callback: called when response is received
      */
-    open func updateSettings(defaultValue: DefaultValue, always: [JID], never: [JID], callback: ((Stanza?)->Void)?) {
+    open func updateSettings(version: Version = Version.MAM1, defaultValue: DefaultValue, always: [JID], never: [JID], callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        let prefs = Element(name: "prefs", xmlns: MessageArchiveManagementModule.MAM_XMLNS);
+        let prefs = Element(name: "prefs", xmlns: version.rawValue);
         prefs.setAttribute("default", value: defaultValue.rawValue);
         iq.addChild(prefs);
         if !always.isEmpty {
@@ -289,11 +360,11 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
-    fileprivate func prepareSettingsCallback(onSuccess: @escaping (DefaultValue,[JID],[JID])->Void, onError: @escaping (ErrorCondition?,Stanza?)->Void) -> ((Stanza?)->Void)? {
+    fileprivate func prepareSettingsCallback(version: Version, completionHandler: @escaping (SettingsResult)->Void) -> ((Stanza?)->Void)? {
         return  { (stanza: Stanza?)->Void in
             let type = stanza?.type ?? StanzaType.error;
             if (type == .result) {
-                if let prefs = stanza?.findChild(name: "prefs", xmlns: MessageArchiveManagementModule.MAM_XMLNS) {
+                if let prefs = stanza?.findChild(name: "prefs", xmlns: version.rawValue) {
                     let defValue = DefaultValue(rawValue: prefs.getAttribute("default") ?? "always") ?? DefaultValue.always;
                     let always: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
                         return JID(elem.value);
@@ -301,12 +372,12 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
                     let never: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
                         return JID(elem.value);
                     }) ?? [JID]();
-                    onSuccess(defValue, always, never);
+                    completionHandler(.success(defValue: defValue, always: always, never: never));
                     return;
                 }
-                onError(ErrorCondition.bad_request, stanza);
+                completionHandler(.failure(errorCondition: .bad_request, response: stanza));
             } else {
-                onError(stanza?.errorCondition, stanza);
+                completionHandler(.failure(errorCondition: stanza?.errorCondition ?? .remote_server_timeout, response: stanza));
             }
         };
     }
@@ -337,25 +408,52 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware {
         public let timestamp: Date!;
         /// Forwarded message
         public let message: Message!;
+        /// Version of MAM request
+        public let version: Version!;
+        /// JID of the archive
+        public let source: BareJID!;
         /// Message ID
         public let messageId: String!;
-        /// Chat for which this forwarded message belongs to
-        public let chat: Chat?;
         
         init() {
             self.sessionObject = nil;
             self.timestamp = nil;
             self.message = nil;
+            self.version = nil;
+            self.source = nil;
             self.messageId = nil;
-            self.chat = nil;
         }
         
-        init(sessionObject: SessionObject, queryid: String, messageId: String, message: Message, timestamp: Date, chat: Chat?) {
+        init(sessionObject: SessionObject, queryid: String, version: Version, messageId: String, source: BareJID, message: Message, timestamp: Date) {
             self.sessionObject = sessionObject;
             self.message = message;
+            self.version = version;
             self.messageId = messageId;
+            self.source = source;
             self.timestamp = timestamp;
-            self.chat = chat;
         }
+    }
+    
+    public enum Version: String {
+        case MAM1 = "urn:xmpp:mam:1"
+        case MAM2 = "urn:xmpp:mam:2"
+        
+        public static let values = [MAM2, MAM1];
+    }
+    
+    private class Query {
+        let id: String;
+        let version: Version;
+        private(set) var endedAt: Date?;
+            
+        init(id: String, version: Version) {
+            self.id = id;
+            self.version = version;
+        }
+        
+        func ended(at date: Date) {
+            self.endedAt = date;
+        }
+        
     }
 }

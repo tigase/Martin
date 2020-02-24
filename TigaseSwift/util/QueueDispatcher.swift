@@ -89,4 +89,8 @@ public class QueueDispatcher {
     open func async(execute: @escaping () -> Void) {
         queue.async(execute: execute);
     }
+    
+    open func asyncAfter(deadline: DispatchTime, execute: @escaping ()->Void) {
+        queue.asyncAfter(deadline: deadline, execute: execute);
+    }
 }
