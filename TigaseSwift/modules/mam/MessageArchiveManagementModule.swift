@@ -115,7 +115,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
 //                let chat = messageModule.processMessage(message, interlocutorJid: from, fireEvents: false)
 //            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: chat));
 //            }
-            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from!.bareJid, message: message, timestamp: timestamp));
+            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.sessionObject.userBareJid!, message: message, timestamp: timestamp));
         }
     }
     
