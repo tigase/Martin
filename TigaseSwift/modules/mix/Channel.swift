@@ -60,10 +60,13 @@ open class Channel: ChatProtocol {
     }
     
     open func createMessage(_ body: String?) -> Message {
-           let msg = Message();
-           msg.to = jid;
-           msg.type = StanzaType.groupchat;
-           msg.body = body;
-           return msg;
-       }
+        let msg = Message();
+        msg.to = jid;
+        msg.type = StanzaType.groupchat;
+        msg.body = body;
+        let id = UUID().uuidString;
+        msg.id = id;
+        msg.originId = id;
+        return msg;
+    }
 }

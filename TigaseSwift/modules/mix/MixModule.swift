@@ -63,7 +63,57 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     public init(channelManager: ChannelManager) {
         self.channelManager = channelManager;
     }
+    
+    open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,ErrorCondition>)->Void) {
+        guard componentJid.localPart == nil else {
+            completionHandler(.failure(.bad_request));
+            return;
+        }
         
+        let iq = Iq();
+        iq.to = JID(componentJid);
+        iq.type = .set;
+        let createEl = Element(name: "create", xmlns: MixModule.CORE_XMLNS);
+        if channel != nil {
+            iq.setAttribute("channel", value: channel);
+        }
+        iq.addChild(createEl);
+        context.writer?.write(iq, completionHandler: { result in
+            switch result {
+            case .success(let response):
+                if let channel = response.findChild(name: "create", xmlns: MixModule.CORE_XMLNS)?.getAttribute("channel") {
+                    completionHandler(.success(BareJID(localPart: channel, domain: componentJid.domain)));
+                } else {
+                    completionHandler(.failure(.unexpected_request));
+                }
+            case .failure(let errorCondition, let response):
+                completionHandler(.failure(errorCondition));
+            }
+        });
+    }
+        
+    open func destroy(channel channelJid: BareJID, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        guard channelJid.localPart != nil else {
+            completionHandler(.failure(.bad_request));
+            return;
+        }
+        
+        let iq = Iq();
+        iq.to = JID(channelJid.domain);
+        iq.type = .set;
+        let createEl = Element(name: "destroy", xmlns: MixModule.CORE_XMLNS);
+        iq.setAttribute("channel", value: channelJid.localPart);
+        iq.addChild(createEl);
+        context.writer?.write(iq, completionHandler: { result in
+            switch result {
+            case .success(let response):
+                completionHandler(.success(Void()));
+            case .failure(let errorCondition, let response):
+                completionHandler(.failure(errorCondition));
+            }
+        });
+    }
+    
     open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info"], completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
@@ -134,6 +184,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         // TODO: retrieve participants? and our own nick..
         // should we do that on "channel created event"?
     }
+    
+    -- do we need channel left? so we could actually close it??
+    -- we may want to add "status" to the channel, to know if we are in participants or not..
     
     open func createJoinEl(withNick nick: String?, withNodes nodes: [String]) -> Element {
         let joinEl = Element(name: "join", xmlns: MixModule.CORE_XMLNS);
