@@ -23,11 +23,17 @@ import Foundation
 
 public protocol ChannelManager {
 
-    func createChannel(jid: BareJID, participantId: String, nick: String?) -> Result<Channel,ErrorCondition>;
+    func channels() -> [Channel];
+    
+    func createChannel(jid: BareJID, participantId: String, nick: String?, state: Channel.State) -> Result<Channel,ErrorCondition>;
     
     func channel(for channelJid: BareJID) -> Channel?;
     
     func close(channel: Channel) -> Bool;
     
     func update(channel: Channel, nick: String?) -> Bool;
+    
+    func update(channel: BareJID, info: ChannelInfo) -> Bool;
+    
+    func update(channel: BareJID, state: Channel.State) -> Bool;
 }

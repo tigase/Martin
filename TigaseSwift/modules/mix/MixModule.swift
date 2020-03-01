@@ -48,8 +48,8 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
 
     public var context: Context! {
         didSet {
-            oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE]);
-            context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE]);
+            oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE]);
+            context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE]);
         }
     }
     
@@ -167,26 +167,50 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             iq.type = .set;
             let clientLeave = Element(name: "client-leave", xmlns: MixModule.PAM2_XMLNS);
             clientLeave.setAttribute("channel", value: channel.channelJid.stringValue);
-            iq.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
+            clientLeave.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
+            iq.addChild(clientLeave);
             
-            context.writer?.write(iq, completionHandler: completionHandler);
+            context.writer?.write(iq, completionHandler: { result in
+                switch result {
+                case .success(let response):
+                    self.channelLeft(channel: channel);
+                default:
+                    break;
+                }
+                completionHandler(result);
+            });
         } else {
             let iq = Iq();
             iq.to = channel.jid;
             iq.type = .set;
             iq.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
-            context.writer?.write(iq, completionHandler: completionHandler);
+            context.writer?.write(iq, completionHandler: { result in
+                switch result {
+                case .success(let response):
+                    self.channelLeft(channel: channel);
+                default:
+                    break;
+                }
+                completionHandler(result);
+            });
         }
     }
     
     open func channelJoined(channelJid: BareJID, participantId: String, nick: String?) {
-        _ = self.channelManager.createChannel(jid: channelJid, participantId: participantId, nick: nick);
-        // TODO: retrieve participants? and our own nick..
-        // should we do that on "channel created event"?
+        switch self.channelManager.createChannel(jid: channelJid, participantId: participantId, nick: nick, state: .joined) {
+        case .success(let channel):
+            retrieveParticipants(for: channel, completionHandler: nil);
+            retrieveInfo(for: channel.channelJid, completionHandler: nil);
+        case .failure(_):
+            break;
+        }
+    }
+
+    open func channelLeft(channel: Channel) {
+        _ = self.channelManager.close(channel: channel);
     }
     
-    -- do we need channel left? so we could actually close it??
-    -- we may want to add "status" to the channel, to know if we are in participants or not..
+    // we may want to add "status" to the channel, to know if we are in participants or not..
     
     open func createJoinEl(withNick nick: String?, withNodes nodes: [String]) -> Element {
         let joinEl = Element(name: "join", xmlns: MixModule.CORE_XMLNS);
@@ -210,9 +234,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         }
     }
     
-    open func retrieveParticipants(for channel: Channel, completionHandler: @escaping (ParticipantsResult)->Void) {
+    open func retrieveParticipants(for channel: Channel, completionHandler: ((ParticipantsResult)->Void)?) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(errorCondition: ErrorCondition.undefined_condition, pubsubErrorCondition: nil, errorText: nil));
+            completionHandler?(.failure(errorCondition: ErrorCondition.undefined_condition, pubsubErrorCondition: nil, errorText: nil));
             return;
         }
         
@@ -231,13 +255,52 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 }
                 channel.update(participants: participants);
                 self.context.eventBus.fire(ParticipantsChangedEvent(sessionObject: self.context.sessionObject, channel: channel, joined: participants, left: left));
-                completionHandler(.success(participants: participants));
+                completionHandler?(.success(participants: participants));
             case .failure(let errorCondition, let pubsubErrorCondition, let response):
-                completionHandler(.failure(errorCondition: errorCondition, pubsubErrorCondition: pubsubErrorCondition, errorText: response?.errorText));
+                completionHandler?(.failure(errorCondition: errorCondition, pubsubErrorCondition: pubsubErrorCondition, errorText: response?.errorText));
             }
         })
     }
     
+    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler(.failure(.undefined_condition))
+            return;
+        }
+        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().submitableElement(type: .result), completionHandler: { response in
+            switch response {
+            case .success(let response, let node, let itemId):
+                completionHandler(.success(Void()));
+            case .failure(let errorCondition, let pubSubErrorCondition, let response):
+                completionHandler(.failure(errorCondition));
+            }
+        });
+    }
+    
+    open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,ErrorCondition>)->Void)?) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler?(.failure(.undefined_condition))
+            return;
+        }
+        pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:info", completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let items, let rsm):
+                guard let item = items.sorted(by: { (i1, i2) in return i1.id > i2.id }).first else {
+                    completionHandler?(.failure(.item_not_found));
+                    return;
+                }
+                guard let info = ChannelInfo(form: JabberDataElement(from: item.payload)) else {
+                    completionHandler?(.failure(.unexpected_request));
+                    return;
+                }
+                self.channelManager.update(channel: channelJid, info: info)
+                completionHandler?(.success(info));
+            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                completionHandler?(.failure(errorCondition));
+            }
+        });
+    }
+
     open func handle(event: Event) {
         switch event {
         case let e as RosterModule.ItemUpdatedEvent:
@@ -251,7 +314,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 guard let channel = channelManager.channel(for: ri.jid.bareJid) else {
                     return;
                 }
-                _ = self.channelManager.close(channel: channel);
+                self.channelLeft(channel: channel);
             default:
                 guard let annotation = ri.annotations.first(where: { item -> Bool in
                     return item.type == "urn:xmpp:mix:roster:0";
@@ -280,6 +343,11 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                     }
                 case "retract":
                     if let id = e.itemId {
+                        if channel.participantId == id {
+                            if self.channelManager.update(channel: channel.channelJid, state: .left) {
+                                self.context.eventBus.fire(ChannelStateChangedEvent(sessionObject: context.sessionObject, channel: channel));
+                            }
+                        }
                         if let participant = channel.participantLeft(participantId: id) {
                             self.context.eventBus.fire(ParticipantsChangedEvent(sessionObject: context.sessionObject, channel: channel, left: [participant]));
                         }
@@ -287,8 +355,22 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 default:
                     break;
                 }
+            case "urn:xmpp:mix:nodes:info":
+                guard let info = ChannelInfo(form: JabberDataElement(from: e.payload)) else {
+                    return;
+                }
+                self.channelManager.update(channel: channel.channelJid, info: info);
             default:
                 break;
+            }
+        case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent, is StreamManagementModule.ResumedEvent:
+            // we have reconnected, so lets update all channels statuses
+            for channel in self.channelManager.channels() {
+                self.context.eventBus.fire(ChannelStateChangedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            }
+        case let ce as SessionObject.ClearedEvent:
+            for channel in self.channelManager.channels() {
+                self.context.eventBus.fire(ChannelStateChangedEvent(sessionObject: self.context.sessionObject, channel: channel));
             }
         default:
             break;
@@ -335,7 +417,25 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         
     }
 
-    /// Event fired when received message in room
+    open class ChannelStateChangedEvent: Event {
+        
+        public static let TYPE = ChannelStateChangedEvent();
+        public let type = "MixModuleChannelStateChangedEvent";
+
+        public let sessionObject: SessionObject!;
+        public let channel: Channel!;
+
+        init() {
+            self.sessionObject = nil;
+            self.channel = nil;
+        }
+        
+        public init(sessionObject: SessionObject, channel: Channel) {
+            self.sessionObject = sessionObject;
+            self.channel = channel;
+        }
+    }
+    
     open class ParticipantsChangedEvent: Event {
         
         public static let TYPE = ParticipantsChangedEvent();

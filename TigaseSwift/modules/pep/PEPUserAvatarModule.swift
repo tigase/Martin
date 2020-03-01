@@ -66,7 +66,18 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         throw ErrorCondition.bad_request;
     }
     
-    open func publishAvatar(data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+    open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+        self.publishAvatar(at: at, data: data, mimeType: mimeType, width: width, height: height, completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let itemId):
+                onSuccess();
+            case .failure(let errorCondition, let pubSubErrorCondition, let response):
+                onError?(errorCondition, pubSubErrorCondition);
+            }
+        })
+    }
+
+    open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         let id = Digest.sha1.digest(toHex: data)!;
         let size = data.count;
         let value = data.base64EncodedString();
@@ -75,22 +86,50 @@ open class PEPUserAvatarModule: AbstractPEPModule {
             print("Required PubSubModule is not registered!");
             return;
         }
-        pubsubModule.publishItem(at: nil, to: PEPUserAvatarModule.DATA_XMLNS, payload: Element(name: "data", cdata: value, xmlns: PEPUserAvatarModule.DATA_XMLNS), onSuccess: { (stanza,node,itemId) in
-            self.publishAvatarMetaData(id: itemId ?? id, mimeType: mimeType, size: size, width: width, height: height, onSuccess: onSuccess, onError: onError);
-            }, onError: onError);
+        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, payload: Element(name: "data", cdata: value, xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let itemId):
+                self.publishAvatarMetaData(at: at, id: itemId ?? id, mimeType: mimeType, size: size, width: width, height: height, completionHandler: completionHandler);
+            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                completionHandler(result);
+            }
+        });
     }
-    
-    open func retractAvatar(onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+
+    open func retractAvatar(from: BareJID? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+        self.retractAvatar(from: from, completionHandler: { result in
+            switch result {
+            case .success(_, _, _):
+                onSuccess();
+            case .failure(let errorCondition, let pubSubErrorCondition, _):
+                onError?(errorCondition, pubSubErrorCondition);
+            }
+        })
+    }
+
+    open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
             print("Required PubSubModule is not registered!");
             return;
         }
         
         let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
-        pubsubModule.publishItem(at: nil, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, onSuccess: { (stanza,node,itemId) in onSuccess(); }, onError: onError);
+        pubsubModule.publishItem(at: from, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
     }
-    
-    open func publishAvatarMetaData(id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+
+    open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+        self.publishAvatarMetaData(at: at, id: id, mimeType: mimeType, size: size, width: width, height: height, url: url, completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let itemId):
+                onSuccess();
+            case .failure(let errorCondition, let pubSubErrorCondition, let response):
+                onError?(errorCondition, pubSubErrorCondition);
+            }
+            
+        });
+    }
+
+    open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
             print("Required PubSubModule is not registered!");
             return;
@@ -112,24 +151,49 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         }
         metadata.addChild(info);
         
-        pubsubModule.publishItem(at: nil, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, onSuccess: { (stanza,node,itemId) in onSuccess(); }, onError: onError);
+        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
     }
-    
-    open func retrieveAvatar(from jid: BareJID, itemId: String, onSuccess: @escaping (BareJID,String,Data?)->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+
+    open func retrieveAvatar(from jid: BareJID, itemId: String? = nil, onSuccess: @escaping (BareJID,String,Data?)->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
             print("Required PubSubModule is not registered!");
             return;
         }
         
-        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: [itemId], onSuccess: { (stanza,node,items,rsm) in
+        let itemIds: [String]? = itemId == nil ? nil : [itemId!];
+        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: itemIds, onSuccess: { (stanza,node,items,rsm) in
             var data: Data? = nil;
             if let cdata = items.first?.payload.value {
                 data = Data(base64Encoded: cdata, options: NSData.Base64DecodingOptions(rawValue: 0))
             }
-            onSuccess(stanza.from?.bareJid ?? jid, items.first?.id ?? itemId, data);
+            onSuccess(stanza.from?.bareJid ?? jid, items.first?.id ?? itemId ?? "", data);
             }, onError: onError);
     }
+
     
+    
+    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,ErrorCondition>)->Void) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            print("Required PubSubModule is not registered!");
+            return;
+        }
+        
+        let itemIds: [String]? = itemId == nil ? nil : [itemId!];
+        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, itemIds: itemIds, completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let items, let rsm):
+                guard let item = items.first, let info = Info(payload: item.payload) else {
+                    completionHandler(.failure(.item_not_found));
+                    return;
+                }
+                self.context.eventBus.fire(AvatarChangedEvent(sessionObject: self.context.sessionObject, jid: JID(jid), itemId: item.id, info: [info]));
+                completionHandler(.success(info));
+            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                completionHandler(.failure(errorCondition));
+            }
+        });
+    }
+
     public func handle(event: Event) {
         switch event {
         case let nre as PubSubModule.NotificationReceivedEvent:
@@ -144,12 +208,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     }
     
     open func onAvatarChangeNotification(sessionObject: SessionObject, from: JID, itemId: String, payload: Element) {
-        let info: [Info] = payload.mapChildren(transform: { (elem) in
-            guard let size = elem.getAttribute("bytes"), let id = elem.getAttribute("id"), let type = elem.getAttribute("type") else {
-                return nil;
-            }
-            return Info(size: Int(size)!, height: Int(elem.getAttribute("height") ?? ""), id: id, mimeType: type, url: elem.getAttribute("url"), width: Int(elem.getAttribute("width") ?? ""));
-        }, filter: { (elem) -> Bool in
+        let info: [Info] = payload.mapChildren(transform: Info.init(payload: ), filter: { (elem) -> Bool in
             return elem.name == "info";
         });
         
@@ -163,6 +222,22 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         public let mimeType: String;
         public let url: String?;
         public let width: Int?;
+        
+        public init?(payload: Element?) {
+            guard let elem = payload, let sizeStr = elem.getAttribute("bytes"), let size = Int(sizeStr), let id = elem.getAttribute("id"), let type = elem.getAttribute("type") else {
+                return nil;
+            }
+            self.init(id: id, size: size, mimeType: type, url: elem.getAttribute("url"), height: Int(elem.getAttribute("height") ?? ""), width: Int(elem.getAttribute("width") ?? ""));
+        }
+        
+        public init(id: String, size: Int, mimeType: String, url: String?, height: Int?, width: Int?) {
+            self.id = id;
+            self.size = size;
+            self.mimeType = mimeType;
+            self.url = url;
+            self.height = height;
+            self.width = width;
+        }
     }
     
     open class AvatarChangedEvent: Event {

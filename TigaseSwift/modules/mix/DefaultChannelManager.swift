@@ -25,27 +25,28 @@ open class DefaultChannelManager: ChannelManager {
     
     public let store: ChannelStore;
     public let context:Context;
-
+    
     public init(context: Context, store: ChannelStore) {
         self.context = context;
         self.store = store;
     }
     
-    open func createChannel(jid: BareJID, participantId: String, nick: String?) -> Result<Channel, ErrorCondition> {
+    open func createChannel(jid: BareJID, participantId: String, nick: String?, state: Channel.State) -> Result<Channel, ErrorCondition> {
         return store.dispatcher.sync(execute: {
             if let channel = store.channel(for: jid) {
                 if channel.participantId == participantId {
+                    store.update(channel: channel, state: state);
                     return .success(channel);
                 } else {
                     if store.close(channel: channel) {
-                        self.context.eventBus.fire(ChannelCreatedEvent(sessionObject: self.context.sessionObject, channel: channel));
+                        self.context.eventBus.fire(ChannelClosedEvent(sessionObject: self.context.sessionObject, channel: channel));
                     }
                 }
             }
-            let result = store.createChannel(jid: jid, participantId: participantId, nick: nick);
+            let result = store.createChannel(jid: jid, participantId: participantId, nick: nick, state: state);
             switch result {
             case .success(let channel):
-                self.context.eventBus.fire(ChannelClosedEvent(sessionObject: self.context.sessionObject, channel: channel));
+                self.context.eventBus.fire(ChannelCreatedEvent(sessionObject: self.context.sessionObject, channel: channel));
             default:
                 break;
             }
@@ -53,6 +54,10 @@ open class DefaultChannelManager: ChannelManager {
         })
     }
     
+    open func channels() -> [Channel] {
+        return store.channels();
+    }
+
     open func channel(for channelJid: BareJID) -> Channel? {
         return store.channel(for: channelJid);
     }
@@ -72,7 +77,29 @@ open class DefaultChannelManager: ChannelManager {
         }
         return false;
     }
-        
+
+    open func update(channel jid: BareJID, info: ChannelInfo) -> Bool {
+        guard let channel = channel(for: jid) else {
+            return false;
+        }
+        if store.update(channel: channel, info: info) {
+            self.context.eventBus.fire(ChannelUpdatedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            return true;
+        }
+        return false;
+    }
+
+    open func update(channel jid: BareJID, state: Channel.State) -> Bool {
+        guard let channel = channel(for: jid) else {
+            return false;
+        }
+        if store.update(channel: channel, state: state) {
+            self.context.eventBus.fire(ChannelUpdatedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            return true;
+        }
+        return false;
+    }
+
     open class ChannelCreatedEvent: Event {
         
         /// Identifier of event which should be used during registration of `EventHandler`

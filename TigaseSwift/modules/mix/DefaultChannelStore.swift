@@ -25,28 +25,34 @@ open class DefaultChannelStore: ChannelStore {
         
     public let dispatcher = QueueDispatcher(label: "DefaultChannelStore");
     
-    private var channels: [BareJID: Channel] = [:];
+    private var items: [BareJID: Channel] = [:];
 
-    open func channel(for channelJid: BareJID) -> Channel? {
+    open func channels() -> [Channel] {
         return dispatcher.sync {
-            return self.channels[channelJid];
+            return Array(items.values);
         }
     }
     
-    open func createChannel(jid: BareJID, participantId: String, nick: String?) -> Result<Channel,ErrorCondition> {
+    open func channel(for channelJid: BareJID) -> Channel? {
         return dispatcher.sync {
-            guard self.channels[jid] == nil else {
+            return self.items[channelJid];
+        }
+    }
+    
+    open func createChannel(jid: BareJID, participantId: String, nick: String?, state: Channel.State) -> Result<Channel,ErrorCondition> {
+        return dispatcher.sync {
+            guard self.items[jid] == nil else {
                 return .failure(.conflict);
             }
-            let channel = Channel(channelJid: jid, participantId: participantId, nickname: nick);
-            self.channels[jid] = channel;
+            let channel = Channel(channelJid: jid, participantId: participantId, nickname: nick, state: state);
+            self.items[jid] = channel;
             return .success(channel);
         }
     }
     
     open func close(channel: Channel) -> Bool {
         return dispatcher.sync {
-            return self.channels.removeValue(forKey: channel.channelJid) != nil;
+            return self.items.removeValue(forKey: channel.channelJid) != nil;
         }
     }
 
@@ -57,6 +63,17 @@ open class DefaultChannelStore: ChannelStore {
             }
             channel.nickname = nick;
             return true;
+        }
+    }
+    
+    public func update(channel: Channel, info: ChannelInfo) -> Bool {
+        // we are not storing channel info in this case.. or maybe we should???
+        return false;
+    }
+    
+    public func update(channel: Channel, state: Channel.State) -> Bool {
+        return dispatcher.sync {
+            return channel.update(state: state);
         }
     }
 }

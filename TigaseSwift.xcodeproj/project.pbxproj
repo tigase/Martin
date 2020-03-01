@@ -123,6 +123,7 @@
 		FEB1BAB01F1F567800F10238 /* MessageArchiveManagementModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */; };
 		FEB4B7B62386B27500426527 /* BlockingCommandModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB4B7B52386B27500426527 /* BlockingCommandModule.swift */; };
 		FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */; };
+		FEC336F124092E3F00EC1A0D /* ChannelInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC336F024092E3F00EC1A0D /* ChannelInfo.swift */; };
 		FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514111CE9C3FB003AF765 /* MucModule.swift */; };
 		FEC514141CE9C4CA003AF765 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514131CE9C4CA003AF765 /* Room.swift */; };
 		FEC514161CE9C702003AF765 /* MucRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514151CE9C702003AF765 /* MucRole.swift */; };
@@ -290,6 +291,7 @@
 		FEB1BAAF1F1F567800F10238 /* MessageArchiveManagementModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageArchiveManagementModule.swift; sourceTree = "<group>"; };
 		FEB4B7B52386B27500426527 /* BlockingCommandModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingCommandModule.swift; sourceTree = "<group>"; };
 		FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractPEPModule.swift; sourceTree = "<group>"; };
+		FEC336F024092E3F00EC1A0D /* ChannelInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelInfo.swift; sourceTree = "<group>"; };
 		FEC514111CE9C3FB003AF765 /* MucModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucModule.swift; sourceTree = "<group>"; };
 		FEC514131CE9C4CA003AF765 /* Room.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
 		FEC514151CE9C702003AF765 /* MucRole.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucRole.swift; sourceTree = "<group>"; };
@@ -576,6 +578,7 @@
 				FE890D312400519F00107437 /* DefaultChannelManager.swift */,
 				FE890D3324005A8600107437 /* ChannelStore.swift */,
 				FE890D3B24018F2A00107437 /* DefaultChannelStore.swift */,
+				FEC336F024092E3F00EC1A0D /* ChannelInfo.swift */,
 			);
 			path = mix;
 			sourceTree = "<group>";
@@ -943,6 +946,7 @@
 				FEDCBF9D1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift in Sources */,
 				FE2EFDA91CB80E09000D254E /* EventBus.swift in Sources */,
 				FEDCBF851D9EC75500AE9129 /* HiddenField.swift in Sources */,
+				FEC336F124092E3F00EC1A0D /* ChannelInfo.swift in Sources */,
 				FE2EFD7B1CB57C70000D254E /* JID.swift in Sources */,
 				FE7F9301200FBE30004C6195 /* ScramSaltedPasswordCacheProcotol.swift in Sources */,
 				FE2EFE201CC417D9000D254E /* XMLParser.swift in Sources */,

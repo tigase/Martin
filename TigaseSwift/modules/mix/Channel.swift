@@ -38,13 +38,15 @@ open class Channel: ChatProtocol {
     
     public var nickname: String?;
     public let participantId: String;
+    public private(set) var state: State;
     
     open private(set) var participants: [String:MixParticipant] = [:];
     
-    public init(channelJid: BareJID, participantId: String, nickname: String?) {
+    public init(channelJid: BareJID, participantId: String, nickname: String?, state: State) {
         self.channelJid = channelJid;
         self.participantId = participantId;
         self.nickname = nickname;
+        self.state = state;
     }
     
     open func update(participants: [MixParticipant]) {
@@ -53,6 +55,18 @@ open class Channel: ChatProtocol {
     
     open func update(participant: MixParticipant) {
         self.participants[participant.id] = participant;
+    }
+    
+    open func update(info: ChannelInfo) {
+        
+    }
+    
+    open func update(state: State) -> Bool {
+        guard self.state != state else {
+            return false;
+        }
+        self.state = state;
+        return true;
     }
     
     open func participantLeft(participantId: String) -> MixParticipant? {
@@ -68,5 +82,10 @@ open class Channel: ChatProtocol {
         msg.id = id;
         msg.originId = id;
         return msg;
+    }
+    
+    public enum State: Int {
+        case left = 0
+        case joined = 1
     }
 }

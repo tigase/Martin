@@ -23,9 +23,9 @@ import Foundation
 
 open class MixParticipant {
     
-    let id: String;
-    let nickname: String?;
-    let jid: BareJID?;
+    public let id: String;
+    public let nickname: String?;
+    public let jid: BareJID?;
     
     public convenience init?(from item: PubSubModule.Item) {
         guard item.payload.name == "participant" && item.payload.xmlns == MixModule.CORE_XMLNS else {

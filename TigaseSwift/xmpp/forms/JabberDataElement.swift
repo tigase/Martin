@@ -39,9 +39,10 @@ open class JabberDataElementFieldAware {
         self.element = from;
     }
     
-    open func addField(_ field: Field) {
+    open func addField<T: Field>(_ field: T) -> T {
         element.removeChildren(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == field.name});
         element.addChild(field.element);
+        return field;
     }
     
     open func getField<T: Field>(named name: String) -> T? {

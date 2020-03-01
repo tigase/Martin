@@ -272,7 +272,10 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     
     /// Process ACK from server
     func processAckAnswer(_ stanza: Stanza) {
-        let newH = UInt32(stanza.getAttribute("h")!) ?? 0;
+        guard let attr = stanza.getAttribute("h") else {
+            return;
+        }
+        let newH = UInt32(attr) ?? 0;
         _ackEnabled = true;
         let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
         ackH.outgoingCounter = newH;

@@ -27,7 +27,43 @@ public protocol PubSubModulePublisherExtension: class, ContextAware {
     
 }
 
+public enum PubSubPublishItemResult {
+    case success(response: Stanza, node: String, itemId: String)
+    case failure(errorCondition: ErrorCondition, pubSubErrorCondition: PubSubErrorCondition?, response: Stanza?);
+}
+
 extension PubSubModulePublisherExtension {
+        
+    /**
+     Publish item to PubSub node
+     - parameter at: jid of PubSub service
+     - parameter to: node name
+     - parameter itemId: id of item
+     - parameter payload: item payload
+     - parameter publishOptions: publish options
+     - parameter completionHandler: called on completion
+     */
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, publishOptions: JabberDataElement? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+        let callback: (Stanza?)->Void = { stanza in
+            guard let response = stanza else {
+                completionHandler(.failure(errorCondition: .remote_server_timeout, pubSubErrorCondition: nil, response: nil));
+                return;
+            }
+            switch response.type ?? .error {
+            case .result:
+                guard let publishEl = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "publish"), let node = publishEl.getAttribute("node"), let id = publishEl.findChild(name: "item")?.getAttribute("id") else {
+                    completionHandler(.failure(errorCondition: .undefined_condition, pubSubErrorCondition: .unsupported, response: response));
+                    return;
+                }
+                completionHandler(.success(response: response, node: node, itemId: id));
+            default:
+                let pubsubError = response.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+                completionHandler(.failure(errorCondition: response.errorCondition ?? .remote_server_timeout, pubSubErrorCondition: pubsubError == nil ? nil : PubSubErrorCondition(rawValue: pubsubError!.name), response: response));
+            }
+        }
+
+        self.publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions, callback: callback);
+    }
     
     /**
      Publish item to PubSub node

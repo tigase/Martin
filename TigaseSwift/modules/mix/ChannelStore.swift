@@ -24,12 +24,18 @@ import Foundation
 public protocol ChannelStore {
 
     var dispatcher: QueueDispatcher { get }
+
+    func channels() -> [Channel];
     
     func channel(for: BareJID) -> Channel?;
     
-    func createChannel(jid: BareJID, participantId: String, nick: String?) -> Result<Channel,ErrorCondition>;
+    func createChannel(jid: BareJID, participantId: String, nick: String?, state: Channel.State) -> Result<Channel,ErrorCondition>;
     
     func close(channel: Channel) -> Bool;
     
     func update(channel: Channel, nick: String?) -> Bool;
+    
+    func update(channel: Channel, info: ChannelInfo) -> Bool;
+    
+    func update(channel: Channel, state: Channel.State) -> Bool;
 }
