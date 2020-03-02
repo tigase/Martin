@@ -91,17 +91,19 @@ open class Bookmarks {
     }
     
     open class Item {
-        let name: String;
+        let name: String?;
         let type: ItemType;
         
-        public init(type: ItemType, name: String) {
+        public init(type: ItemType, name: String?) {
             self.type = type;
             self.name = name;
         }
         
         open func toElement() -> Element {
             let el = Element(name: type.rawValue);
-            el.setAttribute("name", value: name);
+            if name != nil {
+                el.setAttribute("name", value: name);
+            }
             return el;
         }
     }
@@ -113,16 +115,16 @@ open class Bookmarks {
         public let password: String?;
         
         convenience public init?(from el: Element?) {
-            guard el?.name == "conference", let name = el?.getAttribute("name"), let jid = JID(el?.getAttribute("jid")) else {
+            guard el?.name == "conference", let jid = JID(el?.getAttribute("jid")) else {
                 return nil;
             }
             
             let joinStr = el?.getAttribute("autojoin") ?? "false";
 
-            self.init(name: name, jid: jid, autojoin: joinStr == "true" || joinStr == "1", nick: el?.getAttribute("nick") ?? el?.findChild(name: "nick")?.value, password: el?.getAttribute("password"));
+            self.init(name: el?.getAttribute("name"), jid: jid, autojoin: joinStr == "true" || joinStr == "1", nick: el?.getAttribute("nick") ?? el?.findChild(name: "nick")?.value, password: el?.getAttribute("password"));
         }
         
-        public init(name: String, jid: JID, autojoin: Bool, nick: String? = nil, password: String? = nil) {
+        public init(name: String?, jid: JID, autojoin: Bool, nick: String? = nil, password: String? = nil) {
             self.jid = jid;
             self.autojoin = autojoin;
             self.nick = nick;
@@ -149,13 +151,13 @@ open class Bookmarks {
         public let url: String;
         
         convenience public init?(from el: Element?) {
-            guard el?.name == "url", let url = el?.getAttribute("url"), let name = el?.getAttribute("name") else {
+            guard el?.name == "url", let url = el?.getAttribute("url") else {
                 return nil;
             }
-            self.init(name: name, url: url);
+            self.init(name: el?.getAttribute("name"), url: url);
         }
         
-        public init(name: String, url: String) {
+        public init(name: String?, url: String) {
             self.url = url;
             super.init(type: .url, name: name);
         }
