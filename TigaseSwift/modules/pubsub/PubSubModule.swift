@@ -26,7 +26,7 @@ import Foundation
  
  [XEP-0060: Publish-Subscribe]: http://www.xmpp.org/extensions/xep-0060.html
  */
-open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, PubSubModulePublisherExtension, PubSubModuleSubscriberExtension {
+open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, PubSubModulePublisherExtension, PubSubModuleSubscriberExtension {    
     
     public static let PUBSUB_XMLNS = "http://jabber.org/protocol/pubsub";
     

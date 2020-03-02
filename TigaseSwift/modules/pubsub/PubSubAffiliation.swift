@@ -21,56 +21,6 @@
 
 import Foundation
 
-/// Represents affiliation item
-open class PubSubAffiliationElement {
-    /// Instance of element
-    let element: Element;
-    /// Affiliation
-    var affiliation: PubSubAffiliation {
-        get {
-            guard let val = element.getAttribute("affiliation") else {
-                return .none;
-            }
-            return PubSubAffiliation(rawValue: val) ?? .none;
-        }
-        set {
-            element.setAttribute("affiliation", value: newValue.rawValue);
-        }
-    }
-    /// JID of affiliate
-    var jid: JID {
-        return JID(element.getAttribute("jid")!);
-    }
-    /// Name of node
-    var node: String? {
-        return element.getAttribute("node");
-    }
-    
-    /**
-     Creates affiliation item from element
-     - parameter from: element with affiliation
-     */
-    public init?(from: Element) {
-        guard from.name == "affiliation" else {
-            return nil;
-        }
-        self.element = from;
-    }
-    
-    /**
-     Creates affiliation item for manipulation
-     - parameter jid: JID of affiliate
-     - parameter node: name of node
-     */
-    public convenience init(jid: JID, node: String?) {
-        let elem = Element(name: "affiliation");
-        elem.setAttribute("jid", value: jid.stringValue);
-        elem.setAttribute("node", value: node);
-        self.init(from: elem)!;
-    }
-    
-}
-
 /// Enum contains list of possible affiliations with PubSub node
 public enum PubSubAffiliation: String {
     case outcast

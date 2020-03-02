@@ -339,49 +339,77 @@ extension PubSubModuleOwnerExtension {
         
         self.context.writer?.write(iq, callback: callback);
     }
+    
+    private func prepareAffiliationsEl(source: PubSubAffilicationsSource, pubsubEl: Element) -> Element {
+        let affiliations = Element(name: "affiliations");
+        switch source {
+        case .node(let node):
+            affiliations.setAttribute("node", value: node);
+            pubsubEl.xmlns = "http://jabber.org/protocol/pubsub#owner";
+        case .own(let node):
+            pubsubEl.xmlns = "http://jabber.org/protocol/pubsub"
+            if node != nil {
+                affiliations.setAttribute("node", value: node);
+            }
+        }
+        pubsubEl.addNode(affiliations);
+        return affiliations;
+    }
 
     /**
      Retrieve all affiliatons for node
      - parameter from: address of PubSub service
-     - parameter for: name of node
-     - parameter xmlns: optional XMLNS for request
-     - parameter onSuccess: called when request succeeds - passes response stanza and array of affiliation items
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter node: defines if affiliations should be retrieved for sender or for node
+     - parameter completionHandler: called when response if available
      */
-    public func retrieveAffiliations(from pubSubJid: BareJID, for nodeName: String, xmlns: String = PubSubModule.PUBSUB_OWNER_XMLNS, onSuccess: ((Stanza, [PubSubAffiliationElement])->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: { (stanza) in
-            var affiliations = [PubSubAffiliationElement]();
-            stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "affiliations")?.forEachChild { (affEl) in
-                if let aff = PubSubAffiliationElement(from: affEl) {
-                    affiliations.append(aff);
-                }
-            }
-            onSuccess?(stanza, affiliations);
-        }, onError: onError);
-        
-        self.retrieveAffiliations(from: pubSubJid, for: nodeName, xmlns: xmlns, callback: callback);
+    public func retrieveAffiliations(from pubSubJid: BareJID, for nodeName: String, completionHandler: @escaping (PubSubRetrieveAffiliationsResult)->Void) {
+        self.retrieveAffiliations(from: pubSubJid, source: .node(nodeName), completionHandler: completionHandler);
     }
     
     /**
-     Retrieve all affiliatons for node
+     Retrieve all affiliatons for node or sender jid
      - parameter from: address of PubSub service
-     - parameter for: name of node
-     - parameter xmlns: optional XMLNS for request
-     - parameter callback: called when response is received or request times out
+     - parameter source: defines if affiliations should be retrieved for sender or for node
+     - parameter completionHandler: called when response if available
      */
-    public func retrieveAffiliations(from pubSubJid: BareJID, for nodeName: String, xmlns: String = PubSubModule.PUBSUB_OWNER_XMLNS, callback: ((Stanza?)->Void)?) {
+    public func retrieveAffiliations(from pubSubJid: BareJID, source: PubSubAffilicationsSource, completionHandler: @escaping (PubSubRetrieveAffiliationsResult)->Void) {
+
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
         
-        let pubsub = Element(name: "pubsub", xmlns: xmlns);
+        let pubsub = Element(name: "pubsub");
         iq.addChild(pubsub);
         
-        let affiliations = Element(name: "affiliations");
-        affiliations.setAttribute("node", value: nodeName);
-        pubsub.addChild(affiliations);
+        let affiliations = self.prepareAffiliationsEl(source: source, pubsubEl: pubsub);
         
-        self.context.writer?.write(iq, callback: callback);
+        let xmlns = pubsub.xmlns!;
+        
+        self.context.writer?.write(iq, callback: { stanza in
+            guard let response = stanza else {
+                completionHandler(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
+                return;
+            }
+            switch response.type ?? .error {
+            case .result:
+                guard let affiliationsEl = response.findChild(name: "pubsub", xmlns: xmlns)?.findChild(name: "affiliations") else {
+                    completionHandler(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: .unsupported, response: response));
+                    return;
+                }
+                switch source {
+                case .node(let node):
+                    let affiliations = affiliationsEl.mapChildren(transform: { el in PubSubAffiliationItem(from: el, node: node) });
+                    completionHandler(.success(affiliatinons: affiliations));
+                case .own:
+                    let jid = response.to!.withoutResource;
+                    let affiliations = affiliationsEl.mapChildren(transform: { el in PubSubAffiliationItem(from: el, jid: jid) });
+                    completionHandler(.success(affiliatinons: affiliations));
+                }
+            default:
+                let pubsubError = response.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+                completionHandler(.failure(errorCondition: response.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubError == nil ? nil : PubSubErrorCondition(rawValue: pubsubError!.name), response: response));
+            }
+        });
     }
     
     /**
@@ -389,23 +417,9 @@ extension PubSubModuleOwnerExtension {
      - parameter at: address of PubSub service
      - parameter for: node name
      - parameter affiliations: array of affiliation items to modify
-     - parameter onSuccess: called when request succeeds - passes response stanza
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when response is available
      */
-    public func setAffiliations(at pubSubJid: BareJID, for nodeName: String, affiliations values: [PubSubAffiliationElement], onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: onSuccess, onError: onError);
-        
-        self.setAffiliations(at: pubSubJid, for: nodeName, affiliations: values, callback: callback);
-    }
-    
-    /**
-     Set affiliations for passed items for node
-     - parameter at: address of PubSub service
-     - parameter for: node name
-     - parameter affiliations: array of affiliation items to modify
-     - parameter callback: called when response is received or request times out
-     */
-    public func setAffiliations(at pubSubJid: BareJID, for nodeName: String, affiliations values: [PubSubAffiliationElement], callback: ((Stanza?)->Void)?) {
+    public func setAffiliations(at pubSubJid: BareJID, for nodeName: String, affiliations values: [PubSubAffiliationItem], completionHandler: @escaping (PubSubSetAffiliationsResult)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -418,9 +432,36 @@ extension PubSubModuleOwnerExtension {
         pubsub.addChild(affiliations);
         
         values.forEach { (v) in
-            affiliations.addChild(v.element);
+            affiliations.addChild(v.element());
         }
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, callback: { stanza in
+            guard let response = stanza else {
+                completionHandler(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
+                return;
+            }
+            switch response.type ?? .error {
+            case .result:
+                completionHandler(.success);
+            default:
+                let pubsubError = response.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+                completionHandler(.failure(errorCondition: response.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubError == nil ? nil : PubSubErrorCondition(rawValue: pubsubError!.name), response: response));
+            }
+        });
     }
+}
+
+public enum PubSubAffilicationsSource {
+    case node(String)
+    case own(node: String? = nil)
+}
+
+public enum PubSubRetrieveAffiliationsResult {
+    case success(affiliatinons: [PubSubAffiliationItem])
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
+}
+
+public enum PubSubSetAffiliationsResult {
+    case success
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
 }

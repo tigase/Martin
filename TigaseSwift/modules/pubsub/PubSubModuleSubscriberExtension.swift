@@ -28,8 +28,7 @@ public protocol PubSubModuleSubscriberExtension: class, ContextAware {
     func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String, onSuccess: ((Stanza, [PubSubSubscriptionElement])->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?);
     func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String, callback: ((Stanza?)->Void)?);
 
-    func retrieveAffiliations(from pubSubJid: BareJID, for nodeName: String, xmlns: String, onSuccess: ((Stanza, [PubSubAffiliationElement])->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?);
-    func retrieveAffiliations(from pubSubJid: BareJID, for nodeName: String, xmlns: String, callback: ((Stanza?)->Void)?);
+    func retrieveAffiliations(from pubSubJid: BareJID, source: PubSubAffilicationsSource, completionHandler: @escaping ((PubSubRetrieveAffiliationsResult)->Void));
     
 }
 
@@ -370,23 +369,12 @@ extension PubSubModuleSubscriberExtension {
      Retrieve own affiliations for node
      - parameter from: jid of PubSub service
      - parameter for: node name
-     - parameter onSuccess: called when request succeeds - passes response stanza, array of affiliation items
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when response is received
      */
-    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String, onSuccess: ((Stanza, [PubSubAffiliationElement])->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?) {
-        self.retrieveAffiliations(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS, onSuccess: onSuccess, onError: onError);
+    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String?, completionHandler: @escaping (PubSubRetrieveAffiliationsResult)->Void) {
+        self.retrieveAffiliations(from: pubSubJid, source: .own(node: nodeName), completionHandler: completionHandler);
     }
-
-    /**
-     Retrieve own affiliations for node
-     - parameter from: jid of PubSub service
-     - parameter for: node name
-     - parameter callback: called when response is received or request times out
-     */
-    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String, callback: ((Stanza?)->Void)?) {
-        self.retrieveAffiliations(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS, callback: callback);
-    }
-
+    
 }
 
 public enum PubSubRetrieveItemsResult {

@@ -39,14 +39,19 @@ open class Channel: ChatProtocol {
     public var nickname: String?;
     public let participantId: String;
     public private(set) var state: State;
-    
+    open var lastMessageDate: Date?;
     open private(set) var participants: [String:MixParticipant] = [:];
+    open private(set) var permissions: Set<Permission>?;
     
     public init(channelJid: BareJID, participantId: String, nickname: String?, state: State) {
         self.channelJid = channelJid;
         self.participantId = participantId;
         self.nickname = nickname;
         self.state = state;
+    }
+    
+    open func has(permission: Permission) -> Bool {
+        return permissions?.contains(permission) ?? false;
     }
     
     open func update(participants: [MixParticipant]) {
@@ -69,6 +74,10 @@ open class Channel: ChatProtocol {
         return true;
     }
     
+    open func update(permissions: Set<Permission>) {
+        self.permissions = permissions;
+    }
+    
     open func participantLeft(participantId: String) -> MixParticipant? {
         return self.participants.removeValue(forKey: participantId);
     }
@@ -88,4 +97,11 @@ open class Channel: ChatProtocol {
         case left = 0
         case joined = 1
     }
+    
+    public enum Permission {
+        case changeConfig
+        case changeInfo
+        case changeAvatar
+    }
+
 }

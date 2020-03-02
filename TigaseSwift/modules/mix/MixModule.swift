@@ -48,8 +48,8 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
 
     public var context: Context! {
         didSet {
-            oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE]);
-            context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE]);
+            oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
+            context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
         }
     }
     
@@ -59,6 +59,19 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         let accountFeatures: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) ?? [];
         return accountFeatures.contains(MixModule.PAM2_XMLNS);
     }
+    
+    public var localMAMStoresPubSubEvents: Bool {
+        return isPAM2SupportAvailable && false;
+    }
+    
+    public enum AutomaticRetriveActions {
+        case participants
+        case info
+        case avatar
+        case affiliations
+    }
+    
+    public var automaticRetrieve: Set<AutomaticRetriveActions> = [.participants,.info,.avatar,.affiliations];
     
     public init(channelManager: ChannelManager) {
         self.channelManager = channelManager;
@@ -101,12 +114,18 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         let iq = Iq();
         iq.to = JID(channelJid.domain);
         iq.type = .set;
-        let createEl = Element(name: "destroy", xmlns: MixModule.CORE_XMLNS);
-        iq.setAttribute("channel", value: channelJid.localPart);
-        iq.addChild(createEl);
+        let destroyEl = Element(name: "destroy", xmlns: MixModule.CORE_XMLNS);
+        destroyEl.setAttribute("channel", value: channelJid.localPart);
+        iq.addChild(destroyEl);
         context.writer?.write(iq, completionHandler: { result in
             switch result {
             case .success(let response):
+                if let channel = self.channelManager.channel(for: channelJid) {
+                    _  = self.channelManager.close(channel: channel);
+                }
+                if let rosterModule: RosterModule = self.context.modulesManager.getModule(RosterModule.ID) {
+                    rosterModule.rosterStore.remove(jid: JID(channelJid), onSuccess: nil, onError: nil);
+                }
                 completionHandler(.success(Void()));
             case .failure(let errorCondition, let response):
                 completionHandler(.failure(errorCondition));
@@ -132,6 +151,8 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                             let participantId = String(resultJid[resultJid.startIndex..<idx]);
                             let jid = BareJID(String(resultJid[resultJid.index(after: idx)..<resultJid.endIndex]));
                             self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
+                            
+                            self.retrieveHistory(fromChannel: channelJid, max: 100);
                         } else if let participantId = joinEl.getAttribute("id") {
                             self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                         }
@@ -199,8 +220,11 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     open func channelJoined(channelJid: BareJID, participantId: String, nick: String?) {
         switch self.channelManager.createChannel(jid: channelJid, participantId: participantId, nick: nick, state: .joined) {
         case .success(let channel):
-            retrieveParticipants(for: channel, completionHandler: nil);
+            if self.automaticRetrieve.contains(.participants) {
+                retrieveParticipants(for: channel, completionHandler: nil);
+            }
             retrieveInfo(for: channel.channelJid, completionHandler: nil);
+            retrieveAffiliations(for: channel, completionHandler: nil);
         case .failure(_):
             break;
         }
@@ -232,6 +256,43 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         default:
             break;
         }
+    }
+    
+    open func retrieveAffiliations(for channel: Channel, completionHandler: ((PermissionsResult)->Void)?) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler?(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: nil, errorText: nil));
+            return;
+        }
+        
+        pubsubModule.retrieveOwnAffiliations(from: channel.channelJid, for: nil, completionHandler: { result in
+            switch result {
+            case .success(let affiliations):
+                let values = Dictionary(affiliations.map({ ($0.node, $0.affiliation) }), uniquingKeysWith: { (first, _) in first });
+                var permissions: Set<Channel.Permission> = [];
+                switch values["urn:xmpp:mix:nodes:info"] ?? .none {
+                case .owner, .publisher:
+                    permissions.insert(.changeInfo);
+                default:
+                    break;
+                }
+                switch values["urn:xmpp:mix:nodes:config"] ?? .none {
+                case .owner, .publisher:
+                    permissions.insert((.changeConfig));
+                default:
+                    break;
+                }
+                switch values["urn:xmpp:avatar:metadata"] ?? .none {
+                case .owner, .publisher:
+                    permissions.insert((.changeAvatar));
+                default:
+                    break;
+                }
+                channel.update(permissions: permissions);
+            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                channel.update(permissions: []);
+            }
+            self.context.eventBus.fire(ChannelPermissionsChangedEvent(sessionObject: self.context.sessionObject, channel: channel));
+        })
     }
     
     open func retrieveParticipants(for channel: Channel, completionHandler: ((ParticipantsResult)->Void)?) {
@@ -323,6 +384,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 }
                 
                 self.channelJoined(channelJid: ri.jid.bareJid, participantId: participantId, nick: nil);
+                if !isPAM2SupportAvailable {
+                    retrieveHistory(fromChannel: ri.jid.bareJid, max: 100);
+                }
             }
             break;
         case let e as PubSubModule.NotificationReceivedEvent:
@@ -372,12 +436,63 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             for channel in self.channelManager.channels() {
                 self.context.eventBus.fire(ChannelStateChangedEvent(sessionObject: self.context.sessionObject, channel: channel));
             }
+        case is DiscoveryModule.AccountFeaturesReceivedEvent:
+            if !localMAMStoresPubSubEvents {
+                if !isPAM2SupportAvailable {
+                    for channel in self.channelManager.channels() {
+                        if let lastMessageDate = channel.lastMessageDate {
+                            self.retrieveHistory(fromChannel: channel.channelJid, start: lastMessageDate, after: nil);
+                        } else {
+                            self.retrieveHistory(fromChannel: channel.channelJid, max: 100);
+                        }
+                    }
+                }
+                for channel in self.channelManager.channels() {
+                    if self.automaticRetrieve.contains(.participants) {
+                        retrieveParticipants(for: channel, completionHandler: nil);
+                    }
+                    if self.automaticRetrieve.contains(.info) {
+                        retrieveInfo(for: channel.channelJid, completionHandler: nil);
+                    }
+                    if self.automaticRetrieve.contains(.affiliations) {
+                        retrieveAffiliations(for: channel, completionHandler: nil);
+                    }
+                }
+            }
+
         default:
             break;
         }
     }
     
-    
+    // for initial retrieval after join..
+    open func retrieveHistory(fromChannel jid: BareJID, max: Int) {
+        self.retrieveHistory(fromChannel: jid, start: nil, rsm: RSM.Query(lastItems: max))
+    }
+
+    open func retrieveHistory(fromChannel jid: BareJID, start: Date, after: String?) {
+        self.retrieveHistory(fromChannel: jid, start: start, rsm: RSM.Query(before: nil, after: after, max: 100));
+    }
+
+    open func retrieveHistory(fromChannel jid: BareJID, start: Date?, rsm: RSM.Query) {
+        guard let mamModule: MessageArchiveManagementModule = self.context.modulesManager.getModule(MessageArchiveManagementModule.ID) else {
+            return;
+        }
+
+        let queryId = UUID().uuidString;
+        mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: nil, start: nil, queryId: queryId, rsm: rsm, completionHandler: { result in
+            switch result {
+            case .success(let queryId, let complete, let rsm):
+                guard !complete, let rsmQuery = rsm?.next() else {
+                    return;
+                }
+                self.retrieveHistory(fromChannel: jid, start: start, rsm: rsmQuery);
+            case .failure(let errorCondition, let response):
+                break;
+            }
+        });
+    }
+
     /// Event fired when received message in room
     open class MessageReceivedEvent: Event {
         /// Identifier of event which should be used during registration of `EventHandler`
@@ -466,8 +581,34 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         }
     }
     
+    open class ChannelPermissionsChangedEvent: Event {
+        
+        public static let TYPE = ChannelPermissionsChangedEvent();
+        public let type = "MixModuleChannelPermissionsChangedEvent";
+
+        public let sessionObject: SessionObject!;
+        public let channel: Channel!;
+
+        init() {
+            self.sessionObject = nil;
+            self.channel = nil;
+        }
+        
+        public init(sessionObject: SessionObject, channel: Channel) {
+            self.sessionObject = sessionObject;
+            self.channel = channel;
+        }
+    }
+
+    
     public enum ParticipantsResult {
         case success(participants: [MixParticipant])
         case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition?, errorText: String?)
     }
+    
+    public enum PermissionsResult {
+        case success(permissions: [Channel.Permission])
+        case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition?, errorText: String?);
+    }
+    
 }

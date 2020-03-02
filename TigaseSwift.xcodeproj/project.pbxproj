@@ -124,6 +124,7 @@
 		FEB4B7B62386B27500426527 /* BlockingCommandModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB4B7B52386B27500426527 /* BlockingCommandModule.swift */; };
 		FEB62C521DA92D8B001500D5 /* AbstractPEPModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */; };
 		FEC336F124092E3F00EC1A0D /* ChannelInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC336F024092E3F00EC1A0D /* ChannelInfo.swift */; };
+		FEC336F7240D0F4A00EC1A0D /* PubSubAffilicationItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC336F6240D0F4900EC1A0D /* PubSubAffilicationItem.swift */; };
 		FEC514121CE9C3FB003AF765 /* MucModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514111CE9C3FB003AF765 /* MucModule.swift */; };
 		FEC514141CE9C4CA003AF765 /* Room.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514131CE9C4CA003AF765 /* Room.swift */; };
 		FEC514161CE9C702003AF765 /* MucRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC514151CE9C702003AF765 /* MucRole.swift */; };
@@ -292,6 +293,7 @@
 		FEB4B7B52386B27500426527 /* BlockingCommandModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockingCommandModule.swift; sourceTree = "<group>"; };
 		FEB62C511DA92D8B001500D5 /* AbstractPEPModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractPEPModule.swift; sourceTree = "<group>"; };
 		FEC336F024092E3F00EC1A0D /* ChannelInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelInfo.swift; sourceTree = "<group>"; };
+		FEC336F6240D0F4900EC1A0D /* PubSubAffilicationItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PubSubAffilicationItem.swift; sourceTree = "<group>"; };
 		FEC514111CE9C3FB003AF765 /* MucModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucModule.swift; sourceTree = "<group>"; };
 		FEC514131CE9C4CA003AF765 /* Room.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Room.swift; sourceTree = "<group>"; };
 		FEC514151CE9C702003AF765 /* MucRole.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MucRole.swift; sourceTree = "<group>"; };
@@ -674,6 +676,7 @@
 				FEDCBF9A1D9FBE2000AE9129 /* PubSubModulePublisherExtension.swift */,
 				FEDCBF9C1D9FC53A00AE9129 /* PubSubModuleSubscriberExtension.swift */,
 				FEDCBFA01DA003E600AE9129 /* PubSubErrorCondition.swift */,
+				FEC336F6240D0F4900EC1A0D /* PubSubAffilicationItem.swift */,
 			);
 			path = pubsub;
 			sourceTree = "<group>";
@@ -938,6 +941,7 @@
 				FE3DCCEA1FE14A85008B6C8B /* SslCertificateValidator.swift in Sources */,
 				FEA370C01F3F7B2F0050CBAC /* MessageDeliveryReceiptsModule.swift in Sources */,
 				FE596F791CF1C35B0079E22B /* PingModule.swift in Sources */,
+				FEC336F7240D0F4A00EC1A0D /* PubSubAffilicationItem.swift in Sources */,
 				FE75A00B2375DBFF001E78D9 /* PushNotificationsModule.swift in Sources */,
 				FEDCBF7F1D9EC2FE00AE9129 /* ListSingleField.swift in Sources */,
 				FE01ADA71E22463F00FA7E65 /* AdHocCommandsModule.swift in Sources */,
