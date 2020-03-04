@@ -170,6 +170,39 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     }
     
     /**
+     Method retieves informations about particular XMPP recipient and it's node
+     - parameter for: recipient to query
+     - parameter node: node to query for informations
+     - parameter completionHandler: called where result is available
+     */
+    open func getInfo(for jid:JID, node requestedNode:String? = nil, completionHandler: @escaping (DiscoveryModuleInfoResult) -> Void) {
+        getInfo(for: jid, node: requestedNode, callback: {(stanza: Stanza?) -> Void in
+            let type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
+                    completionHandler(.success(node: requestedNode, identities: [], features: []));
+                    return;
+                }
+                let identities = query.mapChildren(transform: { e -> Identity in
+                    return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
+                    }, filter: { (e:Element) -> Bool in
+                       return e.name == "identity" && e.getAttribute("category") != nil && e.getAttribute("type") != nil
+                });
+                let features = query.mapChildren(transform: { e -> String in
+                    return e.getAttribute("var")!;
+                    }, filter: { (e:Element) -> Bool in
+                        return e.name == "feature" && e.getAttribute("var") != nil;
+                })
+                completionHandler(.success(node: query.getAttribute("node") ?? requestedNode, identities: identities, features: features));
+            default:
+                let errorCondition = stanza?.errorCondition;
+                completionHandler(.failure(errorCondition: errorCondition ?? .remote_server_timeout, response: stanza));
+            }
+        })
+    }
+
+    /**
      Method retieves items available at particular XMPP recipient and it's node
      - parameter for: recipient to query
      - parameter node: node to query for items
@@ -217,7 +250,35 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
             }
         });
     }
-    
+
+    /**
+     Method retieves items available at particular XMPP recipient and it's node
+     - parameter for: recipient to query
+     - parameter node: node to query for items
+     - parameter completionHandler: called where result is available
+     */
+    open func getItems(for jid: JID, node requestedNode: String? = nil, completionHandler: @escaping (DiscoveryModuleItemsResult) -> Void) {
+        getItems(for: jid, node: requestedNode, callback: {(stanza:Stanza?) -> Void in
+            let type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
+                    completionHandler(.success(node: requestedNode, items: []));
+                    return;
+                }
+                let items = query.mapChildren(transform: { i -> Item in
+                        return Item(jid: JID(i.getAttribute("jid")!), node: i.getAttribute("node"), name: i.getAttribute("name"));
+                    }, filter: { (e) -> Bool in
+                        return e.name == "item" && e.getAttribute("jid") != nil;
+                })
+                completionHandler(.success(node: query.getAttribute("node") ?? requestedNode, items: items));
+            default:
+                let errorCondition = stanza?.errorCondition;
+                completionHandler(.failure(errorCondition: errorCondition ?? .remote_server_timeout, response: stanza));
+            }
+        });
+    }
+
     /**
      Set custom callback for execution when remote entity will query for
      items or info of local node
@@ -412,4 +473,14 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
         }
     }
 
+}
+
+public enum DiscoveryModuleInfoResult {
+    case success(node: String?, identities: [DiscoveryModule.Identity], features: [String])
+    case failure(errorCondition: ErrorCondition, response: Stanza?)
+}
+
+public enum DiscoveryModuleItemsResult {
+    case success(node: String?, items: [DiscoveryModule.Item])
+    case failure(errorCondition: ErrorCondition, response: Stanza?)
 }
