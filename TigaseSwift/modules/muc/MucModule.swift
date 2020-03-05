@@ -146,6 +146,24 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
      - parameter onError: called when received error or request timed out
      */
     open func setRoomConfiguration(roomJid: JID, configuration: JabberDataElement, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?)->Void)?) {
+        self.setRoomConfiguration(roomJid: roomJid, configuration: configuration, completionHandler: { result in
+            switch result {
+            case .success(_):
+                onSuccess();
+            case .failure(let errorCondition):
+                onError?(errorCondition);
+            }
+        });
+    }
+    
+    /**
+     Set configuration of MUC room (only room owner is allowed to do so)
+     - parameter roomJid: jid of MUC room
+     - parameter configuration: room configuration
+     - parameter onSuccess: called where response with result is received
+     - parameter onError: called when received error or request timed out
+     */
+    open func setRoomConfiguration(roomJid: JID, configuration: JabberDataElement, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = roomJid;
@@ -158,10 +176,10 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                onSuccess();
+                completionHandler(.success(Void()));
             default:
                 let errorCondition = stanza?.errorCondition;
-                onError?(errorCondition);
+                completionHandler(.failure(errorCondition ?? .remote_server_timeout));
             }
         });
     }

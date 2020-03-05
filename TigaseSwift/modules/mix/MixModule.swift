@@ -88,7 +88,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         iq.type = .set;
         let createEl = Element(name: "create", xmlns: MixModule.CORE_XMLNS);
         if channel != nil {
-            iq.setAttribute("channel", value: channel);
+            createEl.setAttribute("channel", value: channel);
         }
         iq.addChild(createEl);
         context.writer?.write(iq, completionHandler: { result in
@@ -133,7 +133,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         });
     }
     
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info"], completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
             iq.to = JID(context.sessionObject.userBareJid!);
@@ -225,6 +225,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             }
             retrieveInfo(for: channel.channelJid, completionHandler: nil);
             retrieveAffiliations(for: channel, completionHandler: nil);
+            if self.automaticRetrieve.contains(.avatar) {
+                retrieveAvatar(for: channel.channelJid, completionHandler: nil);
+            }
         case .failure(_):
             break;
         }
@@ -323,17 +326,17 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         })
     }
     
-    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: ((Result<Void,ErrorCondition>)->Void)?) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(.undefined_condition))
+            completionHandler?(.failure(.undefined_condition))
             return;
         }
         pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().submitableElement(type: .result), completionHandler: { response in
             switch response {
             case .success(let response, let node, let itemId):
-                completionHandler(.success(Void()));
+                completionHandler?(.success(Void()));
             case .failure(let errorCondition, let pubSubErrorCondition, let response):
-                completionHandler(.failure(errorCondition));
+                completionHandler?(.failure(errorCondition));
             }
         });
     }
@@ -457,6 +460,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                     if self.automaticRetrieve.contains(.affiliations) {
                         retrieveAffiliations(for: channel, completionHandler: nil);
                     }
+                    if self.automaticRetrieve.contains(.avatar) {
+                        retrieveAvatar(for: channel.channelJid, completionHandler: nil);
+                    }
                 }
             }
 
@@ -490,6 +496,15 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             case .failure(let errorCondition, let response):
                 break;
             }
+        });
+    }
+    
+    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, ErrorCondition>)->Void)?) {
+        guard let avatarModule: PEPUserAvatarModule = self.context.modulesManager.getModule(PEPUserAvatarModule.ID) else {
+            return;
+        }
+        avatarModule.retrieveAvatarMetadata(from: jid, itemId: nil, fireEvents: true, completionHandler: { result in
+            completionHandler?(result);
         });
     }
 

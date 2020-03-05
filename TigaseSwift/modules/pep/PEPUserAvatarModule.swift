@@ -182,7 +182,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, itemIds: itemIds, completionHandler: { result in
             switch result {
             case .success(let response, let node, let items, let rsm):
-                guard let item = items.first, let info = Info(payload: item.payload) else {
+                guard let item = items.first, let info = item.payload.mapChildren(transform: { Info(payload: $0)}).first else {
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
