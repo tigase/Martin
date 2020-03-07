@@ -133,7 +133,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         });
     }
     
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
             iq.to = JID(context.sessionObject.userBareJid!);
@@ -153,8 +153,16 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                             self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                             
                             self.retrieveHistory(fromChannel: channelJid, max: 100);
+                            if presenceSubscription, let presenceModule: PresenceModule = self.context.modulesManager.getModule(PresenceModule.ID) {
+                                presenceModule.subscribed(by: JID(channelJid));
+                                presenceModule.subscribe(to: JID(channelJid));
+                            }
                         } else if let participantId = joinEl.getAttribute("id") {
                             self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
+                            if presenceSubscription, let presenceModule: PresenceModule = self.context.modulesManager.getModule(PresenceModule.ID) {
+                                presenceModule.subscribed(by: JID(channelJid));
+                                presenceModule.subscribe(to: JID(channelJid));
+                            }
                         }
                     }
                 default:
@@ -365,6 +373,44 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         });
     }
 
+    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<JabberDataElement,ErrorCondition>)->Void) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        }
+        pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", lastItems: 1, completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let items, let rsm):
+                guard let item = items.first else {
+                    completionHandler(.failure(.item_not_found));
+                    return;
+                }
+                guard let config = JabberDataElement(from: item.payload) else {
+                    completionHandler(.failure(.unexpected_request));
+                    return;
+                }
+                completionHandler(.success(config));
+            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                completionHandler(.failure(errorCondition));
+            }
+        });
+    }
+    
+    open func updateConfig(for channelJid: BareJID, config: JabberDataElement, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        }
+        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.submitableElement(type: .submit), completionHandler: { response in
+            switch response {
+            case .success(let response, let node, let itemId):
+                completionHandler(.success(Void()));
+            case .failure(let errorCondition, let pubSubErrorCondition, let response):
+                completionHandler(.failure(errorCondition));
+            }
+        });
+    }
+    
     open func handle(event: Event) {
         switch event {
         case let e as RosterModule.ItemUpdatedEvent:
