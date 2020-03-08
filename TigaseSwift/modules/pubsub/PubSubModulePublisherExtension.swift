@@ -43,7 +43,7 @@ extension PubSubModulePublisherExtension {
      - parameter publishOptions: publish options
      - parameter completionHandler: called on completion
      */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, publishOptions: JabberDataElement? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: JabberDataElement? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         let callback: (Stanza?)->Void = { stanza in
             guard let response = stanza else {
                 completionHandler(.failure(errorCondition: .remote_server_timeout, pubSubErrorCondition: nil, response: nil));
@@ -75,7 +75,7 @@ extension PubSubModulePublisherExtension {
      - parameter onSuccess: called when request succeeds - passes instance of response stanza, node name and item id
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, publishOptions: JabberDataElement? = nil, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: JabberDataElement? = nil, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         let callback = createCallback(onSuccess: { (stanza) in
             guard let publishEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "publish"), let node = publishEl.getAttribute("node") else {
                 onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
@@ -99,7 +99,7 @@ extension PubSubModulePublisherExtension {
      - parameter publishOptions: publish options
      - parameter callback: called when response is received or request times out
      */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element, publishOptions: JabberDataElement? = nil, callback: ((Stanza?)->Void)?) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: JabberDataElement? = nil, callback: ((Stanza?)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
         if pubSubJid != nil {
@@ -117,7 +117,9 @@ extension PubSubModulePublisherExtension {
         item.setAttribute("id", value: itemId);
         publish.addChild(item);
         
-        item.addChild(payload);
+        if let payload = payload {
+            item.addChild(payload);
+        }
         
         if publishOptions != nil {
             let publishOptionsEl = Element(name: "publish-options");
@@ -127,7 +129,30 @@ extension PubSubModulePublisherExtension {
         
         context.writer?.write(iq, callback: callback);
     }
-    
+
+    /**
+     Retract item from PubSub node
+     - parameter at: jid of PubSub service
+     - parameter from: node name
+     - parameter itemId: id of item
+     - parameter completionHandler: called when result is available
+     */
+    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+        self.retractItem(at: pubSubJid, from: nodeName, itemId: itemId, callback: { stanza in
+            guard let response = stanza else {
+                completionHandler(.failure(errorCondition: .remote_server_timeout, pubSubErrorCondition: nil, response: nil));
+                return;
+            }
+            switch response.type ?? .error {
+            case .result:
+                completionHandler(.success(response: response, node: nodeName, itemId: itemId));
+            default:
+                let pubsubError = response.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+                completionHandler(.failure(errorCondition: response.errorCondition ?? .remote_server_timeout, pubSubErrorCondition: pubsubError == nil ? nil : PubSubErrorCondition(rawValue: pubsubError!.name), response: response));
+            }
+        });
+    }
+
     /**
      Retract item from PubSub node
      - parameter at: jid of PubSub service

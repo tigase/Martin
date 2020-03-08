@@ -34,6 +34,28 @@ extension PubSubModuleOwnerExtension {
      - parameter at: address of PubSub service
      - parameter node: name of node to create
      - parameter with: option configuration for new node
+     - parameter completionHandler: called when result is available
+     */
+    public func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: JabberDataElement? = nil, completionHandler: ((PubSubNodeCreationResult)->Void)?) {
+                
+        self.createNode(at: pubSubJid, node: nodeName, with: configuration, callback: { stanza in
+            guard let response = stanza else {
+                completionHandler?(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
+                return;
+            }
+            if response.type == .result, let node = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "create")?.getAttribute("node") ?? nodeName {
+                completionHandler?(.success(node: node));
+            } else {
+                completionHandler?(.failure(errorCondition: response.errorCondition ?? .undefined_condition, pubsubErrorCondition: nil, response: response));
+            }
+        });
+    }
+
+    /**
+     Create new node at PubSub service
+     - parameter at: address of PubSub service
+     - parameter node: name of node to create
+     - parameter with: option configuration for new node
      - parameter onSuccess: called when item is successfully created - passes response stanza and name of newly created node
      - parameter onError: called when node creation failed - passes general and detailed error condition if available
      */
@@ -45,7 +67,7 @@ extension PubSubModuleOwnerExtension {
         
         self.createNode(at: pubSubJid, node: nodeName, with: configuration, callback: callback);
     }
-    
+
     /**
      Create new node at PubSub service
      - parameter at: address of PubSub service
@@ -190,7 +212,27 @@ extension PubSubModuleOwnerExtension {
         
         self.context.writer?.write(iq, callback: callback);
     }
-   
+
+    /**
+     Delete node from PubSub service
+     - parameter from: address of PubSub service
+     - parameter node: name of node to delete
+     - parameter completionHandler: called when result is available
+     */
+    public func deleteNode(from pubSubJid: BareJID, node nodeName: String, completionHandler: ((PubSubNodeDeletionResult)->Void)?) {
+        self.deleteNode(from: pubSubJid, node: nodeName, callback: { stanza in
+            guard let response = stanza else {
+                completionHandler?(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
+                return;
+            }
+            if response.type == .result || response.errorCondition == .item_not_found {
+                completionHandler?(.success(node: nodeName));
+            } else {
+                completionHandler?(.failure(errorCondition: response.errorCondition ?? .undefined_condition, pubsubErrorCondition: nil, response: response));
+            }
+        });
+    }
+
     /**
      Delete node from PubSub service
      - parameter from: address of PubSub service
@@ -463,5 +505,15 @@ public enum PubSubRetrieveAffiliationsResult {
 
 public enum PubSubSetAffiliationsResult {
     case success
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
+}
+
+public enum PubSubNodeCreationResult {
+    case success(node: String)
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
+}
+
+public enum PubSubNodeDeletionResult {
+    case success(node: String)
     case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
 }

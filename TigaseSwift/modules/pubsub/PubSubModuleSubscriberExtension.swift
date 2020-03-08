@@ -278,8 +278,8 @@ extension PubSubModuleSubscriberExtension {
             let itemsEl = pubsubEl?.findChild(name: "items");
             var items = Array<PubSubModule.Item>();
             itemsEl?.forEachChild { (elem) in
-                if let id = elem.getAttribute("id"), let payload = elem.firstChild() {
-                    items.append(PubSubModule.Item(id: id, payload: payload));
+                if let id = elem.getAttribute("id") {
+                    items.append(PubSubModule.Item(id: id, payload: elem.firstChild()));
                 }
             }
             let rsm = RSM.Result(from: pubsubEl?.findChild(name: "set", xmlns: RSM.XMLNS));

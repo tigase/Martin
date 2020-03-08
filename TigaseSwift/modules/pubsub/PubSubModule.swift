@@ -249,13 +249,13 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         /// Item id
         public let id: String;
         /// Item payload
-        public let payload: Element;
+        public let payload: Element?;
         
         open var description: String {
-            return "[id: " + id + ", payload: " + payload.stringValue + "]";
+            return "[id: " + id + ", payload: " + (payload?.stringValue ?? "nil") + "]";
         }
         
-        public init(id: String, payload: Element) {
+        public init(id: String, payload: Element?) {
             self.id = id;
             self.payload = payload;
         }

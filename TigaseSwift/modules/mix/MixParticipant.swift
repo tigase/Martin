@@ -28,10 +28,10 @@ open class MixParticipant {
     public let jid: BareJID?;
     
     public convenience init?(from item: PubSubModule.Item) {
-        guard item.payload.name == "participant" && item.payload.xmlns == MixModule.CORE_XMLNS else {
+        guard let payload = item.payload, payload.name == "participant" && payload.xmlns == MixModule.CORE_XMLNS else {
             return nil;
         }
-        self.init(id: item.id, nickname: item.payload.findChild(name: "nick")?.value, jid: BareJID(item.payload.findChild(name: "jid")?.value));
+        self.init(id: item.id, nickname: payload.findChild(name: "nick")?.value, jid: BareJID(payload.findChild(name: "jid")?.value));
     }
     
     public init(id: String, nickname: String?, jid: BareJID?) {

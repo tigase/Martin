@@ -411,6 +411,137 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         });
     }
     
+    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        publishAccessRule(to: channelJid, for: jid, rule: .allow, value: value, completionHandler: completionHandler);
+    }
+    
+    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: { result in
+            switch result {
+            case.success(let r):
+                completionHandler(.success(r));
+            case .failure(let errorCondition):
+                guard errorCondition == .item_not_found, let pubsubModule: PubSubModule = self.context.modulesManager.getModule(PubSubModule.ID) else {
+                    completionHandler(.failure(errorCondition));
+                    return;
+                }
+                pubsubModule.createNode(at: channelJid, node: AccessRule.deny.node, completionHandler: { result in
+                    switch result {
+                    case .success(let node):
+                        self.publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: completionHandler);
+                    case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                        completionHandler(.failure(errorCondition));
+                    }
+                })
+            }
+        });
+    }
+    
+    private func publishAccessRule(to channelJid: BareJID, for jid: BareJID, rule: AccessRule, value: Bool, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        }
+        if value {
+            pubsubModule.publishItem(at: channelJid, to: rule.node, itemId: jid.stringValue, payload: nil, completionHandler: { result in
+                switch result {
+                case .success(let response, let node, let itemId):
+                    completionHandler(.success(Void()));
+                case .failure(let errorCondition, _, _):
+                    completionHandler(.failure(errorCondition));
+                }
+            })
+        } else {
+            pubsubModule.retractItem(at: channelJid, from: rule.node, itemId: jid.stringValue, completionHandler: { result in
+                switch result {
+                case .success(let response, let node, let itemId):
+                    completionHandler(.success(Void()));
+                case .failure(let errorCondition, _, _):
+                    completionHandler(.failure(errorCondition));
+                }
+            })
+        }
+    }
+    
+    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        }
+        
+        if isPrivate {
+            pubsubModule.createNode(at: channelJid, node: AccessRule.allow.node, completionHandler: { result in
+                switch result {
+                case .success(let node):
+                    self.allowAccess(to: channelJid, for: self.context.sessionObject.userBareJid!, completionHandler: completionHandler);
+                case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                    completionHandler(.failure(errorCondition));
+                }
+            })
+        } else {
+            pubsubModule.deleteNode(from: channelJid, node: AccessRule.allow.node, completionHandler: { result in
+                switch result {
+                case .success(let node):
+                    completionHandler(.success(Void()));
+                case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                    completionHandler(.failure(errorCondition));
+                }
+            })
+        }
+    }
+    
+    open func checkAccessPolicy(of channelJid: BareJID, completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
+        self.retrieveAccessRules(for: channelJid, rule: .allow, completionHandler: { result in
+            switch result {
+            case .success(_):
+                completionHandler(.success(true));
+            case .failure(let errorCondition):
+                if errorCondition == .item_not_found {
+                    completionHandler(.success(false));
+                } else {
+                    completionHandler(.failure(errorCondition));
+                }
+            }
+        });
+    }
+    
+    open func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],ErrorCondition>)->Void) {
+        self.retrieveAccessRules(for: channelJid, rule: .allow, completionHandler: completionHandler);
+    }
+    
+    open func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],ErrorCondition>)->Void) {
+        self.retrieveAccessRules(for: channelJid, rule: .deny, completionHandler: completionHandler);
+    }
+    
+    private func retrieveAccessRules(for channelJid: BareJID, rule: AccessRule, completionHandler: @escaping (Result<[BareJID],ErrorCondition>)->Void) {
+        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        }
+        pubsubModule.retrieveItems(from: channelJid, for: rule.node, completionHandler: { result in
+            switch result {
+            case .success(let response, let node, let items, let rsm):
+                completionHandler(.success(items.map({ BareJID($0.id) })));
+            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+                completionHandler(.failure(errorCondition));
+            }
+        })
+    }
+        
+    public enum AccessRule {
+        case allow
+        case deny
+        
+        var node: String {
+            switch self {
+            case .allow:
+                return "urn:xmpp:mix:nodes:allowed";
+            case .deny:
+                return "urn:xmpp:mix:nodes:banned";
+            }
+        }
+    }
+    
     open func handle(event: Event) {
         switch event {
         case let e as RosterModule.ItemUpdatedEvent:
