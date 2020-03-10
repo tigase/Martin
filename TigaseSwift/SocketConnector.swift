@@ -430,10 +430,10 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         log("onStreamTerminate called... state:", state);
         sessionLogic?.onStreamTerminate();
         switch state {
-        case .disconnecting:
+        case .disconnecting, .connecting:
             closeSocket(newState: State.disconnected);
         // connecting is also set in case of see other host
-        case .connected, .connecting:
+        case .connected:
             //-- probably from other socket, ie due to restart!
             let inStreamState = inStream?.streamStatus;
             if inStreamState == nil || inStreamState == .error || inStreamState == .closed {
