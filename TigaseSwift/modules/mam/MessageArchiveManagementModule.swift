@@ -86,7 +86,10 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     }
     
     open func process(stanza: Stanza) throws {
-        stanza.element.forEachChild(xmlns: MessageArchiveManagementModule.MAM_XMLNS) { (result) in
+        stanza.element.forEachChild(fn: { (result) in
+            guard Version.isSupported(xmlns: result.xmlns) else {
+                return;
+            }
             guard let messageId = result.getAttribute("id"), let queryId = result.getAttribute("queryid"), let forwardedEl = result.findChild(name: "forwarded", xmlns: "urn:xmpp:forward:0"), let query = dispatcher.sync(execute: { return self.queries[queryId]; }) else {
                 return;
             }
@@ -116,7 +119,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
 //            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: chat));
 //            }
             context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.sessionObject.userBareJid!, message: message, timestamp: timestamp));
-        }
+        });
     }
     
     public enum QueryResult {
@@ -439,6 +442,13 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         case MAM2 = "urn:xmpp:mam:2"
         
         public static let values = [MAM2, MAM1];
+        
+        public static func isSupported(xmlns: String?) -> Bool {
+            guard let xmlns = xmlns else {
+                return false;
+            }
+            return Version.values.contains(where: { $0.rawValue == xmlns });
+        }
     }
     
     private class Query {
