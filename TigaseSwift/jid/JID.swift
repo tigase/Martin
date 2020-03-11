@@ -31,7 +31,12 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
     /// Resouce part
     public let resource:String?;
     /// String representation of JID
-    public let stringValue:String;
+    public var stringValue:String {
+        guard let resource = self.resource else {
+            return bareJid.stringValue;
+        }
+        return "\(bareJid)/\(resource)";
+    }
     /// Local part
     open var localPart:String? {
         return self.bareJid.localPart;
@@ -57,7 +62,6 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
     public init(_ jid: BareJID, resource: String? = nil) {
         self.bareJid = jid;
         self.resource = resource;
-        self.stringValue = JID.toString(bareJid, resource);
     }
     
     /**
@@ -67,7 +71,6 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
     public init(_ jid: JID) {
         self.bareJid = jid.bareJid;
         self.resource = jid.resource;
-        self.stringValue = JID.toString(bareJid, resource);
     }
     
     /**
@@ -77,7 +80,6 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
         let idx = jid.firstIndex(of: "/");
         self.resource = (idx == nil) ? nil : String(jid.suffix(from: jid.index(after: idx!)));
         self.bareJid = BareJID(jid);
-        self.stringValue = JID.toString(bareJid, resource);
     }
     
     /**
@@ -106,15 +108,15 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
         try container.encode(self.stringValue);
     }
     
-    fileprivate static func toString(_ bareJid:BareJID, _ resource:String?) -> String {
-        if (resource != nil) {
-            return "\(bareJid)/\(resource!)"
-        } else {
-            return bareJid.description
-        }
-    }
 }
 
 public func ==(lhs: JID, rhs: JID) -> Bool {
-    return lhs.bareJid == rhs.bareJid && lhs.resource == rhs.resource;
+    guard lhs.bareJid == rhs.bareJid else {
+        return false;
+    }
+    if let lRes = lhs.resource, let rRes = rhs.resource {
+        return lRes == rRes;
+    } else {
+        return lhs.resource == nil && rhs.resource == nil;
+    }
 }

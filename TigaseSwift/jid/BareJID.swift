@@ -31,7 +31,12 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
     /// Domain part
     public let domain:String;
     /// String representation
-    public let stringValue:String;
+    public var stringValue:String {
+        guard let localPart = self.localPart else {
+            return domain;
+        }
+        return "\(localPart)@\(domain)";
+    }
     
     required public convenience init(from decoder: Decoder) throws {
         self.init(try decoder.singleValueContainer().decode(String.self));
@@ -45,7 +50,7 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
     public init(localPart: String? = nil, domain: String) {
         self.localPart = localPart;
         self.domain = domain;
-        self.stringValue = BareJID.toString(localPart, domain);
+        //self.stringValue = BareJID.toString(localPart, domain);
     }
     
     /**
@@ -57,7 +62,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
     public init(_ jid: BareJID) {
         self.localPart = jid.localPart
         self.domain = jid.domain
-        self.stringValue = BareJID.toString(localPart, domain);
     }
     
     /**
@@ -74,7 +78,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
             localPart = nil;
             domain = (jid.endIndex == resourceIdx) ? jid : String(jid.prefix(upTo: resourceIdx))
         }
-        self.stringValue = BareJID.toString(localPart, domain);
     }
         
     /**
@@ -95,7 +98,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
     public init(_ jid: JID) {
         self.domain = jid.domain
         self.localPart = jid.localPart
-        self.stringValue = jid.bareJid.stringValue;
     }
     
     open var description : String {
@@ -108,18 +110,22 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
     }
     
     open func hash(into hasher: inout Hasher) {
-        hasher.combine(stringValue.lowercased());
-    }
-    
-    fileprivate static func toString(_ localPart:String?, _ domain:String) -> String {
-        if (localPart == nil) {
-            return domain;
+        if let localPart = self.localPart?.lowercased() {
+            hasher.combine(localPart);
         }
-        return "\(localPart!)@\(domain)"        
+        hasher.combine(domain.lowercased());
     }
     
 }
 
 public func ==(lhs: BareJID, rhs: BareJID) -> Bool {
-    return lhs.stringValue.caseInsensitiveCompare(rhs.stringValue) == .orderedSame;
+    guard lhs.domain.caseInsensitiveCompare(rhs.domain) == .orderedSame else {
+        return false;
+    }
+    
+    if let rPart = rhs.localPart, let lPart = lhs.localPart {
+        return rPart.caseInsensitiveCompare(lPart) == .orderedSame;
+    } else {
+        return rhs.localPart == nil && lhs.localPart == nil;
+    }
 }
