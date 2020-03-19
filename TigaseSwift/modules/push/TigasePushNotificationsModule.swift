@@ -193,7 +193,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         }
         
         public func apply(to enableEl: Element) {
-            let muc = Element(name: "muc", xmlns: GroupchatFilter.XMLNS);
+            let muc = Element(name: "groupchat", xmlns: GroupchatFilter.XMLNS);
             
             for rule in rules {
                 switch rule {
