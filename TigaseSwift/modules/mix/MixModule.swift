@@ -27,7 +27,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     func process(rosterItemElem el: Element) -> RosterItemAnnotation? {
-        guard el.name == "channel" && el.xmlns == "urn:xmpp:mix:roster:0", let id = el.getAttribute("participant-id") else {
+        guard let channelEl = el.findChild(name: "channel", xmlns: "urn:xmpp:mix:roster:0"), let id = channelEl.getAttribute("participant-id") else {
             return nil;
         }
         return RosterItemAnnotation(type: "mix", values: ["participant-id": id]);
