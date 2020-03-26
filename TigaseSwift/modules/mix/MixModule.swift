@@ -133,14 +133,14 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         });
     }
     
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
             iq.to = JID(context.sessionObject.userBareJid!);
             iq.type = .set;
             let clientJoin = Element(name: "client-join", xmlns: MixModule.PAM2_XMLNS);
             clientJoin.setAttribute("channel", value: channelJid.stringValue);
-            clientJoin.addChild(createJoinEl(withNick: nick, withNodes: nodes));
+            clientJoin.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
             iq.addChild(clientJoin);
             
             context.writer?.write(iq, completionHandler: { result in
@@ -174,7 +174,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             let iq = Iq();
             iq.to = JID(channelJid);
             iq.type = .set;
-            iq.addChild(createJoinEl(withNick: nick, withNodes: nodes));
+            iq.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
             context.writer?.write(iq, completionHandler: { result in
                 switch result {
                 case .success(let response):
@@ -247,11 +247,14 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     
     // we may want to add "status" to the channel, to know if we are in participants or not..
     
-    open func createJoinEl(withNick nick: String?, withNodes nodes: [String]) -> Element {
+    open func createJoinEl(withNick nick: String?, withNodes nodes: [String], invitation: MixInvitation?) -> Element {
         let joinEl = Element(name: "join", xmlns: MixModule.CORE_XMLNS);
         joinEl.addChildren(nodes.map({ Element(name: "subscribe", attributes: ["node": $0]) }));
         if let nick = nick {
             joinEl.addChild(Element(name: "nick", cdata: nick));
+        }
+        if let invitation = invitation {
+            joinEl.addChild(invitation.element());
         }
         return joinEl;
     }
@@ -435,6 +438,16 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 })
             }
         });
+    }
+    
+    open func createInvitation(_ invitation: MixInvitation, message body: String?) -> Message {
+        let message = Message();
+        message.type = .chat;
+        message.id = UUID().uuidString;
+        message.to = JID(invitation.invitee);
+        message.mixInvitation = invitation;
+        message.body = body;
+        return message;
     }
     
     private func publishAccessRule(to channelJid: BareJID, for jid: BareJID, rule: AccessRule, value: Bool, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
@@ -803,4 +816,51 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition?, errorText: String?);
     }
     
+}
+
+open class MixInvitation {
+    public let inviter: BareJID;
+    public let invitee: BareJID;
+    public let channel: BareJID;
+    public let token: String?;
+    
+    public convenience init?(from el: Element?) {
+        guard el?.name == "invitation" && el?.xmlns == "urn:xmpp:misc:0" else {
+            return nil;
+        }
+        guard let inviter = BareJID(el?.findChild(name: "inviter")?.value), let invitee = BareJID(el?.findChild(name: "invitee")?.value), let channel = BareJID(el?.findChild(name: "channel")?.value) else {
+            return nil;
+        }
+        self.init(inviter: inviter, invitee: invitee, channel: channel, token: el?.findChild(name: "token")?.value);
+    }
+    
+    public init(inviter: BareJID, invitee: BareJID, channel: BareJID, token: String?) {
+        self.inviter = inviter;
+        self.invitee = invitee;
+        self.channel = channel;
+        self.token = token;
+    }
+    
+    open func element() -> Element {
+        return Element(name: "invitation", xmlns: "urn:xmpp:misc:0", children: [
+            Element(name: "inviter", cdata: inviter.stringValue),
+            Element(name: "invitee", cdata: invitee.stringValue),
+            Element(name: "channel", cdata: channel.stringValue),
+            Element(name: "token", cdata: token)
+        ]);
+    }
+}
+
+extension Message {
+    open var mixInvitation: MixInvitation? {
+        get {
+            return MixInvitation(from: findChild(name: "invitation", xmlns: "urn:xmpp:misc:0"));
+        }
+        set {
+            element.removeChildren(where: { $0.name == "invitation" && $0.xmlns == "urn:xmpp:misc:0"});
+            if let value = newValue {
+                element.addChild(value.element());
+            }
+        }
+    }
 }

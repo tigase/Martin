@@ -24,7 +24,12 @@ import Foundation
 /**
  XMPP entity address for `localpart@domainpart`
  */
-open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, StringValue {
+open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, StringValue, Comparable {
+    
+    public static func < (lhs: BareJID, rhs: BareJID) -> Bool {
+        return lhs.stringValue.compare(rhs.stringValue) == .orderedAscending;
+    }
+    
     
     /// Local part
     public let localPart:String?;
