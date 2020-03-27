@@ -571,7 +571,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 self.channelLeft(channel: channel);
             default:
                 guard let annotation = ri.annotations.first(where: { item -> Bool in
-                    return item.type == "urn:xmpp:mix:roster:0";
+                    return item.type == "mix";
                 }), let participantId = annotation.values["participant-id"] else {
                     return;
                 }
@@ -655,7 +655,16 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                     }
                 }
             }
-
+            if isPAM2SupportAvailable {
+                let store = RosterModule.getRosterStore(context.sessionObject);
+                for jid in store.getJids() {
+                    if let item = store.get(for: jid), let annotation = item.annotations.first(where: { item -> Bool in
+                        return item.type == "mix";
+                    }), let participantId = annotation.values["participant-id"] {
+                        self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
+                    }
+                }
+            }
         default:
             break;
         }

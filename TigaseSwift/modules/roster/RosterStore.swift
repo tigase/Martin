@@ -113,6 +113,10 @@ open class RosterStore {
     open func addItem(_ item:RosterItem) {
     }
 
+    open func getJids() -> [JID] {
+        return [];
+    }
+    
     /**
      Retrieve roster item for JID
      - parameter jid: jid

@@ -48,7 +48,7 @@ open class DefaultRosterStore: RosterStore {
         }) 
     }
     
-    open func getJids() -> [JID] {
+    open override func getJids() -> [JID] {
         var result = [JID]();
         queue.sync {
             self.roster.keys.forEach({ (jid) in
