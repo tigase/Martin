@@ -326,7 +326,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 if let ownParticipant = participants.first(where: { (participant) -> Bool in
                     return participant.id == channel.participantId
                 }) {
-                    self.channelManager.update(channel: channel, nick: ownParticipant.id);
+                    self.channelManager.update(channel: channel, nick: ownParticipant.nickname);
                 }
                 channel.update(participants: participants);
                 self.context.eventBus.fire(ParticipantsChangedEvent(sessionObject: self.context.sessionObject, channel: channel, joined: participants, left: left));
