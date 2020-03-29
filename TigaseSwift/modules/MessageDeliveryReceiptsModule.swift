@@ -53,7 +53,7 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
         
         switch delivery {
         case .request:
-            guard let id = message.id, message.from != nil else {
+            guard let id = message.id, message.from != nil, message.type != .groupchat else {
                 return;
             }
             // need to send response/ack
