@@ -685,7 +685,8 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         }
 
         let queryId = UUID().uuidString;
-        mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: nil, start: nil, queryId: queryId, rsm: rsm, completionHandler: { result in
+        // should we query MIX messages node? or just MAM at MIX channel without a node?
+        mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: "urn:xmpp:mix:nodes:messages", start: nil, queryId: queryId, rsm: rsm, completionHandler: { result in
             switch result {
             case .success(let queryId, let complete, let rsm):
                 guard !complete, let rsmQuery = rsm?.next() else {
