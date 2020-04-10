@@ -373,7 +373,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
         CFWriteStreamSetProperty(outStream as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef);
         
-        if #available(iOSApplicationExtension 11.0, macOSApplicationExtension 10.13, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, OSXApplicationExtension 10.13, OSX 10.13, *) {
             let sslContext: SSLContext = outStream.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLContext as String)) as! SSLContext;
             SSLSetALPNProtocols(sslContext, ["xmpp-client"] as CFArray)
         } else {

@@ -21,7 +21,6 @@
 
 import Foundation
 import dnssd
-import DNS_Util
 
 /**
  Class holds informations for single SRV record of DNS entries
@@ -51,46 +50,46 @@ open class XMPPSrvRecord: Codable, Equatable, CustomStringConvertible {
     }
     
     public convenience init?(parse: UnsafePointer<UInt8>?, length: UInt16?) {
-        guard let rdata = parse, let rdlen = length else {
+        guard var rdata = parse, let rdlen = length, rdlen > 7 else {
             return nil;
         }
+        let origRData = rdata;
+
+        var priority: UInt16 = UInt16(rdata.pointee);
+        rdata = rdata.advanced(by: 1);
+        priority = priority * 256 +  UInt16(rdata.pointee);
+        rdata = rdata.advanced(by: 1);
+
+        var weight: UInt16 =  UInt16(rdata.pointee);
+        rdata = rdata.advanced(by: 1);
+        weight = weight * 256 +  UInt16(rdata.pointee);
+        rdata = rdata.advanced(by: 1);
+        var port: UInt16 =  UInt16(rdata.pointee);
+        rdata = rdata.advanced(by: 1);
+        port = port * 256 +  UInt16(rdata.pointee);
+        rdata = rdata.advanced(by: 1);
+
+        var target = "";
         
-        let rrDataLen = 1+2+2+4+2+Int(rdlen);
-        var rrData = Data(capacity: rrDataLen);
-        
-        var u8: UInt8 = 0;
-        var u16: UInt16 = 0;
-        var u32: UInt32 = 0;
-        rrData.append(UnsafeBufferPointer(start: &u8, count: 1));
-        u16 = UInt16(kDNSServiceType_SRV).bigEndian;
-        rrData.append(UnsafeBufferPointer(start: &u16, count: 1));
-        u16 = UInt16(kDNSServiceClass_IN).bigEndian;
-        rrData.append(UnsafeBufferPointer(start: &u16, count: 1));
-        u32 = UInt32(666).bigEndian;
-        rrData.append(UnsafeBufferPointer(start: &u32, count: 1));
-        u16 = rdlen.bigEndian;
-        rrData.append(UnsafeBufferPointer(start: &u16, count: 1));
-        rrData.append(rdata, count: Int(rdlen));
-        
-        guard let (port, weight, priority, target) = rrData.withUnsafeBytes({ (bytes) -> (Int, Int, Int, String)? in
-            if let rr: UnsafeMutablePointer<dns_resource_record_t> = dns_parse_resource_record(bytes.baseAddress!.assumingMemoryBound(to: Int8.self), UInt32(rrData.count)) {
-                defer {
-                    dns_free_resource_record(rr);
-                }
-                if let target = String(cString: rr.pointee.data.SRV.pointee.target, encoding: .ascii) {
-                    let priority = rr.pointee.data.SRV.pointee.priority;
-                    let weight = rr.pointee.data.SRV.pointee.weight;
-                    let port = rr.pointee.data.SRV.pointee.port;
-                    
-                    return (Int(port), Int(weight), Int(priority), target);
-                }
+        while origRData.distance(to: rdata) < rdlen {
+            let len = Int(rdata.pointee);
+            if len == 0 {
+                break;
             }
-            return nil;
-        }) else {
-            return nil;
+            rdata = rdata.advanced(by: 1);
+            if let part = String(bytes: Array(UnsafeBufferPointer(start: rdata, count: len)), encoding: .utf8) {
+                target = target.isEmpty ? part : "\(target).\(part)";
+            } else {
+                return nil;
+            }
+            rdata = rdata.advanced(by: len);
         }
         
-        self.init(port: port, weight: weight, priority: priority, target: target, directTls: false);
+        guard !target.isEmpty else {
+            return nil;
+        }
+
+        self.init(port: Int(port), weight: Int(weight), priority: Int(priority), target: target, directTls: false);
     }
     
     public init(port:Int, weight:Int, priority:Int, target:String, directTls: Bool, invalid: Date? = nil) {
