@@ -53,6 +53,10 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
             self.onFinish = onFinish;
         }
         
+        deinit {
+            requests.forEach({ $0.cancel(); });
+        }
+        
         func add(completionHandler: @escaping (Result<XMPPSrvResult,DNSError>) -> Void, for jid: BareJID) {
             completionHandlers[jid] = completionHandler;
         }
@@ -162,13 +166,13 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
 
     class Request {
         
-        let resolverQueue = DispatchQueue.init(label: "DnsSrvResolverQueue");
+        private let resolverQueue = DispatchQueue.init(label: "DnsSrvResolverQueue");
         let srvName: String;
-        var sdRef: DNSServiceRef?;
-        var sdFd: dnssd_sock_t = -1;
-        var sdFdReadSource: DispatchSourceRead?;
-        var timeoutTimer: DispatchSourceTimer?;
-        let completionHandler: ((Result<[XMPPSrvRecord],DNSError>)->Void);
+        private var sdRef: DNSServiceRef?;
+        private var sdFd: dnssd_sock_t = -1;
+        private var sdFdReadSource: DispatchSourceRead?;
+        private var timeoutTimer: DispatchSourceTimer?;
+        private var completionHandler: ((Result<[XMPPSrvRecord],DNSError>)->Void)?;
         
         public private(set) var items: [XMPPSrvRecord] = [];
         
@@ -231,8 +235,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
         }
         
         func fail(withError: DNSError) {
-            stop();
-            self.completionHandler(.failure(withError));
+            complete(with: .failure(withError));
         }
         
         func add(record: XMPPSrvRecord) {
@@ -240,25 +243,32 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
         }
         
         func succeed() {
-            stop();
             let isDirectTLS = srvName.starts(with: "_xmpps-client._tcp.");
             if isDirectTLS {
-                self.completionHandler(.success(self.items.map({ it in it.with(directTLS: isDirectTLS); })));
+                complete(with: .success(self.items.map({ it in it.with(directTLS: isDirectTLS); })));
             } else {
-                self.completionHandler(.success(self.items));
+                complete(with: .success(self.items));
             }
         }
         
-        func stop() {
-            resolverQueue.async {
-                print("stopping for:", self.srvName)
-                self.sdFdReadSource?.cancel();
-                self.sdFdReadSource = nil;
-                self.sdFd = -1;
-                self.sdRef = nil;
-                
-                self.timeoutTimer?.cancel();
-                self.timeoutTimer = nil;
+        private func complete(with result: Result<[XMPPSrvRecord],DNSError>) {
+            if let completionHandler = self.completionHandler {
+                self.completionHandler = nil;
+                completionHandler(result);
+            }
+            print("stopping for:", self.srvName)
+            self.sdFdReadSource?.cancel();
+            self.sdFdReadSource = nil;
+            self.sdFd = -1;
+            self.sdRef = nil;
+            
+            self.timeoutTimer?.cancel();
+            self.timeoutTimer = nil;
+        }
+        
+        func cancel() {
+            resolverQueue.sync {
+                complete(with: .failure(DNSError.unknownError));
             }
         }
     }
