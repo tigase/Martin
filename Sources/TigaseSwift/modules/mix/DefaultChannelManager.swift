@@ -35,7 +35,7 @@ open class DefaultChannelManager: ChannelManager {
         return store.dispatcher.sync(execute: {
             if let channel = store.channel(for: jid) {
                 if channel.participantId == participantId {
-                    store.update(channel: channel, state: state);
+                    _ = store.update(channel: channel, state: state);
                     return .success(channel);
                 } else {
                     if store.close(channel: channel) {

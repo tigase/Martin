@@ -302,7 +302,7 @@ extension PubSubModuleSubscriberExtension {
             switch result {
             case .success(let response, let node, let items, let rsm):
                 onSuccess?(response, node, items, rsm);
-            case .failure(let errorCondition, let pubsubErrorCondition, let response):
+            case .failure(let errorCondition, let pubsubErrorCondition, _):
                 onError?(errorCondition, pubsubErrorCondition);
             }
         })

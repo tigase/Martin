@@ -231,7 +231,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                             } else {
                                 self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
                             }
-                        case .failure(let dnsError):
+                        case .failure(_):
                             self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
                         }
                     }

@@ -139,7 +139,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         var currentItem = rosterStore.get(for: jid);
         var action = Action.other;
         var modifiedGroups:[String]? = nil;
-        var annotations: [RosterItemAnnotation] = processRosterItemForAnnotations(item: item);
+        let annotations: [RosterItemAnnotation] = processRosterItemForAnnotations(item: item);
         if (subscription == .remove && currentItem != nil) {
             rosterStore.removeItem(for: jid);
             action = .removed;

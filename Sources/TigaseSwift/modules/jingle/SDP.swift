@@ -92,7 +92,7 @@ extension Jingle.Content {
     public convenience init?(fromSDP media: String, creator: Creator) {
         let sdp = media.split(separator: "\r\n");
         
-        var line = sdp[0].components(separatedBy: " ");
+        let line = sdp[0].components(separatedBy: " ");
         
         let mediaName = String(line[0].dropFirst(2));
         var name = mediaName;
@@ -301,8 +301,6 @@ extension Jingle.Transport.ICEUDPTransport.Candidate {
         var relPort: String?;
         var generation: UInt8?;
         var tcptype: String?;
-        var networkId: String?;
-        var networkCost: String?;
         
         var i = 8;
         while parts.count >= i + 2 {
@@ -313,10 +311,8 @@ extension Jingle.Transport.ICEUDPTransport.Candidate {
                 tcptype = val;
             case "generation":
                 generation = UInt8(val);
-            case "network-id":
-                networkId = val;
-            case "network-cost":
-                networkCost = val;
+            case "network-id", "network-cost":
+                break;
             case "raddr":
                 relAddr = val;
             case "rport":

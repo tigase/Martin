@@ -127,7 +127,9 @@ open class Zlib {
             var out = [UInt8](repeating: 0, count: length + (length / 100) + 13);
             repeat {
                 stream.avail_out = CUnsignedInt(out.count);
-                stream.next_out = &out + 0;
+                out.withUnsafeMutableBytes { ptr in
+                    stream.next_out = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self) + 0;
+                }
                 
                 _ = deflate(&stream, CInt(flush.rawValue));
                 let outCount = out.count - Int(stream.avail_out);
@@ -155,7 +157,9 @@ open class Zlib {
                 var out = [UInt8](repeating: 0, count: count + (count / 100) + 13);
                 repeat {
                     stream.avail_out = CUnsignedInt(out.count);
-                    stream.next_out = &out + 0;
+                    out.withUnsafeMutableBytes { ptr in
+                        stream.next_out = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self) + 0;
+                    }
                     
                     _ = deflate(&stream, CInt(flush.rawValue));
                     let outCount = out.count - Int(stream.avail_out);
@@ -198,7 +202,9 @@ open class Zlib {
             var out = [UInt8](repeating: 0, count: 50);
             repeat {
                 stream.avail_out = CUnsignedInt(out.count);
-                stream.next_out = &out + 0;
+                out.withUnsafeMutableBytes { ptr in
+                    stream.next_out = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self) + 0;
+                }
                 
                 _ = inflate(&stream, CInt(flush.rawValue));
                 let outCount = out.count - Int(stream.avail_out);
@@ -226,7 +232,9 @@ open class Zlib {
                 var out = [UInt8](repeating: 0, count: 50);
                 repeat {
                     stream.avail_out = CUnsignedInt(out.count);
-                    stream.next_out = &out + 0;
+                    out.withUnsafeMutableBytes { ptr in
+                        stream.next_out = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self) + 0;
+                    }
                 
                     _ = inflate(&stream, CInt(flush.rawValue));
                     let outCount = out.count - Int(stream.avail_out);

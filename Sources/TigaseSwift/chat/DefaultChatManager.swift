@@ -55,7 +55,7 @@ open class DefaultChatManager: ChatManager {
         case .success(let chat):
             context.eventBus.fire(MessageModule.ChatCreatedEvent(sessionObject: context.sessionObject, chat: chat));
             return chat;
-        case .failure(let err):
+        case .failure(_):
             return nil;
         }
     }

@@ -382,6 +382,7 @@ extension PubSubModuleOwnerExtension {
         self.context.writer?.write(iq, callback: callback);
     }
     
+    @discardableResult
     private func prepareAffiliationsEl(source: PubSubAffilicationsSource, pubsubEl: Element) -> Element {
         let affiliations = Element(name: "affiliations");
         switch source {
@@ -423,7 +424,7 @@ extension PubSubModuleOwnerExtension {
         let pubsub = Element(name: "pubsub");
         iq.addChild(pubsub);
         
-        let affiliations = self.prepareAffiliationsEl(source: source, pubsubEl: pubsub);
+        self.prepareAffiliationsEl(source: source, pubsubEl: pubsub);
         
         let xmlns = pubsub.xmlns!;
         

@@ -96,6 +96,7 @@ open class XmppModulesManager : ContextAware {
      - parameter module: instance of `XmppModule` to register
      - returns: same instace as passed in parameter `module`
      */
+    @discardableResult
     open func register<T:XmppModule>(_ module:T) -> T {
         if var contextAware = module as? ContextAware {
             contextAware.context = context;
@@ -117,6 +118,7 @@ open class XmppModulesManager : ContextAware {
      - parameter module: instance of `XmppModule` to unregister
      - returns: same instace as passed in parameter `module`
      */
+    @discardableResult
     open func unregister<T:XmppModule>(_ module:T) -> T {
         modulesById.removeValue(forKey: module.id)
         if let idx = self.modules.firstIndex(where: { $0 === module}) {

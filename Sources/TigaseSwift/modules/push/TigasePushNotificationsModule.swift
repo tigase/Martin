@@ -199,7 +199,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                 switch rule {
                 case .always(let room):
                     muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "allow": "always"]));
-                case .never(let room):
+                case .never(_):
                     break;
                 case .mentioned(let room, let nickname):
                     muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "allow": "mentioned", "nick": nickname]));
