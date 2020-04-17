@@ -835,7 +835,7 @@ open class MixInvitation {
     public let token: String?;
     
     public convenience init?(from el: Element?) {
-        guard el?.name == "invitation" && el?.xmlns == "urn:xmpp:misc:0" else {
+        guard el?.name == "invitation" && el?.xmlns == "urn:xmpp:mix:misc:0" else {
             return nil;
         }
         guard let inviter = BareJID(el?.findChild(name: "inviter")?.value), let invitee = BareJID(el?.findChild(name: "invitee")?.value), let channel = BareJID(el?.findChild(name: "channel")?.value) else {
@@ -852,7 +852,7 @@ open class MixInvitation {
     }
     
     open func element() -> Element {
-        return Element(name: "invitation", xmlns: "urn:xmpp:misc:0", children: [
+        return Element(name: "invitation", xmlns: "urn:xmpp:mix:misc:0", children: [
             Element(name: "inviter", cdata: inviter.stringValue),
             Element(name: "invitee", cdata: invitee.stringValue),
             Element(name: "channel", cdata: channel.stringValue),
@@ -864,10 +864,10 @@ open class MixInvitation {
 extension Message {
     open var mixInvitation: MixInvitation? {
         get {
-            return MixInvitation(from: findChild(name: "invitation", xmlns: "urn:xmpp:misc:0"));
+            return MixInvitation(from: findChild(name: "invitation", xmlns: "urn:xmpp:mix:misc:0"));
         }
         set {
-            element.removeChildren(where: { $0.name == "invitation" && $0.xmlns == "urn:xmpp:misc:0"});
+            element.removeChildren(where: { $0.name == "invitation" && $0.xmlns == "urn:xmpp:mix:misc:0"});
             if let value = newValue {
                 element.addChild(value.element());
             }
