@@ -271,6 +271,9 @@ open class XMPPClient: Logger, EventHandler {
         }
 
         override func write(_ stanza: Stanza) {
+            if stanza.name == "iq" && stanza.id == nil {
+                stanza.id = UUID().uuidString;
+            }
             dispatcher.async {
                 self.connector.send(stanza: stanza);
             }

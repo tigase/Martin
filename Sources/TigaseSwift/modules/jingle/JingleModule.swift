@@ -239,7 +239,9 @@ open class JingleModule: XmppModule, ContextAware {
         
         iq.addChild(jingle);
         
-        context.writer?.write(iq);
+        context.writer?.write(iq, completionHandler: { response in
+            print("session transport-info response received:", response as Any);
+        });
     }
     
     open class JingleEvent: Event {
