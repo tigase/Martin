@@ -166,7 +166,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
 
     class Request {
         
-        private let resolverQueue = DispatchQueue.init(label: "DnsSrvResolverQueue");
+        private let dispatcher = QueueDispatcher(label: "DnsSrvResolverQueue");
         let srvName: String;
         private var sdRef: DNSServiceRef?;
         private var sdFd: dnssd_sock_t = -1;
@@ -182,7 +182,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
         }
         
         func resolve(timeout: TimeInterval) {
-            resolverQueue.async {
+            dispatcher.async {
             let result: DNSServiceErrorType = self.srvName.withCString { (srvNameC) -> DNSServiceErrorType in
                 let sdErr = DNSServiceQueryRecord(&self.sdRef, kDNSServiceFlagsReturnIntermediates, UInt32(kDNSServiceInterfaceIndexAny), srvNameC, UInt16(kDNSServiceType_SRV), UInt16(kDNSServiceClass_IN), QueryRecordCallback, XMPPDNSSrvResolver.bridge(self));
                 return sdErr;
@@ -199,8 +199,8 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                     self.fail(withError: .internalError);
                     return;
                 }
-                print("srvName:", self.srvName,"sdFd:", self.sdFd, "resolverQueue:", self.resolverQueue);
-                self.sdFdReadSource = DispatchSource.makeReadSource(fileDescriptor: self.sdFd, queue: self.resolverQueue);
+                print("srvName:", self.srvName,"sdFd:", self.sdFd, "resolverQueue:", self.dispatcher.queue);
+                self.sdFdReadSource = DispatchSource.makeReadSource(fileDescriptor: self.sdFd, queue: self.dispatcher.queue);
                 self.sdFdReadSource?.setEventHandler(handler: {
                     // lets process data..
                     let res = DNSServiceProcessResult(sdRef);
@@ -214,7 +214,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                 })
                 self.sdFdReadSource?.resume();
                 
-                self.timeoutTimer = DispatchSource.makeTimerSource(flags: [], queue: self.resolverQueue);
+                self.timeoutTimer = DispatchSource.makeTimerSource(flags: [], queue: self.dispatcher.queue);
                 self.timeoutTimer?.setEventHandler(handler: {
                     self.fail(withError: .timeout);
                 })
@@ -267,7 +267,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
         }
         
         func cancel() {
-            resolverQueue.sync {
+            dispatcher.sync {
                 complete(with: .failure(DNSError.unknownError));
             }
         }
