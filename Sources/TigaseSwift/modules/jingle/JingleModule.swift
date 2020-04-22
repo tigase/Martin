@@ -42,17 +42,22 @@ open class JingleModule: XmppModule, ContextAware {
     
     public static let XMLNS = "urn:xmpp:jingle:1";
     
+    public static let MESSAGE_INITIATION_XMLNS = "urn:xmpp:jingle-message:0";
+    
     public static let ID = XMLNS;
     
     public let id = XMLNS;
     
-    public let criteria = Criteria.name("iq").add(Criteria.name("jingle", xmlns: XMLNS));
+    public let criteria = Criteria.or(Criteria.name("iq").add(Criteria.name("jingle", xmlns: XMLNS)), Criteria.name("message").add(Criteria.xmlns(MESSAGE_INITIATION_XMLNS)));
     
     public var context: Context!;
     
     public var features: [String] {
         get {
             var result = [JingleModule.XMLNS];
+            if supportsMessageInitiation {
+                result.append(JingleModule.MESSAGE_INITIATION_XMLNS);
+            }
             result.append(contentsOf: supportedTransports.flatMap({ (type, features) in
                 return features;
             }));
@@ -68,6 +73,8 @@ open class JingleModule: XmppModule, ContextAware {
     fileprivate var supportedTransports: [(JingleTransport.Type, [String])] = [];
 
     fileprivate let sessionManager: JingleSessionManager;
+
+    public var supportsMessageInitiation = false;
     
     public init(sessionManager: JingleSessionManager) {
         self.sessionManager = sessionManager;
@@ -101,6 +108,20 @@ open class JingleModule: XmppModule, ContextAware {
     }
  
     public func process(stanza: Stanza) throws {
+        switch stanza {
+        case let message as Message:
+            guard supportsMessageInitiation else {
+                throw ErrorCondition.feature_not_implemented;
+            }
+            try process(message: message);
+        case let iq as Iq:
+            try process(iq: iq);
+        default:
+            throw ErrorCondition.feature_not_implemented;
+        }
+    }
+    
+    open func process(iq stanza: Iq) throws {
         guard stanza.type ?? StanzaType.get == .set else {
             throw ErrorCondition.feature_not_implemented;
         }
@@ -133,6 +154,39 @@ open class JingleModule: XmppModule, ContextAware {
         context.eventBus.fire(JingleEvent(sessionObject: context.sessionObject, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));//, session: session));
         
         context.writer?.write(stanza.makeResult(type: .result));
+    }
+    
+    public func process(message: Message) throws {
+        guard let action = message.jingleMessageInitiationAction, let from = message.from else {
+            return;
+        }
+        switch action {
+        case .propose(_, let descriptions):
+            let xmlnss = descriptions.map({ $0.xmlns });
+            guard supportedDescriptions.first(where: { (type, features) -> Bool in features.contains(where: { xmlnss.contains($0)})}) != nil else {
+                self.sendMessageInitiation(action: .reject(id: id), to: from);
+                return;
+            }
+        default:
+            break;
+        }
+        context.eventBus.fire(JingleMessageInitiationEvent(sessionObject: context.sessionObject, jid: from, action: action));
+    }
+    
+    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID) {
+        switch action {
+        case .proceed(let id):
+            sendMessageInitiation(action: .accept(id: id), to: JID(context.sessionObject.userBareJid!));
+        case .reject(let id):
+            sendMessageInitiation(action: .reject(id: id), to: JID(context.sessionObject.userBareJid!));
+        default:
+            break;
+        }
+        let response = Message();
+        response.type = .chat;
+        response.to = jid;
+        response.jingleMessageInitiationAction = action;
+        context.writer?.write(response);
     }
     
     public func initiateSession(to jid: JID, sid: String, initiator: JID, contents: [Jingle.Content], bundle: [String]?, callback: @escaping (ErrorCondition?)->Void) {
@@ -281,6 +335,29 @@ open class JingleModule: XmppModule, ContextAware {
 //            self.session = session;
         }
         
+    }
+    
+    open class JingleMessageInitiationEvent: Event {
+        
+        public static let TYPE = JingleMessageInitiationEvent();
+                
+        public let type = "JingleMessageInitiationEvent";
+                
+        public let sessionObject: SessionObject!;
+        public let jid: JID!;
+        public let action: Jingle.MessageInitiationAction!;
+                
+        init() {
+            self.sessionObject = nil;
+            self.jid = nil;
+            self.action = nil;
+        }
+                
+        public init(sessionObject: SessionObject, jid: JID, action: Jingle.MessageInitiationAction) {
+            self.sessionObject = sessionObject;
+            self.jid = jid;
+            self.action = action;
+        }
     }
 }
 

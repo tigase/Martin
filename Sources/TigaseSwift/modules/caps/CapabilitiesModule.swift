@@ -144,9 +144,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
         let category = context.sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client");
         let type = context.sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc");
         let name = context.sessionObject.getProperty(SoftwareVersionModule.NAME_KEY, defValue: SoftwareVersionModule.DEFAULT_NAME_VAL);
-        let version = context.sessionObject.getProperty(SoftwareVersionModule.VERSION_KEY, defValue: "0.0.0");
-        
-        let identity = "\(category)/\(type)/\(name) \(version)";
+        let identity = "\(category)/\(type)//\(name)";
         
         let ver = generateVerificationString([identity], features: Array(context.modulesManager.availableFeatures));
         
