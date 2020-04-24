@@ -23,19 +23,7 @@ import Foundation
 
 open class SDP {
     
-    public let id: String;
-    public let sid: String;
-    public let contents: [Jingle.Content];
-    public let bundle: [String]?;
-    
-    public init(sid: String, contents: [Jingle.Content], bundle: [String]?) {
-        self.id = "\(Date().timeIntervalSince1970)";
-        self.sid = sid;
-        self.contents = contents;
-        self.bundle = bundle;
-    }
-    
-    public init?(from sdp: String, creator: Jingle.Content.Creator) {
+    static public func parse(sdpString sdp: String, creator: Jingle.Content.Creator) -> (SDP, String)? {
         var media = sdp.components(separatedBy: "\r\nm=");
         for i in 1..<media.count {
             media[i] = "m=" + media[i];
@@ -50,23 +38,38 @@ open class SDP {
             return nil;
         }
         
-        self.sid = sessionLine[1];
-        self.id = sessionLine[2];
+        let sid = sessionLine[1];
+        let id = sessionLine[2];
         let groupParts = sessionLines.first(where: { s -> Bool in
             return s.starts(with: "a=group:BUNDLE ");
         })?.split(separator: " ") ?? [ "" ];
-        self.bundle = groupParts[0] == "a=group:BUNDLE" ? groupParts.dropFirst().map({ s -> String in return String(s); }) : nil;
+        let bundle = groupParts[0] == "a=group:BUNDLE" ? groupParts.dropFirst().map({ s -> String in return String(s); }) : nil;
         
-        self.contents = media.map({ m -> Jingle.Content? in
+        let contents = media.map({ m -> Jingle.Content? in
             return Jingle.Content(fromSDP: m, creator: creator);
         }).filter({ (c) -> Bool in
             return c != nil;
         }).map({ (c) -> Jingle.Content in
             return c!;
         });
+        return (SDP(id: id, contents: contents, bundle: bundle), sid);
     }
     
-    public func toString() -> String {
+    public let id: String;
+    public let contents: [Jingle.Content];
+    public let bundle: [String]?;
+    
+    public convenience init(contents: [Jingle.Content], bundle: [String]?) {
+        self.init(id: "\(Date().timeIntervalSince1970)", contents: contents, bundle: bundle);
+    }
+    
+    private init(id: String, contents: [Jingle.Content], bundle: [String]?) {
+        self.id = id;
+        self.contents = contents;
+        self.bundle = bundle;
+    }
+    
+    public func toString(withSid sid: String) -> String {
         var sdp = [
             "v=0", "o=- \(sid) \(id) IN IP4 0.0.0.0", "s=-", "t=0 0"
         ];
@@ -137,9 +140,10 @@ extension Jingle.Content {
                 return Jingle.RTP.Description.Encryption(cryptoSuite: parts[0], keyParams: parts[1], tag: parts[2], sessionParams: parts.count > 3 ? parts[3] : nil);
         }
         
+        let hdrExts: [Jingle.RTP.Description.HdrExt] = Jingle.RTP.Description.HdrExt.parse(sdpLines: sdp);
         let ssrcs: [Jingle.RTP.Description.SSRC] = Jingle.RTP.Description.SSRC.parse(sdpLines: sdp);
         let ssrcGroups: [Jingle.RTP.Description.SSRCGroup] = Jingle.RTP.Description.SSRCGroup.parse(sdpLines: sdp);
-        let description = Jingle.RTP.Description(media: mediaName, ssrc: nil, payloads: payloads, bandwidth: nil, encryption: encryptions, rtcpMux: sdp.firstIndex(of: "a=rtcp-mux") != nil, ssrcs: ssrcs, ssrcGroups: ssrcGroups);
+        let description = Jingle.RTP.Description(media: mediaName, ssrc: nil, payloads: payloads, bandwidth: nil, encryption: encryptions, rtcpMux: sdp.firstIndex(of: "a=rtcp-mux") != nil, ssrcs: ssrcs, ssrcGroups: ssrcGroups, hdrExts: hdrExts);
         
         guard let pwd = sdp.first(where: { (l) -> Bool in
             return l.starts(with: "a=ice-pwd:");
@@ -261,7 +265,9 @@ extension Jingle.Content {
                 // add support for payload parameters..
                 // add support for payload feedback..
             }
-            
+            desc.hdrExts.forEach { hdrExt in
+                sdp.append(hdrExt.toSDP());
+            }
             desc.ssrcGroups.forEach { (group) in
                 sdp.append(group.toSDP());
             }
@@ -346,6 +352,19 @@ extension Jingle.Transport.ICEUDPTransport.Candidate {
         sdp.append(" generation \(generation)");
         return sdp;
     }
+}
+
+extension Jingle.RTP.Description.HdrExt {
+    
+    public func toSDP() -> String {
+        return "a=extmap:\(id) \(uri)";
+    }
+    
+    public static func parse(sdpLines: [String.SubSequence]) -> [Jingle.RTP.Description.HdrExt] {
+        let hdrExtLines = sdpLines.filter({ $0.starts(with: "a=extmap:")}).map({ $0.dropFirst("a=extmap:".count) });
+        return hdrExtLines.map { line -> [Substring] in line.split(separator: " ")}.filter({ parts in (parts.count > 1 && !parts[0].contains("/")) }).map({ parts in Jingle.RTP.Description.HdrExt(id: String(parts[0]), uri: String(parts[1]), senders: .both)});
+    }
+    
 }
 
 extension Jingle.RTP.Description.SSRCGroup {

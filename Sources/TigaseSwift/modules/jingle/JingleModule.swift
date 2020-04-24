@@ -111,6 +111,9 @@ open class JingleModule: XmppModule, ContextAware {
         switch stanza {
         case let message as Message:
             guard supportsMessageInitiation else {
+                guard message.type != .error else {
+                    return;
+                }
                 throw ErrorCondition.feature_not_implemented;
             }
             try process(message: message);

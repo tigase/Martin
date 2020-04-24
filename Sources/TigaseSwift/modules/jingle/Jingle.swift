@@ -381,6 +381,7 @@ extension Jingle {
             public let encryption: [Encryption];
             public let ssrcs: [SSRC];
             public let ssrcGroups: [SSRCGroup];
+            public let hdrExts: [HdrExt];
             
             public required convenience init?(from el: Element) {
                 guard el.name == "description" && el.xmlns == "urn:xmpp:jingle:apps:rtp:1" else {
@@ -399,11 +400,12 @@ extension Jingle {
                 let ssrcGroups = el.mapChildren(transform: { (group) -> SSRCGroup? in
                     return SSRCGroup(from: group);
                 });
+                let hdrExts = el.mapChildren(transform: { HdrExt(from: $0 )});
                 
-                self.init(media: media, ssrc: el.getAttribute("ssrc"), payloads: payloads, bandwidth: el.findChild(name: "bandwidth")?.getAttribute("type"), encryption: encryption, rtcpMux: el.findChild(name: "rtcp-mux") != nil, ssrcs: ssrcs, ssrcGroups: ssrcGroups);
+                self.init(media: media, ssrc: el.getAttribute("ssrc"), payloads: payloads, bandwidth: el.findChild(name: "bandwidth")?.getAttribute("type"), encryption: encryption, rtcpMux: el.findChild(name: "rtcp-mux") != nil, ssrcs: ssrcs, ssrcGroups: ssrcGroups, hdrExts: hdrExts);
             }
             
-            public init(media: String, ssrc: String? = nil, payloads: [Payload], bandwidth: String? = nil, encryption: [Encryption] = [], rtcpMux: Bool = false, ssrcs: [SSRC], ssrcGroups: [SSRCGroup]) {
+            public init(media: String, ssrc: String? = nil, payloads: [Payload], bandwidth: String? = nil, encryption: [Encryption] = [], rtcpMux: Bool = false, ssrcs: [SSRC], ssrcGroups: [SSRCGroup], hdrExts: [HdrExt]) {
                 self.media = media;
                 self.ssrc = ssrc;
                 self.payloads = payloads;
@@ -412,6 +414,7 @@ extension Jingle {
                 self.rtcpMux = rtcpMux;
                 self.ssrcs = ssrcs;
                 self.ssrcGroups = ssrcGroups;
+                self.hdrExts = hdrExts;
             }
             
             public func toElement() -> Element {
@@ -442,6 +445,9 @@ extension Jingle {
                 if rtcpMux {
                     el.addChild(Element(name: "rtcp-mux"));
                 }
+                hdrExts.forEach({
+                    el.addChild($0.toElement());
+                })
                 return el;
             }
             
@@ -594,6 +600,51 @@ extension Jingle {
                     return el;
                 }
                 
+            }
+            
+            public class HdrExt {
+
+                public let id: String;
+                public let uri: String;
+                public let senders: Senders;
+                
+                public convenience init?(from el: Element) {
+                    guard el.name == "rtp-hdrext" && el.xmlns == "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0", let id = el.getAttribute("id"), let uri = el.getAttribute("uri") else {
+                        return nil;
+                    }
+                    let senders = Senders(rawValue: el.getAttribute("senders") ?? "") ?? .both;
+                    guard senders == .both else {
+                        return nil;
+                    }
+                    self.init(id: id, uri: uri, senders: senders);
+                }
+                
+                public init(id: String, uri: String, senders: Senders) {
+                    self.id = id;
+                    self.uri = uri;
+                    self.senders = senders;
+                }
+                
+                public func toElement() -> Element {
+                    let el = Element(name: "rtp-hdrext", xmlns: "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0");
+                    el.setAttribute("id", value: id);
+                    el.setAttribute("uri", value: uri);
+                    switch senders {
+                    case .both:
+                        break;
+                    case .initiator:
+                        el.setAttribute("senders", value: "initiator");
+                    case .responder:
+                        el.setAttribute("senders", value: "responder");
+                    }
+                    return el;
+                }
+            }
+            
+            public enum Senders: String {
+                case initiator
+                case responder
+                case both
             }
             
             public class SSRCGroup {
