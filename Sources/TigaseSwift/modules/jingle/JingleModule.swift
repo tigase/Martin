@@ -181,7 +181,9 @@ open class JingleModule: XmppModule, ContextAware {
         case .proceed(let id):
             sendMessageInitiation(action: .accept(id: id), to: JID(context.sessionObject.userBareJid!));
         case .reject(let id):
-            sendMessageInitiation(action: .reject(id: id), to: JID(context.sessionObject.userBareJid!));
+            if jid.bareJid != context.sessionObject.userBareJid! {
+                sendMessageInitiation(action: .reject(id: id), to: JID(context.sessionObject.userBareJid!));
+            }
         default:
             break;
         }
