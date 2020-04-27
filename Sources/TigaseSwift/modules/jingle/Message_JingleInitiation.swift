@@ -98,7 +98,7 @@ public enum MessageInitiationAction {
         }
     }
     
-    var id: String {
+    public var id: String {
         switch self {
         case .accept(let id):
             return id;
@@ -117,14 +117,14 @@ public enum MessageInitiationAction {
         public let xmlns: String;
         public let media: String;
         
-        convenience init?(element descEl: Element) {
+        public convenience init?(element descEl: Element) {
             guard let xmlns = descEl.xmlns, let media = descEl.getAttribute("media") else {
                 return nil;
             }
             self.init(xmlns: xmlns, media: media);
         }
         
-        init(xmlns: String, media: String) {
+        public init(xmlns: String, media: String) {
             self.xmlns = xmlns;
             self.media = media;
         }

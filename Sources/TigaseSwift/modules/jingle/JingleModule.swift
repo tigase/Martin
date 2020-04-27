@@ -274,8 +274,6 @@ open class JingleModule: XmppModule, ContextAware {
         
         iq.addChild(jingle);
 
-        // TODO: improve that in the future!
-        
         jingle.addChild(reason);
         
         context.writer?.write(iq, callback: { response in

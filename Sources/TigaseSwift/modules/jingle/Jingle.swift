@@ -63,7 +63,6 @@ public class Jingle {
             el.setAttribute("creator", value: creator.rawValue);
             el.setAttribute("name", value: name);
             
-            // TODO: add description serialization here!!
             if description != nil {
                 el.addChild(description!.toElement());
             }
