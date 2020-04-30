@@ -21,15 +21,38 @@
 
 import Foundation
 
-public protocol JingleSession: Equatable {
+public protocol JingleSession {
     
     var account: BareJID { get }
     var jid: JID { get }
     var sid: String { get }
+    var state: JingleSessionState { get }
     
-    init(account: BareJID, jid: JID, sid: String?, role: Jingle.Content.Creator);
+    init(sessionObject: SessionObject, jid: JID, sid: String, role: Jingle.Content.Creator, initiationType: JingleSessionInitiationType);
     
-    func terminate() -> Bool;
+    func terminate(reason: JingleSessionTerminateReason);
+}
+
+extension JingleSession {
+    public func terminate() {
+        self.terminate(reason: .success);
+    }
+}
+
+public enum JingleSessionState {
+    // new session
+    case created
+    // session-initiate sent or received
+    case initiating
+    // session-accept sent or received
+    case accepted
+    // session-terminate sent or received
+    case terminated
+}
+
+public enum JingleSessionInitiationType {
+    case iq
+    case message
 }
 
 public protocol JingleSessionManager {
@@ -154,6 +177,7 @@ open class JingleModule: XmppModule, ContextAware {
             return el.name == "content" && el.getAttribute("name") != nil;
         });
         
+        
         context.eventBus.fire(JingleEvent(sessionObject: context.sessionObject, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));//, session: session));
         
         context.writer?.write(stanza.makeResult(type: .result));
@@ -194,7 +218,11 @@ open class JingleModule: XmppModule, ContextAware {
         context.writer?.write(response);
     }
     
-    public func initiateSession(to jid: JID, sid: String, initiator: JID, contents: [Jingle.Content], bundle: [String]?, callback: @escaping (ErrorCondition?)->Void) {
+    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        guard let initiatior = ResourceBinderModule.getBindedJid(context.sessionObject) else {
+            completionHandler(.failure(.unexpected_request));
+            return;
+        }
         let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.set;
@@ -202,7 +230,7 @@ open class JingleModule: XmppModule, ContextAware {
         let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
         jingle.setAttribute("action", value: "session-initiate");
         jingle.setAttribute("sid", value: sid);
-        jingle.setAttribute("initiator", value: initiator.stringValue);
+        jingle.setAttribute("initiator", value: initiatior.stringValue);
     
         iq.addChild(jingle);
         
@@ -220,15 +248,19 @@ open class JingleModule: XmppModule, ContextAware {
         }
         
         context.writer?.write(iq, callback: { (response) in
-            let error = response == nil ? ErrorCondition.remote_server_timeout : response!.errorCondition;
-//            if error != nil {
-//                self.sessionManager.close(account: self.context.sessionObject.userBareJid!, jid: jid, sid: sid);
-//            }
-            callback(error);
+            if let error = response == nil ? ErrorCondition.remote_server_timeout : response!.errorCondition {
+                completionHandler(.failure(error));
+            } else {
+                completionHandler(.success(Void()));
+            }
         });
     }
     
-    public func acceptSession(with jid: JID, sid: String, initiator: JID, contents: [Jingle.Content], bundle: [String]?, callback: @escaping (ErrorCondition?)->Void) {
+    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+        guard let responder = ResourceBinderModule.getBindedJid(context.sessionObject) else {
+            completionHandler(.failure(.unexpected_request));
+            return;
+        }
         let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.set;
@@ -236,7 +268,7 @@ open class JingleModule: XmppModule, ContextAware {
         let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
         jingle.setAttribute("action", value: "session-accept");
         jingle.setAttribute("sid", value: sid);
-        jingle.setAttribute("initiator", value: initiator.stringValue);
+        jingle.setAttribute("responder", value: responder.stringValue);
         
         iq.addChild(jingle);
         
@@ -254,16 +286,15 @@ open class JingleModule: XmppModule, ContextAware {
         }
         
         context.writer?.write(iq, callback: { (response) in
-            let error = response == nil ? ErrorCondition.remote_server_timeout : response!.errorCondition;
-            callback(error);
+            if let error = response == nil ? ErrorCondition.remote_server_timeout : response!.errorCondition {
+                completionHandler(.failure(error));
+            } else {
+                completionHandler(.success(Void()));
+            }
         });
     }
     
-    public func declineSession(with jid: JID, sid: String) {
-        terminateSession(with: jid, sid: sid, reason: Element(name: "reason", children: [Element(name: "decline")]));
-    }
-    
-    public func terminateSession(with jid: JID, sid: String, reason: Element = Element(name: "reason", children: [Element(name: "success")])) {
+    public func terminateSession(with jid: JID, sid: String, reason: JingleSessionTerminateReason) {
         let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.set;
@@ -274,7 +305,7 @@ open class JingleModule: XmppModule, ContextAware {
         
         iq.addChild(jingle);
 
-        jingle.addChild(reason);
+        jingle.addChild(reason.toReasonElement());
         
         context.writer?.write(iq, callback: { response in
             print("session terminated and answer received", response as Any);
@@ -362,5 +393,33 @@ open class JingleModule: XmppModule, ContextAware {
             self.action = action;
         }
     }
+    
 }
 
+public enum JingleSessionTerminateReason: String {
+    case alternativeSession = "alternative-session"
+    case busy = "busy"
+    case cancel = "cancel"
+    case connectivityError = "connectivity-error"
+    case decline = "decline"
+    case expired = "expired"
+    case failedApplication = "failed-application"
+    case failedTransport = "failed-transport"
+    case generalError = "general-error"
+    case gone = "gone"
+    case incompatibleParameters = "incompatible-parameters"
+    case mediaError = "media-error"
+    case securityError = "security-error"
+    case success = "success"
+    case timeout = "timeout"
+    case unsupportedApplications = "unsupported-applications"
+    case unsupportedTransports = "unsupported-transports"
+    
+    func toElement() -> Element {
+        return Element(name: rawValue);
+    }
+    
+    func toReasonElement() -> Element {
+        return Element(name: "reason", children: [toElement()]);
+    }
+}
