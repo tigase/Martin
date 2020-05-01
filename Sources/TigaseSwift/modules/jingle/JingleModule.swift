@@ -194,6 +194,10 @@ open class JingleModule: XmppModule, ContextAware {
                 self.sendMessageInitiation(action: .reject(id: id), to: from);
                 return;
             }
+        case .accept(_):
+            guard from != ResourceBinderModule.getBindedJid(context.sessionObject) else {
+                return;
+            }
         default:
             break;
         }
