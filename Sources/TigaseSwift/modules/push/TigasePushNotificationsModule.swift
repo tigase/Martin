@@ -23,7 +23,7 @@ import Foundation
 
 open class TigasePushNotificationsModule: PushNotificationsModule {
     
-    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<RegistrationResult,ErrorCondition>)->Void) {
+    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,ErrorCondition>)->Void) {
         guard let adhocModule: AdHocCommandsModule = context.modulesManager.getModule(AdHocCommandsModule.ID) else {
             completionHandler(.failure(ErrorCondition.undefined_condition));
             return;
@@ -32,6 +32,9 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         let data = JabberDataElement(type: .submit);
         data.addField(TextSingleField(name: "provider", value: provider));
         data.addField(TextSingleField(name: "device-token", value: deviceId));
+        if pushkitDeviceId != nil {
+            data.addField(TextSingleField(name: "device-second-token", value: pushkitDeviceId));
+        }
         
         adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data, onSuccess: { (stanza, resultData) in
             
@@ -261,4 +264,15 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         
     }
 
+    public struct Jingle: PushNotificationsModuleExtension, Hashable {
+        
+        public static let XMLNS = "tigase:push:jingle:0";
+        
+        public init() {
+        }
+        
+        public func apply(to enableEl: Element) {
+            enableEl.addChild(Element(name: "jingle", xmlns: Jingle.XMLNS));
+        }
+    }
 }
