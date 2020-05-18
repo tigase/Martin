@@ -169,7 +169,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                 }
             
                 let modules = self.modulesManager.findModules(for: stanza);
-                self.log("stanza:", stanza, "will be processed by", modules);
+//                self.log("stanza:", stanza, "will be processed by", modules);
                 if !modules.isEmpty {
                     for module in modules {
                         try module.process(stanza: stanza);

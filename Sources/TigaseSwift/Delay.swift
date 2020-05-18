@@ -28,6 +28,24 @@ import Foundation
  */
 open class Delay {
     
+    @available(iOS 12.0, OSX 10.14, *)
+    private static let isoStampFormatter = { ()-> ISO8601DateFormatter in
+        let f = ISO8601DateFormatter();
+        f.formatOptions = ISO8601DateFormatter.Options(arrayLiteral: [.withColonSeparatorInTime,.withColonSeparatorInTimeZone,.withFullDate,.withFullTime,.withDashSeparatorInDate,.withTimeZone]);
+        f.timeZone = TimeZone(secondsFromGMT: 0);
+        return f;
+    }();
+
+    @available(iOS 12.0, OSX 10.14, *)
+    private static let isoStampWithMilisFormatter = { ()-> ISO8601DateFormatter in
+        let f = ISO8601DateFormatter();
+        var options = f.formatOptions;
+        options.insert(ISO8601DateFormatter.Options.withFractionalSeconds);
+        f.formatOptions = ISO8601DateFormatter.Options(arrayLiteral: [.withColonSeparatorInTime,.withColonSeparatorInTimeZone,.withFullDate,.withFullTime,.withDashSeparatorInDate,.withFractionalSeconds,.withTimeZone]);
+        f.timeZone = TimeZone(secondsFromGMT: 0);
+        return f;
+    }();
+
     fileprivate static let stampFormatter = ({()-> DateFormatter in
         var f = DateFormatter();
         f.locale = Locale(identifier: "en_US_POSIX");
@@ -51,7 +69,11 @@ open class Delay {
     
     public init(element:Element) {
         if let stampStr = element.getAttribute("stamp") {
-            stamp = Delay.stampFormatter.date(from: stampStr) ?? Delay.stampWithMilisFormatter.date(from: stampStr);
+            if #available(iOS 12.0, OSX 10.14, *) {
+                stamp = Delay.isoStampWithMilisFormatter.date(from: stampStr) ?? Delay.isoStampFormatter.date(from: stampStr);
+            } else {
+                stamp = Delay.stampWithMilisFormatter.date(from: stampStr) ?? Delay.stampFormatter.date(from: stampStr);
+            }
         } else {
             stamp = nil;
         }
