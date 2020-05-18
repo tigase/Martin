@@ -160,7 +160,7 @@ open class Room: ChatProtocol, ContextAware {
     }
     
     /// Rejoin this room
-    open func rejoin() -> Presence {
+    open func rejoin(skipHistoryFetch: Bool = false) -> Presence {
         let presence = Presence();
         presence.to = JID(roomJid, resource: nickname);
         let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc");
@@ -169,14 +169,23 @@ open class Room: ChatProtocol, ContextAware {
             x.addChild(Element(name: "password", cdata: password!));
         }
         
+            
         if lastMessageDate != nil {
-            let history = Element(name: "history");
-            history.setAttribute("since", value: Room.stampFormatter.string(from: lastMessageDate!));
-            x.addChild(history);
+            if skipHistoryFetch {
+                let history = Element(name: "history");
+                history.setAttribute("maxchars", value: "0");
+                history.setAttribute("maxstanzas", value: "0");
+                x.addChild(history);
+            } else {
+                let history = Element(name: "history");
+                history.setAttribute("since", value: Room.stampFormatter.string(from: lastMessageDate!));
+                x.addChild(history);
+            }
         }
         
         _state = .requested;
         context.writer?.write(presence);
+        
         return presence;
     }
     
