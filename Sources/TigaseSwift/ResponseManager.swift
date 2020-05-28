@@ -62,25 +62,29 @@ open class ResponseManager: Logger {
      - returns: callback handler if any
      */
     open func getResponseHandler(for stanza:Stanza)-> ((Stanza?)->Void)? {
-        let type = stanza.type;
-        if (stanza.id == nil || (type != StanzaType.error && type !=  StanzaType.result)) {
+        guard let type = stanza.type, let id = stanza.id, (type == StanzaType.error || type == StanzaType.result) else {
             return nil;
         }
-        let id = stanza.id!;
         var callback: ((Stanza?)->Void)? = nil;
         queue.sync {
             if let entry = self.handlers[id] {
                 let userJid = ResourceBinderModule.getBindedJid(self.context.sessionObject);
-                let from = stanza.from;
-                if (entry.jid == from) || (entry.jid == nil && from?.bareJid == userJid?.bareJid) {
-                    self.handlers.removeValue(forKey: id)
-                    callback = entry.callback;
+                if let from = stanza.from {
+                    if entry.jid == from || (entry.jid == nil && from.bareJid == userJid?.bareJid && from.resource == nil) {
+                        self.handlers.removeValue(forKey: id)
+                        callback = entry.callback;
+                    }
+                } else {
+                    if entry.jid == nil || (entry.jid?.bareJid == userJid?.bareJid && entry.jid?.resource == nil) {
+                        self.handlers.removeValue(forKey: id)
+                        callback = entry.callback;
+                    }
                 }
             }
         }
         return callback;
     }
-    
+        
     /**
      Method registers callback for stanza for time
      - parameter stanza: stanza for which to wait for response
