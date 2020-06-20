@@ -340,6 +340,24 @@ open class Message: Stanza {
         }
     }
     
+    open var lastMessageCorrectionId: String? {
+        get {
+            return element.findChild(name: "replace", xmlns: "urn:xmpp:message-correct:0")?.getAttribute("id");
+        }
+        set {
+            var el = element.findChild(name: "replace", xmlns: "urn:xmpp:message-correct:0");
+            if let val = newValue {
+                if el == nil {
+                    el = Element(name: "replace", xmlns: "urn:xmpp:message-correct:0");
+                    element.addChild(el!);
+                }
+                el?.setAttribute("id", value: val)
+            } else if el != nil {
+                element.removeChild(el!);
+            }
+        }
+    }
+    
     open override var description: String {
         return String("Message : \(element)")
     }
