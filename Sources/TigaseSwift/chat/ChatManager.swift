@@ -139,4 +139,5 @@ open class Chat: ChatProtocol {
         
         return msg;
     }
+    
 }

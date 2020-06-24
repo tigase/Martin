@@ -38,7 +38,9 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     
     public let id = ID;
     public let criteria = Criteria.empty();
-    public let features = ["http://jabber.org/protocol/caps"];
+    public var features: [String] {
+        return ["http://jabber.org/protocol/caps"] + additionalFeatures.map({ $0.rawValue });
+    }
     
     open var context: Context! {
         willSet {
@@ -62,8 +64,10 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     /// Node used in CAPS advertisement
     open var nodeName = "http://tigase.org/TigaseSwift" + "X";
     
-    public init() {
-        
+    public let additionalFeatures: [AdditionalFeatures];
+    
+    public init(additionalFeatures: [AdditionalFeatures] = []) {
+        self.additionalFeatures = additionalFeatures;
     }
     
     /// Method do noting
@@ -193,6 +197,14 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
         }
         
         return Digest.sha1.digest(toBase64: string.data(using: String.Encoding.utf8));
+    }
+    
+    public struct AdditionalFeatures: RawRepresentable {
+        public let rawValue: String
+        
+        public init(rawValue: String) {
+            self.rawValue = rawValue;
+        }
     }
 }
 

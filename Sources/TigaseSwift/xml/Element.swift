@@ -321,6 +321,12 @@ open class Element : Node, ElementProtocol {
         }
     }
     
+    open func removeChildren(name: String? = nil, xmlns: String? = nil) {
+        for child in self.getChildren(name: name, xmlns: xmlns) {
+            self.removeChild(child);
+        }
+    }
+    
     /**
      Removes node from children
      */
