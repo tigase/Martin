@@ -230,6 +230,12 @@ open class Field {
         }
     }
     
+    open var media: [Media] {
+        get {
+            return element.mapChildren(transform: Media.init(from: ));
+        }
+    }
+    
     public init?(from: Element) {
         guard from.name == "field" && from.getAttribute("var") != nil else {
             return nil;
@@ -249,6 +255,39 @@ open class Field {
             elem.addChild(Element(name: "required"));
         }
         return elem;
+    }
+
+    open class Media {
+        public let element: Element;
+        
+        public var uris: [Uri] {
+            get {
+                return element.mapChildren(transform: Uri.init(from: ), filter: { $0.name == "uri" && $0.value != nil });
+            }
+        }
+        
+        public init?(from: Element) {
+            guard from.name == "media" && from.xmlns == "urn:xmpp:media-element" else {
+                return nil;
+            }
+            self.element = from;
+        }
+        
+        open class Uri {
+            public let element: Element;
+            
+            public var type: String;
+            public var value: String;
+            
+            public init?(from el: Element) {
+                guard el.name == "uri", let value = el.value, let type = el.getAttribute("type") else {
+                    return nil;
+                }
+                self.element = el;
+                self.type = type;
+                self.value = value;
+            }
+        }
     }
 }
 

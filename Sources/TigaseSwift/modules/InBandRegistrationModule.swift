@@ -85,6 +85,17 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
      - parameter onError: called when server returned error
      */
     open func retrieveRegistrationForm(from jid: JID? = nil, onSuccess: @escaping (Bool, JabberDataElement)->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
+        self.retrieveRegistrationForm(from: jid, completionHandler: { result in
+            switch result {
+            case .success(let type, let form, _):
+                onSuccess(type == .plain, form);
+            case .failure(let errorCondition, let errorText):
+                onError(errorCondition, errorText);
+            }
+        })
+    }
+    
+    open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
@@ -96,8 +107,8 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             let type = response?.type ?? .error;
             switch type {
             case .result:
-                if let form = JabberDataElement(from: response?.findChild(name: "query", xmlns: "jabber:iq:register")?.findChild(name: "x", xmlns: "jabber:x:data")) {
-                    onSuccess(true, form);
+                if let query = response?.findChild(name: "query", xmlns: "jabber:iq:register"), let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data")) {
+                    completionHandler(.success(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: ))));
                 } else {
                     let form = JabberDataElement(type: .form);
                     if let query = response?.findChild(name: "query", xmlns: "jabber:iq:register") {
@@ -114,15 +125,26 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                             form.addField(TextSingleField(name: "email", required: true));
                         }
                     }
-                    onSuccess(false, form);
+                    completionHandler(.success(type: .plain, form: form, bob: []));
                 }
             default:
-                onError(response?.errorCondition, response?.findChild(name: "error")?.findChild(name: "text")?.value);
+                completionHandler(.failure(errorCondition: response?.errorCondition ?? ErrorCondition.remote_server_timeout, errorText: response?.findChild(name: "error")?.findChild(name: "text")?.value));
             }
         });
     }
     
     open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
+        submitRegistrationForm(to: jid, form: form, completionHandler: { result in
+            switch result {
+            case .success(_):
+                onSuccess();
+            case .failure(let errorCondition, let errorText):
+                onError(errorCondition, errorText);
+            }
+        })
+    }
+    
+    open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, completionHandler: @escaping (AsyncResult<String>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
@@ -135,9 +157,9 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             let type = response?.type ?? .error;
             switch type {
             case .result:
-                onSuccess();
+                completionHandler(.success(response: ""));
             default:
-                onError(response?.errorCondition, response?.findChild(name: "error")?.findChild(name: "text")?.value);
+                completionHandler(.failure(errorCondition: response?.errorCondition ?? ErrorCondition.remote_server_timeout, response: response?.findChild(name: "error")?.findChild(name: "text")?.value ?? nil));
             }
         });
     }
@@ -341,7 +363,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     
     open class AccountRegistrationTask: EventHandler {
         
-        var client: XMPPClient! {
+        public private(set) var client: XMPPClient! {
             willSet {
                 if newValue == nil && self.client != nil {
                     let curr = self.client;
@@ -358,9 +380,8 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             }
         };
         var inBandRegistrationModule: InBandRegistrationModule!;
-        var onForm: ((JabberDataElement, AccountRegistrationTask)->Void)?;
-        var onSuccess: (()->Void)?;
-        var onError: ((ErrorCondition?, String?)->Void)?;
+        var onForm: ((JabberDataElement, [BobData], AccountRegistrationTask)->Void)?;
+        var completionHandler: ((RegistrationResult)->Void)?;
         var onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)?;
         
         var usesDataForm = false;
@@ -369,11 +390,10 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
         var acceptedCertificate: SslCertificateInfo? = nil;
         
-        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (JabberDataElement, InBandRegistrationModule.AccountRegistrationTask)->Void, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void, sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil) {
+        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (JabberDataElement, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
             self.setClient(client: client ?? XMPPClient());
             self.onForm = onForm;
-            self.onSuccess = onSuccess;
-            self.onError = onError;
+            self.completionHandler = completionHandler;
             
             _ = self.client?.modulesManager.register(StreamFeaturesModule());
             self.inBandRegistrationModule = self.client!.modulesManager.register(InBandRegistrationModule());
@@ -393,11 +413,18 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 return;
             }
             if (usesDataForm) {
-                inBandRegistrationModule.submitRegistrationForm(form: form, onSuccess: {
-                    let callback = self.onSuccess!;
-                    self.finish();
-                    callback();
-                }, onError: self.onErrorFn);
+                inBandRegistrationModule.submitRegistrationForm(form: form, completionHandler: { result in
+                    switch result {
+                    case .success(_):
+                        let callback = self.completionHandler;
+                        self.finish();
+                        if let completionHandler = callback {
+                            completionHandler(.success);
+                        }
+                    case .failure(let errorCondition, let response):
+                        self.onErrorFn(errorCondition: errorCondition, message: response);
+                    }
+                });
             } else {
                 let username = (form.getField(named: "username") as? TextSingleField)?.value;
                 let password = (form.getField(named: "password") as? TextPrivateField)?.value;
@@ -406,11 +433,13 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                     let type = response?.type ?? .error;
                     switch (type) {
                     case .result:
-                        let callback = self.onSuccess!;
+                        let callback = self.completionHandler;
                         self.finish();
-                        callback();
+                        if let completionHandler = callback {
+                            completionHandler(.success);
+                        }
                     default:
-                        self.onErrorFn(errorCondition: response?.errorCondition, message: response?.findChild(name: "error")?.findChild(name: "text")?.value);
+                        self.onErrorFn(errorCondition: response?.errorCondition ?? ErrorCondition.remote_server_timeout, message: response?.findChild(name: "error")?.findChild(name: "text")?.value);
                     }
                 })
             }
@@ -458,41 +487,45 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 return;
             }
             
-            inBandRegistrationModule.retrieveRegistrationForm(onSuccess: {(usesDataForm, serverForm) in
-                self.usesDataForm = usesDataForm;
-                let form = serverForm;
-                if self.formToSubmit == nil {
-                    self.onForm?(form, self);
-                } else {
-                    var sameForm = true;
-                    var labelsChanged = false;
-                    form.fieldNames.forEach({(name) in
-                        let newField = form.getField(named: name);
-                        let oldField = self.formToSubmit!.getField(named: name);
-                        if newField != nil && oldField != nil {
-                            labelsChanged = newField?.label != oldField?.label;
-                            if labelsChanged {
-                                oldField?.label = newField?.label;
-                                oldField?.element.removeChildren(where: { (el) -> Bool in
-                                    el.name == "value";
-                                })
+            inBandRegistrationModule.retrieveRegistrationForm(completionHandler: { result in
+                switch result {
+                case .success(let type, let form, let bob):
+                    self.usesDataForm = type == .dataForm;
+                    if self.formToSubmit == nil {
+                        self.onForm?(form, bob, self);
+                    } else {
+                        var sameForm = true;
+                        var labelsChanged = false;
+                        form.fieldNames.forEach({(name) in
+                            let newField = form.getField(named: name);
+                            let oldField = self.formToSubmit!.getField(named: name);
+                            if newField != nil && oldField != nil {
+                                labelsChanged = newField?.label != oldField?.label;
+                                if labelsChanged {
+                                    oldField?.label = newField?.label;
+                                    oldField?.element.removeChildren(where: { (el) -> Bool in
+                                        el.name == "value";
+                                    })
+                                }
+                            } else {
+                                sameForm = false;
                             }
-                        } else {
-                            sameForm = false;
+                        });
+                        DispatchQueue.global().async {
+                            if (!sameForm) {
+                                self.onForm?(form, bob, self);
+                            } else if (labelsChanged) {
+                                self.onForm?(self.formToSubmit!, bob, self);
+                            } else {
+                                self.submit(form: self.formToSubmit!);
+                            }
+                            self.formToSubmit = nil;
                         }
-                    });
-                    DispatchQueue.global().async {
-                        if (!sameForm) {
-                            self.onForm?(form, self);
-                        } else if (labelsChanged) {
-                            self.onForm?(self.formToSubmit!, self);
-                        } else {
-                            self.submit(form: self.formToSubmit!);
-                        }
-                        self.formToSubmit = nil;
                     }
+                case .failure(let errorCondition, let errorText):
+                    self.onErrorFn(errorCondition: errorCondition, message: errorText);
                 }
-            }, onError: self.onErrorFn);
+            });
         }
         
         public func getAcceptedCertificate() -> SslCertificateInfo? {
@@ -503,10 +536,10 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             self.client = client;
         }
         
-        fileprivate func onErrorFn(errorCondition: ErrorCondition?, message: String?) -> Void {
-            let callback = self.onError
+        fileprivate func onErrorFn(errorCondition: ErrorCondition, message: String?) -> Void {
+            let callback = self.completionHandler;
             if (callback != nil) {
-                callback!(errorCondition, message);
+                callback!(.failure(errorCondition: errorCondition, errorText: message));
             } else {
                 self.finish();
             }
@@ -551,10 +584,24 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             client = nil;
             inBandRegistrationModule = nil;
             onForm = nil;
-            onSuccess = nil;
-            onError = nil;
+            completionHandler = nil;
         }
         
+        public enum RegistrationResult {
+            case success
+            case failure(errorCondition: ErrorCondition, errorText: String?)
+        }
+        
+    }
+    
+    public enum FormType {
+        case plain
+        case dataForm
+    }
+    
+    public enum RetrieveFormResult {
+        case success(type: FormType, form: JabberDataElement, bob: [BobData])
+        case failure(errorCondition: ErrorCondition, errorText: String?)
     }
     
 }
