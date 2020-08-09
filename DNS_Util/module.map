@@ -1,4 +1,0 @@
-module DNS_Util [system] {
-    header "shim.h"
-    export *
-}

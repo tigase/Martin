@@ -16,7 +16,9 @@ build/
 *.xccheckout
 xcuserdata/
 *.moved-aside
-
+*.xcodeproj/
+.build/
+.swiftpm/
 !Podfile.lock
 !Gemfile.lock
 .idea/workspace.xml
