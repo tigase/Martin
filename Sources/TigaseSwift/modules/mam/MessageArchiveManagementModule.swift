@@ -214,7 +214,9 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
                     return;
                 }
                 
-                completionHandler(.success(queryId: queryId, complete: "true" == fin.getAttribute("complete"), rsm: RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"))));
+                let rsmResult = RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
+                let complete = ("true" == fin.getAttribute("complete")) || ((rsmResult?.count ?? 0) == 0);
+                completionHandler(.success(queryId: queryId, complete: complete, rsm: rsmResult));
             case .failure(let errorCondition, let response):
                 completionHandler(.failure(errorCondition: errorCondition, response: response));
             }
