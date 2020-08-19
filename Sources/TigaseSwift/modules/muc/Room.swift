@@ -330,15 +330,18 @@ open class Room: ChatProtocol, ContextAware {
             return;
         };
         
-        regModule.retrieveRegistrationForm(from: self.jid, onSuccess: { (isForm, form) in
-            if isForm, let field: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline") {
-                completionHandler(.success(field.value));
-            } else {
-                completionHandler(.failure(ErrorCondition.feature_not_implemented));
+        regModule.retrieveRegistrationForm(from: self.jid, completionHandler: { result in
+            switch result {
+            case .success(let type, let form, let bob):
+                if type == .dataForm, let field: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline") {
+                    completionHandler(.success(field.value));
+                } else {
+                    completionHandler(.failure(.feature_not_implemented));
+                }
+            case .failure(let errorCondition, _):
+                completionHandler(.failure(errorCondition));
             }
-        }, onError: { (err, msg) in
-            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
-        })
+        });
     }
     
     open func registerForTigasePushNotification(_ value: Bool, completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
@@ -347,32 +350,35 @@ open class Room: ChatProtocol, ContextAware {
             return;
         };
         
-        regModule.retrieveRegistrationForm(from: self.jid, onSuccess: { (isForm, form) in
-            if isForm, let valueField: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline"), let nicknameField: TextSingleField = form.getField(named: "muc#register_roomnick") {
-                if valueField.value == value {
-                    completionHandler(.success(value));
-                } else {
-                    if value {
-                        valueField.value = value;
-                        nicknameField.value = self.nickname;
-                        regModule.submitRegistrationForm(to: self.jid, form: form, onSuccess: {
-                            completionHandler(.success(value));
-                        }, onError: { (err, msg) in
-                            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
-                        })
+        regModule.retrieveRegistrationForm(from: self.jid, completionHandler: { result in
+            switch result {
+            case .success(let type, let form, let bob):
+                if type == .dataForm, let valueField: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline"), let nicknameField: TextSingleField = form.getField(named: "muc#register_roomnick") {
+                    if valueField.value == value {
+                        completionHandler(.success(value));
                     } else {
-                        regModule.unregister(from: self.jid, onSuccess: {
-                            completionHandler(.success(value));
-                        }, onError: { (err, msg) in
-                            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
-                        });
+                        if value {
+                            valueField.value = value;
+                            nicknameField.value = self.nickname;
+                            regModule.submitRegistrationForm(to: self.jid, form: form, onSuccess: {
+                                completionHandler(.success(value));
+                            }, onError: { (err, msg) in
+                                completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+                            })
+                        } else {
+                            regModule.unregister(from: self.jid, onSuccess: {
+                                completionHandler(.success(value));
+                            }, onError: { (err, msg) in
+                                completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+                            });
+                        }
                     }
+                } else {
+                    completionHandler(.failure(ErrorCondition.feature_not_implemented));
                 }
-            } else {
-                completionHandler(.failure(ErrorCondition.feature_not_implemented));
+            case .failure(let errorCondition, _):
+                completionHandler(.failure(errorCondition));
             }
-        }, onError: { (err, msg) in
-            completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
         })
     }
     
