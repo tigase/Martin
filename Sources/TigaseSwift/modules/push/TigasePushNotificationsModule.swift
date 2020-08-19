@@ -161,14 +161,20 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         
         public let algorithm: String;
         public let key: Data;
+        public let maxPayloadSize: Int?;
         
-        public init(algorithm: String, key: Data) {
+        public init(algorithm: String, key: Data, maxPayloadSize: Int? = nil) {
             self.key = key;
             self.algorithm = algorithm;
+            self.maxPayloadSize = maxPayloadSize;
         }
         
         public func apply(to enableEl: Element) {
-            enableEl.addChild(Element(name: "encrypt", cdata: key.base64EncodedString(), attributes: ["xmlns": Encryption.XMLNS, "alg": algorithm]))
+            let encryptEl = Element(name: "encrypt", cdata: key.base64EncodedString(), attributes: ["xmlns": Encryption.XMLNS, "alg": algorithm]);
+            if let maxSize = maxPayloadSize {
+                encryptEl.setAttribute("max-size", value: String(maxSize));
+            }
+            enableEl.addChild(encryptEl);
         }
         
     }
