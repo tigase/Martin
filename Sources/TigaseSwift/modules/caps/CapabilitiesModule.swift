@@ -64,6 +64,9 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     /// Node used in CAPS advertisement
     open var nodeName = "http://tigase.org/TigaseSwift" + "X";
     
+    private let dispatcher = QueueDispatcher(label: "capsInProgressSynchronizer");
+    private var inProgress: [String] = [];
+    
     public let additionalFeatures: [AdditionalFeatures];
     
     public init(additionalFeatures: [AdditionalFeatures] = []) {
@@ -121,7 +124,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
      */
     func onReceivedPresence(event e: PresenceModule.ContactPresenceChanged) {
         let type = (e.presence.type ?? .available);
-        guard cache != nil && e.presence != nil, let from = e.presence.from, type == .available else {
+        guard let cache = self.cache, e.presence != nil, let from = e.presence.from, type == .available else {
             return;
         }
         
@@ -129,14 +132,37 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
             return;
         }
         
-        cache!.isCached(node: nodeName) { cached in
-            guard let discoveryModule: DiscoveryModule = self.context.modulesManager.getModule(DiscoveryModule.ID) else {
+        dispatcher.async {
+            guard !self.inProgress.contains(nodeName) else {
                 return;
             }
-            discoveryModule.getInfo(for: from, node: nodeName, onInfoReceived: { (node, identities, features) in
-                let identity = identities.first;
-                self.cache?.store(node: node!, identity: identity, features: features);
-            }, onError: nil);
+            cache.isCached(node: nodeName) { cached in
+                guard !cached, let discoveryModule: DiscoveryModule = self.context.modulesManager.getModule(DiscoveryModule.ID) else {
+                    return;
+                }
+                self.dispatcher.async {
+                    guard !self.inProgress.contains(nodeName) else {
+                        return;
+                    }
+                    self.inProgress.append(nodeName);
+                    print("caps disco#info send for:", nodeName, "to:", from);
+                    discoveryModule.getInfo(for: from, node: nodeName, completionHandler: { result in
+                        self.dispatcher.async {
+                            if let idx = self.inProgress.firstIndex(of: nodeName) {
+                                self.inProgress.remove(at: idx);
+                                print("caps disco#info received from:", from, "result:", result)
+                            }
+                            switch result {
+                            case .success(let node, let identities, let features):
+                                let identity = identities.first;
+                                cache.store(node: node!, identity: identity, features: features);
+                            default:
+                                break;
+                            }
+                        }
+                    });
+                }
+            }
         }
     }
     
