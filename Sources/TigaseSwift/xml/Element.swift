@@ -445,6 +445,15 @@ open class Element : Node, ElementProtocol {
     }
 }
 
+/**
+ Method does a shallow check of equality of two instances of  `Element` class and compares
+ only equality of element name and attibute names and their values as well as count of child elements.
+ For deep comparison you need to additionally compare child elements recursively.
+ 
+ It was decided to make it a shallow comparison for performance reasons as this method
+ is executed frequently by instances of collections and comparison of full subtree of elements
+ will add a significant penalty.
+ */
 public func ==(lhs: Element, rhs: Element) -> Bool {
     if (lhs.name != rhs.name) {
         return false;
