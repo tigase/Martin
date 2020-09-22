@@ -460,5 +460,8 @@ public func ==(lhs: Element, rhs: Element) -> Bool {
             return false;
         }
     }
+    if (lhs.nodes != rhs.nodes) {
+        return false;
+    }
     return true;
 }
