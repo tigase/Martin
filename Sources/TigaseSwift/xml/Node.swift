@@ -24,7 +24,7 @@ import Foundation
 /**
  Base class used to represent parsed XML.
  */
-open class Node:Equatable, StringValue {
+open class Node: StringValue {
     
     /// returns serialized value
     open var stringValue:String {

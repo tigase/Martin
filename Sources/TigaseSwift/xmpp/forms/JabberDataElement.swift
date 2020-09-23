@@ -58,8 +58,11 @@ open class JabberDataElementFieldAware {
         element.removeChildren(where: { (elem)->Bool in return elem.name == "field" && elem.getAttribute("var") == name})
     }
     
+    /**
+     Method removes the same element as element within Field class (reference comparison)
+     */
     open func removeField(_ field: Field) {
-        element.removeChildren(where: { (elem)->Bool in return elem == field.element});
+        element.removeChildren(where: { (elem)->Bool in return elem === field.element});
     }
     
     open func wrapIntoField(elem: Element) -> Field? {
@@ -297,7 +300,7 @@ open class Reported {
     
     open var rows: [Row] {
         let children = parent.getChildren();
-        var idx = children.firstIndex(of: element)!.advanced(by: 1);
+        var idx = parent.firstIndex(ofChild: element)!.advanced(by: 1);
         var result: [Row] = [];
         while children.count > idx && children[idx].name == "item" {
             if let row = Row(from: children[idx]) {
@@ -309,7 +312,7 @@ open class Reported {
     };
     
     public init?(from: Element, parent: Element) {
-        guard from.name == "reported" && parent.findChild(where: { el in el == from }) != nil else {
+        guard from.name == "reported" && parent.firstIndex(ofChild: from) != nil else {
             return nil;
         }
         self.element = from;
@@ -324,7 +327,7 @@ open class Reported {
     
     open var count: Int {
         let children = parent.getChildren();
-        let start = children.firstIndex(of: element)!.advanced(by: 1);
+        let start = parent.firstIndex(ofChild: element)!.advanced(by: 1);
         var end = start;
         while children.count > end && children[end].name == "item" {
             end = end.advanced(by: 1);

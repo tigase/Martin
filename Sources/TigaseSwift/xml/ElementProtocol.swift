@@ -49,6 +49,13 @@ public protocol ElementProtocol: CustomStringConvertible {
      - returns: first element which matches
      */
     func findChild(where: (Element)->Bool) -> Element?;
+    
+    /**
+     Finds first index at which this child is found (comparison by reference).
+     - returns: first index at which element was found if any
+     */
+    func firstIndex(ofChild child: Element) -> Int?;
+    
     /**
      Find child elements matching name and xmlns
      - parameter name: name of element
@@ -69,7 +76,7 @@ public protocol ElementProtocol: CustomStringConvertible {
      */
     func getAttribute(_ key:String) -> String?;
     /**
-     Remove element from child elements
+     Remove element from child elements (reference comparison)
      - parameter child: element to remove
      */
     func removeChild(_ child: Element);

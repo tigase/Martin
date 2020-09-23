@@ -173,6 +173,10 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         return self.element.findChild(where: body);
     }
     
+    public func firstIndex(ofChild child: Element) -> Int? {
+        return self.element.firstIndex(ofChild: child);
+    }
+    
     open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         return self.element.getChildren(name: name, xmlns: xmlns);
     }
@@ -269,9 +273,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     
     /// Creates new subelement with following name, xmlns and value. It will replace any other subelement with same name and xmlns
     func setElementValue(name:String, xmlns:String? = nil, value:String?) {
-        element.forEachChild(name: name, xmlns: xmlns) { (e:Element) -> Void in
-            self.element.removeChild(e);
-        };
+        element.removeChildren(name: name, xmlns: xmlns);
         if value != nil {
             element.addChild(Element(name: name, cdata: value!, xmlns: xmlns));
         }
@@ -317,9 +319,7 @@ open class Message: Stanza {
             return findChild(name: "x", xmlns: "jabber:x:oob")?.findChild(name: "url")?.value;
         }
         set {
-            element.forEachChild(name: "x", xmlns: "jabber:x:oob") { (e:Element) -> Void in
-                self.element.removeChild(e);
-            };
+            element.removeChildren(name: "x", xmlns: "jabber:x:oob");
             if newValue != nil {
                 let x = Element(name: "x", xmlns: "jabber:x:oob");
                 x.addChild(Element(name: "url", cdata: newValue))
@@ -457,9 +457,7 @@ open class Presence: Stanza {
             return 0;
         }
         set {
-            element.forEachChild(name: "priority") { (e:Element) -> Void in
-                self.element.removeChild(e);
-            };
+            element.removeChildren(name: "priority");
             if newValue != nil {
                 element.addChild(Element(name: "priority", cdata: newValue!.description));
             }
@@ -488,9 +486,7 @@ open class Presence: Stanza {
             return Show(rawValue: x!);
         }
         set {
-            element.forEachChild(name: "show") { (e:Element) -> Void in
-                self.element.removeChild(e);
-            };
+            element.removeChildren(name: "show");
             if newValue != nil && newValue != Show.online {
                 element.addChild(Element(name: "show", cdata: newValue!.rawValue));
             }
@@ -503,9 +499,7 @@ open class Presence: Stanza {
             return findChild(name: "status")?.value;
         }
         set {
-            element.forEachChild(name: "status") { (e:Element) -> Void in
-                self.element.removeChild(e);
-            };
+            element.removeChildren(name: "status");
             if newValue != nil {
                 element.addChild(Element(name: "status", cdata: newValue!));
             }

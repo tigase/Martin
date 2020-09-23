@@ -250,6 +250,22 @@ open class Element : Node, ElementProtocol {
     }
     
     /**
+     Finds first index at which this child is found (comparison by reference).
+     */
+    open func firstIndex(ofChild child: Element) -> Int? {
+        var idx = 0;
+        for node in nodes {
+            if node is Element {
+                if node === child {
+                    return idx;
+                }
+                idx = idx + 1;
+            }
+        }
+        return nil;
+    }
+    
+    /**
      Finds every child element with matching name and xmlns
      - parameter name: name of child element
      - parameter xmlns: xmlns of child element
@@ -304,7 +320,9 @@ open class Element : Node, ElementProtocol {
     }
     
     /**
-     Removes element from children
+     Removes element instance from children (comparison by reference).
+
+     **WARNING:** only the same instance of Element will be removed!
      - parameter child: element to remove
      */
     open func removeChild(_ child: Element) {
@@ -331,7 +349,7 @@ open class Element : Node, ElementProtocol {
      Removes node from children
      */
     open func removeNode(_ child: Node) {
-        if let idx = self.nodes.firstIndex(of: child) {
+        if let idx = self.nodes.firstIndex(where: { $0 === child }) {
             self.nodes.remove(at: idx);
         }
     }
@@ -446,28 +464,39 @@ open class Element : Node, ElementProtocol {
 }
 
 /**
- Method does a shallow check of equality of two instances of  `Element` class and compares
- only equality of element name and attibute names and their values as well as count of child elements.
- For deep comparison you need to additionally compare child elements recursively.
- 
- It was decided to make it a shallow comparison for performance reasons as this method
- is executed frequently by instances of collections and comparison of full subtree of elements
- will add a significant penalty.
+ Method does full equality check. Do not you it for lookng for elements in collections
+ as it may slow down execution of your code as it compares element and all children
+ recursively.
  */
 public func ==(lhs: Element, rhs: Element) -> Bool {
-    if (lhs.name != rhs.name) {
+    // this is the same instace, we know it is equal
+    if (lhs === rhs) {
+        return true;
+    }
+    
+    guard lhs.name == rhs.name else {
         return false;
     }
-    if (lhs.attributes.count != rhs.attributes.count) {
+    
+    guard lhs.attributes.count == rhs.attributes.count else {
         return false;
     }
-    if (lhs.nodes.count != rhs.nodes.count) {
+    
+    guard lhs.nodes.count == rhs.nodes.count else {
         return false;
     }
+    
     for (k,v) in lhs.attributes {
-        if (rhs.attributes[k] != v) {
+        guard rhs.attributes[k] == v else {
             return false;
         }
     }
+    
+    for i in 0..<lhs.nodes.count {
+        guard lhs.nodes[i] == rhs.nodes[i] else {
+            return false;
+        }
+    }
+    
     return true;
 }
