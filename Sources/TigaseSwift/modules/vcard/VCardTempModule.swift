@@ -68,20 +68,19 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
     /**
      Publish vcard
      - parameter vcard: vcard to publish
-     - parameter onSuccess: called after successful publication
-     - parameter onError: called on failure or timeout
+     - parameter completionHandler: called after publication result is received
      */
-    open func publishVCard(_ vcard: VCard, to jid: BareJID?, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?) {
-        publishVCard(vcard, to: jid) { (stanza) in
+    open func publishVCard(_ vcard: VCard, to: BareJID?, completionHandler: ((Result<Void, ErrorCondition>) -> Void)?) {
+        publishVCard(vcard, to: to, callback: { (stanza) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                onSuccess?();
+                completionHandler?(.success(Void()));
             default:
-                let errorCondition = stanza?.errorCondition;
-                onError?(errorCondition);
+                let errorCondition = stanza?.errorCondition ?? ErrorCondition.remote_server_timeout;
+                completionHandler?(.failure(errorCondition));
             }
-        }
+        })
     }
     
     /**
@@ -101,25 +100,23 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
     /**
      Retrieve vcard for JID
      - parameter jid: JID for which vcard should be retrieved
-     - parameter onSuccess: called retrieved vcard
-     - parameter onError: called on failure or timeout
+     - parameter completionHandler: called when vcard retrieval result is available
      */
-    open func retrieveVCard(from jid: JID? = nil, onSuccess: @escaping (_ vcard: VCard)->Void, onError: @escaping (_ errorCondition: ErrorCondition?)->Void) {
-        retrieveVCard(from: jid) { (stanza) in
+    open func retrieveVCard(from jid: JID?, completionHandler: @escaping (Result<VCard, ErrorCondition>) -> Void) {
+        retrieveVCard(from: jid, callback: { (stanza) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                if let vcardEl = stanza?.findChild(name: "vCard", xmlns: VCardTempModule.VCARD_XMLNS) {
-                    let vcard = VCard(vcardTemp: vcardEl)!;
-                    onSuccess(vcard);
+                if let vcardEl = stanza?.findChild(name: "vCard", xmlns: VCardTempModule.VCARD_XMLNS), let vcard = VCard(vcardTemp: vcardEl) {
+                    completionHandler(.success(vcard));
                 } else {
-                    onSuccess(VCard());
+                    completionHandler(.success(VCard()));
                 }
             default:
-                let errorCondition = stanza?.errorCondition;
-                onError(errorCondition);
+                let errorCondition = stanza?.errorCondition ?? ErrorCondition.remote_server_timeout;
+                completionHandler(.failure(errorCondition));
             }
-        }
+        })
     }
 
 }
@@ -209,8 +206,8 @@ extension VCard {
         }
         
         vcardTemp!.forEachChild(name: "PHOTO") { (el) in
-            if let type = el.findChild(name: "TYPE")?.value, let binval = el.findChild(name: "BINVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
-                self.photos.append(Photo(type: type, binval: binval));
+            if let binval = el.findChild(name: "BINVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
+                self.photos.append(Photo(type: el.findChild(name: "TYPE")?.value, binval: binval));
             }
             if let extval = el.findChild(name: "EXTVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
                 self.photos.append(Photo(uri: extval));
@@ -363,10 +360,17 @@ extension VCard {
 
 extension Presence {
     
+    private static let sha1Regex = try! NSRegularExpression(pattern: "[a-fA-F0-9]{40}");
     /// Hash of photo embedded in vcard-temp
     public var vcardTempPhoto:String? {
         get {
-            return self.findChild(name: "x", xmlns: "vcard-temp:x:update")?.findChild(name: "photo")?.value;
+            guard let photoId = self.findChild(name: "x", xmlns: "vcard-temp:x:update")?.findChild(name: "photo")?.value else {
+                return nil;
+            }
+            guard Presence.sha1Regex.numberOfMatches(in: photoId, options: [], range: NSRange(location: 0, length: photoId.count)) == 1 else {
+                return nil;
+            }
+            return photoId;
         }
         set {
             var x = self.findChild(name: "x", xmlns: "vcard-temp:x:update");

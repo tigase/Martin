@@ -68,20 +68,19 @@ open class VCard4Module: XmppModule, ContextAware, VCardModuleProtocol {
     /**
      Publish vcard
      - parameter vcard: vcard to publish
-     - parameter onSuccess: called after successful publication
-     - parameter onError: called on failure or timeout
+     - parameter completionHandler: called after publication result is received
      */
-    open func publishVCard(_ vcard: VCard, to jid: BareJID?, onSuccess: (()->Void)?, onError: ((_ errorCondition: ErrorCondition?)->Void)?) {
-        publishVCard(vcard, to: jid) { (stanza) in
+    open func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: ((Result<Void,ErrorCondition>)->Void)?) {
+        publishVCard(vcard, to: jid, callback: { (stanza: Stanza?) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                onSuccess?();
+                completionHandler?(.success(Void()));
             default:
-                let errorCondition = stanza?.errorCondition;
-                onError?(errorCondition);
+                let errorCondition = stanza?.errorCondition ?? ErrorCondition.remote_server_timeout;
+                completionHandler?(.failure(errorCondition));
             }
-        }
+        });
     }
     
     /**
@@ -101,25 +100,23 @@ open class VCard4Module: XmppModule, ContextAware, VCardModuleProtocol {
     /**
      Retrieve vcard for JID
      - parameter jid: JID for which vcard should be retrieved
-     - parameter onSuccess: called retrieved vcard
-     - parameter onError: called on failure or timeout
+     - parameter completionHandler: called  vcard retrieval result is received
      */
-    open func retrieveVCard(from jid: JID? = nil, onSuccess: @escaping (_ vcard: VCard)->Void, onError: @escaping (_ errorCondition: ErrorCondition?)->Void) {
-        retrieveVCard(from: jid) { (stanza) in
+    open func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,ErrorCondition>)->Void) {
+                                retrieveVCard(from: jid, callback: { (stanza: Stanza?) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                if let vcardEl = stanza?.findChild(name: "vcard", xmlns: VCard4Module.VCARD_XMLNS) {
-                    let vcard = VCard(vcard4: vcardEl)!;
-                    onSuccess(vcard);
+                if let vcardEl = stanza?.findChild(name: "vcard", xmlns: VCard4Module.VCARD_XMLNS), let vcard = VCard(vcard4: vcardEl) {
+                    completionHandler(.success(vcard));
                 } else {
-                    onSuccess(VCard());
+                    completionHandler(.success(VCard()));
                 }
             default:
-                let errorCondition = stanza?.errorCondition;
-                onError(errorCondition);
+                let errorCondition = stanza?.errorCondition ?? ErrorCondition.remote_server_timeout;
+                completionHandler(.failure(errorCondition));
             }
-        }
+        })
     }
     
 }
