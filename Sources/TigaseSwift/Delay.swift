@@ -28,55 +28,13 @@ import Foundation
  */
 open class Delay {
     
-    @available(iOS 12.0, OSX 10.14, *)
-    private static let isoStampFormatter = { ()-> ISO8601DateFormatter in
-        let f = ISO8601DateFormatter();
-        f.formatOptions = ISO8601DateFormatter.Options(arrayLiteral: [.withColonSeparatorInTime,.withColonSeparatorInTimeZone,.withFullDate,.withFullTime,.withDashSeparatorInDate,.withTimeZone]);
-        f.timeZone = TimeZone(secondsFromGMT: 0);
-        return f;
-    }();
-
-    @available(iOS 12.0, OSX 10.14, *)
-    private static let isoStampWithMilisFormatter = { ()-> ISO8601DateFormatter in
-        let f = ISO8601DateFormatter();
-        var options = f.formatOptions;
-        options.insert(ISO8601DateFormatter.Options.withFractionalSeconds);
-        f.formatOptions = ISO8601DateFormatter.Options(arrayLiteral: [.withColonSeparatorInTime,.withColonSeparatorInTimeZone,.withFullDate,.withFullTime,.withDashSeparatorInDate,.withFractionalSeconds,.withTimeZone]);
-        f.timeZone = TimeZone(secondsFromGMT: 0);
-        return f;
-    }();
-
-    fileprivate static let stampFormatter = ({()-> DateFormatter in
-        var f = DateFormatter();
-        f.locale = Locale(identifier: "en_US_POSIX");
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ";
-        f.timeZone = TimeZone(secondsFromGMT: 0);
-        return f;
-    })();
-    
-    fileprivate static let stampWithMilisFormatter = ({()-> DateFormatter in
-        var f = DateFormatter();
-        f.locale = Locale(identifier: "en_US_POSIX");
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ";
-        f.timeZone = TimeZone(secondsFromGMT: 0);
-        return f;
-    })();
-    
     /// Holds timestamp when delay started. In most cases it is very close to time when stanza was sent.
     public let stamp:Date?;
     /// JID of entity responsible for delay
     public let from:JID?;
     
     public init(element:Element) {
-        if let stampStr = element.getAttribute("stamp") {
-            if #available(iOS 12.0, OSX 10.14, *) {
-                stamp = Delay.isoStampWithMilisFormatter.date(from: stampStr) ?? Delay.isoStampFormatter.date(from: stampStr);
-            } else {
-                stamp = Delay.stampWithMilisFormatter.date(from: stampStr) ?? Delay.stampFormatter.date(from: stampStr);
-            }
-        } else {
-            stamp = nil;
-        }
+        stamp = TimestampHelper.parse(timestamp: element.getAttribute("stamp"));
         if let fromStr = element.getAttribute("from") {
             from = JID(fromStr);
         } else {

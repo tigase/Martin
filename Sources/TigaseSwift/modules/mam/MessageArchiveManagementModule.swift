@@ -28,13 +28,6 @@ import Foundation
  */
 open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandler {
     
-    fileprivate static let stampFormatter = ({()-> DateFormatter in
-        var f = DateFormatter();
-        f.locale = Locale(identifier: "en_US_POSIX");
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ";
-        f.timeZone = TimeZone(secondsFromGMT: 0);
-        return f;
-    })();
     // namespace used by XEP-0313
     public static let MAM_XMLNS = "urn:xmpp:mam:1";
     public static let MAM2_XMLNS = "urn:xmpp:mam:2";
@@ -155,12 +148,12 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         }
         if start != nil {
             let startField = TextSingleField(name: "start");
-            startField.value = MessageArchiveManagementModule.stampFormatter.string(from: start!);
+            startField.value = TimestampHelper.format(date: start!);
             query.addField(startField);
         }
         if end != nil {
             let endField = TextSingleField(name: "end");
-            endField.value = MessageArchiveManagementModule.stampFormatter.string(from: end!);
+            endField.value = TimestampHelper.format(date: end!);
             query.addField(endField);
         }
 
