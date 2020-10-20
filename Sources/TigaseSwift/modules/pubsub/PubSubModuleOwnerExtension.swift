@@ -112,7 +112,18 @@ extension PubSubModuleOwnerExtension {
         
         configureNode(at: pubSubJid, node: nodeName, with: configuration, callback: callback);
     }
-    
+
+    public func configureNode(at pubSubJid: BareJID, node nodeName: String, with configuration: JabberDataElement, completionHandler: @escaping (PubSubNodeConfigurationResult)->Void) {
+        configureNode(at: pubSubJid, node: nodeName, with: configuration, callback: { response in
+            if response?.type == StanzaType.result {
+                completionHandler(.success);
+            } else {
+                let pubsubErrorElem = response?.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+                completionHandler(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubErrorElem == nil ? nil : PubSubErrorCondition(rawValue: pubsubErrorElem!.name), response: response));
+            }
+        });
+    }
+
     /**
      Configure node at PubSub service
      - parameter at: address of PubSub service
@@ -191,6 +202,27 @@ extension PubSubModuleOwnerExtension {
         retrieveNodeConfiguration(from: pubSubJid, node: node, callback: callback);
     }
 
+    /**
+     Retrieve node configuration from PubSub service
+     - parameter from: address of PubSub service
+     - parameter node: node to retrieve configuration
+     - parameter completionHandler: called when result of the request is available
+     */
+    public func retrieveNodeConfiguration(from pubSubJid: BareJID, node: String, completionHandler: @escaping (PubSubRetrieveNodeConfigurationResult)->Void) {
+        retrieveNodeConfiguration(from: pubSubJid, node: node, callback: { response in
+            if response?.type == StanzaType.result {
+                if let config = response?.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "configure")?.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: config) {
+                    completionHandler(.success(configuration: form));
+                } else {
+                    completionHandler(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: .unsupported, response: nil));
+                }
+            } else {
+                let pubsubErrorElem = response?.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+                completionHandler(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubErrorElem == nil ? nil : PubSubErrorCondition(rawValue: pubsubErrorElem!.name), response: response));
+            }
+        });
+    }
+    
     /**
      Retrieve node configuration from PubSub service
      - parameter from: address of PubSub service
@@ -516,5 +548,15 @@ public enum PubSubNodeCreationResult {
 
 public enum PubSubNodeDeletionResult {
     case success(node: String)
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
+}
+
+public enum PubSubNodeConfigurationResult {
+    case success
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
+}
+
+public enum PubSubRetrieveNodeConfigurationResult {
+    case success(configuration: JabberDataElement)
     case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
 }
