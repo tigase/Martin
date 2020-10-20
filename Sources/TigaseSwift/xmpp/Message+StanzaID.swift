@@ -41,12 +41,12 @@ extension Message {
     }
     
     public var stanzaId: [BareJID:String]? {
-        return Dictionary(uniqueKeysWithValues: getChildren(name: "stanza-id", xmlns: "urn:xmpp:sid:0").map({ el -> (BareJID, String)? in
+        return Dictionary(getChildren(name: "stanza-id", xmlns: "urn:xmpp:sid:0").map({ el -> (BareJID, String)? in
             guard let jid = JID(el.getAttribute("by"))?.bareJid, let id = el.getAttribute("id") else {
                 return nil;
             }
             return (jid, id);
-        }).filter({ $0 != nil }).map({ $0! }));
+        }).filter({ $0 != nil }).map({ $0! }), uniquingKeysWith: { (first, _) in first });
     }
     
 }
