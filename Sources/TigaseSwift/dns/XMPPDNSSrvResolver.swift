@@ -61,7 +61,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
             completionHandlers[jid] = completionHandler;
         }
         
-        func start(forServices services: [String]) {
+        func start(forServices services: [String], timeout: TimeInterval = 30.0) {
             for service in services {
                 dispatchGroup.enter();
                 print("starting for service:", service, "at:", domain);
@@ -74,7 +74,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
             }
             requests.forEach { (request) in
                 print("starting for service:", request.srvName, "at:", domain);
-                request.resolve(timeout: 30.0);
+                request.resolve(timeout: timeout);
             }
             dispatchGroup.notify(queue: dispatcher.queue, execute: {
                 self.finished();
@@ -132,11 +132,8 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
      - parameter completionHandler: handler to be called after DNS resoltion is finished
      */
     open func resolve(domain: String, for jid: BareJID, completionHandler: @escaping (Result<XMPPSrvResult,DNSError>) -> Void) {
-        guard !domain.hasSuffix(".local") else {
-            completionHandler(.success(XMPPSrvResult(domain: domain, records: [])));
-            return;
-        }
-        
+        let timeout = domain.hasSuffix(".local") ? 2.0 : 30.0;
+
         resolverDispatcher.async {
             if let operation = self.inProgress[domain] {
                 operation.add(completionHandler: completionHandler, for: jid);
@@ -147,7 +144,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                 });
                 self.inProgress[domain] = operation;
                 operation.add(completionHandler: completionHandler, for: jid);
-                operation.start(forServices: self.services);
+                operation.start(forServices: self.services, timeout: timeout);
             }
         }
     }
