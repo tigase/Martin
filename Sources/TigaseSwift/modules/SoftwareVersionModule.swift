@@ -72,6 +72,40 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
+    public class SoftwareVersion {
+        public let name: String;
+        public let version: String;
+        public let os: String?;
+        
+        public init(name: String, version: String, os: String?) {
+            self.name = name;
+            self.version = version;
+            self.os = os;
+        }
+    }
+    
+    /**
+     Retrieve version of software used by recipient
+     - parameter for: address for which we want to retrieve software version
+     - parameter completionHandler: called when result is available
+     */
+    open func checkSoftwareVersion(for jid:JID, completionHandler: @escaping (Result<SoftwareVersion,ErrorCondition>)->Void) {
+        self.checkSoftwareVersion(for: jid, callback: { (stanza) in
+            let type = stanza?.type ?? StanzaType.error;
+            switch type {
+            case .result:
+                guard let query = stanza?.findChild(name: "query", xmlns: "jabber:iq:version"), let name = query.findChild(name: "name")?.value, let version = query.findChild(name: "version")?.value else {
+                    completionHandler(.failure(.undefined_condition));
+                    return;
+                }
+                let os = query.findChild(name: "os")?.value;
+                completionHandler(.success(SoftwareVersion(name: name, version: version, os: os)));
+            default:
+                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
+            }
+        });
+    }
+
     /**
      Retrieve version of software used by recipient
      - parameter for: address for which we want to retrieve software version
@@ -79,7 +113,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
      - parameter onError: called failure or request timeout
      */
     open func checkSoftwareVersion(for jid:JID, onResult: @escaping (_ name:String?, _ version:String?, _ os:String?)->Void, onError: @escaping (_ errorCondition:ErrorCondition?)->Void) {
-        checkSoftwareVersion(for: jid) { (stanza) in
+        checkSoftwareVersion(for: jid, callback: { (stanza) in
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
@@ -92,7 +126,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
                 let errorCondition = stanza?.errorCondition;
                 onError(errorCondition);
             }
-        }
+        })
     }
     
     /**
