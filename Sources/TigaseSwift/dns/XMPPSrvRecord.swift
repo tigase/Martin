@@ -110,7 +110,11 @@ open class XMPPSrvRecord: Codable, Equatable, CustomStringConvertible {
     }
 }
 
-open class XMPPSrvResult: Codable {
+open class XMPPSrvResult: Codable, CustomStringConvertible {
+    
+    public var description: String {
+        return "[domain: \(domain), records: \(records)]";
+    }
     
     public let domain: String;
     fileprivate(set) var records: [XMPPSrvRecord];

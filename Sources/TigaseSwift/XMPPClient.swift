@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  This is main class for use as XMPP client.
@@ -93,8 +94,9 @@ import Foundation
  ```
  
  */
-open class XMPPClient: Logger, EventHandler {
+open class XMPPClient: EventHandler {
     
+    private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPClient");
     public let sessionObject:SessionObject;
     public let connectionConfiguration:ConnectionConfiguration!;
     open var socketConnector:SocketConnector? {
@@ -129,7 +131,7 @@ open class XMPPClient: Logger, EventHandler {
     /// Internal processing queue
     fileprivate let dispatcher: QueueDispatcher;
     
-    public convenience override init() {
+    public convenience init() {
         self.init(eventBus: nil);
     }
     
@@ -147,7 +149,6 @@ open class XMPPClient: Logger, EventHandler {
         context = Context(sessionObject: self.sessionObject, eventBus: self.eventBus, modulesManager: modulesManager);
         sessionObject.context = context;
         responseManager = ResponseManager(context: context);
-        super.init()
         self.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
     }
     
@@ -160,10 +161,10 @@ open class XMPPClient: Logger, EventHandler {
      */
     open func login() -> Void {
         guard state == SocketConnector.State.disconnected else {
-            log("XMPP in state:", state, " - not starting connection");
+            logger.debug("XMPP in state: \(self.state), - not starting connection");
             return;
         }
-        log("starting connection......");
+        logger.debug("starting connection......");
         dispatcher.sync {
             socketConnector = SocketConnector(context: context);
             context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queueDispatcher: dispatcher);
@@ -191,7 +192,7 @@ open class XMPPClient: Logger, EventHandler {
      */
     open func disconnect(_ force: Bool = false, completionHandler: (()->Void)? = nil) -> Void {
         guard state == SocketConnector.State.connected || state == SocketConnector.State.connecting else {
-            log("XMPP in state:", state, " - not stopping connection");
+            logger.debug("XMPP in state: \(self.state), - not stopping connection");
             return;
         }
         
@@ -229,9 +230,9 @@ open class XMPPClient: Logger, EventHandler {
             dispatcher.sync {
                 sessionLogic = nil;
             }
-            log("connection stopped......");
+            logger.debug("connection stopped......");
         default:
-            log("received unhandled event:", event);
+            logger.error("received unhandled event: \(event)");
         }
     }
     

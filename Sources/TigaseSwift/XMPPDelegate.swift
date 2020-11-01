@@ -26,18 +26,15 @@ open class XMPPDelegate : NSObject, XMPPStreamDelegate {
     open weak var streamLogger: StreamLogger?;
     
     open func onError(msg: String?) {
-        log("error parsing XML", msg);
     }
     
     open func onStreamTerminate() {
-        log("stream closed")
         if let logger = streamLogger {
             logger.incoming("</stream:stream>");
         }
     }
     
     open func onStreamStart(attributes: [String : String]) {
-        log("stream started: \(attributes)")
         if let logger = streamLogger {
             let content = attributes.map { (k,v) -> String in
                 return "\(k)='\(EscapeUtils.escape(v))'";

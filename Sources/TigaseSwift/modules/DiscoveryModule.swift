@@ -26,7 +26,7 @@ import Foundation
  
  [XEP-0030: Service Discovery]: http://xmpp.org/extensions/xep-0030.html
  */
-open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
+open class DiscoveryModule: AbstractIQModule, ContextAware {
 
     /**
      Property name under which category of XMPP entity is hold for returning
@@ -66,8 +66,7 @@ open class DiscoveryModule: Logger, AbstractIQModule, ContextAware {
     
     fileprivate var callbacks = [String:NodeDetailsEntry]();
     
-    public override init() {
-        super.init()
+    public init() {
         setNodeCallback(nil, entry: NodeDetailsEntry(
             identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity? in
                 return Identity(category: sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client"),

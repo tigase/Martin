@@ -154,7 +154,7 @@ private var saxHandler = xmlSAXHandler(
 /**
  Wrapper class for LibXML2 to make it easier to use from Swift
  */
-open class XMLParser: Logger {
+open class XMLParser {
     
     fileprivate var ctx:xmlParserCtxtPtr?;
     fileprivate let delegate:XMLParserDelegate;
@@ -166,7 +166,6 @@ open class XMLParser: Logger {
     public init(delegate:XMLParserDelegate) {
         ctx = nil;
         self.delegate = delegate;
-        super.init()
         ctx = xmlCreatePushParserCtxt(&saxHandler, XMLParser.bridge(self), nil, 0, nil);
     }
     
@@ -182,7 +181,6 @@ open class XMLParser: Logger {
      - parameter length: number of data to process
      */
     open func parse(bytes buffer: UnsafeMutablePointer<UInt8>, length: Int) {
-        log("parsing data:", length, String(data:Data(bytes: UnsafePointer<UInt8>(buffer), count: length), encoding: String.Encoding.utf8));
         _ = buffer.withMemoryRebound(to: CChar.self, capacity: length) {
             xmlParseChunk(ctx, $0, Int32(length), 0);
         }

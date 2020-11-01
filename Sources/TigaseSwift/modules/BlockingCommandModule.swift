@@ -76,9 +76,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
             blockedJids = nil;
         case let e as DiscoveryModule.ServerFeaturesReceivedEvent:
             if e.features.contains(BlockingCommandModule.BC_XMLNS) {
-                self.retrieveBlockedJids(completionHandler: { result in
-                    print("automatically retrieved blocked jids: \(result)");
-                });
+                self.retrieveBlockedJids(completionHandler: nil);
             }
         default:
             break;
@@ -159,7 +157,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         })
     }
     
-    open func retrieveBlockedJids(completionHandler: @escaping (Result<[JID],ErrorCondition>)->Void) {
+    open func retrieveBlockedJids(completionHandler: ((Result<[JID],ErrorCondition>)->Void)?) {
         guard let blockedJids = self.blockedJids else {
             let iq = Iq();
             iq.type = StanzaType.get;
@@ -168,18 +166,18 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
 
             context.writer?.write(iq, callback: { result in
                 if (result?.type ?? .error) == .error {
-                    completionHandler(.failure(result?.errorCondition ?? ErrorCondition.remote_server_timeout));
+                    completionHandler?(.failure(result?.errorCondition ?? ErrorCondition.remote_server_timeout));
                 } else {
                     let blockedJids = result!.findChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.mapChildren(transform: { (el) -> JID? in
                     return JID(el.getAttribute("jid"));
                     }) ?? [];
                     self.blockedJids = blockedJids;
-                    completionHandler(.success(blockedJids));
+                    completionHandler?(.success(blockedJids));
                 }
             })
             return;
         }
-        completionHandler(.success(blockedJids));
+        completionHandler?(.success(blockedJids));
     }
  
     open class BlockedChangedEvent: Event {

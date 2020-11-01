@@ -61,11 +61,9 @@ open class SslCertificateInfo: NSObject, NSCoding {
                 let values = SecCertificateCopyValues(cert!, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
                 let validFrom = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
                 let validTo = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
-                print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any, validFrom as Any, validTo as Any);
             #else
                 let validFrom: Date? = nil;
                 let validTo: Date? = nil;
-                print("cert", cert!, "SUMMARY:", summary as Any, "fingerprint:", fingerprint as Any);
             #endif
             
             

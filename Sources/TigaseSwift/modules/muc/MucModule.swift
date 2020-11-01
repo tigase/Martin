@@ -19,13 +19,14 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 import Foundation
+import TigaseLogging
 
 /**
  Module provides support for [XEP-0045: Multi-User Chat]
  
  [XEP-0045: Multi-User Chat]: http://xmpp.org/extensions/xep-0045.html
  */
-open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHandler {
+open class MucModule: XmppModule, ContextAware, Initializable, EventHandler {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "muc";
     
@@ -33,6 +34,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     fileprivate static let MEDIATED_INVITATION = Criteria.name("message", containsAttribute: "from").add(Criteria.name("x", xmlns: "http://jabber.org/protocol/muc#user").add(Criteria.name("invite")));
     fileprivate static let MEDIATED_INVITATION_DECLINE = Criteria.name("message", containsAttribute: "from").add(Criteria.name("x", xmlns: "http://jabber.org/protocol/muc#user").add(Criteria.name("decline")));
 
+    private let logger = Logger(subsystem: "TigaseSwift", category: "MucModule");
     
     public let id = ID;
     
@@ -63,7 +65,6 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
     
     public init(roomsManager: DefaultRoomsManager) {
         self.roomsManager = roomsManager;
-        super.init();
     }
     
     open func initialize() {
@@ -79,7 +80,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         case is StreamManagementModule.FailedEvent:
             markRoomsAsNotJoined();
         default:
-            log("received event of unsupported type", event);
+            logger.error("\(self.context.sessionObject) - received event of unsupported type: \(event)");
         }
     }
     
@@ -454,7 +455,7 @@ open class MucModule: Logger, XmppModule, ContextAware, Initializable, EventHand
         let timestamp = message.delay?.stamp ?? Date();
         if room.state != .joined && message.type != StanzaType.error {
             room._state = .joined;
-            log("Message while not joined in room:", room, " with nickname:", nickname);
+            logger.debug("\(self.context.sessionObject) - Message while not joined in room: \(room) with nickname: \(nickname)");
             
             context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname ?? room.nickname));
         }

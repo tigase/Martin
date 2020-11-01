@@ -20,13 +20,14 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  Module provides support for [SASL negotiation and authentication]
  
  [SASL negotiation and authentication]: https://tools.ietf.org/html/rfc6120#section-6
  */
-open class SaslModule: Logger, XmppModule, ContextAware {
+open class SaslModule: XmppModule, ContextAware {
     /// Namespace used SASL negotiation and authentication
     static let SASL_XMLNS = "urn:ietf:params:xml:ns:xmpp-sasl";
     /// ID of module for lookup in `XmppModulesManager`
@@ -34,6 +35,7 @@ open class SaslModule: Logger, XmppModule, ContextAware {
     
     fileprivate static let SASL_MECHANISM = "saslMechanism";
     
+    public let logger = Logger(subsystem: "TigaseSwift", category: "SaslModule")
     public let id = SASL_XMLNS;
 
     public let criteria = Criteria.or(
@@ -77,8 +79,7 @@ open class SaslModule: Logger, XmppModule, ContextAware {
         }
     }
     
-    public override init() {
-        super.init();
+    public init() {
         self.addMechanism(ScramMechanism.ScramSha256());
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
@@ -112,16 +113,16 @@ open class SaslModule: Logger, XmppModule, ContextAware {
                 break;
             }
         } catch ClientSaslException.badChallenge(let msg) {
-            log("Received bad challenge from server: \(String(describing: msg))");
+            logger.debug("Received bad challenge from server: \(msg ?? "nil")");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.genericError(let msg) {
-            log("Generic error happened: \(String(describing: msg))");
+            logger.debug("Generic error happened: \(msg ?? "nil")");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.invalidServerSignature {
-            log("Received answer from server with invalid server signature!");
+            logger.debug("Received answer from server with invalid server signature!");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
         } catch ClientSaslException.wrongNonce {
-            log("Received answer from server with wrong nonce!");
+            logger.debug("Received answer from server with wrong nonce!");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
         }
     }
@@ -161,10 +162,10 @@ open class SaslModule: Logger, XmppModule, ContextAware {
         _ = try mechanism!.evaluateChallenge(stanza.element.value, sessionObject: context.sessionObject);
         
         if mechanism!.isComplete(context.sessionObject) {
-            log("Authenticated");
+            logger.debug("Authenticated");
             context.eventBus.fire(SaslAuthSuccessEvent(sessionObject: context.sessionObject));
         } else {
-            log("Authenticated by server but responses not accepted by client.");
+            logger.debug("Authenticated by server but responses not accepted by client.");
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
         }
     }
@@ -173,7 +174,7 @@ open class SaslModule: Logger, XmppModule, ContextAware {
         context.sessionObject.setProperty(SaslModule.SASL_MECHANISM, value: nil);
         let errorName = stanza.findChild()?.name;
         let error = errorName == nil ? nil : SaslError(rawValue: errorName!);
-        log("Authentication failed with error:", error, errorName);
+        logger.error("Authentication failed with error: \(error), \(errorName)");
         
         context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: error ?? SaslError.not_authorized));
     }

@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import TigaseLogging
 
 import dnssd;
 
@@ -28,17 +29,21 @@ import dnssd;
  
  Returns resolved IP address if there is no SRV entries for domain
  */
-open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
+open class XMPPDNSSrvResolver: DNSSrvResolver {
     
     private let resolverDispatcher: QueueDispatcher = QueueDispatcher(label: "XmmpDnsSrvResolverQueue");
     
     var directTlsEnabled: Bool = true;
     
     private var inProgress: [String: DNSOperation] = [:];
-
+    
+    public init() {
+        
+    }
     
     class DNSOperation {
         
+        private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPDNSSrvResolver.DNSOperation");
         let domain: String;
         let dispatchGroup = DispatchGroup();
         let dispatcher: QueueDispatcher;
@@ -64,8 +69,8 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
         func start(forServices services: [String], timeout: TimeInterval = 30.0) {
             for service in services {
                 dispatchGroup.enter();
-                print("starting for service:", service, "at:", domain);
-                requests.append(Request(srvName: "\(service)\(domain)", completionHandler: { result in
+                logger.debug("starting for service: \(service, privacy: .public) at: \(self.domain, privacy: .auto(mask: .hash))");
+                requests.append(Request(srvName: "\(service)\(self.domain)", completionHandler: { result in
                     self.dispatcher.async {
                         self.results.append(result);
                         self.dispatchGroup.leave();
@@ -73,7 +78,7 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                 }))
             }
             requests.forEach { (request) in
-                print("starting for service:", request.srvName, "at:", domain);
+                logger.debug("starting for service: \(request.srvName, privacy: .public) at: \(self.domain, privacy: .auto(mask: .hash))");
                 request.resolve(timeout: timeout);
             }
             dispatchGroup.notify(queue: dispatcher.queue, execute: {
@@ -97,8 +102,10 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                     }
                 }
             }
-            
+                        
             guard wasSuccess else {
+                logger.debug("fininshed query for domain: \(self.domain, privacy: .auto(mask: .hash)) with failure \(self.completionHandlers.values, privacy: .public)");
+
                 onFinish();
                 for handler in completionHandlers.values {
                     handler(.failure(error!));
@@ -115,6 +122,8 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                     return a.weight > b.weight;
                 }
             }));
+            logger.debug("fininshed query for domain: \(self.domain, privacy: .auto(mask: .hash)) with success \(result, privacy: .private(mask: .none))");
+
             onFinish();
             for handler in completionHandlers.values {
                 handler(.success(result));
@@ -139,7 +148,6 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                 operation.add(completionHandler: completionHandler, for: jid);
             } else {
                 let operation = DNSOperation(domain: domain, dispatcher: self.resolverDispatcher, onFinish: {
-                    print("finished for:", domain);
                     self.inProgress.removeValue(forKey: domain);
                 });
                 self.inProgress[domain] = operation;
@@ -196,7 +204,6 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                     self.fail(withError: .internalError);
                     return;
                 }
-                print("srvName:", self.srvName,"sdFd:", self.sdFd, "resolverQueue:", self.dispatcher.queue);
                 self.sdFdReadSource = DispatchSource.makeReadSource(fileDescriptor: self.sdFd, queue: self.dispatcher.queue);
                 self.sdFdReadSource?.setEventHandler(handler: {
                     // lets process data..
@@ -253,7 +260,6 @@ open class XMPPDNSSrvResolver: Logger, DNSSrvResolver {
                 self.completionHandler = nil;
                 completionHandler(result);
             }
-            print("stopping for:", self.srvName)
             self.sdFdReadSource?.cancel();
             self.sdFdReadSource = nil;
             self.sdFd = -1;

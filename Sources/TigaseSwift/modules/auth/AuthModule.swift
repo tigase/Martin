@@ -20,18 +20,21 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  Common authentication module provides generic support for authentication.
  Other authentication module (like ie. `SaslModule`) may require this
  module to work properly.
  */
-open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
+open class AuthModule: XmppModule, ContextAware, EventHandler {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
     public static let AUTHORIZED = "authorized";
     public static let CREDENTIALS_CALLBACK = "credentialsCallback";
     public static let LOGIN_USER_NAME_KEY = "LOGIN_USER_NAME";
+    
+    private let logger = Logger(subsystem: "TigaseSwift", category: "AuthModule");
     
     public let id = ID;
     
@@ -58,7 +61,7 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
         return context.sessionObject.getProperty("AUTH_IN_PROGRESS", defValue: false);
     }
     
-    public override init() {
+    public init() {
         
     }
     
@@ -97,7 +100,7 @@ open class AuthModule: Logger, XmppModule, ContextAware, EventHandler {
             _context.sessionObject.setProperty("AUTH_IN_PROGRESS", value: true);
             _context.eventBus.fire(AuthStartEvent(sessionObject: saslEvent.sessionObject));
         default:
-            log("handing of unsupported event", event);
+            logger.error("handing of unsupported event: \(event)");
         }
     }
     

@@ -20,9 +20,11 @@
 //
 
 import Foundation
+import TigaseLogging
 
-open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {    
+open class DNSSrvResolverWithCache: DNSSrvResolver {
     
+    private let logger = Logger(subsystem: "TigaseSwift", category: "DNSSrvResolverWithCache");
     private let dispatcher = QueueDispatcher(label: "DnsSrvResolverWithCache");
     fileprivate let resolver: DNSSrvResolver;
     fileprivate let cache: DNSSrvResolverCache;
@@ -37,7 +39,7 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
     open func resolve(domain: String, for jid: BareJID, completionHandler: @escaping (_ result: Result<XMPPSrvResult,DNSError>) -> Void) {
         self.dispatcher.async {
             if let records = self.cache.getRecords(for: domain), records.hasValid {
-                self.log("loaded DNS records for domain: \(domain) from cache \(records.records)");
+                self.logger.log("loaded DNS records for domain: \(domain) from cache \(records.records)");
                 completionHandler(.success(records));
                 
                 guard self.automaticRefresh else {
@@ -45,7 +47,7 @@ open class DNSSrvResolverWithCache: Logger, DNSSrvResolver {
                 }
                 
                 self.resolver.resolve(domain: domain, for: jid) { dnsResult in
-                    print("dns resolution finished:", dnsResult);
+                    self.logger.log("dns resolution finished: \(dnsResult)");
                     switch dnsResult {
                     case .success(let records):
                         self.save(for: domain, result: records);

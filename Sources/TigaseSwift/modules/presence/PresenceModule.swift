@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  Module provides support for handling presence on client side
@@ -27,7 +28,7 @@ import Foundation
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html
  */
-open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initializable {
+open class PresenceModule: XmppModule, ContextAware, EventHandler, Initializable {
     
     public static let INITIAL_PRESENCE_ENABLED_KEY = "initalPresenceEnabled";
     public static let PRESENCE_STORE_KEY = "presenceStore";
@@ -35,6 +36,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "presence";
     
+    private let logger = Logger(subsystem: "TigaseSwift", category: "PresenceModule");
     public let id = ID;
     
     public let criteria = Criteria.name("presence");
@@ -78,8 +80,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
         return presenceStore;
     }
     
-    
-    public override init() {
+    public init() {
         
     }
     
@@ -100,7 +101,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
             if initialPresence {
                 sendInitialPresence();
             } else {
-                log("skipping sending initial presence");
+                logger.debug("skipping sending initial presence");
             }
         case is StreamManagementModule.ResumedEvent:
             self.streamResumptionPresences?.forEach { presence in
@@ -118,7 +119,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
                 presenceStore.clear();
             }
         default:
-            log("received unknown event", event);
+            logger.error("received unknown event: \(event)");
         }
     }
     
@@ -134,7 +135,7 @@ open class PresenceModule: Logger, XmppModule, ContextAware, EventHandler, Initi
             case .subscribe:
                 context.eventBus.fire(SubscribeRequestEvent(sessionObject: context.sessionObject, presence: presence));
             default:
-                log("received presence with weird type:", type, presence);
+                logger.error("received presence with weird type: \(type, privacy: .public), \(presence)");
             }
         }
     }

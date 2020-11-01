@@ -20,13 +20,14 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  Module implements support for [XEP-0198: Stream Management]
  
  [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
  */
-open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaFilter, EventHandler {
+open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, EventHandler {
     
     /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
@@ -34,6 +35,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = SM_XMLNS;
     
+    private let logger = Logger(subsystem: "TigaseSwift", category: "StreamManagementModule")
     public let id = SM_XMLNS;
     
     public let criteria = Criteria.xmlns(SM_XMLNS);
@@ -87,8 +89,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
         return _resumptionTime;
     }
     
-    public override init() {
-        super.init();
+    public init() {
     }
     
     /**
@@ -101,7 +102,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
             return;
         }
         
-        log("enabling StreamManagament with resume=", resumption);
+        logger.debug("enabling StreamManagament with resume=\(resumption)");
         let enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS);
         if resumption {
             enable.setAttribute("resume", value: "true");
@@ -241,7 +242,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
     
     /// Start stream resumption
     open func resume() {
-        log("starting stream resumption");
+        logger.debug("starting stream resumption");
         let resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
         resume.setAttribute("h", value: String(ackH.incomingCounter));
         resume.setAttribute("previd", value: resumptionId);
@@ -301,7 +302,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
         
         let errorCondition = stanza.errorCondition ?? ErrorCondition.unexpected_request;
         
-        log("stream resumption failed");
+        logger.debug("stream resumption failed");
         context.eventBus.fire(FailedEvent(sessionObject: context.sessionObject, errorCondition: errorCondition));
     }
     
@@ -319,7 +320,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
             context.writer?.write(s);
         }
         
-        log("stream resumed");
+        logger.debug("stream resumed");
         context.eventBus.fire(ResumedEvent(sessionObject: context.sessionObject, newH: newH, resumeId: stanza.getAttribute("previd")));
     }
     
@@ -340,7 +341,7 @@ open class StreamManagementModule: Logger, XmppModule, ContextAware, XmppStanzaF
             _resumptionTime = Double(mx!);
         }
         
-        log("stream management enabled");
+        logger.debug("stream management enabled");
         context.eventBus.fire(EnabledEvent(sessionObject: context.sessionObject, resume: resume, resumeId: id));
     }
     

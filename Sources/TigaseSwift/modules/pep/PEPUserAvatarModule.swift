@@ -83,7 +83,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         let value = data.base64EncodedString();
         
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            print("Required PubSubModule is not registered!");
+            completionHandler(.failure(errorCondition: .undefined_condition, pubSubErrorCondition: nil, response: nil));
             return;
         }
         pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: id, payload: Element(name: "data", cdata: value, xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
@@ -109,7 +109,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
 
     open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            print("Required PubSubModule is not registered!");
+            completionHandler(.failure(errorCondition: .undefined_condition, pubSubErrorCondition: nil, response: nil));
             return;
         }
         
@@ -131,7 +131,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
 
     open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            print("Required PubSubModule is not registered!");
+            completionHandler(.failure(errorCondition: .undefined_condition, pubSubErrorCondition: nil, response: nil));
             return;
         }
         
@@ -156,7 +156,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
 
     open func retrieveAvatar(from jid: BareJID, itemId: String? = nil, onSuccess: @escaping (BareJID,String,Data?)->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            print("Required PubSubModule is not registered!");
+            onError?(.undefined_condition, nil);
             return;
         }
         
@@ -174,7 +174,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     
     open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,ErrorCondition>)->Void) {
         guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            print("Required PubSubModule is not registered!");
+            completionHandler(.failure(.undefined_condition));
             return;
         }
         

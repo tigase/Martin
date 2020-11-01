@@ -23,7 +23,7 @@ import Foundation
 /**
  Mechanism implements SASL SCRAM authentication mechanism
  */
-open class ScramMechanism: Logger, SaslMechanism {
+open class ScramMechanism: SaslMechanism {
 
     public static let SCRAM_SASL_DATA_KEY = "SCRAM_SASL_DATA_KEY";
     
@@ -278,7 +278,6 @@ open class ScramMechanism: Logger, SaslMechanism {
     
     func groupPartOfString(_ m: NSTextCheckingResult, group: Int, str: NSString) -> String? {
         guard group < m.numberOfRanges else {
-            log("trying to retrive group", group, "not existing in", m);
             return nil;
         }
         

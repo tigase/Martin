@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /// Protocol which is used by other class to interact with classes responsible for session logic.
 public protocol XmppSessionLogic: class {
@@ -56,7 +57,13 @@ public protocol XmppSessionLogic: class {
  Implementation of XmppSessionLogic protocol which is resposible for
  following XMPP session logic for socket connections.
  */
-open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
+open class SocketSessionLogic: XmppSessionLogic, EventHandler {
+    
+    let logger = Logger(subsystem: "TigaseSwift", category: "SocketSessionLogic")
+    
+    public var debugDescription: String {
+        return context.sessionObject.userBareJid?.stringValue ?? context.sessionObject.getProperty(SessionObject.DOMAIN_NAME) ?? "nil";
+    }
     
     var quickstart: Bool = true;
     
@@ -175,7 +182,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                         try module.process(stanza: stanza);
                     }
                 } else {
-                    self.log("feature-not-implemented", stanza);
+                    self.logger.debug("\(self.context) - feature-not-implemented \(stanza, privacy: .public)");
                     throw ErrorCondition.feature_not_implemented;
                 }
             } catch let error as ErrorCondition {
@@ -184,7 +191,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
             } catch {
                 let errorStanza = ErrorCondition.undefined_condition.createResponse(stanza);
                 self.context.writer?.write(errorStanza);
-                self.log("unknown unhandled exception", error)
+                self.logger.debug("\(self.context) - unknown unhandled exception \(error)")
             }
         }
     }
@@ -201,7 +208,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         if let pingModule: PingModule = modulesManager.getModule(PingModule.ID) {
             pingModule.ping(JID(context.sessionObject.userBareJid!), callback: { (stanza) in
                 if stanza == nil {
-                    self.log("no response on ping packet - possible that connection is broken, reconnecting...");
+                    self.logger.debug("\(self.context) - no response on ping packet - possible that connection is broken, reconnecting...");
                 }
             });
         } else {
@@ -230,12 +237,12 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         case is AuthModule.AuthFinishExpectedEvent:
             processAuthFinishExpected();
         default:
-            log("received unhandled event:", event);
+            self.logger.debug("\(self.context) - received unhandled event: \(event)");
         }
     }
     
     func processAuthFailed(_ event:AuthModule.AuthFailedEvent) {
-        log("Authentication failed");
+        self.logger.debug("\(self.context) - Authentication failed");
     }
     
     func processAuthSuccess(_ event:AuthModule.AuthSuccessEvent) {
@@ -271,7 +278,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     }
     
     func processSessionBindedAndEstablished(_ sessionObject:SessionObject) {
-        log("session binded and established");
+        self.logger.debug("\(self.context) - session binded and established");
         if let discoveryModule:DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) {
             discoveryModule.discoverServerFeatures(onInfoReceived: nil, onError: nil);
             discoveryModule.discoverAccountFeatures(onInfoReceived: nil, onError: nil);
@@ -285,7 +292,7 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
     }
     
     func processStreamFeatures(_ featuresElement: Element) {
-        log("processing stream features");
+        self.logger.debug("\(self.context) - processing stream features");
         let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
         let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
         let authorized = context.sessionObject.getProperty(AuthModule.AUTHORIZED, defValue: false);
@@ -298,12 +305,12 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
         } else if ((!compressionActive) && (context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED) != true) && self.isZlibAvailable()) {
             connector.startZlib();
         } else if !authorized {
-            log("starting authentication");
+            self.logger.debug("\(self.context) - starting authentication");
             if let authModule:AuthModule = modulesManager.getModule(AuthModule.ID) {
                 if !authModule.inProgress {
                     authModule.login();
                 } else {
-                    log("skipping authentication as it is already in progress!");
+                    self.logger.debug("\(self.context) - skipping authentication as it is already in progress!");
                     if resumption && context.sessionObject.userBareJid != nil {
                         streamManagementModule!.resume();
                     } else {
@@ -322,11 +329,11 @@ open class SocketSessionLogic: Logger, XmppSessionLogic, EventHandler {
                 }
             }
         }
-        log("finished processing stream features");
+        self.logger.debug("\(self.context) - finished processing stream features");
     }
     
     func isStartTLSAvailable() -> Bool {
-        log("checking TLS");
+        self.logger.debug("\(self.context) - checking TLS");
         let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
         return (featuresElement?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) != nil;
     }

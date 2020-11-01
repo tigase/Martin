@@ -20,11 +20,12 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  Instances of this class keep configuration properties for connections and commonly used state values.
  */
-open class SessionObject: Logger {
+open class SessionObject {
     
     public static let DOMAIN_NAME = "domainName";
     
@@ -66,6 +67,8 @@ open class SessionObject: Logger {
         }
     }
     
+    private let logger = Logger(subsystem: "TigaseSwift", category: "SessionObject");
+    
     fileprivate let queue = DispatchQueue(label: "session_object_queue", attributes: DispatchQueue.Attributes.concurrent);
     fileprivate let eventBus: EventBus;
     fileprivate var properties = [String:Entry]();
@@ -100,7 +103,7 @@ open class SessionObject: Logger {
             scopes.append(Scope.session);
             scopes.append(Scope.stream);
         }
-        log("removing properties for scopes", scopes);
+        logger.debug("\(self) - removing properties for scopes: \(scopes)");
         queue.sync(flags: .barrier, execute: {
             for (k,v) in self.properties {
                 if (scopes.firstIndex(where: { $0 == v.scope }) != nil) {

@@ -20,19 +20,21 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  Module provides roster manipulation features as described in [RFC6121]
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
  */
-open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, Initializable {
+open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializable {
     
     public static let ROSTER_STORE_KEY = "rosterStore";
     /// ID of module for looup in `XmppModulesManager`
     public static let ID = "roster";
     
     public let id = ID;
+    public let logger = Logger(subsystem: "TigaseSwift", category: "RosterModule");
     
     open var context:Context! {
         didSet {
@@ -65,7 +67,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
         return rosterStore!;
     }
     
-    public override init() {
+    public init() {
         
     }
     
@@ -90,7 +92,7 @@ open class RosterModule: Logger, AbstractIQModule, ContextAware, EventHandler, I
                 context.eventBus.fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: nil, action: .removed, modifiedGroups: nil));
             }
         default:
-            log("received unknown event", event);
+            logger.error("received unknown event: \(event)");
         }
     }
     

@@ -19,14 +19,16 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 import Foundation
+import TigaseLogging
 
 /**
  Class implements manager for registering requests sent to stream
  and their callbacks, and to retieve them when response appears
  in the stream.
  */
-open class ResponseManager: Logger {
+open class ResponseManager {
     
+    private let logger = Logger(subsystem: "TigaseSwift", category: "ResponseManager")
     /// Internal class holding information about request and callbacks
     fileprivate class Entry {
         let jid: JID?;

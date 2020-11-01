@@ -25,12 +25,15 @@ import Foundation
  Implementation of XMLParserDelegate to properly parse XMPP stream
  and notify about stream start and end.
  */
-open class XMPPParserDelegate: Logger, XMLParserDelegate {
+open class XMPPParserDelegate: XMLParserDelegate {
     
     var xmlnss = [String:String]();
     open var delegate:XMPPStreamDelegate?;
     var el_stack = [Element]()
     var all_roots = [Element]()
+    
+    public init() {
+    }
     
     open func startElement(name elementName:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]) {
         

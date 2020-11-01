@@ -26,7 +26,7 @@ import Foundation
  
  [session establishment]: http://xmpp.org/rfcs/rfc3921.html#session
  */
-open class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
+open class SessionEstablishmentModule: XmppModule, ContextAware {
 
     /// Namespace used in session establishment process
     static let SESSION_XMLNS = "urn:ietf:params:xml:ns:xmpp-session";
@@ -56,7 +56,7 @@ open class SessionEstablishmentModule: Logger, XmppModule, ContextAware {
         return false;
     }
     
-    public override init() {
+    public init() {
         
     }
     

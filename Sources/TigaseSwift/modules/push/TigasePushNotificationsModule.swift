@@ -20,8 +20,11 @@
 //
 
 import Foundation
+import TigaseLogging
 
 open class TigasePushNotificationsModule: PushNotificationsModule {
+    
+    private let logger = Logger(subsystem: "TigaseSwift", category: "TigasePushNotificationsModule");
     
     open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,ErrorCondition>)->Void) {
         guard let adhocModule: AdHocCommandsModule = context.modulesManager.getModule(AdHocCommandsModule.ID) else {
@@ -73,7 +76,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         }
         discoModule.getItems(for: JID(context.sessionObject.userBareJid!.domain)!, node: nil, onItemsReceived: {(node, items) in
             let result = DiscoResults(items: items) { (jids) in
-                print("found proper push components at", jids);
+                self.logger.debug("\(self.context) - found proper push components at \(jids)");
                 if let jid = jids.first {
                     completionHandler(.success(jid));
                 } else {

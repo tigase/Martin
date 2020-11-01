@@ -25,20 +25,19 @@ import Foundation
  Class implements mechanism of events bus which is used by TigaseSwift
  to notify about events.
  */
-open class EventBus: Logger {
+open class EventBus {
     
     fileprivate var handlersByEvent:[String:[EventHandler]];
     
     private let dispatcher: QueueDispatcher;
     
-    public convenience override init() {
+    public convenience init() {
         self.init(queueDispatcher: nil);
     }
     
     public init(queueDispatcher: QueueDispatcher?) {
         handlersByEvent = [:];
         self.dispatcher = queueDispatcher ?? QueueDispatcher(label: "eventbus_queue");
-        super.init();
     }
     
     /**

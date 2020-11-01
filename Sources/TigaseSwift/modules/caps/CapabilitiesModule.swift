@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import TigaseLogging
 
 /**
  Module implements support for [XEP-0115: Entity Capabilities].
@@ -35,6 +36,8 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "caps";
+    
+    private let logger = Logger(subsystem: "TigaseSwift", category: "CapabilitiesModule");
     
     public let id = ID;
     public let criteria = Criteria.empty();
@@ -145,12 +148,12 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
                         return;
                     }
                     self.inProgress.append(nodeName);
-                    print("caps disco#info send for:", nodeName, "to:", from);
+                    self.logger.debug("\(self.context) - caps disco#info send for: \(nodeName, privacy: .public) to: \(from, privacy: .auto(mask: .hash))");
                     discoveryModule.getInfo(for: from, node: nodeName, completionHandler: { result in
                         self.dispatcher.async {
                             if let idx = self.inProgress.firstIndex(of: nodeName) {
                                 self.inProgress.remove(at: idx);
-                                print("caps disco#info received from:", from, "result:", result)
+                                self.logger.debug("\(self.context) - caps disco#info received from: \(from, privacy: .public) result: \(result, privacy: .public)");
                             }
                             switch result {
                             case .success(let node, let identities, let features):
