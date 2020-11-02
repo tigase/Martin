@@ -21,6 +21,15 @@
 
 import Foundation
 
+public struct XmppModuleIdentifier<T: XmppModule> {
+    
+    public var id: String {
+        return T.ID;
+    }
+
+}
+
+
 /**
  Class responsible for storing instances of `XmppModule` and returning
  instances of `XmppModule` which are registered for processing particular
@@ -42,6 +51,14 @@ open class XmppModulesManager : ContextAware {
     fileprivate var modulesById = [String:XmppModule]();
     
     init() {
+    }
+    
+    deinit {
+        for module in modules {
+            if var contextAware = module as? ContextAware {
+                contextAware.context = nil;
+            }
+        }
     }
     
     /// Returns list of features provided by registered `XmppModule` instances
@@ -74,17 +91,43 @@ open class XmppModulesManager : ContextAware {
         }
         return results;
     }
-    
+
+    open func module<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T {
+        return modulesById[identifier.id]! as! T;
+    }
+
+    open func moduleOrNil<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T? {
+        return modulesById[identifier.id] as? T
+    }
+
+    open func module<T: XmppModule>(_ type: T.Type) -> T {
+        return modulesById[type.ID]! as! T;
+    }
+
+    open func moduleOrNil<T: XmppModule>(_ type: T.Type) -> T? {
+        return modulesById[type.ID] as? T;
+    }
+
     /// Returns instance of `XmppModule` registered under passed id
+    @available(* , deprecated, message: "Replaced with moduleOrNil using XmppModule type or XmppModuleIdentifier as a parameter")
     open func getModule<T:XmppModule>(_ id:String) -> T? {
         return modulesById[id] as? T;
     }
     
     // Returns true if there is an instance of `XmppModule` registered for passed id
+    @available(* , deprecated, message: "Replaced with method accepting XmppModule type or XmppModuleIdentifier as a parameter")
     open func hasModule(_ id: String) -> Bool {
         return modulesById[id] != nil;
     }
-    
+
+    open func hasModule(_ type: XmppModule.Type) -> Bool {
+        return modulesById[type.ID] != nil;
+    }
+
+    open func hasModule<T:XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> Bool {
+        return modulesById[identifier.id] != nil;
+    }
+
     open func initIfRequired() {
         initializationRequired.forEach { (module) in
             module.initialize();
@@ -102,7 +145,7 @@ open class XmppModulesManager : ContextAware {
             contextAware.context = context;
         }
         
-        modulesById[module.id] = module;
+        modulesById[T.ID] = module;
         modules.append(module);
         if let initModule = module as? Initializable {
             initializationRequired.append(initModule);
@@ -120,7 +163,7 @@ open class XmppModulesManager : ContextAware {
      */
     @discardableResult
     open func unregister<T:XmppModule>(_ module:T) -> T {
-        modulesById.removeValue(forKey: module.id)
+        modulesById.removeValue(forKey: T.ID)
         if let idx = self.modules.firstIndex(where: { $0 === module}) {
             self.modules.remove(at: idx);
         }

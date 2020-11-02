@@ -22,6 +22,12 @@
 import Foundation
 import TigaseLogging
 
+extension XmppModuleIdentifier {
+    public static var auth: XmppModuleIdentifier<AuthModule> {
+        return AuthModule.IDENTIFIER;
+    }
+}
+
 /**
  Common authentication module provides generic support for authentication.
  Other authentication module (like ie. `SaslModule`) may require this
@@ -30,14 +36,13 @@ import TigaseLogging
 open class AuthModule: XmppModule, ContextAware, EventHandler {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
+    public static let IDENTIFIER = XmppModuleIdentifier<AuthModule>();
     public static let AUTHORIZED = "authorized";
     public static let CREDENTIALS_CALLBACK = "credentialsCallback";
     public static let LOGIN_USER_NAME_KEY = "LOGIN_USER_NAME";
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "AuthModule");
-    
-    public let id = ID;
-    
+        
     fileprivate var _context:Context!;
     open var context:Context! {
         get {
@@ -74,7 +79,7 @@ open class AuthModule: XmppModule, ContextAware, EventHandler {
      mechanisms for authentication
      */
     open func login() {
-        if let saslModule:SaslModule = _context.modulesManager.getModule(SaslModule.ID) {
+        if let saslModule = _context.modulesManager.moduleOrNil(.sasl) {
             saslModule.login();
         }
     }

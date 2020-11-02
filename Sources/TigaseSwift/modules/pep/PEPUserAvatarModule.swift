@@ -21,17 +21,22 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var pepUserAvatar: XmppModuleIdentifier<PEPUserAvatarModule> {
+        return PEPUserAvatarModule.IDENTIFIER;
+    }
+}
+
 open class PEPUserAvatarModule: AbstractPEPModule {
 
     public static let METADATA_XMLNS = ID + ":metadata";
     public static let DATA_XMLNS = ID + ":data";
     
     public static let ID = "urn:xmpp:avatar";
+    public static let IDENTIFIER = XmppModuleIdentifier<PEPUserAvatarModule>();
     
     public static let FEATURES_NOTIFY = [ METADATA_XMLNS + "+notify" ];
     public static let FEATURES_NONE = [String]();
-    
-    public let id = ID;
     
     open var context: Context! {
         didSet {
@@ -40,6 +45,9 @@ open class PEPUserAvatarModule: AbstractPEPModule {
             }
             if context != nil {
                 context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
+                pubsubModule = context.modulesManager.module(.pubsub);
+            } else {
+                pubsubModule = nil;
             }
         }
     }
@@ -57,6 +65,8 @@ open class PEPUserAvatarModule: AbstractPEPModule {
             }
         }
     }
+    
+    private var pubsubModule: PubSubModule!;
     
     public init() {
         
@@ -82,10 +92,6 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         let size = data.count;
         let value = data.base64EncodedString();
         
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(errorCondition: .undefined_condition, pubSubErrorCondition: nil, response: nil));
-            return;
-        }
         pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: id, payload: Element(name: "data", cdata: value, xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
             switch result {
             case .success(_, _, let itemId):
@@ -108,11 +114,6 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     }
 
     open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(errorCondition: .undefined_condition, pubSubErrorCondition: nil, response: nil));
-            return;
-        }
-        
         let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
         pubsubModule.publishItem(at: from, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
     }
@@ -130,11 +131,6 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     }
 
     open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(errorCondition: .undefined_condition, pubSubErrorCondition: nil, response: nil));
-            return;
-        }
-        
         let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
         let info = Element(name: "info");
         info.setAttribute("id", value: id);
@@ -155,11 +151,6 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     }
 
     open func retrieveAvatar(from jid: BareJID, itemId: String? = nil, onSuccess: @escaping (BareJID,String,Data?)->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            onError?(.undefined_condition, nil);
-            return;
-        }
-        
         let itemIds: [String]? = itemId == nil ? nil : [itemId!];
         pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: itemIds, onSuccess: { (stanza,node,items,rsm) in
             var data: Data? = nil;
@@ -173,11 +164,6 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     
     
     open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,ErrorCondition>)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
-        
         let itemIds: [String]? = itemId == nil ? nil : [itemId!];
         pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, itemIds: itemIds, completionHandler: { result in
             switch result {

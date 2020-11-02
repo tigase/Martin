@@ -21,14 +21,19 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var messageDeliveryReceipts: XmppModuleIdentifier<MessageDeliveryReceiptsModule> {
+        return MessageDeliveryReceiptsModule.IDENTIFIER;
+    }
+}
+
 open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
     
     /// Namespace used by Message Carbons
     public static let XMLNS = "urn:xmpp:receipts";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = XMLNS;
-    
-    public let id = XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<MessageDeliveryReceiptsModule>();
     
     public let criteria = Criteria.name("message").add(Criteria.xmlns(XMLNS));
     

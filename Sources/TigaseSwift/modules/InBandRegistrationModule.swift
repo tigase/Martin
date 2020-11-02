@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var inBandRegistration: XmppModuleIdentifier<InBandRegistrationModule> {
+        return InBandRegistrationModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0077: In-Band Registration]
  
@@ -31,8 +37,7 @@ import Foundation
 open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "InBandRegistrationModule";
-    
-    public let id = ID;
+    public static let IDENTIFIER = XmppModuleIdentifier<InBandRegistrationModule>();
     
     open var context: Context!;
     public let features = [String]();
@@ -330,8 +335,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                     return;
                 }
                 
-                let regModule: InBandRegistrationModule = context.modulesManager.getModule(InBandRegistrationModule.ID)!;
-                regModule.register(username: userJid.localPart, password: password, email: email, callback: { (stanza) in
+                context.modulesManager.module(.inBandRegistration).register(username: userJid.localPart, password: password, email: email, callback: { (stanza) in
                     var errorCondition:ErrorCondition?;
                     if let type = stanza?.type {
                         switch type {

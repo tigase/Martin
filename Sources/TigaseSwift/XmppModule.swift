@@ -25,8 +25,9 @@ import Foundation
  to be registered in `XmppModulesManager` and process incoming `Stanza`s
  */
 public protocol XmppModule: class {
-    /// id used to register in `XmppModulesManager`
-    var id: String { get };
+    
+    static var ID: String { get }
+    
     /// criteria used to match if this module should process particular stanza
     var criteria: Criteria { get };
     /// list of features supported by this module

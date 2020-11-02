@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var resourceBind: XmppModuleIdentifier<ResourceBinderModule> {
+        return ResourceBinderModule.IDENTIFIER;
+    }
+}
+
 /**
  Module responsible for [resource binding]
  
@@ -36,8 +42,7 @@ open class ResourceBinderModule: XmppModule, ContextAware {
     
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = BIND_XMLNS;
-    
-    public let id = BIND_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<ResourceBinderModule>();
     
     public let criteria = Criteria.empty();
     

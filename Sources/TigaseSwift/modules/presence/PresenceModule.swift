@@ -22,6 +22,12 @@
 import Foundation
 import TigaseLogging
 
+extension XmppModuleIdentifier {
+    public static var presence: XmppModuleIdentifier<PresenceModule> {
+        return PresenceModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for handling presence on client side
  as described in [RFC6121]
@@ -35,9 +41,9 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler, Initializable
     
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "presence";
+    public static let IDENTIFIER = XmppModuleIdentifier<PresenceModule>();
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "PresenceModule");
-    public let id = ID;
     
     public let criteria = Criteria.name("presence");
     

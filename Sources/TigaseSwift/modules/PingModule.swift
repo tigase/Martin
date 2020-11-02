@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var ping: XmppModuleIdentifier<PingModule> {
+        return PingModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0199: XMPP Ping]
  
@@ -31,8 +37,7 @@ open class PingModule: AbstractIQModule, ContextAware {
     fileprivate static let PING_XMLNS = "urn:xmpp:ping";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = PING_XMLNS;
-    
-    public let id = ID;
+    public static let IDENTIFIER = XmppModuleIdentifier<PingModule>();
     
     open var context: Context!;
     

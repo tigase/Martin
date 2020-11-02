@@ -22,6 +22,12 @@
 import Foundation
 import TigaseLogging
 
+extension XmppModuleIdentifier {
+    public static var sasl: XmppModuleIdentifier<SaslModule> {
+        return SaslModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [SASL negotiation and authentication]
  
@@ -32,11 +38,11 @@ open class SaslModule: XmppModule, ContextAware {
     static let SASL_XMLNS = "urn:ietf:params:xml:ns:xmpp-sasl";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = SASL_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<SaslModule>();
     
     fileprivate static let SASL_MECHANISM = "saslMechanism";
     
     public let logger = Logger(subsystem: "TigaseSwift", category: "SaslModule")
-    public let id = SASL_XMLNS;
 
     public let criteria = Criteria.or(
         Criteria.name("success", xmlns: SASL_XMLNS),

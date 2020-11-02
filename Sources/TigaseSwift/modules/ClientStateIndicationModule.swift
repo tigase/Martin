@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var csi: XmppModuleIdentifier<ClientStateIndicationModule> {
+        return ClientStateIndicationModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0352: Client State Inidication] feature
  
@@ -32,8 +38,7 @@ open class ClientStateIndicationModule: XmppModule, ContextAware, EventHandler {
     public static let CSI_XMLNS = "urn:xmpp:csi:0";
     /// ID of module to lookup for in `XmppModulesManager`
     public static let ID = CSI_XMLNS;
-    
-    public let id = CSI_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<ClientStateIndicationModule>();
     
     public let criteria = Criteria.empty();
     

@@ -20,15 +20,20 @@
 //
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var message: XmppModuleIdentifier<MessageModule> {
+        return MessageModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides features responsible for handling messages
  */
 open class MessageModule: XmppModule, ContextAware, Initializable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "message";
-    
-    public let id = ID;
-    
+    public static let IDENTIFIER = XmppModuleIdentifier<MessageModule>();
+        
     public let criteria = Criteria.name("message", types:[StanzaType.chat, StanzaType.normal, nil, StanzaType.headline, StanzaType.error]);
     
     public let features = [String]();
@@ -84,7 +89,7 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     }
     
     fileprivate func getOrCreateChatForProcessing(message: Message, interlocutorJid: JID) -> Chat? {
-        if message.body != nil && (message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || !context.modulesManager.hasModule(MucModule.ID)) {
+        if message.body != nil && (message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || !context.modulesManager.hasModule(.muc)) {
             return chatManager.getChatOrCreate(with: interlocutorJid, thread: message.thread);
         } else {
             return chatManager.getChat(with: interlocutorJid, thread: message.thread);

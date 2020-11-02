@@ -21,13 +21,18 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var blockingCommand: XmppModuleIdentifier<BlockingCommandModule> {
+        return BlockingCommandModule.IDENTIFIER;
+    }
+}
+
 open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
     
     public static let BC_XMLNS = "urn:xmpp:blocking";
     /// ID of module to lookup for in `XmppModulesManager`
     public static let ID = BC_XMLNS;
-    
-    public let id = BC_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<BlockingCommandModule>();
     
     public let criteria = Criteria.name("iq", types: [.set]).add(Criteria.or(Criteria.name("block", xmlns: BlockingCommandModule.BC_XMLNS), Criteria.name("unblock", xmlns: BlockingCommandModule.BC_XMLNS)));
     

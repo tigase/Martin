@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var mam: XmppModuleIdentifier<MessageArchiveManagementModule> {
+        return MessageArchiveManagementModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0313: Message Archive Management]
  
@@ -32,10 +38,9 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     public static let MAM_XMLNS = "urn:xmpp:mam:1";
     public static let MAM2_XMLNS = "urn:xmpp:mam:2";
     // ID of a module for a lookup in `XmppModulesManager`
+    public static let IDENTIFIER = XmppModuleIdentifier<MessageArchiveManagementModule>();
     public static let ID = "mam";
-    
-    public let id = ID;
-    
+        
     public let criteria: Criteria = Criteria.name("message").add(Criteria.or(Criteria.xmlns(MessageArchiveManagementModule.MAM_XMLNS), Criteria.xmlns(MessageArchiveManagementModule.MAM2_XMLNS)));
     
     public let features = [String]();

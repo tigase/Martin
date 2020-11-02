@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var sessionEstablishment: XmppModuleIdentifier<SessionEstablishmentModule> {
+        return SessionEstablishmentModule.IDENTIFIER;
+    }
+}
+
 /**
  Module responsible for [session establishment] process.
  
@@ -33,8 +39,7 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
     
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "session";
-    
-    public let id = ID;
+    public static let IDENTIFIER = XmppModuleIdentifier<SessionEstablishmentModule>();
     
     open var context:Context!;
     

@@ -22,6 +22,12 @@
 import Foundation
 import TigaseLogging
 
+extension XmppModuleIdentifier {
+    public static var streamManagement: XmppModuleIdentifier<StreamManagementModule> {
+        return StreamManagementModule.IDENTIFIER;
+    }
+}
+
 /**
  Module implements support for [XEP-0198: Stream Management]
  
@@ -34,9 +40,9 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
     
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = SM_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<StreamManagementModule>();
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "StreamManagementModule")
-    public let id = SM_XMLNS;
     
     public let criteria = Criteria.xmlns(SM_XMLNS);
     

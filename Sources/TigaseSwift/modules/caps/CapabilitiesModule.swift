@@ -22,6 +22,12 @@
 import Foundation
 import TigaseLogging
 
+extension XmppModuleIdentifier {
+    public static var caps: XmppModuleIdentifier<CapabilitiesModule> {
+        return CapabilitiesModule.IDENTIFIER;
+    }
+}
+
 /**
  Module implements support for [XEP-0115: Entity Capabilities].
  
@@ -36,10 +42,10 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "caps";
+    public static let IDENTIFIER = XmppModuleIdentifier<CapabilitiesModule>();
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "CapabilitiesModule");
     
-    public let id = ID;
     public let criteria = Criteria.empty();
     public var features: [String] {
         return ["http://jabber.org/protocol/caps"] + additionalFeatures.map({ $0.rawValue });
@@ -51,6 +57,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
                 return;
             }
             context.eventBus.unregister(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
+            discoModule = nil;
         }
         
         didSet {
@@ -58,6 +65,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
                 return;
             }
             context.eventBus.register(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
+            discoModule = context.modulesManager.module(.disco);
         }
     }
     
@@ -67,6 +75,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     /// Node used in CAPS advertisement
     open var nodeName = "http://tigase.org/TigaseSwift" + "X";
     
+    private var discoModule: DiscoveryModule!;
     private let dispatcher = QueueDispatcher(label: "capsInProgressSynchronizer");
     private var inProgress: [String] = [];
     
@@ -140,7 +149,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
                 return;
             }
             cache.isCached(node: nodeName) { cached in
-                guard !cached, let discoveryModule: DiscoveryModule = self.context.modulesManager.getModule(DiscoveryModule.ID) else {
+                guard !cached else {
                     return;
                 }
                 self.dispatcher.async {
@@ -149,7 +158,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
                     }
                     self.inProgress.append(nodeName);
                     self.logger.debug("\(self.context) - caps disco#info send for: \(nodeName, privacy: .public) to: \(from, privacy: .auto(mask: .hash))");
-                    discoveryModule.getInfo(for: from, node: nodeName, completionHandler: { result in
+                    self.discoModule.getInfo(for: from, node: nodeName, completionHandler: { result in
                         self.dispatcher.async {
                             if let idx = self.inProgress.firstIndex(of: nodeName) {
                                 self.inProgress.remove(at: idx);
@@ -182,12 +191,11 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
         let ver = generateVerificationString([identity], features: Array(context.modulesManager.availableFeatures));
         
         let oldVer: String? = context.sessionObject.getProperty(CapabilitiesModule.VERIFICATION_STRING_KEY);
-        let discoveryModule: DiscoveryModule? = context.modulesManager.getModule(DiscoveryModule.ID);
         if oldVer != nil && ver != oldVer {
-            discoveryModule?.setNodeCallback(nodeName + "#" + oldVer!, entry: nil);
+            discoModule.setNodeCallback(nodeName + "#" + oldVer!, entry: nil);
         }
         if ver != nil {
-            discoveryModule?.setNodeCallback(nodeName + "#" + ver!, entry: DiscoveryModule.NodeDetailsEntry(
+            discoModule.setNodeCallback(nodeName + "#" + ver!, entry: DiscoveryModule.NodeDetailsEntry(
                 identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> DiscoveryModule.Identity? in
                     return DiscoveryModule.Identity(category: sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client"),
                         type: sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc"),

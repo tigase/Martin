@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var httpFileUpload: XmppModuleIdentifier<HttpFileUploadModule> {
+        return HttpFileUploadModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for requesting upload slot at HTTP server used for 
  file transfer as specified in [XEP-0363: HTTP File Upload]
@@ -32,14 +38,23 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
     static let HTTP_FILE_UPLOAD_XMLNS = "urn:xmpp:http:upload:0";
     
     public static let ID = HTTP_FILE_UPLOAD_XMLNS;
-    
-    public let id = HTTP_FILE_UPLOAD_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<HttpFileUploadModule>();
     
     public let criteria = Criteria.empty();
     
     public let features = [String]();
     
-    open var context: Context!;
+    open var context: Context! {
+        didSet {
+            if let context = self.context {
+                discoModule = context.modulesManager.module(.disco);
+            } else {
+                discoModule = nil;
+            }
+        }
+    }
+    
+    private var discoModule: DiscoveryModule!;
     
     public init() {
         
@@ -49,12 +64,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         throw ErrorCondition.bad_request;
     }
     
-    open func findHttpUploadComponent(onSuccess: @escaping ([JID:Int?])->Void, onError: @escaping (ErrorCondition?)->Void) {
-        guard let discoModule: DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) else {
-            onError(ErrorCondition.undefined_condition);
-            return;
-        }
-        
+    open func findHttpUploadComponent(onSuccess: @escaping ([JID:Int?])->Void, onError: @escaping (ErrorCondition?)->Void) {        
         let serverJid = JID(context.sessionObject.userBareJid!.domain)!;
         discoModule.getItems(for: serverJid, onItemsReceived: { (_, items) in
             var components: [JID:Int?] = [:];
@@ -77,7 +87,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
                 }
             };
             items.forEach({ (item) in
-                discoModule.getInfo(for: item.jid, node: nil, callback: {(stanza: Stanza?) -> Void in
+                self.discoModule.getInfo(for: item.jid, node: nil, callback: {(stanza: Stanza?) -> Void in
                     let type = stanza?.type ?? StanzaType.error;
                     switch type {
                     case .result:

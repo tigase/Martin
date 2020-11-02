@@ -61,6 +61,12 @@ public protocol JingleSessionManager {
     
 }
 
+extension XmppModuleIdentifier {
+    public static var jingle: XmppModuleIdentifier<JingleModule> {
+        return JingleModule.IDENTIFIER;
+    }
+}
+
 open class JingleModule: XmppModule, ContextAware {
     
     public static let XMLNS = "urn:xmpp:jingle:1";
@@ -68,8 +74,7 @@ open class JingleModule: XmppModule, ContextAware {
     public static let MESSAGE_INITIATION_XMLNS = "urn:xmpp:jingle-message:0";
     
     public static let ID = XMLNS;
-    
-    public let id = XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<JingleModule>();
     
     public let criteria = Criteria.or(Criteria.name("iq").add(Criteria.name("jingle", xmlns: XMLNS)), Criteria.name("message").add(Criteria.xmlns(MESSAGE_INITIATION_XMLNS)));
     
@@ -188,7 +193,7 @@ open class JingleModule: XmppModule, ContextAware {
             return;
         }
         switch action {
-        case .propose(_, let descriptions):
+        case .propose(let id, let descriptions):
             let xmlnss = descriptions.map({ $0.xmlns });
             guard supportedDescriptions.first(where: { (type, features) -> Bool in features.contains(where: { xmlnss.contains($0)})}) != nil else {
                 self.sendMessageInitiation(action: .reject(id: id), to: from);

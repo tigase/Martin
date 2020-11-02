@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var mix: XmppModuleIdentifier<MixModule> {
+        return MixModule.IDENTIFIER;
+    }
+}
+
 open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAwareProtocol {
     func prepareRosterGetRequest(queryElem el: Element) {
         el.addChild(Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0"));
@@ -34,10 +40,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     public static let CORE_XMLNS = "urn:xmpp:mix:core:1";
+    public static let IDENTIFIER = XmppModuleIdentifier<MixModule>();
     public static let ID = "mix";
     public static let PAM2_XMLNS = "urn:xmpp:mix:pam:2";
-    
-    public let id: String = MixModule.ID;
     
     public let criteria: Criteria = Criteria.or(
         Criteria.name("message", types: [.groupchat], containsAttribute: "from").add(Criteria.name("mix", xmlns: MixModule.CORE_XMLNS)),
@@ -50,9 +55,28 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         didSet {
             oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
             context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
+            if let context = context {
+                mamModule = context.modulesManager.module(.mam);
+                pubsubModule = context.modulesManager.module(.pubsub);
+                avatarModule = context.modulesManager.module(.pepUserAvatar);
+                presenceModule = context.modulesManager.module(.presence);
+                rosterModule = context.modulesManager.module(.roster);
+            } else {
+                mamModule = nil;
+                pubsubModule = nil;
+                avatarModule = nil;
+                presenceModule = nil;
+                rosterModule = nil;
+            }
         }
     }
-    
+
+    private var mamModule: MessageArchiveManagementModule!;
+    private var pubsubModule: PubSubModule!;
+    private var avatarModule: PEPUserAvatarModule!;
+    private var presenceModule: PresenceModule!;
+    private var rosterModule: RosterModule!;
+
     public let channelManager: ChannelManager;
     
     public var isPAM2SupportAvailable: Bool {
@@ -123,9 +147,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 if let channel = self.channelManager.channel(for: channelJid) {
                     _  = self.channelManager.close(channel: channel);
                 }
-                if let rosterModule: RosterModule = self.context.modulesManager.getModule(RosterModule.ID) {
-                    rosterModule.rosterStore.remove(jid: JID(channelJid), onSuccess: nil, onError: nil);
-                }
+                self.rosterModule.rosterStore.remove(jid: JID(channelJid), onSuccess: nil, onError: nil);
                 completionHandler(.success(Void()));
             case .failure(let errorCondition, _):
                 completionHandler(.failure(errorCondition));
@@ -153,15 +175,15 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                             self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                             
                             self.retrieveHistory(fromChannel: channelJid, max: 100);
-                            if presenceSubscription, let presenceModule: PresenceModule = self.context.modulesManager.getModule(PresenceModule.ID) {
-                                presenceModule.subscribed(by: JID(channelJid));
-                                presenceModule.subscribe(to: JID(channelJid));
+                            if presenceSubscription {
+                                self.presenceModule.subscribed(by: JID(channelJid));
+                                self.presenceModule.subscribe(to: JID(channelJid));
                             }
                         } else if let participantId = joinEl.getAttribute("id") {
                             self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
-                            if presenceSubscription, let presenceModule: PresenceModule = self.context.modulesManager.getModule(PresenceModule.ID) {
-                                presenceModule.subscribed(by: JID(channelJid));
-                                presenceModule.subscribe(to: JID(channelJid));
+                            if presenceSubscription {
+                                self.presenceModule.subscribed(by: JID(channelJid));
+                                self.presenceModule.subscribe(to: JID(channelJid));
                             }
                         }
                     }
@@ -273,11 +295,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func retrieveAffiliations(for channel: Channel, completionHandler: ((PermissionsResult)->Void)?) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler?(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: nil, errorText: nil));
-            return;
-        }
-        
         pubsubModule.retrieveOwnAffiliations(from: channel.channelJid, for: nil, completionHandler: { result in
             switch result {
             case .success(let affiliations):
@@ -310,11 +327,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func retrieveParticipants(for channel: Channel, completionHandler: ((ParticipantsResult)->Void)?) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler?(.failure(errorCondition: ErrorCondition.undefined_condition, pubsubErrorCondition: nil, errorText: nil));
-            return;
-        }
-        
         pubsubModule.retrieveItems(from: channel.channelJid, for: "urn:xmpp:mix:nodes:participants", completionHandler: { result in
             switch result {
             case .success(_, _, let items, _):
@@ -338,10 +350,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: ((Result<Void,ErrorCondition>)->Void)?) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler?(.failure(.undefined_condition))
-            return;
-        }
         pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().submitableElement(type: .result), completionHandler: { response in
             switch response {
             case .success(_, _, _):
@@ -353,10 +361,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,ErrorCondition>)->Void)?) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler?(.failure(.undefined_condition))
-            return;
-        }
         pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:info", completionHandler: { result in
             switch result {
             case .success(_, _, let items, _):
@@ -377,10 +381,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
 
     open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<JabberDataElement,ErrorCondition>)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
         pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", lastItems: 1, completionHandler: { result in
             switch result {
             case .success(_, _, let items, _):
@@ -400,10 +400,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func updateConfig(for channelJid: BareJID, config: JabberDataElement, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
         pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.submitableElement(type: .submit), completionHandler: { response in
             switch response {
             case .success(_, _, _):
@@ -424,11 +420,11 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             case.success(let r):
                 completionHandler(.success(r));
             case .failure(let errorCondition):
-                guard errorCondition == .item_not_found, let pubsubModule: PubSubModule = self.context.modulesManager.getModule(PubSubModule.ID) else {
+                guard errorCondition == .item_not_found else {
                     completionHandler(.failure(errorCondition));
                     return;
                 }
-                pubsubModule.createNode(at: channelJid, node: AccessRule.deny.node, completionHandler: { result in
+                self.pubsubModule.createNode(at: channelJid, node: AccessRule.deny.node, completionHandler: { result in
                     switch result {
                     case .success(_):
                         self.publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: completionHandler);
@@ -451,10 +447,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     private func publishAccessRule(to channelJid: BareJID, for jid: BareJID, rule: AccessRule, value: Bool, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
         if value {
             pubsubModule.publishItem(at: channelJid, to: rule.node, itemId: jid.stringValue, payload: nil, completionHandler: { result in
                 switch result {
@@ -477,11 +469,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
-        
         if isPrivate {
             pubsubModule.createNode(at: channelJid, node: AccessRule.allow.node, completionHandler: { result in
                 switch result {
@@ -527,10 +514,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     private func retrieveAccessRules(for channelJid: BareJID, rule: AccessRule, completionHandler: @escaping (Result<[BareJID],ErrorCondition>)->Void) {
-        guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
         pubsubModule.retrieveItems(from: channelJid, for: rule.node, completionHandler: { result in
             switch result {
             case .success(_, _, let items, _):
@@ -680,10 +663,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
 
     open func retrieveHistory(fromChannel jid: BareJID, start: Date?, rsm: RSM.Query) {
-        guard let mamModule: MessageArchiveManagementModule = self.context.modulesManager.getModule(MessageArchiveManagementModule.ID) else {
-            return;
-        }
-
         let queryId = UUID().uuidString;
         // should we query MIX messages node? or just MAM at MIX channel without a node?
         mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: "urn:xmpp:mix:nodes:messages", start: nil, queryId: queryId, rsm: rsm, completionHandler: { result in
@@ -700,9 +679,6 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, ErrorCondition>)->Void)?) {
-        guard let avatarModule: PEPUserAvatarModule = self.context.modulesManager.getModule(PEPUserAvatarModule.ID) else {
-            return;
-        }
         avatarModule.retrieveAvatarMetadata(from: jid, itemId: nil, fireEvents: true, completionHandler: { result in
             completionHandler?(result);
         });

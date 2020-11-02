@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var streamFeatures: XmppModuleIdentifier<StreamFeaturesModule> {
+        return StreamFeaturesModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for XMPP [stream features]
  
@@ -30,8 +36,8 @@ open class StreamFeaturesModule: XmppModule, ContextAware {
 
     public static let ID = "stream:features";
     public static let STREAM_FEATURES_KEY = "stream:features";
+    public static let IDENTIFIER = XmppModuleIdentifier<StreamFeaturesModule>();
     
-    public let id = ID;
     public let criteria = Criteria.name("features", xmlns: "http://etherx.jabber.org/streams");
     public let features = [String]();
     

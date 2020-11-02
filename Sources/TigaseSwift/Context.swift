@@ -43,4 +43,20 @@ open class Context {
         self.modulesManager.context = self;
     }
     
+    open func module<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T {
+        return modulesManager.module(identifier);
+    }
+
+    open func moduleOrNil<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T? {
+        return modulesManager.moduleOrNil(identifier);
+    }
+
+    open func module<T: XmppModule>(_ type: T.Type) -> T {
+        return modulesManager.module(type);
+    }
+
+    open func moduleOrNil<T: XmppModule>(_ type: T.Type) -> T? {
+        return modulesManager.moduleOrNil(type);
+    }
+
 }

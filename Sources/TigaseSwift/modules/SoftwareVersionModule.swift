@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var softwareVersion: XmppModuleIdentifier<SoftwareVersionModule> {
+        return SoftwareVersionModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0092: Software Version]
  
@@ -45,8 +51,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "softwareVersion";
-    
-    public let id = ID;
+    public static let IDENTIFIER = XmppModuleIdentifier<SoftwareVersionModule>();
     
     open var context:Context!;
     

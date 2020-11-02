@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var messageCarbons: XmppModuleIdentifier<MessageCarbonsModule> {
+        return MessageCarbonsModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0280: Message Carbons]
  
@@ -33,14 +39,17 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     fileprivate static let SF_XMLNS = "urn:xmpp:forward:0";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = MC_XMLNS;
-    
-    public let id = MC_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<MessageCarbonsModule>();
     
     public let criteria = Criteria.name("message").add(Criteria.xmlns(MC_XMLNS));
     
     public let features = [MC_XMLNS];
     
-    open var context: Context!
+    open var context: Context! {
+        didSet {
+            messageModule = context.modulesManager.module(.message);
+        }
+    }
     
     open var isAvailable: Bool {
         guard let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) else {
@@ -48,6 +57,8 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
         }
         return serverFeatures.contains(MessageCarbonsModule.MC_XMLNS);
     }
+    
+    private var messageModule: MessageModule!;
     
     public init() {
         
@@ -117,10 +128,8 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     }
     
     func processForwaredMessage(_ forwarded: Message, action: Action) {
-        if let messageModule: MessageModule = context.modulesManager.getModule(MessageModule.ID) {
-            let chat = messageModule.processMessage(forwarded, interlocutorJid: action == .received ? forwarded.from : forwarded.to, fireEvents: false);
-            context.eventBus.fire(CarbonReceivedEvent(sessionObject: context.sessionObject, action: action, message: forwarded, chat: chat));
-        }
+        let chat = messageModule.processMessage(forwarded, interlocutorJid: action == .received ? forwarded.from : forwarded.to, fireEvents: false);
+        context.eventBus.fire(CarbonReceivedEvent(sessionObject: context.sessionObject, action: action, message: forwarded, chat: chat));
     }
     
     /**

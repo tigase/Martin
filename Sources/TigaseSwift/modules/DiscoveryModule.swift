@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var disco: XmppModuleIdentifier<DiscoveryModule> {
+        return DiscoveryModule.IDENTIFIER;
+    }
+}
+
 /**
  Module responsible for [XEP-0030: Service Discovery] feature.
  
@@ -44,14 +50,13 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
     public static let INFO_XMLNS = "http://jabber.org/protocol/disco#info";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "discovery";
+    public static let IDENTIFIER = XmppModuleIdentifier<DiscoveryModule>();
     
     public static let SERVER_IDENTITY_TYPES_KEY = "serverIdentityTypes";
     public static let SERVER_FEATURES_KEY = "serverFeatures";
     
     public static let ACCOUNT_IDENTITY_TYPES_KEY = "accountIdentityTypes";
     public static let ACCOUNT_FEATURES_KEY = "accountFeatures";
-    
-    public let id = ID;
     
     open var context:Context!;
     

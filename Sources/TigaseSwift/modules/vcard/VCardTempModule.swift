@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var vcardTemp: XmppModuleIdentifier<VCardTempModule> {
+        return VCardTempModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0054: vcard-temp]
  
@@ -32,8 +38,7 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
     fileprivate static let VCARD_XMLNS = "vcard-temp";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = VCARD_XMLNS;
-    
-    public let id = VCARD_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<VCardTempModule>();
     
     public let criteria = Criteria.empty();
     

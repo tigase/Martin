@@ -21,6 +21,12 @@
 import Foundation
 import TigaseLogging
 
+extension XmppModuleIdentifier {
+    public static var muc: XmppModuleIdentifier<MucModule> {
+        return MucModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0045: Multi-User Chat]
  
@@ -28,6 +34,7 @@ import TigaseLogging
  */
 open class MucModule: XmppModule, ContextAware, Initializable, EventHandler {
     /// ID of module for lookup in `XmppModulesManager`
+    public static let IDENTIFIER = XmppModuleIdentifier<MucModule>();
     public static let ID = "muc";
     
     fileprivate static let DIRECT_INVITATION = Criteria.name("message", containsAttribute: "from").add(Criteria.name("x", xmlns: "jabber:x:conference"));
@@ -35,8 +42,6 @@ open class MucModule: XmppModule, ContextAware, Initializable, EventHandler {
     fileprivate static let MEDIATED_INVITATION_DECLINE = Criteria.name("message", containsAttribute: "from").add(Criteria.name("x", xmlns: "http://jabber.org/protocol/muc#user").add(Criteria.name("decline")));
 
     private let logger = Logger(subsystem: "TigaseSwift", category: "MucModule");
-    
-    public let id = ID;
     
     open var context:Context! {
         didSet {

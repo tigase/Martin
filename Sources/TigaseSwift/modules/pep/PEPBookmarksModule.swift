@@ -21,15 +21,20 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var pepBookmarks: XmppModuleIdentifier<PEPBookmarksModule> {
+        return PEPBookmarksModule.IDENTIFIER;
+    }
+}
+
 open class PEPBookmarksModule: AbstractPEPModule {
     
     public static let ID = "storage:bookmarks";
+    public static let IDENTIFIER = XmppModuleIdentifier<PEPBookmarksModule>();
     
     public let criteria = Criteria.empty();
     
     public let features: [String] = [ ID + "+notify" ];
-    
-    public let id = ID;
     
     public fileprivate(set) var currentBookmarks: Bookmarks = Bookmarks();
     
@@ -40,9 +45,17 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }
             if context != nil {
                 context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE);
+                discoModule = context.modulesManager.module(.disco);
+                pubsubModule = context.modulesManager.module(.pubsub);
+            } else {
+                discoModule = nil;
+                pubsubModule = nil;
             }
         }
     }
+    
+    var discoModule: DiscoveryModule!;
+    var pubsubModule: PubSubModule!;
     
     public init() {
         
@@ -53,13 +66,9 @@ open class PEPBookmarksModule: AbstractPEPModule {
     }
     
     public func publish(bookmarks: Bookmarks) {
-        guard let discoModule: DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID), let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-            return;
-        }
-        
         let pepJID = JID(context.sessionObject.userBareJid!);
         discoModule.getInfo(for: pepJID, node: PEPBookmarksModule.ID, onInfoReceived: { (node, identities, features) in
-            pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
+            self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
         }) { (error) in
             if (error ?? ErrorCondition.remote_server_timeout) == .item_not_found {
                 let config = JabberDataElement(type: .submit);
@@ -68,11 +77,11 @@ open class PEPBookmarksModule: AbstractPEPModule {
                 config.addField(formType);
                 config.addField(BooleanField(name: "pubsub#persist_items", label: nil, desc: nil, required: false, value: true));
                 config.addField(TextSingleField(name: "pubsub#access_model", label: nil, desc: nil, required: false, value: "whitelist"));
-                pubsubModule.createNode(at: pepJID.bareJid, node: PEPBookmarksModule.ID, with: config, onSuccess: { (stanza: Stanza, node: String)->Void in
+                self.pubsubModule.createNode(at: pepJID.bareJid, node: PEPBookmarksModule.ID, with: config, onSuccess: { (stanza: Stanza, node: String)->Void in
                     guard node == PEPBookmarksModule.ID else {
                         return;
                     }
-                    pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
+                    self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
                 }, onError: nil);
             }
         }
@@ -91,9 +100,6 @@ open class PEPBookmarksModule: AbstractPEPModule {
                 return false;
             }) {
                 // requesting Bookmarks!!
-                guard let pubsubModule: PubSubModule = context.modulesManager.getModule(PubSubModule.ID) else {
-                    return;
-                }
                 let pepJID = context.sessionObject.userBareJid!;
                 pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, rsm: nil, lastItems: 1, itemIds: nil, onSuccess: { (stanza, node, items, rsm) in
                     if let item = items.first {

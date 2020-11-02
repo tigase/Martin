@@ -21,6 +21,12 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var pubsub: XmppModuleIdentifier<PubSubModule> {
+        return PubSubModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides support for [XEP-0060: Publish-Subscribe]
  
@@ -35,11 +41,11 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
     public static let PUBSUB_EVENT_XMLNS = PUBSUB_XMLNS + "#event";
     
     public static let PUBSUB_OWNER_XMLNS = PUBSUB_XMLNS + "#owner";
+    
+    public static let IDENTIFIER = XmppModuleIdentifier<PubSubModule>();
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = PUBSUB_XMLNS;
-    
-    public let id = PUBSUB_XMLNS;
-    
+        
     open var context: Context!;
     
     public let criteria = Criteria.name("message").add(Criteria.name("event", xmlns: PUBSUB_EVENT_XMLNS));

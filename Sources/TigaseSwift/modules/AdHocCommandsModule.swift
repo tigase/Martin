@@ -21,13 +21,18 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var adhoc: XmppModuleIdentifier<AdHocCommandsModule> {
+        return AdHocCommandsModule.IDENTIFIER;
+    }
+}
+
 open class AdHocCommandsModule: XmppModule, ContextAware {
     
     public static let COMMANDS_XMLNS = "http://jabber.org/protocol/commands";
     
     public static let ID = COMMANDS_XMLNS;
-    
-    public let id = ID;
+    public static let IDENTIFIER = XmppModuleIdentifier<AdHocCommandsModule>();
     
     public let criteria = Criteria.empty();
     

@@ -115,8 +115,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         if let redirect: XMPPSrvRecord = self.context.sessionObject.removeProperty(SocketConnector.SEE_OTHER_HOST_KEY) {
             return redirect;
         }
-        let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
-        return streamManagementModule?.resumptionLocation;
+        return modulesManager.moduleOrNil(.streamManagement)?.resumptionLocation;
     }
     
     open func serverToConnect() -> String {
@@ -124,7 +123,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     open func onStreamClose(completionHandler: @escaping () -> Void) {
-        if let streamManagementModule: StreamManagementModule = modulesManager.getModule(StreamManagementModule.ID) {
+        if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement) {
             streamManagementModule.request();
             streamManagementModule.sendAck();
         }
@@ -135,7 +134,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     open func onStreamError(_ streamErrorEl: Element) {
         if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value), let lastConnectionDetails: XMPPSrvRecord = self.context.sessionObject.getProperty(SocketConnector.CURRENT_CONNECTION_DETAILS) {
-            if let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining = modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID) {
+            if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
                 streamFeaturesWithPipelining.connectionRestarted();
             }
             
@@ -151,9 +150,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     open func onStreamTerminate() {
         // we may need to adjust those condition....
         if self.connector.state == .connecting {
-            let streamManagementModule:StreamManagementModule? = modulesManager.getModule(StreamManagementModule.ID);
-            
-            streamManagementModule?.reset();
+            modulesManager.moduleOrNil(.streamManagement)?.reset();
         }
     }
     
@@ -205,7 +202,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     open func keepalive() {
-        if let pingModule: PingModule = modulesManager.getModule(PingModule.ID) {
+        if let pingModule = modulesManager.moduleOrNil(.ping) {
             pingModule.ping(JID(context.sessionObject.userBareJid!), callback: { (stanza) in
                 if stanza == nil {
                     self.logger.debug("\(self.context) - no response on ping packet - possible that connection is broken, reconnecting...");
@@ -231,7 +228,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         case let re as StreamManagementModule.ResumedEvent:
             processSessionBindedAndEstablished(re.sessionObject);
         case is StreamManagementModule.FailedEvent:
-            if let bindModule: ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
+            if let bindModule = modulesManager.moduleOrNil(.resourceBind) {
                 bindModule.bind();
             }
         case is AuthModule.AuthFinishExpectedEvent:
@@ -246,7 +243,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     func processAuthSuccess(_ event:AuthModule.AuthSuccessEvent) {
-        let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining? = modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID);
+        let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining;
 
         if !(streamFeaturesWithPipelining?.active ?? false) {
             connector.restartStream();
@@ -254,7 +251,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     func processAuthFinishExpected() {
-        guard let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining = modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID) else {
+        guard let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining else {
             return;
         }
         
@@ -266,7 +263,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     func processResourceBindSuccess(_ event:ResourceBinderModule.ResourceBindSuccessEvent) {
         if (SessionEstablishmentModule.isSessionEstablishmentRequired(context.sessionObject)) {
-            if let sessionModule:SessionEstablishmentModule = modulesManager.getModule(SessionEstablishmentModule.ID) {
+            if let sessionModule = modulesManager.moduleOrNil(.sessionEstablishment) {
                 sessionModule.establish();
             } else {
                 // here we should report an error
@@ -279,12 +276,12 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     func processSessionBindedAndEstablished(_ sessionObject:SessionObject) {
         self.logger.debug("\(self.context) - session binded and established");
-        if let discoveryModule:DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) {
+        if let discoveryModule = context.modulesManager.moduleOrNil(.disco) {
             discoveryModule.discoverServerFeatures(onInfoReceived: nil, onError: nil);
             discoveryModule.discoverAccountFeatures(onInfoReceived: nil, onError: nil);
         }
         
-        if let streamManagementModule:StreamManagementModule = context.modulesManager.getModule(StreamManagementModule.ID) {
+        if let streamManagementModule = context.modulesManager.moduleOrNil(.streamManagement) {
             if streamManagementModule.isAvailable() {
                 streamManagementModule.enable();
             }
@@ -296,7 +293,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
         let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
         let authorized = context.sessionObject.getProperty(AuthModule.AUTHORIZED, defValue: false);
-        let streamManagementModule:StreamManagementModule? = context.modulesManager.getModule(StreamManagementModule.ID);
+        let streamManagementModule = context.modulesManager.moduleOrNil(.streamManagement);
         let resumption = (streamManagementModule?.resumptionEnabled ?? false) && (streamManagementModule?.isAvailable() ?? false);
         
         if (!startTlsActive)
@@ -306,7 +303,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
             connector.startZlib();
         } else if !authorized {
             self.logger.debug("\(self.context) - starting authentication");
-            if let authModule:AuthModule = modulesManager.getModule(AuthModule.ID) {
+            if let authModule:AuthModule = modulesManager.moduleOrNil(.auth) {
                 if !authModule.inProgress {
                     authModule.login();
                 } else {
@@ -314,7 +311,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                     if resumption && context.sessionObject.userBareJid != nil {
                         streamManagementModule!.resume();
                     } else {
-                        if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
+                        if let bindModule:ResourceBinderModule = modulesManager.moduleOrNil(.resourceBind) {
                             bindModule.bind();
                         }
                     }
@@ -324,7 +321,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
             if resumption && context.sessionObject.userBareJid != nil {
                 streamManagementModule!.resume();
             } else {
-                if let bindModule:ResourceBinderModule = modulesManager.getModule(ResourceBinderModule.ID) {
+                if let bindModule:ResourceBinderModule = modulesManager.moduleOrNil(.resourceBind) {
                     bindModule.bind();
                 }
             }
@@ -351,7 +348,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         let seeOtherHost = (self.context.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) && userJid != nil) ? " from='\(userJid!)'" : ""
         self.connector.send(data: "<stream:stream to='\(domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
         
-        if let streamFeaturesWithPipelining: StreamFeaturesModuleWithPipelining = self.context.modulesManager.getModule(StreamFeaturesModuleWithPipelining.ID) {
+        if let streamFeaturesWithPipelining = self.context.modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
             streamFeaturesWithPipelining.streamStarted();
         }
     }

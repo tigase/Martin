@@ -325,7 +325,7 @@ open class Room: ChatProtocol, ContextAware {
     }
     
     open func checkTigasePushNotificationRegistrationStatus(completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
-        guard let regModule: InBandRegistrationModule = context?.modulesManager.getModule(InBandRegistrationModule.ID) else {
+        guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
             completionHandler(.failure(.undefined_condition));
             return;
         };
@@ -345,7 +345,7 @@ open class Room: ChatProtocol, ContextAware {
     }
     
     open func registerForTigasePushNotification(_ value: Bool, completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
-        guard let regModule: InBandRegistrationModule = context?.modulesManager.getModule(InBandRegistrationModule.ID) else {
+        guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
             completionHandler(.failure(.undefined_condition));
             return;
         };

@@ -22,6 +22,12 @@
 import Foundation
 import TigaseLogging
 
+extension XmppModuleIdentifier {
+    public static var roster: XmppModuleIdentifier<RosterModule> {
+        return RosterModule.IDENTIFIER;
+    }
+}
+
 /**
  Module provides roster manipulation features as described in [RFC6121]
  
@@ -29,11 +35,11 @@ import TigaseLogging
  */
 open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializable {
     
+    public static let IDENTIFIER = XmppModuleIdentifier<RosterModule>();
     public static let ROSTER_STORE_KEY = "rosterStore";
     /// ID of module for looup in `XmppModulesManager`
     public static let ID = "roster";
     
-    public let id = ID;
     public let logger = Logger(subsystem: "TigaseSwift", category: "RosterModule");
     
     open var context:Context! {

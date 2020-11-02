@@ -21,13 +21,18 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var push: XmppModuleIdentifier<PushNotificationsModule> {
+        return PushNotificationsModule.IDENTIFIER;
+    }
+}
+
 open class PushNotificationsModule: XmppModule, ContextAware {
     
     public static let PUSH_NOTIFICATIONS_XMLNS = "urn:xmpp:push:0";
     
     public static let ID = PUSH_NOTIFICATIONS_XMLNS;
-    
-    public let id = PUSH_NOTIFICATIONS_XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<PushNotificationsModule>();
     
     public let criteria = Criteria.name("message").add(Criteria.name("pubsub", xmlns: PubSubModule.PUBSUB_XMLNS).add(Criteria.name("affiliation")));
     

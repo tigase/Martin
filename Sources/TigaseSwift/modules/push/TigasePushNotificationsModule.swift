@@ -27,10 +27,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     private let logger = Logger(subsystem: "TigaseSwift", category: "TigasePushNotificationsModule");
     
     open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,ErrorCondition>)->Void) {
-        guard let adhocModule: AdHocCommandsModule = context.modulesManager.getModule(AdHocCommandsModule.ID) else {
-            completionHandler(.failure(ErrorCondition.undefined_condition));
-            return;
-        }
+        let adhocModule = context.modulesManager.module(.adhoc);
         
         let data = JabberDataElement(type: .submit);
         data.addField(TextSingleField(name: "provider", value: provider));
@@ -53,10 +50,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     }
     
     open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, ErrorCondition>)->Void) {
-        guard let adhocModule: AdHocCommandsModule = context.modulesManager.getModule(AdHocCommandsModule.ID) else {
-            completionHandler(.failure(ErrorCondition.undefined_condition));
-            return;
-        }
+        let adhocModule: AdHocCommandsModule = context.modulesManager.module(.adhoc);
         
         let data = JabberDataElement(type: .submit);
         data.addField(TextSingleField(name: "provider", value: provider));
@@ -70,10 +64,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     }
     
     open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,ErrorCondition>)->Void) {
-        guard let discoModule: DiscoveryModule = context.modulesManager.getModule(DiscoveryModule.ID) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
+        let discoModule = context.modulesManager.module(.disco);
         discoModule.getItems(for: JID(context.sessionObject.userBareJid!.domain)!, node: nil, onItemsReceived: {(node, items) in
             let result = DiscoResults(items: items) { (jids) in
                 self.logger.debug("\(self.context) - found proper push components at \(jids)");

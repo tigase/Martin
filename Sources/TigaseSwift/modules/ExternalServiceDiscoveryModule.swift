@@ -21,12 +21,18 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var externalServiceDiscovery: XmppModuleIdentifier<ExternalServiceDiscoveryModule> {
+        return ExternalServiceDiscoveryModule.IDENTIFIER;
+    }
+}
+
 open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
 
     public static let XMLNS = "urn:xmpp:extdisco:2";
     public static let ID = XMLNS;
+    public static let IDENTIFIER = XmppModuleIdentifier<ExternalServiceDiscoveryModule>();
     
-    public let id: String = ID;
     public let criteria: Criteria = Criteria.empty();
     public let features: [String] = [];
     

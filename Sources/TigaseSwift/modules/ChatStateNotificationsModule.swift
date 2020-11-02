@@ -21,13 +21,18 @@
 
 import Foundation
 
+extension XmppModuleIdentifier {
+    public static var chatStateNotifications: XmppModuleIdentifier<ChatStateNotificationsModule> {
+        return ChatStateNotificationsModule.IDENTIFIER;
+    }
+}
+
 open class ChatStateNotificationsModule: XmppModule, ContextAware {
     
     public static let XMLNS = "http://jabber.org/protocol/chatstates";
     
     public static let ID = XMLNS;
-    
-    public var id = ID;
+    public static let IDENTIFIER = XmppModuleIdentifier<ChatStateNotificationsModule>();
     
     public var criteria: Criteria = Criteria.empty();
     
@@ -37,18 +42,27 @@ open class ChatStateNotificationsModule: XmppModule, ContextAware {
         throw ErrorCondition.bad_request;
     }
     
-    public var context: Context!;
+    public var context: Context! {
+        didSet {
+            if let context = self.context {
+                presenceModule = context.modulesManager.module(.presence);
+                capsModule = context.modulesManager.module(.caps);
+            } else {
+                presenceModule = nil;
+                capsModule = nil;
+            }
+        }
+    }
+    
+    private var presenceModule: PresenceModule!;
+    private var capsModule: CapabilitiesModule!;
     
     open func hasSupport(jid: JID) -> Bool {
         guard jid.resource != nil else {
             return hasSupport(jid: jid.bareJid);
         }
         
-        guard let presenceModule: PresenceModule = context.modulesManager.getModule(PresenceModule.ID), let capsNode = presenceModule.presenceStore.getPresence(for: jid)?.capsNode else {
-            return false;
-        }
-        
-        guard let capsModule: CapabilitiesModule = context.modulesManager.getModule(CapabilitiesModule.ID) else {
+        guard let capsNode = presenceModule.presenceStore.getPresence(for: jid)?.capsNode else {
             return false;
         }
         
@@ -56,11 +70,7 @@ open class ChatStateNotificationsModule: XmppModule, ContextAware {
     }
     
     open func hasSupport(jid: BareJID) -> Bool {
-        guard let presenceModule: PresenceModule = context.modulesManager.getModule(PresenceModule.ID) else {
-            return false;
-        }
-
-        guard let presences = presenceModule.presenceStore.getPresences(for: jid), let capsModule: CapabilitiesModule = context.modulesManager.getModule(CapabilitiesModule.ID) else {
+        guard let presences = presenceModule.presenceStore.getPresences(for: jid) else {
             return false;
         }
         
