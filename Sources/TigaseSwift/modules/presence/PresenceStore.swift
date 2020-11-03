@@ -29,7 +29,7 @@ open class PresenceStore {
     fileprivate let queue = DispatchQueue(label: "presence_store_queue", attributes: DispatchQueue.Attributes.concurrent);
     fileprivate let queueTag = DispatchSpecificKey<DispatchQueue?>();
     
-    fileprivate var handler:PresenceStoreHandler?;
+    public var handler:PresenceStoreHandler?;
     
     fileprivate var bestPresence = [BareJID:Presence]();
     fileprivate var presenceByJid = [JID:Presence]();

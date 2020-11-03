@@ -33,10 +33,9 @@ extension XmppModuleIdentifier {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
  */
-open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializable {
+open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     
     public static let IDENTIFIER = XmppModuleIdentifier<RosterModule>();
-    public static let ROSTER_STORE_KEY = "rosterStore";
     /// ID of module for looup in `XmppModulesManager`
     public static let ID = "roster";
     
@@ -57,34 +56,22 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializ
     
     public let features = [String]();
     /// Roster cache versio provider
-    open var versionProvider:RosterCacheProvider?;
+    open var versionProvider: RosterCacheProvider?;
     /// Roster store
-    open var rosterStore:RosterStore {
-        get {
-            return RosterModule.getRosterStore(context.sessionObject);
-        }
-        set {
-            context.sessionObject.setProperty(RosterModule.ROSTER_STORE_KEY, value: newValue, scope: .user);
-        }
+    public let store: RosterStore;
+    @available(* , deprecated, renamed: "store")
+    public var rosterStore: RosterStore {
+        return store;
     }
-    
+
+    @available(*, deprecated, message: "Use store property of the module instance directly!")
     public static func getRosterStore(_ sessionObject:SessionObject) -> RosterStore {
-        let rosterStore:RosterStore? = sessionObject.getProperty(ROSTER_STORE_KEY);
-        return rosterStore!;
+        return sessionObject.context.module(.roster).store;
     }
     
-    public init() {
-        
-    }
-    
-    open func initialize() {
-        var rosterStoreTmp:RosterStore? = context.sessionObject.getProperty(RosterModule.ROSTER_STORE_KEY);
-        if rosterStoreTmp == nil {
-            rosterStoreTmp = DefaultRosterStore();
-            context.sessionObject.setProperty(RosterModule.ROSTER_STORE_KEY, value: rosterStoreTmp, scope: .user);
-        }
-        
-        rosterStore.handler = RosterStoreHandlerImpl(module: self);
+    public init(store: RosterStore = DefaultRosterStore()) {
+        self.store = store;
+        store.handler = RosterStoreHandlerImpl(module: self);
         loadFromCache();
     }
     
@@ -94,7 +81,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializ
             rosterRequest();
         case let ce as SessionObject.ClearedEvent:
             if ce.scopes.contains(.user) {
-                rosterStore.cleared();
+                store.cleared();
                 context.eventBus.fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: nil, action: .removed, modifiedGroups: nil));
             }
         default:
@@ -119,7 +106,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializ
     
     fileprivate func processRosterQuery(_ query:Element, force:Bool) {
         if force {
-            rosterStore.removeAll();
+            store.removeAll();
         }
         
         let ver = query.getAttribute("ver");
@@ -144,12 +131,12 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializ
                 return e.name == "group" && e.value != nil;
             });
         
-        var currentItem = rosterStore.get(for: jid);
+        var currentItem = store.get(for: jid);
         var action = Action.other;
         var modifiedGroups:[String]? = nil;
         let annotations: [RosterItemAnnotation] = processRosterItemForAnnotations(item: item);
         if (subscription == .remove && currentItem != nil) {
-            rosterStore.removeItem(for: jid);
+            store.removeItem(for: jid);
             action = .removed;
             modifiedGroups = currentItem!.groups;
         } else {
@@ -176,7 +163,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializ
             }
             currentItem = currentItem != nil ? currentItem!.update(name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations) : RosterItem(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
             
-            rosterStore.addItem(currentItem!);
+            store.addItem(currentItem!);
             
         }
         fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
@@ -206,7 +193,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializ
         
         if isRosterVersioningAvailable() {
             var x = versionProvider?.getCachedVersion(context.sessionObject) ?? "";
-            if (rosterStore.count == 0) {
+            if (store.count == 0) {
                 x = "";
                 versionProvider?.updateReceivedVersion(context.sessionObject, ver: x);
             }
@@ -266,7 +253,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler, Initializ
     
     fileprivate func loadFromCache() {
         if versionProvider != nil {
-            let store = rosterStore;
+            let store = self.store;
             versionProvider?.loadCachedRoster(context.sessionObject).forEach({ (item:RosterItem) in
                 store.addItem(item);
             })

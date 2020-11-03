@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [stream features]: http://xmpp.org/rfcs/rfc6120.html#streams-negotiation-features
  */
-open class StreamFeaturesModule: XmppModule, ContextAware {
+open class StreamFeaturesModule: XmppModule, ContextAware, Resetable {
 
     public static let ID = "stream:features";
     public static let STREAM_FEATURES_KEY = "stream:features";
@@ -43,6 +43,8 @@ open class StreamFeaturesModule: XmppModule, ContextAware {
     
     open var context: Context!;
 
+    open private(set) var streamFeatures: Element?;
+    
     /**
      Retrieves stream features which were recevied from server
      - parameter sessionObject: instance of `SessionObject` to retrieve cached stream features element
@@ -70,8 +72,12 @@ open class StreamFeaturesModule: XmppModule, ContextAware {
     }
     
     func setStreamFeatures(_ element: Element) {
-        context.sessionObject.setProperty("stream:features", value: element);
+        self.streamFeatures = element;
         fireEvent(streamFeatures: element);
+    }
+    
+    public func reset(scope: ResetableScope) {
+        streamFeatures = nil;
     }
 }
 

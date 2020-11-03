@@ -35,20 +35,7 @@ extension XmppModuleIdentifier {
 open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
     public static let DEFAULT_NAME_VAL = "Tigase based software";
-    
-    /**
-     Property under which name of software is stored in `SessionObject`
-     */
-    public static let NAME_KEY = "softwareVersionName";
-    /**
-     Property under which name of operation system is stored in `SessionObject`
-     */
-    public static let OS_KEY = "softwareVersionOS";
-    /**
-     Property under which version of software is stored in `SessionObject`
-     */
-    public static let VERSION_KEY = "softwareVersionVersion";
-    
+        
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "softwareVersion";
     public static let IDENTIFIER = XmppModuleIdentifier<SoftwareVersionModule>();
@@ -59,8 +46,10 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     
     public let features = [ "jabber:iq:version" ];
 
-    public init() {
-        
+    public let version: SoftwareVersion;
+    
+    public init(version: SoftwareVersion = SoftwareVersion(name: "Tigase based software", version: "0.0.0", os: nil)) {
+        self.version = version;
     }
     
     /**
@@ -144,11 +133,9 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
         let query = Element(name: "query", xmlns: "jabber:iq:version");
         result.addChild(query);
         
-        let name = context.sessionObject.getProperty(SoftwareVersionModule.NAME_KEY, defValue: SoftwareVersionModule.DEFAULT_NAME_VAL);
-        query.addChild(Element(name: "name", cdata: name));
-        let version = context.sessionObject.getProperty(SoftwareVersionModule.VERSION_KEY, defValue: "0.0.0");
-        query.addChild(Element(name: "version", cdata: version));
-        if let os:String = context.sessionObject.getProperty(SoftwareVersionModule.OS_KEY) {
+        query.addChild(Element(name: "name", cdata: version.name));
+        query.addChild(Element(name: "version", cdata: version.version));
+        if let os = version.os {
             query.addChild(Element(name: "os", cdata: os));
         }
         

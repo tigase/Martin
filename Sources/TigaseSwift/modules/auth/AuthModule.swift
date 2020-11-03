@@ -33,11 +33,10 @@ extension XmppModuleIdentifier {
  Other authentication module (like ie. `SaslModule`) may require this
  module to work properly.
  */
-open class AuthModule: XmppModule, ContextAware, EventHandler {
+open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
     public static let IDENTIFIER = XmppModuleIdentifier<AuthModule>();
-    public static let AUTHORIZED = "authorized";
     public static let CREDENTIALS_CALLBACK = "credentialsCallback";
     public static let LOGIN_USER_NAME_KEY = "LOGIN_USER_NAME";
     
@@ -62,9 +61,7 @@ open class AuthModule: XmppModule, ContextAware, EventHandler {
     
     public let features = [String]();
     
-    open var inProgress: Bool {
-        return context.sessionObject.getProperty("AUTH_IN_PROGRESS", defValue: false);
-    }
+    open private(set) var state: AuthorizationStatus = .notAuthorized;
     
     public init() {
         
@@ -93,19 +90,28 @@ open class AuthModule: XmppModule, ContextAware, EventHandler {
         switch event {
         case is SaslModule.SaslAuthSuccessEvent:
             let saslEvent = event as! SaslModule.SaslAuthSuccessEvent;
-            _context.sessionObject.setProperty("AUTH_IN_PROGRESS", value: false);
-            saslEvent.sessionObject.setProperty(AuthModule.AUTHORIZED, value: true, scope: SessionObject.Scope.stream);
+            self.state = .authorized;
             _context.eventBus.fire(AuthSuccessEvent(sessionObject: saslEvent.sessionObject));
         case is SaslModule.SaslAuthFailedEvent:
             let saslEvent = event as! SaslModule.SaslAuthFailedEvent;
-            saslEvent.sessionObject.setProperty(AuthModule.AUTHORIZED, value: false, scope: SessionObject.Scope.stream);
+            self.state = .notAuthorized;
             _context.eventBus.fire(AuthFailedEvent(sessionObject: saslEvent.sessionObject, error: saslEvent.error));
         case is SaslModule.SaslAuthStartEvent:
             let saslEvent = event as! SaslModule.SaslAuthStartEvent;
-            _context.sessionObject.setProperty("AUTH_IN_PROGRESS", value: true);
+            self.state = .inProgress;
             _context.eventBus.fire(AuthStartEvent(sessionObject: saslEvent.sessionObject));
         default:
             logger.error("handing of unsupported event: \(event)");
+        }
+    }
+    
+    public func reset(scope: ResetableScope) {
+        if scope == .session {
+            state = .notAuthorized;
+        } else {
+            if state == .inProgress {
+                state = .notAuthorized;
+            }
         }
     }
     
@@ -183,5 +189,11 @@ open class AuthModule: XmppModule, ContextAware, EventHandler {
         public init(sessionObject: SessionObject) {
             self.sessionObject = sessionObject;
         }
+    }
+    
+    public enum AuthorizationStatus {
+        case notAuthorized
+        case inProgress
+        case authorized
     }
 }

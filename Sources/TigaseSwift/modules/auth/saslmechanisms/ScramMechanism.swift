@@ -25,8 +25,6 @@ import Foundation
  */
 open class ScramMechanism: SaslMechanism {
 
-    public static let SCRAM_SASL_DATA_KEY = "SCRAM_SASL_DATA_KEY";
-    
     public static let SCRAM_SALTED_PASSWORD_CACHE = "SCRAM_SALTED_PASSWORD_CACHE";
     
     fileprivate static let ALPHABET = [Character]("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
@@ -60,6 +58,7 @@ open class ScramMechanism: SaslMechanism {
     
     /// Name of mechanism
     public let name: String;
+    public private(set) var status: SaslMechanismStatus = .new;
     
     fileprivate let algorithm: Digest;
     
@@ -74,14 +73,14 @@ open class ScramMechanism: SaslMechanism {
     }
     
     open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) throws -> String? {
-        guard !isComplete(sessionObject) else {
+        guard status != .completed else {
             guard input == nil else {
                 throw ClientSaslException.genericError(msg: "Client in illegal state - already authorized!");
             }
             return nil;
         }
         
-        let data = getData(sessionObject);
+        let data = getData();
     
         let saltedPasswordCache: ScramSaltedPasswordCacheProtocol? = sessionObject.getProperty(ScramMechanism.SCRAM_SALTED_PASSWORD_CACHE);
         
@@ -160,7 +159,7 @@ open class ScramMechanism: SaslMechanism {
             clientFinalMessage += "," + "p=" + Foundation.Data(bytes: &clientProof, count: clientProof.count).base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
 
             data.stage += 1;
-            setCompleteExpected(sessionObject);
+            status = .completedExpected;
             return clientFinalMessage.data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
         case 2:
             guard input != nil else {
@@ -203,13 +202,13 @@ open class ScramMechanism: SaslMechanism {
             if let saltedCacheId = data.saltedCacheId, let saltedPassword = data.saltedPassword {
                 saltedPasswordCache?.store(for: sessionObject, id: saltedCacheId, saltedPassword: saltedPassword);
             }
-            setComplete(sessionObject, completed: true);
+            status = .completed;
             
             // releasing data object
-            sessionObject.setProperty(ScramMechanism.SCRAM_SASL_DATA_KEY, value: nil);
+            self.saslData = nil;
             return nil;
         default:
-            guard isComplete(sessionObject) && input == nil else {
+            guard status == .completed && input == nil else {
                 saltedPasswordCache?.clearCache(for: sessionObject);
                 throw ClientSaslException.genericError(msg: "Client in illegal state! stage = \(data.stage)");
             }
@@ -247,13 +246,15 @@ open class ScramMechanism: SaslMechanism {
         return str.data(using: String.Encoding.utf8)!;
     }
     
-    func getData(_ sessionObject: SessionObject) -> Data {
-        var data: Data? = sessionObject.getProperty(ScramMechanism.SCRAM_SASL_DATA_KEY);
-        if data == nil {
-            data = Data();
-            sessionObject.setProperty(ScramMechanism.SCRAM_SASL_DATA_KEY, value: data);
+    private var saslData: Data?;
+    
+    func getData() -> Data {
+        guard let data = saslData else {
+            let data = Data();
+            self.saslData = data;
+            return data;
         }
-        return data!;
+        return data;
     }
     
     func randomString() -> String {

@@ -28,6 +28,8 @@ open class PlainMechanism: SaslMechanism {
     /// Name of mechanism
     public let name = "PLAIN";
 
+    public private(set) var status: SaslMechanismStatus = .new;
+    
     /**
      Process input data to generate response
      - parameter input: input data
@@ -35,7 +37,7 @@ open class PlainMechanism: SaslMechanism {
      - returns: reponse to send to server
      */
     open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) -> String? {
-        if (isComplete(sessionObject)) {
+        if (status == .completed) {
             return nil;
         }
         
@@ -50,10 +52,9 @@ open class PlainMechanism: SaslMechanism {
         let utf8str = lreq.data(using: String.Encoding.utf8);
         let base64 = utf8str?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
         if base64 != nil {
-            setComplete(sessionObject, completed: true);
+            status = .completed;
         }
         
-        setCompleteExpected(sessionObject);
         return base64;
     }
     

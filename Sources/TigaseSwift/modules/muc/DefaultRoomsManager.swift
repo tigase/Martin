@@ -90,11 +90,7 @@ open class DefaultRoomsManager: ContextAware {
     open func getRooms() -> [Room] {
         return store.rooms;
     }
-    
-    open func initialize() {
-        
-    }
-        
+            
     /**
      Remove room instance
      - parameter room: room instance to remove

@@ -38,6 +38,9 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
     
     fileprivate var queue = DispatchQueue(label: "capabilities_cache_queue", attributes: DispatchQueue.Attributes.concurrent);
     
+    public init() {
+    }
+    
     open func getFeatures(for node: String) -> [String]? {
         var result: [String]?;
         queue.sync {

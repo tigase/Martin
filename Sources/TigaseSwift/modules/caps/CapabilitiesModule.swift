@@ -35,11 +35,8 @@ extension XmppModuleIdentifier {
  
  [XEP-0115: Entity Capabilities]:http://xmpp.org/extensions/xep-0115.html
  */
-open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHandler {
-    
-    /// Key used to cache verification string in `SessionObject`
-    public static let VERIFICATION_STRING_KEY = "XEP115VerificationString";
-    
+open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
+        
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "caps";
     public static let IDENTIFIER = XmppModuleIdentifier<CapabilitiesModule>();
@@ -70,8 +67,9 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     }
     
     /// Keeps instance of `CapabilitiesCache` responsible for caching discovery results
-    open var cache: CapabilitiesCache?;
-    
+    public let cache: CapabilitiesCache;
+    private var verificationString: String?;
+
     /// Node used in CAPS advertisement
     open var nodeName = "http://tigase.org/TigaseSwift" + "X";
     
@@ -81,7 +79,8 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     
     public let additionalFeatures: [AdditionalFeatures];
     
-    public init(additionalFeatures: [AdditionalFeatures] = []) {
+    public init(cache: CapabilitiesCache = DefaultCapabilitiesCache(), additionalFeatures: [AdditionalFeatures] = []) {
+        self.cache = cache;
         self.additionalFeatures = additionalFeatures;
     }
     
@@ -89,13 +88,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     open func process(stanza: Stanza) throws {
         throw ErrorCondition.bad_request;
     }
-    
-    open func initialize() {
-        if cache == nil {
-            cache = DefaultCapabilitiesCache();
-        }
-    }
-    
+        
     open func handle(event: Event) {
         switch event {
         case let e as PresenceModule.BeforePresenceSendEvent:
@@ -115,7 +108,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
      - parameter event: event fired before `Presence` is send
      */
     func onBeforePresenceSend(event e: PresenceModule.BeforePresenceSendEvent) {
-        guard let ver: String = context.sessionObject.getProperty(CapabilitiesModule.VERIFICATION_STRING_KEY) ?? calculateVerificationString() else {
+        guard let ver: String = self.verificationString ?? calculateVerificationString() else {
             return;
         }
         
@@ -136,7 +129,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
      */
     func onReceivedPresence(event e: PresenceModule.ContactPresenceChanged) {
         let type = (e.presence.type ?? .available);
-        guard let cache = self.cache, e.presence != nil, let from = e.presence.from, type == .available else {
+        guard e.presence != nil, let from = e.presence.from, type == .available else {
             return;
         }
         
@@ -148,7 +141,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
             guard !self.inProgress.contains(nodeName) else {
                 return;
             }
-            cache.isCached(node: nodeName) { cached in
+            self.cache.isCached(node: nodeName) { cached in
                 guard !cached else {
                     return;
                 }
@@ -167,7 +160,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
                             switch result {
                             case .success(let node, let identities, let features):
                                 let identity = identities.first;
-                                cache.store(node: node!, identity: identity, features: features);
+                                self.cache.store(node: node!, identity: identity, features: features);
                             default:
                                 break;
                             }
@@ -185,12 +178,12 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
     func calculateVerificationString() -> String? {
         let category = context.sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client");
         let type = context.sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc");
-        let name = context.sessionObject.getProperty(SoftwareVersionModule.NAME_KEY, defValue: SoftwareVersionModule.DEFAULT_NAME_VAL);
+        let name = self.context.moduleOrNil(.softwareVersion)?.version.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL;
         let identity = "\(category)/\(type)//\(name)";
         
         let ver = generateVerificationString([identity], features: Array(context.modulesManager.availableFeatures));
         
-        let oldVer: String? = context.sessionObject.getProperty(CapabilitiesModule.VERIFICATION_STRING_KEY);
+        let oldVer: String? = verificationString;
         if oldVer != nil && ver != oldVer {
             discoModule.setNodeCallback(nodeName + "#" + oldVer!, entry: nil);
         }
@@ -199,7 +192,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
                 identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> DiscoveryModule.Identity? in
                     return DiscoveryModule.Identity(category: sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client"),
                         type: sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc"),
-                        name: sessionObject.getProperty(SoftwareVersionModule.NAME_KEY, defValue: SoftwareVersionModule.DEFAULT_NAME_VAL)
+                        name: self.context.moduleOrNil(.softwareVersion)?.version.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL
                     );
                 },
                 features: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]? in
@@ -210,7 +203,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, Initializable, EventHan
             }));
         }
         
-        context.sessionObject.setProperty(CapabilitiesModule.VERIFICATION_STRING_KEY, value: ver);
+        self.verificationString = ver;
         
         return ver;
     }

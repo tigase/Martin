@@ -292,7 +292,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         self.logger.debug("\(self.context) - processing stream features");
         let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
         let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
-        let authorized = context.sessionObject.getProperty(AuthModule.AUTHORIZED, defValue: false);
+        let authorized = (context.moduleOrNil(.auth)?.state ?? .notAuthorized) == .authorized;
         let streamManagementModule = context.modulesManager.moduleOrNil(.streamManagement);
         let resumption = (streamManagementModule?.resumptionEnabled ?? false) && (streamManagementModule?.isAvailable() ?? false);
         
@@ -304,7 +304,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         } else if !authorized {
             self.logger.debug("\(self.context) - starting authentication");
             if let authModule:AuthModule = modulesManager.moduleOrNil(.auth) {
-                if !authModule.inProgress {
+                if authModule.state != .inProgress {
                     authModule.login();
                 } else {
                     self.logger.debug("\(self.context) - skipping authentication as it is already in progress!");

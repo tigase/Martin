@@ -62,15 +62,15 @@ open class ChatStateNotificationsModule: XmppModule, ContextAware {
             return hasSupport(jid: jid.bareJid);
         }
         
-        guard let capsNode = presenceModule.presenceStore.getPresence(for: jid)?.capsNode else {
+        guard let capsNode = presenceModule.store.getPresence(for: jid)?.capsNode else {
             return false;
         }
         
-        return capsModule.cache?.isSupported(for: capsNode, feature: ChatStateNotificationsModule.XMLNS) ?? false;
+        return capsModule.cache.isSupported(for: capsNode, feature: ChatStateNotificationsModule.XMLNS) ?? false;
     }
     
     open func hasSupport(jid: BareJID) -> Bool {
-        guard let presences = presenceModule.presenceStore.getPresences(for: jid) else {
+        guard let presences = presenceModule.store.getPresences(for: jid) else {
             return false;
         }
         
@@ -78,7 +78,7 @@ open class ChatStateNotificationsModule: XmppModule, ContextAware {
             guard let capsNode = value.capsNode else {
                 return false;
             }
-            return capsModule.cache?.isSupported(for: capsNode, feature: ChatStateNotificationsModule.XMLNS) ?? false;
+            return capsModule.cache.isSupported(for: capsNode, feature: ChatStateNotificationsModule.XMLNS) ?? false;
         }
 
         return !withSupport.isEmpty;

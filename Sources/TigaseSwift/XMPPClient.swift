@@ -170,7 +170,6 @@ open class XMPPClient: EventHandler {
             context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queueDispatcher: dispatcher);
             sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queueDispatcher: dispatcher);
             sessionLogic!.bind();
-            modulesManager.initIfRequired();
             
             keepaliveTimer?.cancel();
             if keepaliveTimeout > 0 {
@@ -221,6 +220,7 @@ open class XMPPClient: EventHandler {
         case let de as SocketConnector.DisconnectedEvent:
             keepaliveTimer?.cancel();
             keepaliveTimer = nil;
+            modulesManager.reset(scope: de.clean ? .session : .stream);
             if de.clean {
                 context.sessionObject.clear();
             } else {

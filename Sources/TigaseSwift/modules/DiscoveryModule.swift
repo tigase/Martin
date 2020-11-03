@@ -76,7 +76,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
             identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity? in
                 return Identity(category: sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client"),
                     type: sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc"),
-                    name: sessionObject.getProperty(SoftwareVersionModule.NAME_KEY, defValue: SoftwareVersionModule.DEFAULT_NAME_VAL)
+                    name: self.context.moduleOrNil(.softwareVersion)?.version.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL
                 );
             },
             features: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]? in

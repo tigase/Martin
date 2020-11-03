@@ -25,10 +25,12 @@ import Foundation
  Protocol which must be implemented by every mechanism for SASL based 
  authentication.
  */
-public protocol SaslMechanism {
+public protocol SaslMechanism: class {
 
     /// Mechanism name
     var name: String { get }
+    
+    var status: SaslMechanismStatus { get }
     
     /**
      Process input data and prepare response
@@ -54,33 +56,9 @@ public enum ClientSaslException: Error {
     case genericError(msg: String?)
 }
 
-extension SaslMechanism {
-
-    /**
-     Check if SASL authentication is completed
-     - parameter sessionObject: instance of `SessionObject`
-     - returns: true if completed
-     */
-    public func isComplete(_ sessionObject:SessionObject) -> Bool {
-        return sessionObject.getProperty("SASL_COMPLETE_KEY", defValue: false);
-    }
-    
-    /**
-     Mark SASL authentication as completed
-     - parameter sessionObject: instance of `SessionObject`
-     - parameter completed: true if authentication is completed
-     */
-    func setComplete(_ sessionObject:SessionObject, completed:Bool) {
-        sessionObject.setProperty("SASL_COMPLETE_KEY", value: completed, scope: SessionObject.Scope.stream);
-    }
-    
-    func setCompleteExpected(_ sessionObject: SessionObject) {
-        sessionObject.setProperty("SASL_COMPLETE_EXPECTED_KEY", value: true);
-    }
-    
-    func isCompleteExpected(_ sessionObject: SessionObject) -> Bool {
-        return sessionObject.getProperty("SASL_COMPLETE_EXPECTED_KEY", defValue: false);
-    }
-
+public enum SaslMechanismStatus {
+    case new
+    case completed
+    case completedExpected
 }
 

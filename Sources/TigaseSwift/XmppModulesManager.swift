@@ -35,20 +35,17 @@ public struct XmppModuleIdentifier<T: XmppModule> {
  instances of `XmppModule` which are registered for processing particular
  stanza.
  */
-open class XmppModulesManager : ContextAware {
-    
+open class XmppModulesManager : ContextAware, Resetable {
+        
     open var context:Context!;
     
     /// List of registered instances of `XmppStanzaFilter` which needs to process packets
-    open var filters = [XmppStanzaFilter]();
-    
-    /// List of instances `Initializable` which require initialization
-    fileprivate var initializationRequired = [Initializable]();
-    
+    open private(set) var filters = [XmppStanzaFilter]();
+        
     /// List of registered modules
-    fileprivate(set) var modules = [XmppModule]();
+    open private(set) var modules = [XmppModule]();
     /// Map of registered modules where module id is key - used for fast retrieval of module instances
-    fileprivate var modulesById = [String:XmppModule]();
+    private var modulesById = [String:XmppModule]();
     
     init() {
     }
@@ -127,10 +124,13 @@ open class XmppModulesManager : ContextAware {
     open func hasModule<T:XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> Bool {
         return modulesById[identifier.id] != nil;
     }
-
-    open func initIfRequired() {
-        initializationRequired.forEach { (module) in
-            module.initialize();
+    
+    /// Method resets registered modules internal state
+    open func reset(scope: ResetableScope) {
+        for module in modules {
+            if let resetable = module as? Resetable {
+                resetable.reset(scope: scope);
+            }
         }
     }
     
@@ -147,9 +147,6 @@ open class XmppModulesManager : ContextAware {
         
         modulesById[T.ID] = module;
         modules.append(module);
-        if let initModule = module as? Initializable {
-            initializationRequired.append(initModule);
-        }
         if let filter = module as? XmppStanzaFilter {
             filters.append(filter);
         }
@@ -166,11 +163,6 @@ open class XmppModulesManager : ContextAware {
         modulesById.removeValue(forKey: T.ID)
         if let idx = self.modules.firstIndex(where: { $0 === module}) {
             self.modules.remove(at: idx);
-        }
-        if let initModule = module as? Initializable {
-            if let idx = self.initializationRequired.firstIndex(where: { $0 === initModule }) {
-                self.initializationRequired.remove(at: idx);
-            }
         }
         if let filter = module as? XmppStanzaFilter {
             if let idx = self.filters.firstIndex(where: { $0 === filter }) {

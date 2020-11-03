@@ -1,8 +1,8 @@
 //
-// Initializable.swift
+// Resetable.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,13 +21,13 @@
 
 import Foundation
 
-/**
- Protocol which needs to be supported by `XmppModule`s which needs to be
- initialized before connection is started - ie. to create other objects
- which are required.
- */
-public protocol Initializable: class {
+public protocol Resetable {
     
-    func initialize();
+    func reset(scope: ResetableScope);
     
+}
+
+public enum ResetableScope {
+    case session
+    case stream
 }

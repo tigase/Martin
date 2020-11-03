@@ -29,13 +29,14 @@ open class AnonymousMechanism: SaslMechanism {
     
     public let name = "ANONYMOUS";
     
+    public private(set) var status: SaslMechanismStatus = .new;
+    
     public init() {
         
     }
     
     open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) throws -> String? {
-        setComplete(sessionObject, completed: true);
-        setCompleteExpected(sessionObject);
+        status = .completed;
         return nil;
     }
     

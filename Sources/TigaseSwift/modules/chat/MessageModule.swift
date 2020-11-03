@@ -29,7 +29,7 @@ extension XmppModuleIdentifier {
 /**
  Module provides features responsible for handling messages
  */
-open class MessageModule: XmppModule, ContextAware, Initializable {
+open class MessageModule: XmppModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "message";
     public static let IDENTIFIER = XmppModuleIdentifier<MessageModule>();
@@ -39,12 +39,16 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
     public let features = [String]();
     
     /// Instance of `ChatManager`
-    open var chatManager:ChatManager!;
+    public let chatManager:ChatManager!;
     
     open var context:Context!
     
-    public init() {
-        
+    public convenience init(client: XMPPClient) {
+        self.init(chatManager: DefaultChatManager(context: client.context));
+    }
+    
+    public init(chatManager: ChatManager) {
+        self.chatManager = chatManager;
     }
     
     /**
@@ -55,12 +59,6 @@ open class MessageModule: XmppModule, ContextAware, Initializable {
      */
     open func createChat(with jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
         return chatManager.createChat(with: jid, thread: thread);
-    }
-    
-    open func initialize() {
-        if chatManager == nil {
-            chatManager = DefaultChatManager(context: context);
-        }
     }
     
     open func process(stanza: Stanza) {

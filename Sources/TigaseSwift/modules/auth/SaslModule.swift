@@ -33,16 +33,14 @@ extension XmppModuleIdentifier {
  
  [SASL negotiation and authentication]: https://tools.ietf.org/html/rfc6120#section-6
  */
-open class SaslModule: XmppModule, ContextAware {
+open class SaslModule: XmppModule, ContextAware, Resetable {
     /// Namespace used SASL negotiation and authentication
     static let SASL_XMLNS = "urn:ietf:params:xml:ns:xmpp-sasl";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = SASL_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<SaslModule>();
     
-    fileprivate static let SASL_MECHANISM = "saslMechanism";
-    
-    public let logger = Logger(subsystem: "TigaseSwift", category: "SaslModule")
+    private let logger = Logger(subsystem: "TigaseSwift", category: "SaslModule")
 
     public let criteria = Criteria.or(
         Criteria.name("success", xmlns: SASL_XMLNS),
@@ -54,15 +52,14 @@ open class SaslModule: XmppModule, ContextAware {
     
     open var context:Context!;
     
-    fileprivate var mechanisms = [String:SaslMechanism]();
-    fileprivate var _mechanismsOrder = [String]();
+    private var mechanisms = [String:SaslMechanism]();
+    private var _mechanismsOrder = [String]();
+    
+    // remember to clear it! ie. on SessionObject being cleared!
+    private var mechanismInUse: SaslMechanism?;
     
     open var inProgress: Bool {
-        guard let mechanism: SaslMechanism = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM) else {
-            return false;
-        }
-        
-        return mechanism.isCompleteExpected(context.sessionObject) && !mechanism.isComplete(context.sessionObject);
+        return (mechanismInUse?.status ?? .new) == .completedExpected;
     }
     
     /// Order of mechanisms preference
@@ -90,6 +87,10 @@ open class SaslModule: XmppModule, ContextAware {
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
         self.addMechanism(AnonymousMechanism());
+    }
+    
+    open func reset(scope: ResetableScope) {
+        self.mechanismInUse = nil;
     }
     
     /**
@@ -141,7 +142,7 @@ open class SaslModule: XmppModule, ContextAware {
             context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.invalid_mechanism));
             return;
         }
-        context.sessionObject.setProperty(SaslModule.SASL_MECHANISM, value: mechanism, scope: SessionObject.Scope.stream);
+        self.mechanismInUse = mechanism;
         
         do {
             let auth = Stanza(name: "auth");
@@ -153,7 +154,7 @@ open class SaslModule: XmppModule, ContextAware {
         
             context.writer!.write(auth);
             
-            if mechanism.isCompleteExpected(context.sessionObject) {
+            if mechanism.status == .completedExpected {
                 context.writer?.execAfterWrite {
                     self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(sessionObject: self.context.sessionObject));
                 }
@@ -164,10 +165,10 @@ open class SaslModule: XmppModule, ContextAware {
     }
     
     func processSuccess(_ stanza: Stanza) throws {
-        let mechanism: SaslMechanism? = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM);
+        let mechanism: SaslMechanism? = self.mechanismInUse;
         _ = try mechanism!.evaluateChallenge(stanza.element.value, sessionObject: context.sessionObject);
         
-        if mechanism!.isComplete(context.sessionObject) {
+        if mechanism!.status == .completed {
             logger.debug("Authenticated");
             context.eventBus.fire(SaslAuthSuccessEvent(sessionObject: context.sessionObject));
         } else {
@@ -177,7 +178,7 @@ open class SaslModule: XmppModule, ContextAware {
     }
     
     func processFailure(_ stanza: Stanza) throws {
-        context.sessionObject.setProperty(SaslModule.SASL_MECHANISM, value: nil);
+        self.mechanismInUse = nil;
         let errorName = stanza.findChild()?.name;
         let error = errorName == nil ? nil : SaslError(rawValue: errorName!);
         logger.error("Authentication failed with error: \(error), \(errorName)");
@@ -186,10 +187,10 @@ open class SaslModule: XmppModule, ContextAware {
     }
     
     func processChallenge(_ stanza: Stanza) throws {
-        guard let mechanism: SaslMechanism = context.sessionObject.getProperty(SaslModule.SASL_MECHANISM) else {
+        guard let mechanism: SaslMechanism = self.mechanismInUse else {
             return;
         }
-        if mechanism.isComplete(context.sessionObject) {
+        if mechanism.status == .completed {
             throw ErrorCondition.bad_request;
         }
         let challenge = stanza.element.value;
@@ -199,7 +200,7 @@ open class SaslModule: XmppModule, ContextAware {
         responseEl.element.value = response;
         context.writer?.write(responseEl);
         
-        if mechanism.isCompleteExpected(context.sessionObject) {
+        if mechanism.status == .completedExpected {
             context.writer?.execAfterWrite {
                 self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(sessionObject: self.context.sessionObject));
             }

@@ -34,11 +34,8 @@ extension XmppModuleIdentifier {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html
  */
-open class PresenceModule: XmppModule, ContextAware, EventHandler, Initializable {
-    
-    public static let INITIAL_PRESENCE_ENABLED_KEY = "initalPresenceEnabled";
-    public static let PRESENCE_STORE_KEY = "presenceStore";
-    
+open class PresenceModule: XmppModule, ContextAware, EventHandler {
+        
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "presence";
     public static let IDENTIFIER = XmppModuleIdentifier<PresenceModule>();
@@ -61,45 +58,29 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler, Initializable
     }
     
     /// Should initial presence be sent automatically
-    open var initialPresence:Bool {
-        get {
-            return context.sessionObject.getProperty(PresenceModule.INITIAL_PRESENCE_ENABLED_KEY, defValue: true);
-        }
-        set {
-            context.sessionObject.setUserProperty(PresenceModule.INITIAL_PRESENCE_ENABLED_KEY, value: newValue);
-        }
-    }
+    open var initialPresence: Bool = true;
     
     /// Presence store with current presence informations
-    open var presenceStore:PresenceStore {
-        get {
-            return PresenceModule.getPresenceStore(context.sessionObject);
-        }
+    public let store: PresenceStore;
+    @available(*, deprecated, renamed: "store")
+    public var presenceStore: PresenceStore {
+        return store;
     }
     
     /// Should send presence changes events during stream resumption
     open var fireEventsOnStreamResumption = true;
     fileprivate var streamResumptionPresences: [Presence]? = nil;
     
+    @available(*, deprecated, message: "Use store property of the module instance directly!")
     public static func getPresenceStore(_ sessionObject:SessionObject) -> PresenceStore {
-        let presenceStore:PresenceStore = sessionObject.getProperty(PRESENCE_STORE_KEY)!;
-        return presenceStore;
+        return sessionObject.context.module(.presence).store;
     }
     
-    public init() {
+    public init(store: PresenceStore = PresenceStore()) {
+        self.store = store;
+        store.handler = PresenceStoreHandlerImpl(presenceModule: self);
+    }
         
-    }
-    
-    open func initialize() {
-        var presenceStoreTmp:PresenceStore? = context.sessionObject.getProperty(PresenceModule.PRESENCE_STORE_KEY);
-        if presenceStoreTmp == nil {
-            presenceStoreTmp = PresenceStore();
-            context.sessionObject.setProperty(PresenceModule.PRESENCE_STORE_KEY, value: presenceStoreTmp, scope: .user);
-        }
-        
-        presenceStore.setHandler(PresenceStoreHandlerImpl(presenceModule:self));
-    }
-    
     open func handle(event: Event) {
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
@@ -111,7 +92,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler, Initializable
             }
         case is StreamManagementModule.ResumedEvent:
             self.streamResumptionPresences?.forEach { presence in
-                let availabilityChanged = presenceStore.update(presence: presence);
+                let availabilityChanged = store.update(presence: presence);
                 context.eventBus.fire(ContactPresenceChanged(sessionObject: context.sessionObject, presence: presence, availabilityChanged: availabilityChanged));
             }
             self.streamResumptionPresences = nil;
@@ -119,10 +100,10 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler, Initializable
             self.streamResumptionPresences = nil;
         case let ce as SessionObject.ClearedEvent:
             if ce.scopes.contains(.session) {
-                presenceStore.clear();
+                store.clear();
             } else if ce.scopes.contains(.stream) && self.fireEventsOnStreamResumption {
-                self.streamResumptionPresences = presenceStore.getAllPresences();
-                presenceStore.clear();
+                self.streamResumptionPresences = store.getAllPresences();
+                store.clear();
             }
         default:
             logger.error("received unknown event: \(event)");
@@ -134,7 +115,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler, Initializable
             let type = presence.type ?? StanzaType.available;
             switch type {
             case .available, .unavailable, .error:
-                let availabilityChanged = presenceStore.update(presence: presence);
+                let availabilityChanged = store.update(presence: presence);
                 context.eventBus.fire(ContactPresenceChanged(sessionObject: context.sessionObject, presence: presence, availabilityChanged: availabilityChanged));
             case .unsubscribed:
                 context.eventBus.fire(ContactUnsubscribedEvent(sessionObject: context.sessionObject, presence: presence));

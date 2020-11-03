@@ -97,6 +97,10 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     
     public var automaticRetrieve: Set<AutomaticRetriveActions> = [.participants,.info,.avatar,.affiliations];
     
+    public convenience init(client: XMPPClient) {
+        self.init(channelManager: DefaultChannelManager(context: client.context, store: DefaultChannelStore()));
+    }
+
     public init(channelManager: ChannelManager) {
         self.channelManager = channelManager;
     }
@@ -147,7 +151,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 if let channel = self.channelManager.channel(for: channelJid) {
                     _  = self.channelManager.close(channel: channel);
                 }
-                self.rosterModule.rosterStore.remove(jid: JID(channelJid), onSuccess: nil, onError: nil);
+                self.rosterModule.store.remove(jid: JID(channelJid), onSuccess: nil, onError: nil);
                 completionHandler(.success(Void()));
             case .failure(let errorCondition, _):
                 completionHandler(.failure(errorCondition));

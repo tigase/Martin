@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0045: Multi-User Chat]: http://xmpp.org/extensions/xep-0045.html
  */
-open class MucModule: XmppModule, ContextAware, Initializable, EventHandler {
+open class MucModule: XmppModule, ContextAware, EventHandler {
     /// ID of module for lookup in `XmppModulesManager`
     public static let IDENTIFIER = XmppModuleIdentifier<MucModule>();
     public static let ID = "muc";
@@ -68,14 +68,14 @@ open class MucModule: XmppModule, ContextAware, Initializable, EventHandler {
     /// Instance of DefautRoomManager
     public let roomsManager: DefaultRoomsManager;
     
+    public convenience init(client: XMPPClient, store: RoomStore) {
+        self.init(roomsManager: DefaultRoomsManager(store: store));
+    }
+
     public init(roomsManager: DefaultRoomsManager) {
         self.roomsManager = roomsManager;
     }
-    
-    open func initialize() {
-        roomsManager.initialize();
-    }
-    
+        
     open func handle(event: Event) {
         switch event {
         case let sec as SessionObject.ClearedEvent:
