@@ -36,26 +36,29 @@ open class PlainMechanism: SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: reponse to send to server
      */
-    open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) -> String? {
+    open func evaluateChallenge(_ input: String?, context: Context) -> String? {
         if (status == .completed) {
             return nil;
         }
         
-        let callback:CredentialsCallback = sessionObject.getProperty(AuthModule.CREDENTIALS_CALLBACK) ?? DefaultCredentialsCallback(sessionObject: sessionObject);
-        
-        let userJid:BareJID = sessionObject.getProperty(SessionObject.USER_BARE_JID)!;
-        let authcid:String = sessionObject.getProperty(AuthModule.LOGIN_USER_NAME_KEY) ?? userJid.localPart!;
-        let credential = callback.getCredential();
-        
-        let lreq = "\0\(authcid)\0\(credential)";
-        
-        let utf8str = lreq.data(using: String.Encoding.utf8);
-        let base64 = utf8str?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
-        if base64 != nil {
-            status = .completed;
+        switch context.connectionConfiguration.credentials {
+        case .password(let password, let authenticationName, _):
+            let userJid: BareJID = context.userBareJid;
+            let authcid: String = authenticationName ?? userJid.localPart!;
+
+            let lreq = "\0\(authcid)\0\(password)";
+            
+            let utf8str = lreq.data(using: String.Encoding.utf8);
+            let base64 = utf8str?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
+            if base64 != nil {
+                status = .completed;
+            }
+
+            return base64;
+        default:
+            status = .new;
+            return nil;
         }
-        
-        return base64;
     }
     
     /**
@@ -63,9 +66,13 @@ open class PlainMechanism: SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: true if usage is allowed
      */
-    open func isAllowedToUse(_ sessionObject: SessionObject) -> Bool {
-        return sessionObject.hasProperty(SessionObject.PASSWORD)
-            && sessionObject.hasProperty(SessionObject.USER_BARE_JID);
+    open func isAllowedToUse(_ context: Context) -> Bool {
+        switch context.connectionConfiguration.credentials {
+        case .password(_, _, _):
+            return true;
+        default:
+            return false;
+        }
     }
     
 

@@ -160,7 +160,7 @@ open class JingleModule: XmppModule, ContextAware {
         let jingle = stanza.findChild(name: "jingle", xmlns: JingleModule.XMLNS)!;
         
         // sid is required but Movim is not sending it so we are adding another workaround!
-        guard let action = Jingle.Action(rawValue: jingle.getAttribute("action") ?? ""), let from = stanza.from, let sid = jingle.getAttribute("sid") ?? sessionManager.activeSessionSid(for: context.sessionObject.userBareJid!, with: from), let initiator = JID(jingle.getAttribute("initiator")) ?? stanza.from else {
+        guard let action = Jingle.Action(rawValue: jingle.getAttribute("action") ?? ""), let from = stanza.from, let sid = jingle.getAttribute("sid") ?? sessionManager.activeSessionSid(for: context.userBareJid, with: from), let initiator = JID(jingle.getAttribute("initiator")) ?? stanza.from else {
             throw ErrorCondition.bad_request;
         }
         
@@ -212,10 +212,10 @@ open class JingleModule: XmppModule, ContextAware {
     public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID) {
         switch action {
         case .proceed(let id):
-            sendMessageInitiation(action: .accept(id: id), to: JID(context.sessionObject.userBareJid!));
+            sendMessageInitiation(action: .accept(id: id), to: JID(context.userBareJid));
         case .reject(let id):
-            if jid.bareJid != context.sessionObject.userBareJid! {
-                sendMessageInitiation(action: .reject(id: id), to: JID(context.sessionObject.userBareJid!));
+            if jid.bareJid != context.userBareJid {
+                sendMessageInitiation(action: .reject(id: id), to: JID(context.userBareJid));
             }
         default:
             break;

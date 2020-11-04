@@ -32,14 +32,11 @@ extension XmppModuleIdentifier {
  
  [resource binding]: http://xmpp.org/rfcs/rfc6120.html#bind
  */
-open class ResourceBinderModule: XmppModule, ContextAware {
+open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
  
     /// Namespace used by resource binding
     static let BIND_XMLNS = "urn:ietf:params:xml:ns:xmpp-bind";
-    
-    /// Name of property in `SessionObject` used to store binded `JID`
-    static let BINDED_RESOURCE_JID = "BINDED_RESOURCE_JID";
-    
+        
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = BIND_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<ResourceBinderModule>();
@@ -50,17 +47,25 @@ open class ResourceBinderModule: XmppModule, ContextAware {
     
     open var context:Context!;
     
+    open private(set) var bindedJid: JID?;
+    
     /**
      Method returns binded JID retrieved from property of `SessionObject`
      - parameter sessionObject: instance of `SessionObject` to retrieve from
      - returns: binded JID
      */
     public static func getBindedJid(_ sessionObject:SessionObject) -> JID? {
-        return sessionObject.getProperty(ResourceBinderModule.BINDED_RESOURCE_JID);
+        return sessionObject.context.module(.resourceBind).bindedJid;
     }
     
     public init() {
         
+    }
+    
+    public func reset(scope: ResetableScope) {
+        if scope == .session {
+            bindedJid = nil;
+        }
     }
     
     /// Method called to bind resource
@@ -70,7 +75,7 @@ open class ResourceBinderModule: XmppModule, ContextAware {
         let bind = Element(name:"bind");
         bind.xmlns = ResourceBinderModule.BIND_XMLNS;
         iq.element.addChild(bind);
-        let resource:String? = context.sessionObject.getProperty(SessionObject.RESOURCE);
+        let resource:String? = context.connectionConfiguration.resource;
         bind.addChild(Element(name: "resource", cdata:resource));
         context.writer?.write(iq) { (stanza:Stanza?) in
             var errorCondition:ErrorCondition?;
@@ -79,7 +84,7 @@ open class ResourceBinderModule: XmppModule, ContextAware {
                 case .result:
                     if let name = stanza!.element.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {
                         let jid = JID(name);
-                        self.context.sessionObject.setProperty(ResourceBinderModule.BINDED_RESOURCE_JID, value: jid);
+                        self.bindedJid = jid;
                         self.context.eventBus.fire(ResourceBindSuccessEvent(sessionObject: self.context.sessionObject, bindedJid: jid));
                         return;
                     }

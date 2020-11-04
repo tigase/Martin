@@ -335,7 +335,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         let r = stanza.getAttribute("resume");
         let mx = stanza.getAttribute("max");
         let resume = r == "true" || r == "1";
-        if let location = SocketConnector.preprocessConnectionDetails(string: stanza.getAttribute("location")), let details: XMPPSrvRecord = self.context.sessionObject.getProperty(SocketConnector.CURRENT_CONNECTION_DETAILS) {
+        if let location = SocketConnector.preprocessConnectionDetails(string: stanza.getAttribute("location")), let details: XMPPSrvRecord = self.context.currentConnectionDetails {
             _resumptionLocation = XMPPSrvRecord(port: location.1 ?? details.port, weight: 1, priority: 1, target: location.0, directTls: details.directTls)
         } else {
             _resumptionLocation = nil;

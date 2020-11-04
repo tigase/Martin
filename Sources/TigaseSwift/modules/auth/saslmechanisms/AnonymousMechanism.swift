@@ -35,13 +35,18 @@ open class AnonymousMechanism: SaslMechanism {
         
     }
     
-    open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) throws -> String? {
+    open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
         status = .completed;
         return nil;
     }
     
-    open func isAllowedToUse(_ sessionObject: SessionObject) -> Bool {
-        return sessionObject.userBareJid == nil;
+    open func isAllowedToUse(_ context: Context) -> Bool {
+        switch context.connectionConfiguration.credentials {
+        case .none:
+            return true;
+        default:
+            return false;
+        }
     }
     
 }

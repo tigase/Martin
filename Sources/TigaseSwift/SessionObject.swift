@@ -27,24 +27,6 @@ import TigaseLogging
  */
 open class SessionObject {
     
-    public static let DOMAIN_NAME = "domainName";
-    
-    public static let NICKNAME = "nickname";
-    
-    public static let PASSWORD = "password";
-    
-    public static let RESOURCE = "resource";
-    
-    public static let USER_BARE_JID = "userBareJid";
-    
-    public static let STARTTLS_ACTIVE = "starttls#active";
-    
-    public static let STARTTLS_DISLABLED = "starttls#disabled";
-    
-    public static let COMPRESSION_ACTIVE = "compression#active";
-    
-    public static let COMPRESSION_DISABLED = "compression#disabled";
-    
     /**
      Possible scopes of properties stored in SessionObject instance:
      - stream: values will be removed when stream is closed or broken
@@ -76,17 +58,10 @@ open class SessionObject {
     /// Returns BareJID of user for connection - will be nil if user jid is not set (ie. during ANONYMOUS connection)
     open var userBareJid: BareJID? {
         get {
-            return self.getProperty(SessionObject.USER_BARE_JID);
+            return self.context.userBareJid;
         }
     }
-    
-    /// Returns domain name of server for connection
-    open var domainName: String? {
-        get {
-            return userBareJid?.domain ?? getProperty(SessionObject.DOMAIN_NAME);
-        }
-    }
-    
+        
     open internal(set) weak var context: Context!;
     
     public init(eventBus:EventBus) {

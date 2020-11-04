@@ -66,7 +66,7 @@ open class PEPBookmarksModule: AbstractPEPModule {
     }
     
     public func publish(bookmarks: Bookmarks) {
-        let pepJID = JID(context.sessionObject.userBareJid!);
+        let pepJID = JID(context.userBareJid);
         discoModule.getInfo(for: pepJID, node: PEPBookmarksModule.ID, onInfoReceived: { (node, identities, features) in
             self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
         }) { (error) in
@@ -100,7 +100,7 @@ open class PEPBookmarksModule: AbstractPEPModule {
                 return false;
             }) {
                 // requesting Bookmarks!!
-                let pepJID = context.sessionObject.userBareJid!;
+                let pepJID = context.userBareJid;
                 pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, rsm: nil, lastItems: 1, itemIds: nil, onSuccess: { (stanza, node, items, rsm) in
                     if let item = items.first {
                         if let bookmarks = Bookmarks(from: item.payload) {
@@ -112,7 +112,7 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }
             
         case let e as PubSubModule.NotificationReceivedEvent:
-            guard let from = e.message.from?.bareJid, let account = e.sessionObject.userBareJid, from == account else {
+            guard let from = e.message.from?.bareJid, context.userBareJid == from else {
                 return;
             }
             if let bookmarks = Bookmarks(from: e.payload) {

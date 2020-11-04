@@ -32,18 +32,8 @@ extension XmppModuleIdentifier {
  
  [XEP-0030: Service Discovery]: http://xmpp.org/extensions/xep-0030.html
  */
-open class DiscoveryModule: AbstractIQModule, ContextAware {
+open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
 
-    /**
-     Property name under which category of XMPP entity is hold for returning
-     to remote clients on query
-     */
-    public static let IDENTITY_CATEGORY_KEY = "discoveryIdentityCategory";
-    /** 
-     Property name under which type of XMPP entity is hold for returning 
-     to remote clients on query
-     */
-    public static let IDENTITY_TYPE_KEY = "discoveryIdentityType";
     /// Namespace used by service discovery
     public static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
     /// Namespace used by service discovery
@@ -51,13 +41,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "discovery";
     public static let IDENTIFIER = XmppModuleIdentifier<DiscoveryModule>();
-    
-    public static let SERVER_IDENTITY_TYPES_KEY = "serverIdentityTypes";
-    public static let SERVER_FEATURES_KEY = "serverFeatures";
-    
-    public static let ACCOUNT_IDENTITY_TYPES_KEY = "accountIdentityTypes";
-    public static let ACCOUNT_FEATURES_KEY = "accountFeatures";
-    
+        
     open var context:Context!;
     
     public let criteria = Criteria.name("iq").add(
@@ -71,13 +55,16 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
     
     fileprivate var callbacks = [String:NodeDetailsEntry]();
     
-    public init() {
+    public let identity: Identity;
+    
+    public private(set) var serverDiscoResult: DiscoveryResult?;
+    public private(set) var accountDiscoResult: DiscoveryResult?;
+    
+    public init(identity: Identity = Identity(category: "client", type: "pc", name: SoftwareVersionModule.DEFAULT_NAME_VAL)) {
+        self.identity = identity;
         setNodeCallback(nil, entry: NodeDetailsEntry(
             identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity? in
-                return Identity(category: sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client"),
-                    type: sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc"),
-                    name: self.context.moduleOrNil(.softwareVersion)?.version.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL
-                );
+                return self.identity;
             },
             features: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]? in
                 return Array(self.context.modulesManager.availableFeatures);
@@ -96,8 +83,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
     open func discoverServerFeatures(onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
             getInfo(for: JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
-                self.context.sessionObject.setProperty(DiscoveryModule.SERVER_IDENTITY_TYPES_KEY, value: identities);
-                self.context.sessionObject.setProperty(DiscoveryModule.SERVER_FEATURES_KEY, value: features)
+                self.serverDiscoResult = DiscoveryResult(identities: identities, features: features);
                 self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features, identities: identities));
                 onInfoReceived?(node, identities, features);
                 }, onError: onError);
@@ -112,8 +98,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
     open func discoverAccountFeatures(onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
             getInfo(for: jid.withoutResource, onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
-                self.context.sessionObject.setProperty(DiscoveryModule.ACCOUNT_IDENTITY_TYPES_KEY, value: identities);
-                self.context.sessionObject.setProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY, value: features)
+                self.accountDiscoResult = DiscoveryResult(identities: identities, features: features);
                 self.context.eventBus.fire(AccountFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
                 onInfoReceived?(node, identities, features);
             }, onError: onError);
@@ -376,6 +361,11 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
         context.writer?.write(result);
     }
  
+    public func reset(scope: ResetableScope) {
+        self.accountDiscoResult = nil;
+        self.serverDiscoResult = nil;
+    }
+    
     /**
      Container class which holds informations to return on service 
      discovery for particular node
@@ -477,6 +467,10 @@ open class DiscoveryModule: AbstractIQModule, ContextAware {
         }
     }
 
+    public struct DiscoveryResult {
+        public let identities: [Identity];
+        public let features: [String];
+    }
 }
 
 public enum DiscoveryModuleInfoResult {

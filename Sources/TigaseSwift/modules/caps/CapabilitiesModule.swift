@@ -176,10 +176,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
      - returns: calculated verification string
      */
     func calculateVerificationString() -> String? {
-        let category = context.sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client");
-        let type = context.sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc");
-        let name = self.context.moduleOrNil(.softwareVersion)?.version.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL;
-        let identity = "\(category)/\(type)//\(name)";
+        let identity = "\(discoModule.identity.category)/\(discoModule.identity.type)//\(discoModule.identity.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL)";
         
         let ver = generateVerificationString([identity], features: Array(context.modulesManager.availableFeatures));
         
@@ -188,12 +185,10 @@ open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
             discoModule.setNodeCallback(nodeName + "#" + oldVer!, entry: nil);
         }
         if ver != nil {
+            let identity = self.discoModule.identity;
             discoModule.setNodeCallback(nodeName + "#" + ver!, entry: DiscoveryModule.NodeDetailsEntry(
                 identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> DiscoveryModule.Identity? in
-                    return DiscoveryModule.Identity(category: sessionObject.getProperty(DiscoveryModule.IDENTITY_CATEGORY_KEY, defValue: "client"),
-                        type: sessionObject.getProperty(DiscoveryModule.IDENTITY_TYPE_KEY, defValue: "pc"),
-                        name: self.context.moduleOrNil(.softwareVersion)?.version.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL
-                    );
+                    return identity;
                 },
                 features: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]? in
                     return Array(self.context.modulesManager.availableFeatures);

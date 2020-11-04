@@ -22,19 +22,9 @@
 import Foundation
 
 open class SslCertificateValidator {
-    
-    public static let ACCEPTED_SSL_CERTIFICATE_FINGERPRINT = "SslCertificateValidator#AcceptedFingerprint";
- 
-    public static func registerSslCertificateValidator(_ sessionObject: SessionObject) {
-        sessionObject.setUserProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR, value: SslCertificateValidator.validateSslCertificate);
-    }
-    
-    public static func setAcceptedSslCertificate(_ sessionObject: SessionObject, fingerprint: String?) {
-        sessionObject.setUserProperty(SslCertificateValidator.ACCEPTED_SSL_CERTIFICATE_FINGERPRINT, value: fingerprint);
-    }
-    
-    public static func validateSslCertificate(_ sessionObject: SessionObject, trust: SecTrust) -> Bool {
-        let policy = SecPolicyCreateSSL(false, sessionObject.userBareJid?.domain as CFString?);
+        
+    public static func validateSslCertificate(domain: String, fingerprint acceptedFingerprint: String, trust: SecTrust) -> Bool {
+        let policy = SecPolicyCreateSSL(false, domain as CFString?);
         var secTrustResultType = SecTrustResultType.invalid;
         SecTrustSetPolicies(trust, policy);
         SecTrustEvaluate(trust, &secTrustResultType);
@@ -46,7 +36,6 @@ open class SslCertificateValidator {
             if certCount > 0 {
                 let cert = SecTrustGetCertificateAtIndex(trust, 0);
                 let fingerprint = SslCertificateInfo.calculateSha1Fingerprint(certificate: cert!);
-                let acceptedFingerprint: String? = sessionObject.getProperty(SslCertificateValidator.ACCEPTED_SSL_CERTIFICATE_FINGERPRINT);
                 valid = fingerprint == acceptedFingerprint;
             }
             else {
@@ -56,4 +45,10 @@ open class SslCertificateValidator {
         return valid;
     }
     
+}
+
+public enum SSLCertificateValidation {
+    case `default`
+    case fingerprint(String)
+    case customValidator((SecTrust)->Bool)
 }

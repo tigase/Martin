@@ -148,7 +148,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             let auth = Stanza(name: "auth");
             auth.element.xmlns = SaslModule.SASL_XMLNS;
             auth.element.setAttribute("mechanism", value: mechanism.name);
-            auth.element.value = try mechanism.evaluateChallenge(nil, sessionObject: context.sessionObject);
+            auth.element.value = try mechanism.evaluateChallenge(nil, context: context);
         
             context.eventBus.fire(SaslAuthStartEvent(sessionObject:context.sessionObject, mechanism: mechanism.name))
         
@@ -166,7 +166,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
     
     func processSuccess(_ stanza: Stanza) throws {
         let mechanism: SaslMechanism? = self.mechanismInUse;
-        _ = try mechanism!.evaluateChallenge(stanza.element.value, sessionObject: context.sessionObject);
+        _ = try mechanism!.evaluateChallenge(stanza.element.value, context: context);
         
         if mechanism!.status == .completed {
             logger.debug("Authenticated");
@@ -194,7 +194,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             throw ErrorCondition.bad_request;
         }
         let challenge = stanza.element.value;
-        let response = try mechanism.evaluateChallenge(challenge, sessionObject: context.sessionObject);
+        let response = try mechanism.evaluateChallenge(challenge, context: context);
         let responseEl = Stanza(name: "response");
         responseEl.element.xmlns = SaslModule.SASL_XMLNS;
         responseEl.element.value = response;
@@ -222,7 +222,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
                 if (!supported.contains(name)) {
                     continue;
                 }
-                if (mechanism.isAllowedToUse(context.sessionObject)) {
+                if (mechanism.isAllowedToUse(context)) {
                     return mechanism;
                 }
             }

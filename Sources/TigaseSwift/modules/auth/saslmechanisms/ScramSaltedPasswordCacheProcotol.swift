@@ -31,27 +31,27 @@ public protocol ScramSaltedPasswordCacheProtocol {
     
     /**
      Retrive salted version of a password for provided parameters
-     - parameter for: instance of `SessionObject`
+     - parameter for: instance of `Context`
      - parameter id: id of a salted password generated using `generateId()` method
      */
-    func getSaltedPassword(for: SessionObject, id: String) -> [UInt8]?;
+    func getSaltedPassword(for: Context, id: String) -> [UInt8]?;
     
     /**
      Store salted version of a password for future usage
-     - parameter for: instance of `SessionObject`
+     - parameter for: instance of `Context`
      - parameter id: id of a salted password generated using `generateId()` method
      - parameter saltedPassword: actual value of a salted password
      
      - Node:
      This method should clear any other salted password values stored for passed instance of a `SessionObject`.
     */
-    func store(for: SessionObject, id: String, saltedPassword: [UInt8]);
+    func store(for: Context, id: String, saltedPassword: [UInt8]);
     
     /**
      Clear all cached salted passwords for particular session object
      - parameter for: instance of `SessionObject`
     */
-    func clearCache(for: SessionObject);
+    func clearCache(for: Context);
  
 }
 
@@ -69,27 +69,37 @@ open class DefaultScramSaltedPasswordCache: ScramSaltedPasswordCacheProtocol {
     public static let SALTED_ID_KEY = "scramSaltedId";
     public static let SALTED_PASSWORD_KEY = "scramSaltedPassword";
     
+    private var cache: [BareJID: Entry] = [:];
+    
     public init() {
     }
     
-    public func getSaltedPassword(for sessionObject: SessionObject, id: String) -> [UInt8]? {
-        guard let storedId: String = sessionObject.getProperty(DefaultScramSaltedPasswordCache.SALTED_ID_KEY) else {
+    public func getSaltedPassword(for context: Context, id: String) -> [UInt8]? {
+        guard let entry = cache[context.userBareJid] else {
             return nil;
         }
-        guard id == storedId else {
+        guard id == entry.id else {
+            cache.removeValue(forKey: context.userBareJid);
             return nil;
         }
-        return sessionObject.getProperty(DefaultScramSaltedPasswordCache.SALTED_PASSWORD_KEY);
+        return entry.saltedPassword;
     }
     
-    public func store(for sessionObject: SessionObject, id: String, saltedPassword: [UInt8]) {
-        clearCache(for: sessionObject);
-        sessionObject.setUserProperty(DefaultScramSaltedPasswordCache.SALTED_PASSWORD_KEY, value: saltedPassword);
-        sessionObject.setUserProperty(DefaultScramSaltedPasswordCache.SALTED_ID_KEY, value: id);
+    public func store(for context: Context, id: String, saltedPassword: [UInt8]) {
+        cache[context.userBareJid] = Entry(id: id, saltedPassword: saltedPassword);
     }
     
-    public func clearCache(for sessionObject: SessionObject) {
-        sessionObject.setUserProperty(DefaultScramSaltedPasswordCache.SALTED_ID_KEY, value: nil);
-        sessionObject.setUserProperty(DefaultScramSaltedPasswordCache.SALTED_PASSWORD_KEY, value: nil);
+    public func clearCache(for context: Context) {
+        cache.removeValue(forKey: context.userBareJid);
+    }
+    
+    class Entry {
+        let id: String;
+        let saltedPassword: [UInt8];
+        
+        init(id: String, saltedPassword: [UInt8]) {
+            self.id = id;
+            self.saltedPassword = saltedPassword;
+        }
     }
 }

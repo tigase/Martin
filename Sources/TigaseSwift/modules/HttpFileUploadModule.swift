@@ -65,7 +65,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
     }
     
     open func findHttpUploadComponent(onSuccess: @escaping ([JID:Int?])->Void, onError: @escaping (ErrorCondition?)->Void) {        
-        let serverJid = JID(context.sessionObject.userBareJid!.domain)!;
+        let serverJid = JID(context.userBareJid.domain);
         discoModule.getItems(for: serverJid, onItemsReceived: { (_, items) in
             var components: [JID:Int?] = [:];
             var queries = items.count;

@@ -41,14 +41,14 @@ open class PushNotificationsModule: XmppModule, ContextAware {
     open var context:Context!;
     
     open var isAvailable: Bool {
-        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+        if let features: [String] = context.module(.disco).accountDiscoResult?.features {
             if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
                 return true;
             }
         }
         
         // TODO: fallback to handle previous behavior - remove it later on...
-        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) {
+        if let features: [String] = context.module(.disco).serverDiscoResult?.features {
             if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
                 return true;
             }
@@ -58,14 +58,14 @@ open class PushNotificationsModule: XmppModule, ContextAware {
     }
     
     open func isSupported(extension type: PushNotificationsModuleExtension.Type) -> Bool {
-        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+        if let features: [String] = context.module(.disco).accountDiscoResult?.features {
             return features.contains(type.XMLNS);
         }
         return false;
     }
     
     open func isSupported(feature: String) -> Bool {
-        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+        if let features: [String] = context.module(.disco).accountDiscoResult?.features {
             return features.contains(feature);
         }
         return false;
@@ -86,7 +86,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         guard let jid = BareJID(affiliationEl.getAttribute("jid")), let affiliation = affiliationEl.getAttribute("affiliation") else {
             return;
         }
-        guard jid == context.sessionObject.userBareJid && affiliation == "none" else {
+        guard jid == context.userBareJid && affiliation == "none" else {
             return;
         }
         

@@ -145,7 +145,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
         presence.status = status;
         presence.priority = priority;
         
-        if let nick:String = context.sessionObject.getProperty(SessionObject.NICKNAME) {
+        if let nick: String = context.connectionConfiguration.nickname {
             presence.nickname = nick;
         }
         

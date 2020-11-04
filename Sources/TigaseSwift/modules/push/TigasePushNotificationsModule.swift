@@ -65,7 +65,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     
     open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,ErrorCondition>)->Void) {
         let discoModule = context.modulesManager.module(.disco);
-        discoModule.getItems(for: JID(context.sessionObject.userBareJid!.domain)!, node: nil, onItemsReceived: {(node, items) in
+        discoModule.getItems(for: JID(context.userBareJid.domain), node: nil, onItemsReceived: {(node, items) in
             let result = DiscoResults(items: items) { (jids) in
                 self.logger.debug("\(self.context) - found proper push components at \(jids)");
                 if let jid = jids.first {

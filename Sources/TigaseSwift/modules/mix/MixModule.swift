@@ -56,12 +56,14 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
             context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
             if let context = context {
+                discoModule = context.modulesManager.module(.disco);
                 mamModule = context.modulesManager.module(.mam);
                 pubsubModule = context.modulesManager.module(.pubsub);
                 avatarModule = context.modulesManager.module(.pepUserAvatar);
                 presenceModule = context.modulesManager.module(.presence);
                 rosterModule = context.modulesManager.module(.roster);
             } else {
+                discoModule = nil;
                 mamModule = nil;
                 pubsubModule = nil;
                 avatarModule = nil;
@@ -71,6 +73,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         }
     }
 
+    private var discoModule: DiscoveryModule!;
     private var mamModule: MessageArchiveManagementModule!;
     private var pubsubModule: PubSubModule!;
     private var avatarModule: PEPUserAvatarModule!;
@@ -80,7 +83,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     public let channelManager: ChannelManager;
     
     public var isPAM2SupportAvailable: Bool {
-        let accountFeatures: [String] = context.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) ?? [];
+        let accountFeatures: [String] = discoModule.accountDiscoResult?.features ?? [];
         return accountFeatures.contains(MixModule.PAM2_XMLNS);
     }
     
@@ -162,7 +165,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
-            iq.to = JID(context.sessionObject.userBareJid!);
+            iq.to = JID(context.userBareJid);
             iq.type = .set;
             let clientJoin = Element(name: "client-join", xmlns: MixModule.PAM2_XMLNS);
             clientJoin.setAttribute("channel", value: channelJid.stringValue);
@@ -218,7 +221,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     open func leave(channel: Channel, completionHandler: @escaping (AsyncResult<Stanza>)->Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
-            iq.to = JID(context.sessionObject.userBareJid!);
+            iq.to = JID(context.userBareJid);
             iq.type = .set;
             let clientLeave = Element(name: "client-leave", xmlns: MixModule.PAM2_XMLNS);
             clientLeave.setAttribute("channel", value: channel.channelJid.stringValue);
@@ -477,7 +480,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             pubsubModule.createNode(at: channelJid, node: AccessRule.allow.node, completionHandler: { result in
                 switch result {
                 case .success(_):
-                    self.allowAccess(to: channelJid, for: self.context.sessionObject.userBareJid!, completionHandler: completionHandler);
+                    self.allowAccess(to: channelJid, for: self.context.userBareJid, completionHandler: completionHandler);
                 case .failure(let errorCondition, _, _):
                     completionHandler(.failure(errorCondition));
                 }
@@ -643,7 +646,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 }
             }
             if isPAM2SupportAvailable {
-                let store = RosterModule.getRosterStore(context.sessionObject);
+                let store = rosterModule.store;
                 for jid in store.getJids() {
                     if let item = store.get(for: jid), let annotation = item.annotations.first(where: { item -> Bool in
                         return item.type == "mix";

@@ -60,10 +60,10 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     }
     
     open var availableVersion: Version? {
-        if let accountFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.ACCOUNT_FEATURES_KEY) {
+        if let accountFeatures: [String] = context?.module(.disco).accountDiscoResult?.features {
             return Version.values.first(where: { version in accountFeatures.contains(version.rawValue) });
         }
-        if let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) {
+        if let serverFeatures: [String] = context?.module(.disco).serverDiscoResult?.features {
             return Version.values.first(where: { version in serverFeatures.contains(version.rawValue) });
         }
         return nil;
@@ -116,7 +116,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
 //                let chat = messageModule.processMessage(message, interlocutorJid: from, fireEvents: false)
 //            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: chat));
 //            }
-            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.sessionObject.userBareJid!, message: message, timestamp: timestamp));
+            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
         });
     }
     

@@ -49,7 +49,6 @@ public protocol XmppSessionLogic: class {
     /// Called when stream is terminated abnormally
     func onStreamTerminate();
     /// Using properties set decides which name use to connect to XMPP server
-    func serverToConnect() -> String;
     func serverToConnectDetails() -> XMPPSrvRecord?;
 }
 
@@ -62,7 +61,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     let logger = Logger(subsystem: "TigaseSwift", category: "SocketSessionLogic")
     
     public var debugDescription: String {
-        return context.sessionObject.userBareJid?.stringValue ?? context.sessionObject.getProperty(SessionObject.DOMAIN_NAME) ?? "nil";
+        return context.userBareJid.stringValue;
     }
     
     var quickstart: Bool = true;
@@ -82,13 +81,15 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     private let dispatcher: QueueDispatcher;
+    private var seeOtherHost: XMPPSrvRecord? = nil;
     
-    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queueDispatcher: QueueDispatcher) {
+    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queueDispatcher: QueueDispatcher, seeOtherHost: XMPPSrvRecord?) {
         self.dispatcher = queueDispatcher;
         self.connector = connector;
         self.context = context;
         self.modulesManager = modulesManager;
         self.responseManager = responseManager;
+        self.seeOtherHost = seeOtherHost;
     }
     
     open func bind() {
@@ -112,14 +113,10 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     open func serverToConnectDetails() -> XMPPSrvRecord? {
-        if let redirect: XMPPSrvRecord = self.context.sessionObject.removeProperty(SocketConnector.SEE_OTHER_HOST_KEY) {
+        if let redirect: XMPPSrvRecord = self.seeOtherHost {
             return redirect;
         }
         return modulesManager.moduleOrNil(.streamManagement)?.resumptionLocation;
-    }
-    
-    open func serverToConnect() -> String {
-        return context.sessionObject.getProperty(SocketConnector.SERVER_HOST) ?? context.sessionObject.domainName!;
     }
     
     open func onStreamClose(completionHandler: @escaping () -> Void) {
@@ -131,14 +128,14 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
             completionHandler();
         }
     }
-    
+        
     open func onStreamError(_ streamErrorEl: Element) {
-        if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value), let lastConnectionDetails: XMPPSrvRecord = self.context.sessionObject.getProperty(SocketConnector.CURRENT_CONNECTION_DETAILS) {
+        if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value), let lastConnectionDetails: XMPPSrvRecord = self.connector.currentConnectionDetails {
             if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
                 streamFeaturesWithPipelining.connectionRestarted();
             }
             
-            self.context.sessionObject.setUserProperty(SocketConnector.SEE_OTHER_HOST_KEY, value: XMPPSrvRecord(port: seeOtherHost.1 ?? lastConnectionDetails.port, weight: 1, priority: 1, target: seeOtherHost.0, directTls: lastConnectionDetails.directTls));
+            self.seeOtherHost = XMPPSrvRecord(port: seeOtherHost.1 ?? lastConnectionDetails.port, weight: 1, priority: 1, target: seeOtherHost.0, directTls: lastConnectionDetails.directTls);
             connector.reconnect();
             return;
         }
@@ -203,7 +200,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     open func keepalive() {
         if let pingModule = modulesManager.moduleOrNil(.ping) {
-            pingModule.ping(JID(context.sessionObject.userBareJid!), callback: { (stanza) in
+            pingModule.ping(JID(context.userBareJid), callback: { (stanza) in
                 if stanza == nil {
                     self.logger.debug("\(self.context) - no response on ping packet - possible that connection is broken, reconnecting...");
                 }
@@ -290,16 +287,14 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     func processStreamFeatures(_ featuresElement: Element) {
         self.logger.debug("\(self.context) - processing stream features");
-        let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
-        let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
         let authorized = (context.moduleOrNil(.auth)?.state ?? .notAuthorized) == .authorized;
         let streamManagementModule = context.modulesManager.moduleOrNil(.streamManagement);
         let resumption = (streamManagementModule?.resumptionEnabled ?? false) && (streamManagementModule?.isAvailable() ?? false);
         
-        if (!startTlsActive)
-            && (context.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED) != true) && self.isStartTLSAvailable() {
+        if (!connector.isTLSActive)
+            && (!context.connectionConfiguration.disableTLS) && self.isStartTLSAvailable() {
             connector.startTLS();
-        } else if ((!compressionActive) && (context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED) != true) && self.isZlibAvailable()) {
+        } else if ((!connector.isCompressionActive) && (!context.connectionConfiguration.disableCompression) && self.isZlibAvailable()) {
             connector.startZlib();
         } else if !authorized {
             self.logger.debug("\(self.context) - starting authentication");
@@ -308,7 +303,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                     authModule.login();
                 } else {
                     self.logger.debug("\(self.context) - skipping authentication as it is already in progress!");
-                    if resumption && context.sessionObject.userBareJid != nil {
+                    if resumption {
                         streamManagementModule!.resume();
                     } else {
                         if let bindModule:ResourceBinderModule = modulesManager.moduleOrNil(.resourceBind) {
@@ -318,7 +313,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                 }
             }
         } else if authorized {
-            if resumption && context.sessionObject.userBareJid != nil {
+            if resumption {
                 streamManagementModule!.resume();
             } else {
                 if let bindModule:ResourceBinderModule = modulesManager.moduleOrNil(.resourceBind) {
@@ -341,11 +336,11 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     open func startStream() {
-        let userJid:BareJID? = self.context.sessionObject.getProperty(SessionObject.USER_BARE_JID);
+        let userJid = self.context.userBareJid;
         // replace with this first one to enable see-other-host feature
         //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
-        let domain = self.context.sessionObject.domainName!;
-        let seeOtherHost = (self.context.sessionObject.getProperty(SocketConnector.SEE_OTHER_HOST_KEY, defValue: true) && userJid != nil) ? " from='\(userJid!)'" : ""
+        let domain = userJid.domain
+        let seeOtherHost = (self.context.connectionConfiguration.useSeeOtherHost && userJid.localPart != nil) ? " from='\(userJid)'" : ""
         self.connector.send(data: "<stream:stream to='\(domain)'\(seeOtherHost) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
         
         if let streamFeaturesWithPipelining = self.context.modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {

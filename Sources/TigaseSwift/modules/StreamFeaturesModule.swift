@@ -51,7 +51,7 @@ open class StreamFeaturesModule: XmppModule, ContextAware, Resetable {
      - returns: element with stream features
      */
     public static func getStreamFeatures(_ sessionObject:SessionObject) -> Element? {
-        return sessionObject.getProperty(STREAM_FEATURES_KEY);
+        return sessionObject.context.module(.streamFeatures).streamFeatures;
     }
     
     

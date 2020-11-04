@@ -52,7 +52,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     }
     
     open var isAvailable: Bool {
-        guard let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) else {
+        guard let serverFeatures: [String] = context?.module(.disco).serverDiscoResult?.features else {
             return false;
         }
         return serverFeatures.contains(MessageCarbonsModule.MC_XMLNS);

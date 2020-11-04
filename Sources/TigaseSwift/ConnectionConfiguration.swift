@@ -21,53 +21,31 @@
 
 import Foundation
 
-/// Helper class to make it possible to set connection properties in easy way
-open class ConnectionConfiguration {
+public struct ConnectionConfiguration {
+    public var userJid: BareJID = BareJID("");
+    public var resource: String? = nil;
+    public var nickname: String? = nil;
     
-    var sessionObject:SessionObject!;
+    // how about enum with multiple password providers?
+    public var credentials: Credentials = .none;
     
-    init(_ sessionObject:SessionObject) {
-        self.sessionObject = sessionObject;
-    }
-    
-    /**
-     Set domain as domain to which we should connect - will be used if `userJid` is not set
-     - parameter domain: domain to connect to
-     */
-    open func setDomain(_ domain: String?) {
-        self.sessionObject.setUserProperty(SessionObject.DOMAIN_NAME, value: domain);
-    }
-    
-    /**
-     Set jid of user as which we should connect
-     - parameter jid: jid
-     */
-    open func setUserJID(_ jid:BareJID?) {
-        self.sessionObject.setUserProperty(SessionObject.USER_BARE_JID, value: jid);
-        setDomain(nil);
-    }
-    
-    /** 
-     Set password for authentication as user
-     - parameter password: password
-     */
-    open func setUserPassword(_ password:String?) {
-        self.sessionObject.setUserProperty(SessionObject.PASSWORD, value: password);
-    }
+    public var disableCompression: Bool = true;
+    public var disableTLS: Bool = false;
+    public var useSeeOtherHost: Bool = true;
+    public var sslCertificateValidation: SSLCertificateValidation = .default;
+    public var serverConnectionDetails: ServerConnectionDetails?;
+    public var lastConnectionDetails: XMPPSrvRecord?;
+    public var conntectionTimeout: Double?;
+    public var dnsResolver: DNSSrvResolver?;
+}
 
-    /**
-     Set server host to which we should connect (ie. to select particular node of a server cluster)
-     - parameter serverHost: name or ip address of server
-     */
-    open func setServerHost(_ serverHost: String?) {
-        self.sessionObject.setUserProperty(SocketConnector.SERVER_HOST, value: serverHost);
-    }
- 
-    /**
-     Set server port to which we should connect (ie. if there is no SRV records and server uses port other than default port 5222)
-     - parameter serverPort: server port to connect to
-     */
-    open func setServerPort(_ serverPort: Int?) {
-        self.sessionObject.setUserProperty(SocketConnector.SERVER_PORT, value: serverPort);
-    }
+public struct ServerConnectionDetails {
+    public var host: String;
+    public var port: Int = 5222;
+    public var useSSL: Bool = false;
+}
+
+public enum Credentials {
+    case none
+    case password(password: String, authenticationName: String? = nil, cache: ScramSaltedPasswordCacheProtocol? = nil)
 }

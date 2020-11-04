@@ -66,7 +66,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, callback: @escaping (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
+        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         if username != nil && !username!.isEmpty {
@@ -103,7 +103,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
-        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
+        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
     
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         
@@ -152,7 +152,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, completionHandler: @escaping (AsyncResult<String>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.sessionObject.domainName!);
+        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(form.submitableElement(type: .submit));
@@ -210,7 +210,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     }
     
     open func changePassword(for serviceJid: JID? = nil, newPassword: String, callback: @escaping (Stanza?)->Void) {
-        guard let username = self.context.sessionObject.userBareJid?.localPart else {
+        guard let username = self.context.userBareJid.localPart else {
             return;
         }
         let iq = Iq();
@@ -236,133 +236,6 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     
     public static func isRegistrationAvailable(_ featuresElement: Element?) -> Bool {
         return featuresElement?.findChild(name: "register", xmlns: "http://jabber.org/features/iq-register") != nil;
-    }
-    
-    /**
-     Convenience function for registration process.
-     
-     This function may use passed not authorized instance of `XMPPClient` 
-     or will create new one if nil is passed.
-     
-     Function will return immediately, however registration process will 
-     finish when one of callbacks is called.
-     
-     - parameter client: instance of XMPPClient to use
-     - parameter userJid: user jid to register
-     - parameter password: password
-     - parameter email: email
-     - parameter onSuccess: called after sucessful registration
-     - parameter onError: called on error or due to timeout
-     */
-    public static func connectAndRegister(client: XMPPClient! = nil, userJid: BareJID, password: String?, email: String?, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?)->Void) -> XMPPClient {
-        var client = client
-        if client == nil {
-            client = XMPPClient();
-        }
-        
-        _ = client?.modulesManager.register(StreamFeaturesModule());
-        _ = client!.modulesManager.register(InBandRegistrationModule());
-        
-        client?.connectionConfiguration.setDomain(client!.sessionObject.domainName ?? userJid.domain);
-        
-        let handler = RegistrationEventHandlerOld(client: client!);
-        handler.userJid = userJid;
-        handler.password = password;
-        handler.email = email;
-        handler.onSuccess = onSuccess;
-        handler.onError = onError;
-        
-        client?.login();
-        
-        return client!;
-    }
-    
-    class RegistrationEventHandlerOld: EventHandler {
-        
-        var client: XMPPClient! {
-            willSet {
-                if newValue == nil {
-                    let curr = self.client;
-                    self.unregisterEvents(curr!);
-                    DispatchQueue.main.async {
-                        curr?.disconnect();
-                    }
-                }
-            }
-        }
-        var context: Context! {
-            return client.context;
-        }
-        var userJid: BareJID!;
-        var password: String?;
-        var email: String?;
-        var onSuccess: (() -> Void)?;
-        var onError: ((ErrorCondition?) -> Void)?;
-        
-        init(client: XMPPClient) {
-            self.client = client;
-            registerEvents(client);
-        }
-        
-        func registerEvents(_ client: XMPPClient) {
-            client.eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
-        }
-        
-        func unregisterEvents(_ client: XMPPClient) {
-            client.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE);
-        }
-        
-        public func handle(event: Event) {
-            switch event {
-            case is StreamFeaturesReceivedEvent:
-                // check registration possibility
-                let startTlsActive = context.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
-                let compressionActive = context.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
-                let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
-                
-                guard startTlsActive || context.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED, defValue: false) || ((featuresElement?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
-                    return;
-                }
-                
-                guard compressionActive || context.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
-                    return;
-                }
-                
-                guard InBandRegistrationModule.isRegistrationAvailable(featuresElement) else {
-                    self.onSuccess = nil;
-                    self.client = nil;
-                    self.onError?(ErrorCondition.feature_not_implemented);
-                    return;
-                }
-                
-                context.modulesManager.module(.inBandRegistration).register(username: userJid.localPart, password: password, email: email, callback: { (stanza) in
-                    var errorCondition:ErrorCondition?;
-                    if let type = stanza?.type {
-                        switch type {
-                        case .result:
-                            self.onError = nil;
-                            self.client = nil;
-                            self.onSuccess?();
-                            return;
-                        default:
-                            if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
-                                errorCondition = ErrorCondition(rawValue: name);
-                            }
-                        }
-                    }
-                    self.onSuccess = nil;
-                    self.client = nil;
-                    self.onError?(errorCondition);
-                });
-            case is SocketConnector.DisconnectedEvent:
-                onSuccess = nil;
-                self.client = nil;
-                onError?(ErrorCondition.service_unavailable);
-            default:
-                break;
-            }
-        }
-        
     }
     
     open class AccountRegistrationTask: EventHandler {
@@ -394,18 +267,17 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
         var acceptedCertificate: SslCertificateInfo? = nil;
         
-        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (JabberDataElement, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
+        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (JabberDataElement, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
             self.setClient(client: client ?? XMPPClient());
             self.onForm = onForm;
             self.completionHandler = completionHandler;
             
             _ = self.client?.modulesManager.register(StreamFeaturesModule());
             self.inBandRegistrationModule = self.client!.modulesManager.register(InBandRegistrationModule());
-            self.client?.sessionObject.setUserProperty("urn:xmpp:invite#preauth", value: preauth);
+            self.preauthToken = preauth;
             
-            self.client?.sessionObject.setUserProperty(SessionObject.COMPRESSION_DISABLED, value: true);
-            self.client?.connectionConfiguration.setDomain(self.client!.sessionObject.domainName ?? domainName);
-            self.client?.sessionObject.setUserProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR, value: sslCertificateValidator);
+            self.client?.connectionConfiguration.userJid = BareJID(domainName);
+            self.client.connectionConfiguration.sslCertificateValidation = sslCertificateValidator == nil ? .default : .customValidator(sslCertificateValidator!);
             self.onCertificateValidationError = onCertificateValidationError;
             self.client?.login();
         }
@@ -461,7 +333,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                     let certData = SslCertificateInfo(trust: e.trust!);
                     self.serverAvailable = true;
                     self.onCertificateValidationError!(certData, {() -> Void in
-                        SslCertificateValidator.setAcceptedSslCertificate(self.client.sessionObject, fingerprint: certData.details.fingerprintSha1);
+                        self.client.connectionConfiguration.sslCertificateValidation = .fingerprint(certData.details.fingerprintSha1);
                         self.acceptedCertificate = certData;
                         self.serverAvailable = false;
                         self.client.login();
@@ -476,6 +348,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 }
                 startIBR();
             case is SocketConnector.DisconnectedEvent:
+                self.preauthDone = false;
                 if !serverAvailable {
                     onErrorFn(errorCondition: ErrorCondition.service_unavailable, message: nil);
                 }
@@ -549,30 +422,30 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             }
         }
         
+        open var preauthToken: String?;
+        private var preauthDone = false;
+        
         fileprivate func isStreamReady() -> Bool {
-            let startTlsActive = client.sessionObject.getProperty(SessionObject.STARTTLS_ACTIVE, defValue: false);
-            let compressionActive = client.sessionObject.getProperty(SessionObject.COMPRESSION_ACTIVE, defValue: false);
             let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
             
-            guard startTlsActive || client.sessionObject.getProperty(SessionObject.STARTTLS_DISLABLED, defValue: false) || ((featuresElement?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
+            guard (client.socketConnector?.isTLSActive ?? false) || client.connectionConfiguration.disableTLS || ((featuresElement?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
                 return false;
             }
             
-            guard compressionActive || client.sessionObject.getProperty(SessionObject.COMPRESSION_DISABLED, defValue: false) || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+            guard (client.socketConnector?.isCompressionActive ?? false) || client.connectionConfiguration.disableCompression || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
                 return false;
             }
             
-            let preauthSupported: Bool = StreamFeaturesModule.getStreamFeatures(client.sessionObject)?.findChild(name: "register", xmlns: "urn:xmpp:invite") != nil;
-            if preauthSupported && !client.sessionObject.getProperty("urn:xmpp:invite#preauth_done", defValue: false), let preauth: String = client.sessionObject.getProperty("urn:xmpp:invite#preauth") {
+            let preauthSupported: Bool = client.context.module(.streamFeatures).streamFeatures?.findChild(name: "register", xmlns: "urn:xmpp:invite") != nil;
+            if preauthSupported && !preauthDone, let preauth: String = preauthToken {
                 let iq = Iq();
                 iq.type = .set;
-                if let domain: String = client.sessionObject.getProperty(SessionObject.DOMAIN_NAME) {
-                    iq.to = JID(domain);
-                }
+                let domain: String = client.context.userBareJid.domain
+                iq.to = JID(domain);
                 iq.addChild(Element(name: "preauth", attributes: ["token": preauth, "xmlns": "urn:xmpp:pars:0"]));
                 client.context.writer?.write(iq, callback: { result in
                     if result?.type ?? .error == .result {
-                        self.client.sessionObject.setProperty("urn:xmpp:invite#preauth_done", value: true);
+                        self.preauthDone = true;
                         self.startIBR();
                     } else {
                         let error: ErrorCondition = result?.errorCondition ?? ErrorCondition.remote_server_timeout;

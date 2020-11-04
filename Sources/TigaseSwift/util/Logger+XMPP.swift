@@ -25,17 +25,10 @@ import TigaseLogging
 extension LogMessageInterpolation {
     
     /**
-        Method adds supoprt for logging SessionObject as a bare JID or domain if bare JID is not set
-     */
-    public mutating func appendInterpolation(_ supplier: @autoclosure @escaping ()->SessionObject, privacy: LogPrivacy = .auto(mask: .hash)) {
-        append(supplier: { supplier().userBareJid?.stringValue ?? supplier().domainName ?? "--" }, privacy: privacy);
-    }
-
-    /**
         Method adds supoprt for logging Context as a bare JID or domain if bare JID is not set
      */
     public mutating func appendInterpolation(_ supplier: @autoclosure @escaping ()->Context, privacy: LogPrivacy = .auto(mask: .hash)) {
-        append(supplier: { supplier().sessionObject.userBareJid?.stringValue ?? supplier().sessionObject.domainName ?? "--" }, privacy: privacy);
+        append(supplier: { supplier().userBareJid.stringValue ?? "--" }, privacy: privacy);
     }
 
     /**

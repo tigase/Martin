@@ -49,7 +49,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
     }
     
     open var isAvailable: Bool {
-        if let features: [String] = context.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) {
+        if let features: [String] = context.module(.disco).serverDiscoResult?.features {
             if features.contains(BlockingCommandModule.BC_XMLNS) {
                 return true;
             }

@@ -27,6 +27,12 @@ import Foundation
  */
 open class Context {
     
+    public var userBareJid: BareJID {
+        return connectionConfiguration.userJid;
+    }
+    
+    public var currentConnectionDetails: XMPPSrvRecord?;
+    public var connectionConfiguration: ConnectionConfiguration = ConnectionConfiguration();
     // Instance of `SessionObject` with properties for particular connection/client
     public let sessionObject: SessionObject;
     // Instance of `EventBus` which processes events for particular connection/client

@@ -38,14 +38,14 @@ public protocol SaslMechanism: class {
      - parameter sessionObject: instance of `SessionObject`
      - returns: response to send to server
      */
-    func evaluateChallenge(_ input:String?, sessionObject:SessionObject) throws -> String?
+    func evaluateChallenge(_ input:String?, context: Context) throws -> String?
     
     /** 
      Check if mechanism may be used (ie. if needed data are available)
      - parameter sessionObject: instance of `SessionObject`
      - returns: true if possible
      */
-    func isAllowedToUse(_ sessionObject:SessionObject) -> Bool;
+    func isAllowedToUse(_ context: Context) -> Bool;
     
 }
 

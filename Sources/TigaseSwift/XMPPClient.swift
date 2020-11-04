@@ -98,7 +98,14 @@ open class XMPPClient: EventHandler {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPClient");
     public let sessionObject:SessionObject;
-    public let connectionConfiguration:ConnectionConfiguration!;
+    public var connectionConfiguration: ConnectionConfiguration {
+        get {
+            self.context.connectionConfiguration
+        }
+        set {
+            self.context.connectionConfiguration = newValue;
+        }
+    }
     open var socketConnector:SocketConnector? {
         willSet {
             sessionLogic?.unbind();
@@ -144,7 +151,6 @@ open class XMPPClient: EventHandler {
         }
             
         sessionObject = SessionObject(eventBus: self.eventBus);
-        connectionConfiguration = ConnectionConfiguration(self.sessionObject);
         modulesManager = XmppModulesManager();
         context = Context(sessionObject: self.sessionObject, eventBus: self.eventBus, modulesManager: modulesManager);
         sessionObject.context = context;
@@ -159,7 +165,7 @@ open class XMPPClient: EventHandler {
     /**
      Method initiates modules if needed and starts process of connecting to XMPP server.
      */
-    open func login() -> Void {
+    open func login(lastSeeOtherHost: XMPPSrvRecord? = nil) -> Void {
         guard state == SocketConnector.State.disconnected else {
             logger.debug("XMPP in state: \(self.state), - not starting connection");
             return;
@@ -168,7 +174,7 @@ open class XMPPClient: EventHandler {
         dispatcher.sync {
             socketConnector = SocketConnector(context: context);
             context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queueDispatcher: dispatcher);
-            sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queueDispatcher: dispatcher);
+            sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queueDispatcher: dispatcher, seeOtherHost: lastSeeOtherHost);
             sessionLogic!.bind();
             
             keepaliveTimer?.cancel();

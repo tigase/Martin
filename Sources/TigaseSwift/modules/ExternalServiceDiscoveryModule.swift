@@ -39,7 +39,7 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
     open var context:Context!;
     
     open var isAvailable: Bool {
-        guard let serverFeatures: [String] = context?.sessionObject.getProperty(DiscoveryModule.SERVER_FEATURES_KEY) else {
+        guard let serverFeatures: [String] = context?.module(.disco).serverDiscoResult?.features else {
             return false;
         }
         return serverFeatures.contains(ExternalServiceDiscoveryModule.XMLNS);
@@ -55,7 +55,7 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
     
     public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],ErrorCondition>)->Void) {
         let iq = Iq();
-        iq.to = jid ?? JID(context.sessionObject.userBareJid?.domain);
+        iq.to = jid ?? JID(context.userBareJid.domain);
         iq.type = .get;
         let servicesEl = Element(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS);
         if type != nil {

@@ -51,11 +51,7 @@ open class ScramMechanism: SaslMechanism {
         (data as NSData).getBytes(&serverKey, length: data.count);
         return ScramMechanism(mechanismName: "SCRAM-SHA-1", algorithm: Digest.sha1, clientKey: clientKey, serverKey: serverKey);
     }
-    
-    public static func setSaltedPasswordCache(_ cache: ScramSaltedPasswordCacheProtocol?, sessionObject: SessionObject) {
-        sessionObject.setUserProperty(ScramMechanism.SCRAM_SALTED_PASSWORD_CACHE, value: cache);
-    }
-    
+        
     /// Name of mechanism
     public let name: String;
     public private(set) var status: SaslMechanismStatus = .new;
@@ -72,7 +68,7 @@ open class ScramMechanism: SaslMechanism {
         self.serverKeyData = serverKey;
     }
     
-    open func evaluateChallenge(_ input: String?, sessionObject: SessionObject) throws -> String? {
+    open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
         guard status != .completed else {
             guard input == nil else {
                 throw ClientSaslException.genericError(msg: "Client in illegal state - already authorized!");
@@ -82,145 +78,151 @@ open class ScramMechanism: SaslMechanism {
         
         let data = getData();
     
-        let saltedPasswordCache: ScramSaltedPasswordCacheProtocol? = sessionObject.getProperty(ScramMechanism.SCRAM_SALTED_PASSWORD_CACHE);
-        
-        switch data.stage {
-        case 0:
-            data.conce = randomString();
-            
-            var sb = "n,";
-            sb += ",";
-            data.cb = sb;
-            
-            data.clientFirstMessageBare = "n=" + sessionObject.userBareJid!.localPart! + "," + "r=" + data.conce!;
-            data.stage += 1;
-            
-            return (sb + data.clientFirstMessageBare!).data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
-        case 1:
-            guard input != nil else {
-                throw ClientSaslException.badChallenge(msg: "Received empty challenge!");
-            }
-            let msgBytes = Foundation.Data(base64Encoded: input!, options: NSData.Base64DecodingOptions(rawValue: 0));
-            
-            guard msgBytes != nil else {
-                throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
-            }
-            let msg = String(data: msgBytes!, encoding: String.Encoding.utf8);
-            let r = ScramMechanism.SERVER_FIRST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.count));
-            
-            guard r.count == 1 && r[0].numberOfRanges >= 5  else {
-                throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
-            }
-            let msgNS = msg! as NSString;
-            let m = r[0];
-            _ = groupPartOfString(m, group: 1, str: msgNS);
-            guard let nonce = groupPartOfString(m, group: 2, str: msgNS) else {
-                throw ClientSaslException.badChallenge(msg: "Missing nonce");
+        switch context.connectionConfiguration.credentials {
+        case .password(let password, let authenticationName, let saltedPasswordCache):
+            switch data.stage {
+            case 0:
+                data.conce = randomString();
+                
+                var sb = "n,";
+                sb += ",";
+                data.cb = sb;
+                
+                data.clientFirstMessageBare = "n=" + context.userBareJid.localPart! + "," + "r=" + data.conce!;
+                data.stage += 1;
+                
+                return (sb + data.clientFirstMessageBare!).data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
+            case 1:
+                guard input != nil else {
+                    throw ClientSaslException.badChallenge(msg: "Received empty challenge!");
+                }
+                let msgBytes = Foundation.Data(base64Encoded: input!, options: NSData.Base64DecodingOptions(rawValue: 0));
+                
+                guard msgBytes != nil else {
+                    throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
+                }
+                let msg = String(data: msgBytes!, encoding: String.Encoding.utf8);
+                let r = ScramMechanism.SERVER_FIRST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.count));
+                
+                guard r.count == 1 && r[0].numberOfRanges >= 5  else {
+                    throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
+                }
+                let msgNS = msg! as NSString;
+                let m = r[0];
+                _ = groupPartOfString(m, group: 1, str: msgNS);
+                guard let nonce = groupPartOfString(m, group: 2, str: msgNS) else {
+                    throw ClientSaslException.badChallenge(msg: "Missing nonce");
+                }
+
+                guard let saltStr = groupPartOfString(m, group: 3, str: msgNS) else {
+                    throw ClientSaslException.badChallenge(msg: "Missing salt");
+                }
+
+                guard let salt = Foundation.Data(base64Encoded: saltStr, options: NSData.Base64DecodingOptions(rawValue: 0)) else {
+                    throw ClientSaslException.badChallenge(msg: "Invalid encoding of salt");
+                }
+                guard let iterations = Int(groupPartOfString(m, group: 4, str: msgNS) ?? "") else {
+                    throw ClientSaslException.badChallenge(msg: "Invalid number of iterations");
+                }
+
+                guard nonce.hasPrefix(data.conce!) else {
+                    throw ClientSaslException.wrongNonce;
+                }
+
+                let c = data.cb.data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
+                
+                var clientFinalMessage = "c=" + c! + "," + "r=" + nonce;
+                let part = "," + msg! + ",";
+                data.authMessage = data.clientFirstMessageBare! + part + clientFinalMessage;
+                
+                let saltedCacheId = saltedPasswordCache?.generateId(algorithm: algorithm, salt: salt, iterations: iterations);
+                if saltedCacheId != nil {
+                    data.saltedPassword = saltedPasswordCache?.getSaltedPassword(for: context, id: saltedCacheId!);
+                }
+                if data.saltedPassword == nil {
+                    data.saltedCacheId = saltedCacheId;
+                    data.saltedPassword = hi(password: normalize(password), salt: salt, iterations: iterations);
+                }
+                var clientKeyData = self.clientKeyData;
+                var clientKey = algorithm.hmac(key: &data.saltedPassword!, data: &clientKeyData);
+                var storedKey = algorithm.digest(bytes: &clientKey, length: clientKey.count);
+                
+                var clientSignature = algorithm.hmac(key: &storedKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
+                var clientProof = xor(clientKey, &clientSignature);
+                
+                clientFinalMessage += "," + "p=" + Foundation.Data(bytes: &clientProof, count: clientProof.count).base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
+
+                data.stage += 1;
+                status = .completedExpected;
+                return clientFinalMessage.data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
+            case 2:
+                guard input != nil else {
+                    saltedPasswordCache?.clearCache(for: context);
+                    throw ClientSaslException.badChallenge(msg: "Received empty challenge!");
+                }
+
+                let msgBytes = Foundation.Data(base64Encoded: input!, options: NSData.Base64DecodingOptions(rawValue: 0));
+                
+                guard msgBytes != nil else {
+                    saltedPasswordCache?.clearCache(for: context);
+                    throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
+                }
+                let msg = String(data: msgBytes!, encoding: String.Encoding.utf8);
+                let r = ScramMechanism.SERVER_LAST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.count));
+                
+                guard r.count == 1 && r[0].numberOfRanges >= 3  else {
+                    saltedPasswordCache?.clearCache(for: context);
+                    throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
+                }
+                let msgNS = msg! as NSString;
+                let m = r[0];
+                _ = groupPartOfString(m, group: 1, str: msgNS);
+                guard let v = groupPartOfString(m, group: 2, str: msgNS) else {
+                    saltedPasswordCache?.clearCache(for: context);
+                    throw ClientSaslException.badChallenge(msg: "Invalid value of 'v'");
+                }
+                
+                var serverKeyData = self.serverKeyData;
+                var serverKey = algorithm.hmac(key: &data.saltedPassword!, data: &serverKeyData);
+                var serverSignature = algorithm.hmac(key: &serverKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
+                
+                let value = Foundation.Data(base64Encoded: v, options: NSData.Base64DecodingOptions(rawValue: 0));
+                guard value != nil && (value! == Foundation.Data(bytes: &serverSignature, count: serverSignature.count)) else {
+                    saltedPasswordCache?.clearCache(for: context);
+                    throw ClientSaslException.invalidServerSignature;
+                }
+                
+                data.stage += 1;
+                if let saltedCacheId = data.saltedCacheId, let saltedPassword = data.saltedPassword {
+                    saltedPasswordCache?.store(for: context, id: saltedCacheId, saltedPassword: saltedPassword);
+                }
+                status = .completed;
+                
+                // releasing data object
+                self.saslData = nil;
+                return nil;
+            default:
+                guard status == .completed && input == nil else {
+                    saltedPasswordCache?.clearCache(for: context);
+                    throw ClientSaslException.genericError(msg: "Client in illegal state! stage = \(data.stage)");
+                }
+                // let's assume this is ok as session is authenticated
+                return nil;
             }
 
-            guard let saltStr = groupPartOfString(m, group: 3, str: msgNS) else {
-                throw ClientSaslException.badChallenge(msg: "Missing salt");
-            }
-
-            guard let salt = Foundation.Data(base64Encoded: saltStr, options: NSData.Base64DecodingOptions(rawValue: 0)) else {
-                throw ClientSaslException.badChallenge(msg: "Invalid encoding of salt");
-            }
-            guard let iterations = Int(groupPartOfString(m, group: 4, str: msgNS) ?? "") else {
-                throw ClientSaslException.badChallenge(msg: "Invalid number of iterations");
-            }
-
-            guard nonce.hasPrefix(data.conce!) else {
-                throw ClientSaslException.wrongNonce;
-            }
-
-            let callback:CredentialsCallback = sessionObject.getProperty(AuthModule.CREDENTIALS_CALLBACK) ?? DefaultCredentialsCallback(sessionObject: sessionObject);
-
-            let c = data.cb.data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
-            
-            var clientFinalMessage = "c=" + c! + "," + "r=" + nonce;
-            let part = "," + msg! + ",";
-            data.authMessage = data.clientFirstMessageBare! + part + clientFinalMessage;
-            
-            let saltedCacheId = saltedPasswordCache?.generateId(algorithm: algorithm, salt: salt, iterations: iterations);
-            if saltedCacheId != nil {
-                data.saltedPassword = saltedPasswordCache?.getSaltedPassword(for: sessionObject, id: saltedCacheId!);
-            }
-            if data.saltedPassword == nil {
-                data.saltedCacheId = saltedCacheId;
-                data.saltedPassword = hi(password: normalize(callback.getCredential()), salt: salt, iterations: iterations);
-            }
-            var clientKeyData = self.clientKeyData;
-            var clientKey = algorithm.hmac(key: &data.saltedPassword!, data: &clientKeyData);
-            var storedKey = algorithm.digest(bytes: &clientKey, length: clientKey.count);
-            
-            var clientSignature = algorithm.hmac(key: &storedKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
-            var clientProof = xor(clientKey, &clientSignature);
-            
-            clientFinalMessage += "," + "p=" + Foundation.Data(bytes: &clientProof, count: clientProof.count).base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
-
-            data.stage += 1;
-            status = .completedExpected;
-            return clientFinalMessage.data(using: String.Encoding.utf8)?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
-        case 2:
-            guard input != nil else {
-                saltedPasswordCache?.clearCache(for: sessionObject);
-                throw ClientSaslException.badChallenge(msg: "Received empty challenge!");
-            }
-
-            let msgBytes = Foundation.Data(base64Encoded: input!, options: NSData.Base64DecodingOptions(rawValue: 0));
-            
-            guard msgBytes != nil else {
-                saltedPasswordCache?.clearCache(for: sessionObject);
-                throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
-            }
-            let msg = String(data: msgBytes!, encoding: String.Encoding.utf8);
-            let r = ScramMechanism.SERVER_LAST_MESSAGE.matches(in: msg!, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg!.count));
-            
-            guard r.count == 1 && r[0].numberOfRanges >= 3  else {
-                saltedPasswordCache?.clearCache(for: sessionObject);
-                throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
-            }
-            let msgNS = msg! as NSString;
-            let m = r[0];
-            _ = groupPartOfString(m, group: 1, str: msgNS);
-            guard let v = groupPartOfString(m, group: 2, str: msgNS) else {
-                saltedPasswordCache?.clearCache(for: sessionObject);
-                throw ClientSaslException.badChallenge(msg: "Invalid value of 'v'");
-            }
-            
-            var serverKeyData = self.serverKeyData;
-            var serverKey = algorithm.hmac(key: &data.saltedPassword!, data: &serverKeyData);
-            var serverSignature = algorithm.hmac(key: &serverKey, data: data.authMessage!.data(using: String.Encoding.utf8)!);
-            
-            let value = Foundation.Data(base64Encoded: v, options: NSData.Base64DecodingOptions(rawValue: 0));
-            guard value != nil && (value! == Foundation.Data(bytes: &serverSignature, count: serverSignature.count)) else {
-                saltedPasswordCache?.clearCache(for: sessionObject);
-                throw ClientSaslException.invalidServerSignature;
-            }
-            
-            data.stage += 1;
-            if let saltedCacheId = data.saltedCacheId, let saltedPassword = data.saltedPassword {
-                saltedPasswordCache?.store(for: sessionObject, id: saltedCacheId, saltedPassword: saltedPassword);
-            }
-            status = .completed;
-            
-            // releasing data object
-            self.saslData = nil;
-            return nil;
         default:
-            guard status == .completed && input == nil else {
-                saltedPasswordCache?.clearCache(for: sessionObject);
-                throw ClientSaslException.genericError(msg: "Client in illegal state! stage = \(data.stage)");
-            }
-            // let's assume this is ok as session is authenticated
-            return nil;
+            throw ClientSaslException.genericError(msg: "Invalid credentials type for authorization!");
         }
-        
+                
     }
     
-    open func isAllowedToUse(_ sessionObject: SessionObject) -> Bool {
-        return sessionObject.hasProperty(SessionObject.PASSWORD)
-            && sessionObject.hasProperty(SessionObject.USER_BARE_JID);
+    open func isAllowedToUse(_ context: Context) -> Bool {
+        switch context.connectionConfiguration.credentials {
+        case .password(_, _, _):
+            return true;
+        default:
+            return false;
+        }
     }
     
     func hi(password: Foundation.Data, salt: Foundation.Data, iterations: Int) -> [UInt8] {

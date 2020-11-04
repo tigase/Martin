@@ -26,36 +26,6 @@ import TigaseLogging
  */
 open class SocketConnector : XMPPDelegate, StreamDelegate {
     
-    /**
-     Key in `SessionObject` to store custom validator for SSL certificates 
-     provided by servers
-     */
-    public static let SSL_CERTIFICATE_VALIDATOR = "sslCertificateValidator";
-    /**
-     Key in `SessionObject` to store host to which we should reconnect
-     after receiving see-other-host error.
-     */
-    public static let SEE_OTHER_HOST_KEY = "seeOtherHost";
-    /**
-     Key in `SessionObject` to store host to which XMPP client should
-     try to connect to.
-     */
-    public static let SERVER_HOST = "serverHost";
-    /**
-     Key in `SessionObject` to store server port to which XMPP client
-     should try to connect to.
-     */
-    public static let SERVER_PORT = "serverPort";
-    /**
-     Key in `SessionObject` to store information if server port is
-     a direct TLS port.
-     */
-    public static let DIRECT_TLS = "serverDirectTls";
-    
-    public static let CURRENT_CONNECTION_DETAILS = "currentConnectionDetails";
-    
-    public static let CONNECTION_TIMEOUT = "connectionTimeout";
-    
     fileprivate static var QUEUE_TAG = "xmpp_socket_queue";
     
     /**
@@ -85,9 +55,13 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     var outStreamBuffer: WriteBuffer?;
     var parserDelegate: XMLParserDelegate?
     var parser: XMLParser?
-    var dnsResolver: DNSSrvResolver?;
+    private let dnsResolver: DNSSrvResolver;
     weak var sessionLogic: XmppSessionLogic?;
-    var zlib: Zlib?;
+    private var zlib: Zlib?;
+    public private(set) var isTLSActive: Bool = false;
+    public var isCompressionActive: Bool {
+        return zlib != nil;
+    }
     /**
      Stores information about SSL certificate validation and can
      have following values:
@@ -102,12 +76,9 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
     
     fileprivate var server: String?;
-    fileprivate var lastConnectionDetails: XMPPSrvRecord? {
-        get {
-            return self.sessionObject.getProperty(SocketConnector.CURRENT_CONNECTION_DETAILS);
-        }
-        set {
-            self.sessionObject.setProperty(SocketConnector.CURRENT_CONNECTION_DETAILS, value: newValue);
+    private(set) var currentConnectionDetails: XMPPSrvRecord? {
+        didSet {
+            context.currentConnectionDetails = self.currentConnectionDetails;
         }
     }
     
@@ -135,7 +106,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                         self.connectionTimer?.invalidate();
                         self.connectionTimer = nil;
                     }
-                    self.context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject, connectionDetails: self.lastConnectionDetails, clean: State.disconnecting == oldState));
+                    self.context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject, connectionDetails: self.currentConnectionDetails, clean: State.disconnecting == oldState));
                 }
                 if oldState == State.connecting && newValue == State.connected {
                     DispatchQueue.main.async {
@@ -144,7 +115,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                     }
                     self.context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
                 }
-                if newValue == .connecting, let timeout: Double = sessionObject.getProperty(SocketConnector.CONNECTION_TIMEOUT) {
+                if newValue == .connecting, let timeout: Double = context.connectionConfiguration.conntectionTimeout {
                     self.logger.debug("\(self.context) - scheduling timer for: \(timeout)");
                     DispatchQueue.main.async {
                         self.connectionTimer = Foundation.Timer.scheduledTimer(timeInterval: timeout, target: self, selector: #selector(self.connectionTimedOut), userInfo: nil, repeats: false)
@@ -180,6 +151,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         self.queue = DispatchQueue(label: "xmpp_socket_queue", attributes: []);
         self.queueTag = DispatchSpecificKey<DispatchQueue?>();
         queue.setSpecific(key: queueTag, value: queue);
+        self.dnsResolver = context.connectionConfiguration.dnsResolver ?? XMPPDNSSrvResolver();
         self.sessionObject = context.sessionObject;
         self.context = context;
     }
@@ -200,43 +172,35 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         }
         queue.async {
             let start = Date();
-            let timeout: Double? = self.sessionObject.getProperty(SocketConnector.CONNECTION_TIMEOUT);
+            let timeout: Double? = self.context.connectionConfiguration.conntectionTimeout;
             self.state = .connecting;
             if let srvRecord = self.sessionLogic?.serverToConnectDetails() {
                 self.connect(dnsName: srvRecord.target, srvRecord: srvRecord);
                 return;
             } else {
-                guard let server = self.sessionLogic?.serverToConnect() else {
-                    return;
+                if let details = self.context.connectionConfiguration.serverConnectionDetails {
+                    self.connect(addr: details.host, port: details.port, ssl: details.useSSL);
                 }
-                if let port: Int = self.context.sessionObject.getProperty(SocketConnector.SERVER_PORT) {
-                    self.connect(addr: server, port: port, ssl: self.context.sessionObject.getProperty(SocketConnector.DIRECT_TLS) ?? false);
-                } else {
-                    self.logger.debug("\(self.context) - connecting to server: \(server)");
-                    if let dnsResolver = self.context.sessionObject.dnsSrvResolver {
-                        self.dnsResolver = dnsResolver;
-                    }
-                    if self.dnsResolver == nil {
-                        self.dnsResolver = XMPPDNSSrvResolver();
-                    }
-                    self.dnsResolver!.resolve(domain: server, for: self.sessionObject.userBareJid ?? BareJID(domain: server)) { result in
-                        if timeout != nil {
-                            // if timeout was set, do not try to connect after timeout was fired!
-                            // another event will take care of that
-                            guard Date().timeIntervalSince(start) < timeout! else {
-                                return;
-                            }
+
+                let server = self.context.userBareJid.domain;
+                self.logger.debug("\(self.context) - connecting to server: \(server)");
+                self.dnsResolver.resolve(domain: server, for: self.context.userBareJid) { result in
+                    if timeout != nil {
+                        // if timeout was set, do not try to connect after timeout was fired!
+                        // another event will take care of that
+                        guard Date().timeIntervalSince(start) < timeout! else {
+                            return;
                         }
-                        switch result {
-                        case .success(let dnsResult):
-                            if let record = dnsResult.record() ?? self.lastConnectionDetails {
-                                self.connect(dnsName: server, srvRecord: record);
-                            } else {
-                                self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
-                            }
-                        case .failure(_):
+                    }
+                    switch result {
+                    case .success(let dnsResult):
+                        if let record = dnsResult.record() ?? self.currentConnectionDetails {
+                            self.connect(dnsName: server, srvRecord: record);
+                        } else {
                             self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
                         }
+                    case .failure(_):
+                        self.connect(dnsName: server, srvRecord: XMPPSrvRecord(port: 5222, weight: 0, priority: 0, target: server, directTls: false));
                     }
                 }
             }
@@ -264,7 +228,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         logger.debug("\(self.context) - got dns record to connect to: \(srvRecord)");
         queue.async {
             self.server = dnsName;
-            self.lastConnectionDetails = srvRecord;
+            self.currentConnectionDetails = srvRecord;
             self.connect(addr: srvRecord.target, port: srvRecord.port, ssl: srvRecord.directTls);
         }
     }
@@ -289,14 +253,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         
         self.inStream!.delegate = self
         self.outStream!.delegate = self
-        
-//        let r1 = CFReadStreamSetProperty(self.inStream! as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamNetworkServiceType), kCFStreamNetworkServiceTypeVoIP)
-//        let r2 = CFWriteStreamSetProperty(self.outStream! as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamNetworkServiceType), kCFStreamNetworkServiceTypeVoIP)
-//
-//        if !r1 || !r2 {
-//            log("failed to enabled background connection feature", r1, r2);
-//        }
-        
+                
         self.inStream!.schedule(in: RunLoop.main, forMode: RunLoop.Mode.default)
         self.outStream!.schedule(in: RunLoop.main, forMode: RunLoop.Mode.default)
                 
@@ -363,7 +320,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         inStream.delegate = self
         outStream.delegate = self
 
-        let domain = self.sessionObject.domainName!;
+        let domain = self.context.userBareJid.domain;
         
         sslCertificateValidated = nil;
         let settings:NSDictionary = NSDictionary(objects: [StreamSocketSecurityLevel.negotiatedSSL, 
@@ -389,7 +346,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         inStream.schedule(in: RunLoop.current, forMode: RunLoop.Mode.default);
         outStream.schedule(in: RunLoop.current, forMode: RunLoop.Mode.default);
             
-        self.context.sessionObject.setProperty(SessionObject.STARTTLS_ACTIVE, value: true, scope: SessionObject.Scope.stream);
+        self.isTLSActive = true;
     }
     
     open func restartStream() {
@@ -407,7 +364,6 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     
     func proceedZlib() {
         zlib = Zlib(compressionLevel: .default, flush: .sync);
-        self.context.sessionObject.setProperty(SessionObject.COMPRESSION_ACTIVE, value: true, scope: SessionObject.Scope.stream);
         restartStream();
     }
     
@@ -535,8 +491,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 return;
             }
             self.logger.debug("\(self.context) - establishing connection to:\(self.server ?? "unknown", privacy: .auto(mask: .hash)) timed out!");
-            if let domain = self.server, let lastConnectionDetails = self.lastConnectionDetails {
-                self.dnsResolver?.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
+            if let domain = self.server, let lastConnectionDetails = self.currentConnectionDetails {
+                self.dnsResolver.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
             }
             self.onStreamTerminate();
         }
@@ -551,8 +507,8 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 // this is intentional - we need to execute onStreamTerminate()
                 // on main queue, but after all task are executed by our serial queueła
                 queue.async { [weak self] in
-                    if let state = self?.state, state == .connecting, let domain = self?.server, let lastConnectionDetails = self?.lastConnectionDetails {
-                        self?.dnsResolver?.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
+                    if let state = self?.state, state == .connecting, let domain = self?.server, let lastConnectionDetails = self?.currentConnectionDetails {
+                        self?.dnsResolver.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
                     }
                     self?.onStreamTerminate();
                 }
@@ -632,17 +588,20 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
                 
                 let trust: SecTrust = trustVal as! SecTrust;
                 
-                let sslCertificateValidator: ((SessionObject,SecTrust)->Bool)? = context.sessionObject.getProperty(SocketConnector.SSL_CERTIFICATE_VALIDATOR);
-                if sslCertificateValidator != nil {
-                    sslCertificateValidated = sslCertificateValidator!(sessionObject, trust);
-                } else {
-                    let policy = SecPolicyCreateSSL(false, sessionObject.userBareJid?.domain as CFString?);
+                switch context.connectionConfiguration.sslCertificateValidation {
+                case .default:
+                    let policy = SecPolicyCreateSSL(false, context.userBareJid.domain as CFString?);
                     var secTrustResultType = SecTrustResultType.invalid;
                     SecTrustSetPolicies(trust, policy);
                     SecTrustEvaluate(trust, &secTrustResultType);
                                         
                     sslCertificateValidated = (secTrustResultType == SecTrustResultType.proceed || secTrustResultType == SecTrustResultType.unspecified);
+                case .fingerprint(let fingerprint):
+                    sslCertificateValidated = SslCertificateValidator.validateSslCertificate(domain: context.userBareJid.domain, fingerprint: fingerprint, trust: trust);
+                case .customValidator(let validator):
+                    sslCertificateValidated = validator(trust);
                 }
+
                 if !sslCertificateValidated! {
                     self.logger.debug("SSL certificate validation failed");
                     self.context.eventBus.fire(CertificateErrorEvent(sessionObject: context.sessionObject, trust: trust));

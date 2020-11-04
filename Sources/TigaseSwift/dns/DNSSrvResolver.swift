@@ -34,16 +34,3 @@ public enum DNSError: Error {
     case internalError
     case unknownError
 }
-
-extension SessionObject {
-    
-    open var dnsSrvResolver: DNSSrvResolver? {
-        get {
-            return self.getProperty("dnsSrvResolver");
-        }
-        set {
-            self.setUserProperty("dnsSrvResolver", value: newValue);
-        }
-    }
-    
-}
