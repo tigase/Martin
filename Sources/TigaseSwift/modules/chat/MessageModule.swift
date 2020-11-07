@@ -68,7 +68,7 @@ open class MessageModule: XmppModule, ContextAware {
     
     open func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
         guard let jid = interlocutorJid, let chat = getOrCreateChatForProcessing(message: message, interlocutorJid: jid) else {
-            fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: nil, message: message));
+            fire(MessageReceivedEvent(context: context, chat: nil, message: message));
             return nil;
         }
         
@@ -80,7 +80,7 @@ open class MessageModule: XmppModule, ContextAware {
         }
         
         if fireEvents {
-            fire(MessageReceivedEvent(sessionObject: context.sessionObject, chat: chat, message: message));
+            fire(MessageReceivedEvent(context: context, chat: chat, message: message));
         }
         
         return chat;
@@ -113,72 +113,62 @@ open class MessageModule: XmppModule, ContextAware {
     }
     
     /// Event fired when Chat is created/opened
-    open class ChatCreatedEvent: Event {
+    open class ChatCreatedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChatCreatedEvent();
         
-        public let type = "ChatCreatedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Instance of opened chat
         public let chat:Chat!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.chat = nil;
+            super.init(type: "ChatCreatedEvent");
         }
         
-        public init(sessionObject:SessionObject, chat:Chat) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, chat: Chat) {
             self.chat = chat;
+            super.init(type: "ChatCreatedEvent", context: context);
         }
     }
 
     /// Event fired when Chat is closed
-    open class ChatClosedEvent: Event {
+    open class ChatClosedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChatClosedEvent();
         
-        public let type = "ChatClosedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Instance of closed chat
         public let chat:Chat!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.chat = nil;
+            super.init(type: "ChatClosedEvent")
         }
         
-        public init(sessionObject:SessionObject, chat:Chat) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, chat:Chat) {
             self.chat = chat;
+            super.init(type: "ChatClosedEvent", context: context);
         }
     }
     
     /// Event fired when message is received
-    open class MessageReceivedEvent: Event {
+    open class MessageReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = MessageReceivedEvent();
         
-        public let type = "MessageReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
-        /// Instance of chat to which this message belongs
         public let chat:Chat?;
         /// Received message
         public let message:Message!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.chat = nil;
             self.message = nil;
+            super.init(type: "MessageReceivedEvent");
         }
         
-        public init(sessionObject:SessionObject, chat:Chat?, message:Message) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, chat:Chat?, message:Message) {
             self.chat = chat;
             self.message = message;
+            super.init(type: "MessageReceivedEvent", context: context);
         }
     }
     

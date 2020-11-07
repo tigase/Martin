@@ -42,10 +42,11 @@ open class Context {
     // Instance of `PacketWriter` to use for sending stanzas
     open var writer: PacketWriter?;
     
-    init(sessionObject: SessionObject, eventBus: EventBus, modulesManager: XmppModulesManager) {
-        self.sessionObject = sessionObject;
+    init(eventBus: EventBus, modulesManager: XmppModulesManager) {
+        self.sessionObject = SessionObject(eventBus: eventBus);
         self.eventBus = eventBus;
         self.modulesManager = modulesManager;
+        self.sessionObject.context = self;
         self.modulesManager.context = self;
     }
     

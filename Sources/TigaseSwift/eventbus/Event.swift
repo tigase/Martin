@@ -31,6 +31,30 @@ public protocol Event: class {
     
 }
 
+open class AbstractEvent: Event {
+    
+    /// Identifier of event while looking for`EventHandler`
+    public let type: String;
+    /// Context of the sender
+    public let context: Context!;
+    /// Access to SessionObject of the context (for compatibility)
+    public var sessionObject: SessionObject {
+        return context.sessionObject;
+    }
+    
+    /// Use only for creation of TYPE parameters!
+    public init(type: String) {
+        self.type = type;
+        self.context = nil;
+    }
+    
+    public init(type: String, context: Context) {
+        self.type = type;
+        self.context = context;
+    }
+
+}
+
 /**
  Protocol to mark events for which handlers must be called only one at the time
  */

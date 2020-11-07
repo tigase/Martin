@@ -295,7 +295,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             guard let channel = channelManager.channel(for: message.from!.bareJid) else {
                 return;
             }
-            self.context.eventBus.fire(MessageReceivedEvent(sessionObject: self.context.sessionObject, message: message, channel: channel, nickname: message.mix?.nickname, senderJid: message.mix?.jid, timestamp: message.delay?.stamp ?? Date()));
+            self.context.eventBus.fire(MessageReceivedEvent(context: self.context, message: message, channel: channel, nickname: message.mix?.nickname, senderJid: message.mix?.jid, timestamp: message.delay?.stamp ?? Date()));
         default:
             break;
         }
@@ -329,7 +329,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             case .failure(_, _, _):
                 channel.update(permissions: []);
             }
-            self.context.eventBus.fire(ChannelPermissionsChangedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            self.context.eventBus.fire(ChannelPermissionsChangedEvent(context: self.context, channel: channel));
         })
     }
     
@@ -348,7 +348,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                     _ = self.channelManager.update(channel: channel, nick: ownParticipant.nickname);
                 }
                 channel.update(participants: participants);
-                self.context.eventBus.fire(ParticipantsChangedEvent(sessionObject: self.context.sessionObject, channel: channel, joined: participants, left: left));
+                self.context.eventBus.fire(ParticipantsChangedEvent(context: self.context, channel: channel, joined: participants, left: left));
                 completionHandler?(.success(participants: participants));
             case .failure(let errorCondition, let pubsubErrorCondition, let response):
                 completionHandler?(.failure(errorCondition: errorCondition, pubsubErrorCondition: pubsubErrorCondition, errorText: response?.errorText));
@@ -586,17 +586,17 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                             _ = self.channelManager.update(channel: channel, nick: participant.nickname);
                         }
                         channel.update(participant: participant);
-                        self.context.eventBus.fire(ParticipantsChangedEvent(sessionObject: context.sessionObject, channel: channel, joined: [participant]));
+                        self.context.eventBus.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
                     }
                 case "retract":
                     if let id = e.itemId {
                         if channel.participantId == id {
                             if self.channelManager.update(channel: channel.channelJid, state: .left) {
-                                self.context.eventBus.fire(ChannelStateChangedEvent(sessionObject: context.sessionObject, channel: channel));
+                                self.context.eventBus.fire(ChannelStateChangedEvent(context: context, channel: channel));
                             }
                         }
                         if let participant = channel.participantLeft(participantId: id) {
-                            self.context.eventBus.fire(ParticipantsChangedEvent(sessionObject: context.sessionObject, channel: channel, left: [participant]));
+                            self.context.eventBus.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
                         }
                     }
                 default:
@@ -613,11 +613,11 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent, is StreamManagementModule.ResumedEvent:
             // we have reconnected, so lets update all channels statuses
             for channel in self.channelManager.channels() {
-                self.context.eventBus.fire(ChannelStateChangedEvent(sessionObject: self.context.sessionObject, channel: channel));
+                self.context.eventBus.fire(ChannelStateChangedEvent(context: self.context, channel: channel));
             }
         case is SessionObject.ClearedEvent:
             for channel in self.channelManager.channels() {
-                self.context.eventBus.fire(ChannelStateChangedEvent(sessionObject: self.context.sessionObject, channel: channel));
+                self.context.eventBus.fire(ChannelStateChangedEvent(context: self.context, channel: channel));
             }
         case is DiscoveryModule.AccountFeaturesReceivedEvent:
             if !localMAMStoresPubSubEvents {
@@ -692,13 +692,10 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
 
     /// Event fired when received message in room
-    open class MessageReceivedEvent: Event {
+    open class MessageReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = MessageReceivedEvent();
         
-        public let type = "MixModuleMessageReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received message
         public let message: Message!;
         /// Room which delivered message
@@ -711,66 +708,62 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         public let timestamp: Date!;
         
         init() {
-            self.sessionObject = nil;
             self.message = nil;
             self.channel = nil;
             self.nickname = nil;
             self.senderJid = nil;
             self.timestamp = nil;
+            super.init(type: "MixModuleMessageReceivedEvent")
         }
         
-        public init(sessionObject: SessionObject, message: Message, channel: Channel, nickname: String?, senderJid: BareJID?, timestamp: Date) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, message: Message, channel: Channel, nickname: String?, senderJid: BareJID?, timestamp: Date) {
             self.message = message;
             self.channel = channel;
             self.nickname = nickname;
             self.senderJid = senderJid;
             self.timestamp = timestamp;
+            super.init(type: "MixModuleMessageReceivedEvent", context: context);
         }
         
     }
 
-    open class ChannelStateChangedEvent: Event {
+    open class ChannelStateChangedEvent: AbstractEvent {
         
         public static let TYPE = ChannelStateChangedEvent();
-        public let type = "MixModuleChannelStateChangedEvent";
 
-        public let sessionObject: SessionObject!;
         public let channel: Channel!;
 
         init() {
-            self.sessionObject = nil;
             self.channel = nil;
+            super.init(type: "MixModuleChannelStateChangedEvent");
         }
         
-        public init(sessionObject: SessionObject, channel: Channel) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, channel: Channel) {
             self.channel = channel;
+            super.init(type: "MixModuleChannelStateChangedEvent", context: context)
         }
     }
     
-    open class ParticipantsChangedEvent: Event {
+    open class ParticipantsChangedEvent: AbstractEvent {
         
         public static let TYPE = ParticipantsChangedEvent();
-        public let type = "MixModuleParticipantChangedEvent";
-        
-        public let sessionObject: SessionObject!;
+
         public let channel: Channel!;
         public let joined: [MixParticipant];
         public let left: [MixParticipant];
         
         init() {
-            self.sessionObject = nil;
             self.channel = nil;
             self.joined = [];
             self.left = [];
+            super.init(type: "MixModuleParticipantChangedEvent")
         }
         
-        public init(sessionObject: SessionObject, channel: Channel, joined: [MixParticipant] = [], left: [MixParticipant] = []) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, channel: Channel, joined: [MixParticipant] = [], left: [MixParticipant] = []) {
             self.channel = channel;
             self.joined = joined;
             self.left = left;
+            super.init(type: "MixModuleParticipantChangedEvent", context: context);
         }
         
         public enum Action {
@@ -779,22 +772,20 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         }
     }
     
-    open class ChannelPermissionsChangedEvent: Event {
+    open class ChannelPermissionsChangedEvent: AbstractEvent {
         
         public static let TYPE = ChannelPermissionsChangedEvent();
-        public let type = "MixModuleChannelPermissionsChangedEvent";
 
-        public let sessionObject: SessionObject!;
         public let channel: Channel!;
 
         init() {
-            self.sessionObject = nil;
             self.channel = nil;
+            super.init(type: "MixModuleChannelPermissionsChangedEvent");
         }
         
-        public init(sessionObject: SessionObject, channel: Channel) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, channel: Channel) {
             self.channel = channel;
+            super.init(type: "MixModuleChannelPermissionsChangedEvent", context: context);
         }
     }
 

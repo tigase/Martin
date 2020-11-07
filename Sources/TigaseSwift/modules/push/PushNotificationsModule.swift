@@ -90,7 +90,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             return;
         }
         
-        context.eventBus.fire(NotificationsDisabledEvent(sessionObject: context.sessionObject, service: from, node: node));
+        context.eventBus.fire(NotificationsDisabledEvent(context: context, service: from, node: node));
     }
     
     open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil, completionHandler: @escaping (Result<Stanza,ErrorCondition>)->Void) {
@@ -148,13 +148,10 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         }
     }
     
-    open class NotificationsDisabledEvent : Event {
+    open class NotificationsDisabledEvent : AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NotificationsDisabledEvent();
         
-        public let type = "PushNotificationsDisabledEvent"
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// JID of disabled service
         public let serviceJid: JID!;
         /// Node of disable service
@@ -162,15 +159,15 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         
         
         init() {
-            self.sessionObject = nil;
             self.serviceJid = nil;
             self.serviceNode = nil;
+            super.init(type: "PushNotificationsDisabledEvent")
         }
         
-        init(sessionObject: SessionObject, service pushServiceJid: JID, node: String ) {
-            self.sessionObject = sessionObject;
+        init(context: Context, service pushServiceJid: JID, node: String ) {
             self.serviceJid = pushServiceJid;
             self.serviceNode = node;
+            super.init(type: "PushNotificationsDisabledEvent", context: context);
         }
     }
     

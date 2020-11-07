@@ -121,16 +121,16 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             }
         } catch ClientSaslException.badChallenge(let msg) {
             logger.debug("Received bad challenge from server: \(msg ?? "nil")");
-            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
+            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.genericError(let msg) {
             logger.debug("Generic error happened: \(msg ?? "nil")");
-            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.temporary_auth_failure));
+            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.invalidServerSignature {
             logger.debug("Received answer from server with invalid server signature!");
-            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
+            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
         } catch ClientSaslException.wrongNonce {
             logger.debug("Received answer from server with wrong nonce!");
-            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
+            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
         }
     }
     
@@ -139,7 +139,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
      */
     open func login() {
         guard let mechanism = guessSaslMechanism() else {
-            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.invalid_mechanism));
+            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.invalid_mechanism));
             return;
         }
         self.mechanismInUse = mechanism;
@@ -150,17 +150,17 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             auth.element.setAttribute("mechanism", value: mechanism.name);
             auth.element.value = try mechanism.evaluateChallenge(nil, context: context);
         
-            context.eventBus.fire(SaslAuthStartEvent(sessionObject:context.sessionObject, mechanism: mechanism.name))
+            context.eventBus.fire(SaslAuthStartEvent(context: context, mechanism: mechanism.name))
         
             context.writer!.write(auth);
             
             if mechanism.status == .completedExpected {
                 context.writer?.execAfterWrite {
-                    self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(sessionObject: self.context.sessionObject));
+                    self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
                 }
             }
         } catch _ {
-            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.aborted));
+            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.aborted));
         }
     }
     
@@ -170,10 +170,10 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         
         if mechanism!.status == .completed {
             logger.debug("Authenticated");
-            context.eventBus.fire(SaslAuthSuccessEvent(sessionObject: context.sessionObject));
+            context.eventBus.fire(SaslAuthSuccessEvent(context: context));
         } else {
             logger.debug("Authenticated by server but responses not accepted by client.");
-            context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: SaslError.server_not_trusted));
+            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
         }
     }
     
@@ -183,7 +183,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         let error = errorName == nil ? nil : SaslError(rawValue: errorName!);
         logger.error("Authentication failed with error: \(error), \(errorName)");
         
-        context.eventBus.fire(SaslAuthFailedEvent(sessionObject: context.sessionObject, error: error ?? SaslError.not_authorized));
+        context.eventBus.fire(SaslAuthFailedEvent(context: context, error: error ?? SaslError.not_authorized));
     }
     
     func processChallenge(_ stanza: Stanza) throws {
@@ -202,7 +202,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         
         if mechanism.status == .completedExpected {
             context.writer?.execAfterWrite {
-                self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(sessionObject: self.context.sessionObject));
+                self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
             }
         }
     }
@@ -231,64 +231,54 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
     }
     
     /// Event fired when SASL authentication fails
-    open class SaslAuthFailedEvent: Event {
+    open class SaslAuthFailedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SaslAuthFailedEvent();
         
-        public let type = "SaslAuthFailedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Error which occurred
         public let error:SaslError!;
         
         init() {
-            sessionObject = nil;
             error = nil;
+            super.init(type: "SaslAuthFailedEvent");
         }
         
-        public init(sessionObject: SessionObject, error: SaslError) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, error: SaslError) {
             self.error = error;
+            super.init(type: "SaslAuthFailedEvent", context: context);
         }
     }
     
     /// Event fired when SASL authentication begins
-    open class SaslAuthStartEvent: Event {
+    open class SaslAuthStartEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SaslAuthStartEvent();
         
-        public let type = "SaslAuthStartEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Mechanism used during authentication
         public let mechanism:String!;
         
         init() {
-            sessionObject = nil;
             mechanism = nil;
+            super.init(type: "SaslAuthStartEvent");
         }
         
-        public init(sessionObject: SessionObject, mechanism:String) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, mechanism:String) {
             self.mechanism = mechanism;
+            super.init(type: "SaslAuthStartEvent", context: context);
         }
     }
     
     /// Event fired after successful authentication
-    open class SaslAuthSuccessEvent: Event {
+    open class SaslAuthSuccessEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SaslAuthSuccessEvent();
-        
-        public let type = "SaslAuthSuccessEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
-        
+                
         init() {
-            sessionObject = nil;
+            super.init(type: "SaslAuthSuccessEvent")
         }
         
-        public init(sessionObject: SessionObject) {
-            self.sessionObject = sessionObject;
+        public init(context: Context) {
+            super.init(type: "SaslAuthSuccessEvent", context: context);
         }
     }
 }

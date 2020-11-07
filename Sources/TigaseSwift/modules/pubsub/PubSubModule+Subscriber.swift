@@ -1,5 +1,5 @@
 //
-// PubSubModuleSubscriberExtension.swift
+// PubSubModule+Subscriber.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -21,18 +21,7 @@
 
 import Foundation
 
-public protocol PubSubModuleSubscriberExtension: class, ContextAware {
-    
-    func createCallback(onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?) -> Void)?) -> ((Stanza?)->Void)?;
-    
-    func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String, onSuccess: ((Stanza, [PubSubSubscriptionElement])->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?);
-    func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String, callback: ((Stanza?)->Void)?);
-
-    func retrieveAffiliations(from pubSubJid: BareJID, source: PubSubAffilicationsSource, completionHandler: @escaping ((PubSubRetrieveAffiliationsResult)->Void));
-    
-}
-
-extension PubSubModuleSubscriberExtension {
+extension PubSubModule {
 
     /**
      Subscribe to node
@@ -40,20 +29,17 @@ extension PubSubModuleSubscriberExtension {
      - parameter to: node name
      - parameter subscriber: jid of subscriber
      - parameter with: optional subscription options
-     - parameter onSuccess: called when request succeeds - passes response stanza and subscription item
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when result is available
      */
-    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: JabberDataElement? = nil, onSuccess: ((Stanza,PubSubSubscriptionElement)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: { (stanza) in
-            let subscriptionEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "subscription");
-            guard subscriptionEl != nil, let subscription = PubSubSubscriptionElement(from: subscriptionEl!) else {
-                onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
+    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: JabberDataElement? = nil, completionHandler: ((PubSubResult<PubSubSubscriptionElement>)->Void)?) {
+        
+        self.subscribe(at: pubSubJid, to: nodeName, subscriber: subscriber, callback: { stanza in
+            guard stanza?.type == .result, let subscriptionEl = stanza?.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "subscription"), let subscription = PubSubSubscriptionElement(from: subscriptionEl) else {
+                completionHandler?(.failure(errorCondition: stanza?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: nil, response: stanza));
                 return;
             }
-            onSuccess?(stanza, subscription);
-            }, onError: onError);
-        
-        self.subscribe(at: pubSubJid, to: nodeName, subscriber: subscriber, callback: callback);
+            completionHandler?(.success(subscription));
+        });
     }
 
     /**
@@ -93,13 +79,16 @@ extension PubSubModuleSubscriberExtension {
      - parameter at: jid of PubSub service
      - parameter from: node name
      - parameter subscriber: jid of subscriber
-     - parameter onSuccess: called when request succeeds - passes response stanza
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when result is available
      */
-    public func unsubscribe(at pubSubJid: BareJID, from nodeName: String, subscriber: JID, onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: onSuccess, onError: onError);
-        
-        self.unsubscribe(at: pubSubJid, from: nodeName, subscriber: subscriber, callback: callback);
+    public func unsubscribe(at pubSubJid: BareJID, from nodeName: String, subscriber: JID, completionHandler: ((PubSubResult<Void>)->Void)?) {
+        self.unsubscribe(at: pubSubJid, from: nodeName, subscriber: subscriber, callback: { stanza in
+            if stanza?.type == .result {
+                completionHandler?(.success(Void()));
+            } else {
+                completionHandler?(.failure(errorCondition: stanza?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: nil, response: stanza));
+            }
+        });
     }
     
     /**
@@ -134,10 +123,14 @@ extension PubSubModuleSubscriberExtension {
      - parameter onSuccess: called when request succeeds - passes response stanza
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
-    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: JabberDataElement, onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: onSuccess, onError: onError);
-        
-        self.configureSubscription(at: pubSubJid, for: nodeName, subscriber: subscriber, with: options, callback: callback);
+    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: JabberDataElement, completionHandler: ((PubSubResult<Void>)->Void)?) {
+        self.configureSubscription(at: pubSubJid, for: nodeName, subscriber: subscriber, with: options, callback: { stanza in
+            if stanza?.type == .result {
+                completionHandler?(.success(Void()));
+            } else {
+                completionHandler?(.failure(errorCondition: stanza?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: nil, response: stanza));
+            }
+        });
     }
     
     /**
@@ -169,21 +162,16 @@ extension PubSubModuleSubscriberExtension {
      Retrieve default configuration for subscription
      - parameter from: jid of PubSub service
      - parameter for: node name
-     - parameter onSuccess: called when request succeeds - passes response stanza, node name and configuration
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when result is available
      */
-    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?, onSuccess: ((Stanza,String?,JabberDataElement)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: { (stanza) in
-            let defaultEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "default");
-            let x = defaultEl?.findChild(name: "x", xmlns: "jabber:x:data");
-            guard x != nil, let defaults = JabberDataElement(from: x!) else {
-                onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
+    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?, completionHandler: ((PubSubResult<JabberDataElement>)->Void)?) {
+        self.retrieveDefaultSubscriptionConfiguration(from: pubSubJid, for: nodeName, callback: { response in
+            if let stanza = response, stanza.type == .result,  let defaultEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "default"), let x = defaultEl.findChild(name: "x", xmlns: "jabber:x:data"), let defaults = JabberDataElement(from: x) {
+                completionHandler?(.success(defaults));
                 return;
             }
-            onSuccess?(stanza, defaultEl?.getAttribute("node") ?? nodeName, defaults);
-            }, onError: onError);
-        
-        self.retrieveDefaultSubscriptionConfiguration(from: pubSubJid, for: nodeName, callback: callback);
+            completionHandler?(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: nil, response: response));
+        });
     }
     
     /**
@@ -212,21 +200,20 @@ extension PubSubModuleSubscriberExtension {
      - parameter from: jid of PubSub service
      - parameter for: node name
      - parameter subscriber: subscriber jid
-     - parameter onSuccess: called when request succeeds - passes response stanza, node name, subscriber jid and configuration
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when response is available
      */
-    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID, onSuccess: ((Stanza,String,JID,JabberDataElement)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: { (stanza) in
-            let optionsEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "options");
-            let x = optionsEl?.findChild(name: "x", xmlns: "jabber:x:data");
-            guard x != nil, let options = JabberDataElement(from: x!) else {
-                onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
+    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID, completionHandler: ((PubSubResult<JabberDataElement>)->Void)?) {
+        self.retrieveSubscriptionConfiguration(from: pubSubJid, for: nodeName, subscriber: subscriber, callback: { response in
+            guard let stanza = response, stanza.type == .result else {
+                completionHandler?(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
                 return;
             }
-            onSuccess?(stanza, optionsEl?.getAttribute("node") ?? nodeName, JID(optionsEl?.getAttribute("jid")) ?? subscriber, options);
-            }, onError: onError);
-        
-        self.retrieveSubscriptionConfiguration(from: pubSubJid, for: nodeName, subscriber: subscriber, callback: callback);
+            guard let optionsEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "options"), let x = optionsEl.findChild(name: "x", xmlns: "jabber:x:data"), let options = JabberDataElement(from: x) else {
+                completionHandler?(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: nil, response: stanza));
+                return;
+            }
+            completionHandler?(.success(options));
+        });
     }
     
     /**
@@ -286,27 +273,6 @@ extension PubSubModuleSubscriberExtension {
             completionHandler(.success(response: stanza, node: itemsEl?.getAttribute("node") ?? nodeName, items: items, rsm: rsm));
         });
     }
-    /**
-     Retrieve items from node
-     - parameter from: jid of PubSub service
-     - parameter for: node name
-     - parameter rsm: result set information
-     - parameter lastItem: number of last items to return
-     - parameter itemIds: array of item ids to retrieve
-     - parameter onSuccess: called when request succeeds - passes response stanza, node name, array of retrieved items and result set informations
-     - parameter onError: called when request failed - passes general and detailed error condition if available
-     */
-    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, rsm: RSM.Query? = nil, lastItems: Int? = nil, itemIds: [String]? = nil, onSuccess: ((Stanza,String,[PubSubModule.Item],RSM.Result?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-    
-        self.retrieveItems(from: pubSubJid, for: nodeName, rsm: rsm, lastItems: lastItems, itemIds: itemIds, completionHandler: { result in
-            switch result {
-            case .success(let response, let node, let items, let rsm):
-                onSuccess?(response, node, items, rsm);
-            case .failure(let errorCondition, let pubsubErrorCondition, _):
-                onError?(errorCondition, pubsubErrorCondition);
-            }
-        })
-    }
     
     /**
      Retrieve items from node
@@ -351,8 +317,8 @@ extension PubSubModuleSubscriberExtension {
      - parameter onSuccess: called when request succeeds - passes response stanza, array of subscription items
      - parameter onError: called when request failed - passes general and detailed error condition if available
      */
-    public func retrieveOwnSubscriptions(from pubSubJid: BareJID, for nodeName: String, onSuccess: ((Stanza, [PubSubSubscriptionElement])->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?)->Void)?) {
-        self.retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS, onSuccess: onSuccess, onError: onError);
+    public func retrieveOwnSubscriptions(from pubSubJid: BareJID, for nodeName: String, completionHandler: @escaping (PubSubResult< [PubSubSubscriptionElement]>)->Void) {
+        self.retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS, completionHandler: completionHandler);
     }
     
     /**

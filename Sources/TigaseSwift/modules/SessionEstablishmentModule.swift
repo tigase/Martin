@@ -71,7 +71,7 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
     }
     
     /// Method called to start session establishemnt
-    open func establish() {
+    open func establish(completionHandler: ((Result<Void,ErrorCondition>)->Void)? = nil) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let session = Element(name:"session");
@@ -79,60 +79,49 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
         iq.element.addChild(session);
 
         context.writer?.write(iq) { (stanza:Stanza?) in
-            var errorCondition:ErrorCondition?;
-            if let type = stanza?.type {
-                switch type {
-                case .result:
-                    self.context.eventBus.fire(SessionEstablishmentSuccessEvent(sessionObject:self.context.sessionObject));
-                    return;
-                default:
-                    if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
-                        errorCondition = ErrorCondition(rawValue: name);
-                    }
-                }
+            switch stanza?.type ?? .error {
+            case .result:
+                self.context.eventBus.fire(SessionEstablishmentSuccessEvent(context: self.context));
+                completionHandler?(.success(Void()));
+            default:
+                let error = stanza?.errorCondition ?? .remote_server_timeout;
+                self.context.eventBus.fire(SessionEstablishmentErrorEvent(context: self.context, errorCondition: error));
+                completionHandler?(.failure(error))
             }
-            
-            self.context.eventBus.fire(SessionEstablishmentErrorEvent(sessionObject:self.context.sessionObject, errorCondition: errorCondition));
         }
     }
     
     /// Event fired when session establishment process fails
-    open class SessionEstablishmentErrorEvent: Event {
+    open class SessionEstablishmentErrorEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SessionEstablishmentErrorEvent();
         
-        public let type = "SessionEstablishmentErrorEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Error condition returned by server
-        public let errorCondition:ErrorCondition?;
+        public let errorCondition:ErrorCondition!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.errorCondition = nil;
+            super.init(type: "SessionEstablishmentErrorEvent")
         }
         
-        public init(sessionObject:SessionObject, errorCondition:ErrorCondition?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, errorCondition:ErrorCondition) {
             self.errorCondition = errorCondition;
+            super.init(type: "SessionEstablishmentErrorEvent", context: context);
         }
     }
     
     /// Event fired when session is established
-    open class SessionEstablishmentSuccessEvent: Event {
+    open class SessionEstablishmentSuccessEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SessionEstablishmentSuccessEvent();
         
-        public let type = "SessionEstablishmentSuccessEvent";        
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         
         fileprivate init() {
-            self.sessionObject = nil;
+            super.init(type: "SessionEstablishmentSuccessEvent")
         }
         
-        public init(sessionObject:SessionObject) {
-            self.sessionObject = sessionObject;
+        public init(context: Context) {
+            super.init(type: "SessionEstablishmentSuccessEvent", context: context);
         }
     }
 }

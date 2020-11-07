@@ -80,13 +80,18 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    open func discoverServerFeatures(onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+    open func discoverServerFeatures(completionHandler: ((DiscoveryModuleInfoResult)->Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
-            getInfo(for: JID(jid.domain), onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
-                self.serverDiscoResult = DiscoveryResult(identities: identities, features: features);
-                self.context.eventBus.fire(ServerFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features, identities: identities));
-                onInfoReceived?(node, identities, features);
-                }, onError: onError);
+            getInfo(for: JID(jid.domain), completionHandler: { result in
+                switch result {
+                case .success(_, let identities, let features, _):
+                    self.serverDiscoResult = DiscoveryResult(identities: identities, features: features);
+                    self.context.eventBus.fire(ServerFeaturesReceivedEvent(context: self.context, features: features, identities: identities));
+                default:
+                    break;
+                }
+                completionHandler?(result);
+            });
         }
     }
     
@@ -95,13 +100,18 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    open func discoverAccountFeatures(onInfoReceived:((_ node: String?, _ identities: [Identity], _ features: [String]) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
+    open func discoverAccountFeatures(completionHandler:((DiscoveryModuleInfoResult) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
-            getInfo(for: jid.withoutResource, onInfoReceived: {(node :String?, identities: [Identity], features: [String]) -> Void in
-                self.accountDiscoResult = DiscoveryResult(identities: identities, features: features);
-                self.context.eventBus.fire(AccountFeaturesReceivedEvent(sessionObject: self.context.sessionObject, features: features));
-                onInfoReceived?(node, identities, features);
-            }, onError: onError);
+            getInfo(for: jid.withoutResource, completionHandler: { result in
+                switch result {
+                case .success(_, let identities, let features, _):
+                    self.accountDiscoResult = DiscoveryResult(identities: identities, features: features);
+                    self.context.eventBus.fire(AccountFeaturesReceivedEvent(context: self.context, features: features));
+                default:
+                    break;
+                }
+                completionHandler?(result);
+            });
         }
     }
     
@@ -128,40 +138,6 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      Method retieves informations about particular XMPP recipient and it's node
      - parameter for: recipient to query
      - parameter node: node to query for informations
-     - parameter onInfoReceived: called where response with result is received
-     - parameter onError: called when received error or request timed out
-     */
-    open func getInfo(for jid:JID, node requestedNode:String? = nil, onInfoReceived:@escaping (_ node: String?, _ identities: [Identity], _ features: [String]) -> Void, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
-        getInfo(for: jid, node: requestedNode, callback: {(stanza: Stanza?) -> Void in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
-                    onInfoReceived(requestedNode, [], []);
-                    return;
-                }
-                let identities = query.mapChildren(transform: { e -> Identity in
-                    return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
-                    }, filter: { (e:Element) -> Bool in
-                       return e.name == "identity" && e.getAttribute("category") != nil && e.getAttribute("type") != nil
-                });
-                let features = query.mapChildren(transform: { e -> String in
-                    return e.getAttribute("var")!;
-                    }, filter: { (e:Element) -> Bool in
-                        return e.name == "feature" && e.getAttribute("var") != nil;
-                })
-                onInfoReceived(query.getAttribute("node") ?? requestedNode, identities, features);
-            default:
-                let errorCondition = stanza?.errorCondition;
-                onError?(errorCondition);
-            }
-        })
-    }
-    
-    /**
-     Method retieves informations about particular XMPP recipient and it's node
-     - parameter for: recipient to query
-     - parameter node: node to query for informations
      - parameter completionHandler: called where result is available
      */
     open func getInfo(for jid:JID, node requestedNode:String? = nil, completionHandler: @escaping (DiscoveryModuleInfoResult) -> Void) {
@@ -170,7 +146,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
             switch type {
             case .result:
                 guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
-                    completionHandler(.success(node: requestedNode, identities: [], features: []));
+                    completionHandler(.success(node: requestedNode, identities: [], features: [], form: nil));
                     return;
                 }
                 let identities = query.mapChildren(transform: { e -> Identity in
@@ -183,7 +159,8 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
                     }, filter: { (e:Element) -> Bool in
                         return e.name == "feature" && e.getAttribute("var") != nil;
                 })
-                completionHandler(.success(node: query.getAttribute("node") ?? requestedNode, identities: identities, features: features));
+                let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data"));
+                completionHandler(.success(node: query.getAttribute("node") ?? requestedNode, identities: identities, features: features, form: form));
             default:
                 let errorCondition = stanza?.errorCondition;
                 completionHandler(.failure(errorCondition: errorCondition ?? .remote_server_timeout, response: stanza));
@@ -208,36 +185,6 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         iq.addChild(query);
         
         context.writer?.write(iq, callback: callback);
-    }
-
-
-    /**
-     Method retieves items available at particular XMPP recipient and it's node
-     - parameter for: recipient to query
-     - parameter node: node to query for items
-     - parameter onItemsReceived: called where response with result is received
-     - parameter onError: called when received error or request timed out
-     */
-    open func getItems(for jid: JID, node requestedNode: String? = nil, onItemsReceived: @escaping (_ node:String?, _ items:[Item]) -> Void, onError: @escaping (_ errorCondition:ErrorCondition?) -> Void) {
-        getItems(for: jid, node: requestedNode, callback: {(stanza:Stanza?) -> Void in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
-                    onItemsReceived(requestedNode, []);
-                    return;
-                }
-                let items = query.mapChildren(transform: { i -> Item in
-                        return Item(jid: JID(i.getAttribute("jid")!), node: i.getAttribute("node"), name: i.getAttribute("name"));
-                    }, filter: { (e) -> Bool in
-                        return e.name == "item" && e.getAttribute("jid") != nil;
-                })
-                onItemsReceived(query.getAttribute("node") ?? requestedNode, items);
-            default:
-                let errorCondition = stanza?.errorCondition;
-                onError(errorCondition);
-            }
-        });
     }
 
     /**
@@ -312,7 +259,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         throw ErrorCondition.not_allowed;
     }
     
-    func processGetInfo(_ stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
+    private func processGetInfo(_ stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
         let result = stanza.makeResult(type: StanzaType.result);
         
         let queryResult = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
@@ -339,7 +286,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         context.writer?.write(result);
     }
     
-    func processGetItems(_ stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
+    private func processGetItems(_ stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
         let result = stanza.makeResult(type: StanzaType.result);
         
         let queryResult = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
@@ -421,49 +368,43 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
     }
     
     /// Event fired when server features are retrieved
-    open class ServerFeaturesReceivedEvent: Event {
+    open class ServerFeaturesReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ServerFeaturesReceivedEvent();
         
-        public let type = "ServerFeaturesReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Array of available server features
         public let features: [String]!;
         public let identities: [Identity]!;
         
         init() {
-            self.sessionObject = nil;
             self.features = nil;
             self.identities = nil;
+            super.init(type: "ServerFeaturesReceivedEvent");
         }
         
-        public init(sessionObject: SessionObject, features: [String], identities: [Identity]) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, features: [String], identities: [Identity]) {
             self.features = features;
             self.identities = identities;
+            super.init(type: "ServerFeaturesReceivedEvent", context: context)
         }
     }
 
     /// Event fired when account features are retrieved
-    open class AccountFeaturesReceivedEvent: Event {
+    open class AccountFeaturesReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AccountFeaturesReceivedEvent();
         
-        public let type = "AccountFeaturesReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Array of available server features
         public let features: [String]!;
         
         init() {
-            self.sessionObject = nil;
             self.features = nil;
+            super.init(type: "AccountFeaturesReceivedEvent")
         }
         
-        public init(sessionObject: SessionObject, features: [String]) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, features: [String]) {
             self.features = features;
+            super.init(type: "AccountFeaturesReceivedEvent", context: context);
         }
     }
 
@@ -474,7 +415,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
 }
 
 public enum DiscoveryModuleInfoResult {
-    case success(node: String?, identities: [DiscoveryModule.Identity], features: [String])
+    case success(node: String?, identities: [DiscoveryModule.Identity], features: [String], form: JabberDataElement?)
     case failure(errorCondition: ErrorCondition, response: Stanza?)
 }
 

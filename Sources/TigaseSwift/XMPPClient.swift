@@ -94,29 +94,21 @@ import TigaseLogging
  ```
  
  */
-open class XMPPClient: EventHandler {
+open class XMPPClient: Context, EventHandler {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPClient");
-    public let sessionObject:SessionObject;
-    public var connectionConfiguration: ConnectionConfiguration {
-        get {
-            self.context.connectionConfiguration
-        }
-        set {
-            self.context.connectionConfiguration = newValue;
-        }
-    }
     open var socketConnector:SocketConnector? {
         willSet {
             sessionLogic?.unbind();
             newValue?.streamLogger = streamLogger;
+            writer = nil;
         }
     }
-    public let modulesManager:XmppModulesManager!;
-    public let eventBus:EventBus;
-    public let context:Context!;
-    fileprivate var sessionLogic:XmppSessionLogic?;
-    fileprivate let responseManager:ResponseManager;
+    public var context:Context {
+        return self;
+    }
+    private var sessionLogic:XmppSessionLogic?;
+    private let responseManager:ResponseManager;
     
     fileprivate var keepaliveTimer: Timer?;
     open var keepaliveTimeout: TimeInterval = (3 * 60) - 5;
@@ -127,14 +119,10 @@ open class XMPPClient: EventHandler {
         }
     }
     
-    open var state:SocketConnector.State {
-        var value:SocketConnector.State = .disconnected;
-        dispatcher.sync {
-            value = sessionLogic?.state ?? socketConnector?.state ?? .disconnected;
-        }
-        return value;
-    }
+    open private(set) var state:SocketConnector.State = .disconnected;
 
+    private var stateSubscription: Cancellable?;
+    
     /// Internal processing queue
     fileprivate let dispatcher: QueueDispatcher;
     
@@ -144,21 +132,13 @@ open class XMPPClient: EventHandler {
     
     public init(eventBus: EventBus?) {
         dispatcher = QueueDispatcher(label: "xmpp_queue")
-        if eventBus == nil {
-            self.eventBus = EventBus();
-        } else {
-            self.eventBus = eventBus!;
-        }
-            
-        sessionObject = SessionObject(eventBus: self.eventBus);
-        modulesManager = XmppModulesManager();
-        context = Context(sessionObject: self.sessionObject, eventBus: self.eventBus, modulesManager: modulesManager);
-        sessionObject.context = context;
-        responseManager = ResponseManager(context: context);
+        responseManager = ResponseManager();
+        super.init(eventBus: eventBus ?? EventBus(), modulesManager: XmppModulesManager());
         self.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
     }
     
     deinit {
+        stateSubscription?.cancel();
         eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
     }
     
@@ -174,8 +154,12 @@ open class XMPPClient: EventHandler {
         dispatcher.sync {
             socketConnector = SocketConnector(context: context);
             context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queueDispatcher: dispatcher);
-            sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queueDispatcher: dispatcher, seeOtherHost: lastSeeOtherHost);
-            sessionLogic!.bind();
+            let sessionLogic = SocketSessionLogic(connector: socketConnector!, responseManager: responseManager, context: context, queueDispatcher: dispatcher, seeOtherHost: lastSeeOtherHost);
+            self.sessionLogic = sessionLogic;
+            sessionLogic.bind();
+            sessionLogic.$state.sink(receiveValue: { [weak self] newState in
+                self?.state = newState;
+            });
             
             keepaliveTimer?.cancel();
             if keepaliveTimeout > 0 {
@@ -234,6 +218,10 @@ open class XMPPClient: EventHandler {
             }
             sessionLogic?.unbind();
             dispatcher.sync {
+                stateSubscription?.cancel();
+                stateSubscription = nil;
+                self.state = .disconnected;
+                socketConnector = nil;
                 sessionLogic = nil;
             }
             logger.debug("connection stopped......");

@@ -121,7 +121,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
      - parameter onSuccess: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func getRoomConfiguration(roomJid: JID, onSuccess: @escaping (JabberDataElement)->Void, onError: ((ErrorCondition?)->Void)?) {
+    open func getRoomConfiguration(roomJid: JID, completionHandler: @escaping (Result<JabberDataElement,ErrorCondition>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = roomJid;
@@ -131,33 +131,14 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                let data = JabberDataElement(from: stanza!.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data"));
-                if data == nil {
-                    onError?(ErrorCondition.undefined_condition)
+                
+                if let data = JabberDataElement(from: stanza!.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data")) {
+                    completionHandler(.success(data));
                 } else {
-                    onSuccess(data!);
+                    completionHandler(.failure(.undefined_condition));
                 }
             default:
-                let errorCondition = stanza?.errorCondition;
-                onError?(errorCondition);
-            }
-        });
-    }
-    
-    /**
-     Set configuration of MUC room (only room owner is allowed to do so)
-     - parameter roomJid: jid of MUC room
-     - parameter configuration: room configuration
-     - parameter onSuccess: called where response with result is received
-     - parameter onError: called when received error or request timed out
-     */
-    open func setRoomConfiguration(roomJid: JID, configuration: JabberDataElement, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?)->Void)?) {
-        self.setRoomConfiguration(roomJid: roomJid, configuration: configuration, completionHandler: { result in
-            switch result {
-            case .success(_):
-                onSuccess();
-            case .failure(let errorCondition):
-                onError?(errorCondition);
+                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
             }
         });
     }
@@ -190,10 +171,10 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         });
     }
     
-    open func getRoomAffiliations(from room: Room, with affiliation: MucAffiliation, completionHandler: @escaping ([RoomAffiliation]?, ErrorCondition?)->Void) {
+    open func getRoomAffiliations(from room: Room, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],ErrorCondition>)->Void) {
         let userRole = (room.presences[room.nickname]?.role ?? .none);
         guard userRole == .participant || userRole == .moderator else {
-            completionHandler(nil, ErrorCondition.forbidden);
+            completionHandler(.failure(.forbidden));
             return;
         };
         
@@ -212,18 +193,18 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
                 let affiliations = stanza?.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.mapChildren(transform: { el in
                     return RoomAffiliation(from: el);
                 }, filter: { el -> Bool in return el.name == "item"}) ?? [];
-                completionHandler(affiliations, nil);
+                completionHandler(.success(affiliations));
             default:
-                completionHandler(nil, stanza?.errorCondition ?? ErrorCondition.remote_server_timeout);
+                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
                 break;
             }
         });
     }
     
-    open func setRoomAffiliations(to room: Room, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (ErrorCondition?)->Void) {
+    open func setRoomAffiliations(to room: Room, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
         let userAffiliation = (room.presences[room.nickname]?.affiliation ?? .none);
         guard userAffiliation == .admin || userAffiliation == .owner else {
-            completionHandler(ErrorCondition.forbidden);
+            completionHandler(.failure(.forbidden));
             return;
         };
 
@@ -244,9 +225,9 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             let type = stanza?.type ?? StanzaType.error;
             switch type {
             case .result:
-                completionHandler(nil);
+                completionHandler(.success(Void()));
             default:
-                completionHandler(stanza?.errorCondition ?? ErrorCondition.remote_server_timeout);
+                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
             }
         });
     }
@@ -300,7 +281,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             room.onRoomCreated = ifCreated;
             room.onRoomJoined = onJoined;
             let presence = room.rejoin();
-            self.context.eventBus.fire(JoinRequestedEvent(sessionObject: self.context.sessionObject, presence: presence, room: room, nickname: nickname));
+            self.context.eventBus.fire(JoinRequestedEvent(context: self.context, presence: presence, room: room, nickname: nickname));
         });
         return result;
     }
@@ -329,7 +310,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         roomsManager.close(room: room);
         
         room._state = .destroyed;
-        context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
+        context.eventBus.fire(RoomClosedEvent(context: context, presence: nil, room: room));
         
         return true;
     }
@@ -351,7 +332,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         roomsManager.close(room: room);
         
         room._state = .destroyed;
-        context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
+        context.eventBus.fire(RoomClosedEvent(context: context, presence: nil, room: room));
     }
     
     open func process(stanza: Stanza) throws {
@@ -386,9 +367,9 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         if type == StanzaType.error {
             if room.state != .joined && nickname == nil {
                 room._state = .not_joined;
-                context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: presence, room: room));
+                context.eventBus.fire(RoomClosedEvent(context: context, presence: presence, room: room));
             } else {
-                context.eventBus.fire(PresenceErrorEvent(sessionObject: context.sessionObject, presence: presence, room: room, nickname: nickname));
+                context.eventBus.fire(PresenceErrorEvent(context: context, presence: presence, room: room, nickname: nickname));
                 return;
             }
         }
@@ -399,7 +380,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         
         if (type == StanzaType.unavailable && nickname == room.nickname) {
             room._state = .not_joined;
-            context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: presence, room: room));
+            context.eventBus.fire(RoomClosedEvent(context: context, presence: presence, room: room));
             return;
         }
         
@@ -419,22 +400,22 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             if xUser?.statuses.firstIndex(of: 201) == nil {
                 room.onRoomCreated = nil;
             }
-            context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname));
-            context.eventBus.fire(OccupantComesEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
+            context.eventBus.fire(YouJoinedEvent(context: context, room: room, nickname: nickname));
+            context.eventBus.fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         } else if (presenceOld == nil || presenceOld?.type == StanzaType.unavailable) && type == nil {
             if let tmp = room.removeTemp(nickname: nickname!) {
                 let oldNickname = tmp.nickname;
                 room.add(occupant: occupant!);
-                context.eventBus.fire(OccupantChangedNickEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: oldNickname));
+                context.eventBus.fire(OccupantChangedNickEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: oldNickname));
             } else {
                 room.add(occupant: occupant!);
-                context.eventBus.fire(OccupantComesEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
+                context.eventBus.fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
             }
         } else if (presenceOld != nil && presenceOld!.type == nil && type == StanzaType.unavailable) {
             room.remove(occupant: occupant!);
-            context.eventBus.fire(OccupantLeavedEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
+            context.eventBus.fire(OccupantLeavedEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         } else {
-            context.eventBus.fire(OccupantChangedPresenceEvent(sessionObject: context.sessionObject, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
+            context.eventBus.fire(OccupantChangedPresenceEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
         }
         
         if xUser != nil && xUser?.statuses.firstIndex(of: 201) != nil {
@@ -443,7 +424,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
                 onRoomCreated(room);
             }
 
-            context.eventBus.fire(NewRoomCreatedEvent(sessionObject: context.sessionObject, presence: presence, room: room));
+            context.eventBus.fire(NewRoomCreatedEvent(context: context, presence: presence, room: room));
         }
     }
     
@@ -462,9 +443,9 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             room._state = .joined;
             logger.debug("\(self.context.sessionObject) - Message while not joined in room: \(room) with nickname: \(nickname)");
             
-            context.eventBus.fire(YouJoinedEvent(sessionObject: context.sessionObject, room: room, nickname: nickname ?? room.nickname));
+            context.eventBus.fire(YouJoinedEvent(context: context, room: room, nickname: nickname ?? room.nickname));
         }
-        context.eventBus.fire(MessageReceivedEvent(sessionObject: context.sessionObject, message: message, room: room, nickname: nickname, timestamp: timestamp));
+        context.eventBus.fire(MessageReceivedEvent(context: context, message: message, room: room, nickname: nickname, timestamp: timestamp));
         room.lastMessageDate = timestamp;
     }
     
@@ -473,18 +454,18 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         let contStr = x?.getAttribute("continue");
         let cont = contStr == "true" || contStr == "1";
         
-        let invitation = DirectInvitation(sessionObject: context.sessionObject, message: message, roomJid: BareJID(x!.getAttribute("jid")!), inviter: message.from!, reason: x?.getAttribute("reason"), password: x?.getAttribute("password"), threadId: x?.getAttribute("thread"), continueFlag: cont);
+        let invitation = DirectInvitation(context: context, message: message, roomJid: BareJID(x!.getAttribute("jid")!), inviter: message.from!, reason: x?.getAttribute("reason"), password: x?.getAttribute("password"), threadId: x?.getAttribute("thread"), continueFlag: cont);
         
-        context.eventBus.fire(InvitationReceivedEvent(sessionObject: context.sessionObject, invitation: invitation));
+        context.eventBus.fire(InvitationReceivedEvent(context: context, invitation: invitation));
     }
     
     func processMediatedInvitationMessage(_ message: Message) {
         let x = message.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         let invite = x?.findChild(name: "invite");
         
-        let invitation = MediatedInvitation(sessionObject: context.sessionObject, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.getAttribute("from")), reason: invite?.getAttribute("reason"), password: x?.getAttribute("password"));
+        let invitation = MediatedInvitation(context: context, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.getAttribute("from")), reason: invite?.getAttribute("reason"), password: x?.getAttribute("password"));
         
-        context.eventBus.fire(InvitationReceivedEvent(sessionObject: context.sessionObject, invitation: invitation));
+        context.eventBus.fire(InvitationReceivedEvent(context: context, invitation: invitation));
     }
     
     func processInvitationDeclinedMessage(_ message: Message) {
@@ -498,27 +479,24 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         let reason = decline?.findChild(name: "reason")?.stringValue;
         let invitee = decline?.getAttribute("from");
         
-        context.eventBus.fire(InvitationDeclinedEvent(sessionObject: context.sessionObject, message: message, room: room!, invitee: JID(invitee), reason: reason));
+        context.eventBus.fire(InvitationDeclinedEvent(context: context, message: message, room: room!, invitee: JID(invitee), reason: reason));
     }
 
     fileprivate func markRoomsAsNotJoined() {
         for room in roomsManager.getRooms() {
             room._state = .not_joined;
             
-            context.eventBus.fire(RoomClosedEvent(sessionObject: context.sessionObject, presence: nil, room: room));
+            context.eventBus.fire(RoomClosedEvent(context: context, presence: nil, room: room));
         }
     }
     
     /**
      Event fired when join request is sent
      */
-    open class JoinRequestedEvent: Event {
+    open class JoinRequestedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = JoinRequestedEvent();
         
-        public let type = "MucModuleJoinRequestedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Presence sent
         public let presence: Presence!;
         /// Room to join
@@ -527,29 +505,26 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public let nickname: String?;
         
         init() {
-            self.sessionObject = nil;
             self.presence = nil;
             self.room = nil;
             self.nickname = nil;
+            super.init(type: "MucModuleJoinRequestedEvent");
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, nickname: String?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, presence: Presence, room: Room, nickname: String?) {
             self.presence = presence;
             self.room = room;
             self.nickname = nickname;
+            super.init(type: "MucModuleJoinRequestedEvent", context: context)
         }
         
     }
     
     /// Event fired when received message in room
-    open class MessageReceivedEvent: Event {
+    open class MessageReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = MessageReceivedEvent();
         
-        public let type = "MucModuleMessageReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received message
         public let message: Message!;
         /// Room which delivered message
@@ -560,55 +535,48 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public let timestamp: Date!;
         
         init() {
-            self.sessionObject = nil;
             self.message = nil;
             self.room = nil;
             self.nickname = nil;
             self.timestamp = nil;
+            super.init(type: "MucModuleMessageReceivedEvent")
         }
         
-        public init(sessionObject: SessionObject, message: Message, room: Room, nickname: String?, timestamp: Date) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, message: Message, room: Room, nickname: String?, timestamp: Date) {
             self.message = message;
             self.room = room;
             self.nickname = nickname;
             self.timestamp = timestamp;
+            super.init(type: "MucModuleMessageReceivedEvent", context: context);
         }
         
     }
     
     /// Event fired when new room is opened locally
-    open class NewRoomCreatedEvent: Event {
+    open class NewRoomCreatedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NewRoomCreatedEvent();
         
-        public let type = "MucModuleNewRoomCreatedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Presence in room
         public let presence: Presence!;
         /// Created room
         public let room: Room!;
         
         init() {
-            self.sessionObject = nil;
             self.presence = nil;
             self.room = nil;
+            super.init(type: "MucModuleNewRoomCreatedEvent");
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, presence: Presence, room: Room) {
             self.presence = presence;
             self.room = room;
+            super.init(type: "MucModuleNewRoomCreatedEvent", context: context);
         }
     }
     
-    open class AbstractOccupantEvent: Event {
+    open class AbstractOccupantEvent: AbstractEvent {
         
-        public let type: String;
-        
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// New presence
         public let presence: Presence!;
         /// Room in which occupant changed presence
@@ -620,14 +588,22 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         /// Additional informations from new presence
         public let xUser: XMucUserElement?;
         
-        init(type: String, sessionObject: SessionObject?, presence: Presence?, room: Room?, occupant: MucOccupant?, nickname: String?, xUser: XMucUserElement? = nil) {
-            self.type = type;
-            self.sessionObject = sessionObject;
+        fileprivate override init(type: String) {
+            self.presence = nil;
+            self.room = nil;
+            self.occupant = nil;
+            self.nickname = nil;
+            self.xUser = nil;
+            super.init(type: type);
+        }
+        
+        init(type: String, context: Context, presence: Presence?, room: Room?, occupant: MucOccupant?, nickname: String?, xUser: XMucUserElement? = nil) {
             self.presence = presence;
             self.room = room;
             self.occupant = occupant;
             self.nickname = nickname;
             self.xUser = xUser;
+            super.init(type: type, context: context);
         }
     }
     
@@ -637,11 +613,11 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public static let TYPE = OccupantChangedNickEvent();
         
         init() {
-            super.init(type: "MucModuleOccupantChangedNickEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
+            super.init(type: "MucModuleOccupantChangedNickEvent");
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?) {
-            super.init(type: "MucModuleOccupantChangedNickEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: nil);
+        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?) {
+            super.init(type: "MucModuleOccupantChangedNickEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: nil);
         }
     }
     
@@ -651,11 +627,11 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public static let TYPE = OccupantChangedPresenceEvent();
         
         init() {
-            super.init(type: "MucModuleOccupantChangedPresenceEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
+            super.init(type: "MucModuleOccupantChangedPresenceEvent");
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
-            super.init(type: "MucModuleOccupantChangedPresenceEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
+        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+            super.init(type: "MucModuleOccupantChangedPresenceEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
     }
     
@@ -665,11 +641,11 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public static let TYPE = OccupantComesEvent();
         
         init() {
-            super.init(type: "MucModuleOccupantComesEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
+            super.init(type: "MucModuleOccupantComesEvent");
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
-            super.init(type: "MucModuleOccupantComesEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
+        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+            super.init(type: "MucModuleOccupantComesEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
         
     }
@@ -680,23 +656,20 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public static let TYPE = OccupantLeavedEvent();
         
         init() {
-            super.init(type: "MucModuleOccupantLeavedEvent", sessionObject: nil, presence: nil, room: nil, occupant: nil, nickname: nil, xUser: nil);
+            super.init(type: "MucModuleOccupantLeavedEvent");
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
-            super.init(type: "MucModuleOccupantLeavedEvent", sessionObject: sessionObject, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
+        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+            super.init(type: "MucModuleOccupantLeavedEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
         
     }
     
     /// Event fired when we receive presence of type error from MUC room
-    open class PresenceErrorEvent: Event {
+    open class PresenceErrorEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = PresenceErrorEvent();
         
-        public let type = "MucModulePresenceErrorEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received presence
         public let presence: Presence!;
         /// Room which sent presence
@@ -705,80 +678,71 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public let nickname: String?;
         
         init() {
-            self.sessionObject = nil;
             self.presence = nil;
             self.room = nil;
             self.nickname = nil;
+            super.init(type: "MucModulePresenceErrorEvent")
         }
         
-        public init(sessionObject: SessionObject, presence: Presence, room: Room, nickname: String?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, presence: Presence, room: Room, nickname: String?) {
             self.presence = presence;
             self.room = room;
             self.nickname = nickname;
+            super.init(type: "MucModulePresenceErrorEvent", context: context);
         }
     }
     
     /// Event fired when room is closed (left by us)
-    open class RoomClosedEvent: Event {
+    open class RoomClosedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = RoomClosedEvent();
         
-        public let type = "MucModuleRoomClosedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received presence
         public let presence: Presence?;
         /// Closed room
         public let room: Room!;
         
         init() {
-            self.sessionObject = nil;
             self.presence = nil;
             self.room = nil;
+            super.init(type: "MucModuleRoomClosedEvent")
         }
         
-        public init(sessionObject: SessionObject, presence: Presence?, room: Room) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, presence: Presence?, room: Room) {
             self.presence = presence;
             self.room = room;
+            super.init(type: "MucModuleRoomClosedEvent", context: context);
         }
     }
     
     /// Event fired when room is joined by us
-    open class YouJoinedEvent: Event {
+    open class YouJoinedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = YouJoinedEvent();
         
-        public let type = "MucModuleYouJoinedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Joined room
         public let room: Room!;
         /// Joined under nickname
         public let nickname: String?;
         
         init() {
-            self.sessionObject = nil;
             self.room = nil;
             self.nickname = nil;
+            super.init(type: "MucModuleYouJoinedEvent");
         }
         
-        public init(sessionObject: SessionObject, room: Room, nickname: String?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, room: Room, nickname: String?) {
             self.room = room;
             self.nickname = nickname;
+            super.init(type: "MucModuleYouJoinedEvent", context: context);
         }
     }
     
     /// Event fired when information about declined invitation is received
-    open class InvitationDeclinedEvent: Event {
+    open class InvitationDeclinedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = InvitationDeclinedEvent();
         
-        public let type = "MucModuleInvitationDeclinedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received message
         public let message: Message!;
         /// Room
@@ -789,49 +753,49 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         public let reason: String?;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.message = nil;
             self.room = nil;
             self.invitee = nil;
             self.reason = nil;
+            super.init(type: "MucModuleInvitationDeclinedEvent");
         }
     
-        public init(sessionObject: SessionObject, message: Message, room: Room, invitee: JID?, reason: String?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, message: Message, room: Room, invitee: JID?, reason: String?) {
             self.message = message;
             self.room = room;
             self.invitee = invitee;
             self.reason = reason;
+            super.init(type: "MucModuleInvitationDeclinedEvent", context: context);
         }
     }
     
     /// Event fired when invitation is received
-    open class InvitationReceivedEvent: Event {
+    open class InvitationReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = InvitationReceivedEvent();
         
-        public let type = "MucModuleInvitationReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received invitation
         public let invitation: Invitation!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.invitation = nil;
+            super.init(type: "MucModuleInvitationReceivedEvent")
         }
         
-        public init(sessionObject: SessionObject, invitation: Invitation) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, invitation: Invitation) {
             self.invitation = invitation;
+            super.init(type: "MucModuleInvitationReceivedEvent", context: context);
         }
         
     }
     
     /// Common class for invitations
     open class Invitation {
+        public let context: Context;
         /// Instance of `SessionObject` to identify connection which fired event
-        public let sessionObject: SessionObject;
+        public var sessionObject: SessionObject {
+            return context.sessionObject;
+        }
         /// Received message
         public let message: Message;
         /// Room JID
@@ -843,8 +807,8 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         /// Reason for invitation
         public let reason: String?;
         
-        public init(sessionObject: SessionObject, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?) {
+            self.context = context;
             self.message = message;
             self.roomJid = roomJid;
             self.inviter = inviter;
@@ -860,18 +824,18 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         /// Continuation flag
         public let continueFlag: Bool;
         
-        public init(sessionObject: SessionObject, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?, threadId: String?, continueFlag: Bool) {
+        public init(context: Context, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?, threadId: String?, continueFlag: Bool) {
             self.threadId = threadId;
             self.continueFlag = continueFlag;
-            super.init(sessionObject: sessionObject, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
+            super.init(context: context, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
         }
     }
     
     /// Class for mediated invitations over MUC component
     open class MediatedInvitation: Invitation {
         
-        public override init(sessionObject: SessionObject, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?) {
-            super.init(sessionObject: sessionObject, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
+        public override init(context: Context, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?) {
+            super.init(context: context, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
         }
         
     }

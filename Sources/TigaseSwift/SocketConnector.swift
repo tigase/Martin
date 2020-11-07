@@ -25,9 +25,7 @@ import TigaseLogging
  Class responsible for connecting to XMPP server, sending and receiving data.
  */
 open class SocketConnector : XMPPDelegate, StreamDelegate {
-    
-    fileprivate static var QUEUE_TAG = "xmpp_socket_queue";
-    
+        
     /**
      Possible states of connection:
      - connecting: Trying to establish connection to XMPP server
@@ -42,10 +40,10 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
         case disconnected
     }
     
-    let context: Context;
-    let sessionObject: SessionObject;
-    var inStream: InputStream?
-    var outStream: OutputStream? {
+    private weak var context: Context!;
+    private let sessionObject: SessionObject;
+    private var inStream: InputStream?
+    private var outStream: OutputStream? {
         didSet {
             if outStream != nil && oldValue == nil {
                 outStreamBuffer = WriteBuffer();
@@ -72,8 +70,7 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     var sslCertificateValidated: Bool? = false;
     
     /// Internal processing queue
-    fileprivate let queue: DispatchQueue;
-    fileprivate var queueTag: DispatchSpecificKey<DispatchQueue?>;
+    private let queue: QueueDispatcher;
     
     fileprivate var server: String?;
     private(set) var currentConnectionDetails: XMPPSrvRecord? {
@@ -83,81 +80,61 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
     }
     
     private var connectionTimer: Foundation.Timer?;
-    fileprivate var state_:State = State.disconnected;
-    open var state:State {
-        get {
-            return self.dispatch_sync_with_result_local_queue() {
-                if self.state_ != State.disconnected && ((self.inStream?.streamStatus ?? .notOpen) == Stream.Status.closed || (self.outStream?.streamStatus ?? .notOpen) == Stream.Status.closed) {
-                    return State.disconnected;
-                }
-                return self.state_;
-            }
-        }
-        set {
-            dispatch_sync_local_queue() {
-                self.logger.debug("\(self.context) - connection state changed from: \(self.state) to: \(newValue)");
-                if newValue == State.disconnecting && self.state_ == State.disconnected {
-                    return;
-                }
-                let oldState = self.state_;
-                self.state_ = newValue
-                if oldState != State.disconnected && newValue == State.disconnected {
-                    DispatchQueue.main.async {
-                        self.connectionTimer?.invalidate();
-                        self.connectionTimer = nil;
-                    }
-                    self.context.eventBus.fire(DisconnectedEvent(sessionObject: self.sessionObject, connectionDetails: self.currentConnectionDetails, clean: State.disconnecting == oldState));
-                }
-                if oldState == State.connecting && newValue == State.connected {
-                    DispatchQueue.main.async {
-                        self.connectionTimer?.invalidate();
-                        self.connectionTimer = nil;
-                    }
-                    self.context.eventBus.fire(ConnectedEvent(sessionObject: self.sessionObject));
-                }
-                if newValue == .connecting, let timeout: Double = context.connectionConfiguration.conntectionTimeout {
-                    self.logger.debug("\(self.context) - scheduling timer for: \(timeout)");
-                    DispatchQueue.main.async {
-                        self.connectionTimer = Foundation.Timer.scheduledTimer(timeInterval: timeout, target: self, selector: #selector(self.connectionTimedOut), userInfo: nil, repeats: false)
-                    }
-                }
-            }
-        }
-    }
     
-    fileprivate func dispatch_sync_local_queue(_ block: ()->()) {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
-            block();
-        } else {
-            queue.sync(execute: block);
-        }
-    }
-    
-    fileprivate func dispatch_sync_with_result_local_queue<T>(_ block: ()-> T) -> T {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
-            return block();
-        } else {
-            var result: T!;
-            queue.sync {
-                result = block();
-            }
-            return result;
-        }
-    }
+    @Published
+    open private(set) var state: State = .disconnected;
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "SocketConnector")
+    private var stateSubscription: Cancellable?;
     
     init(context:Context) {
-        self.queue = DispatchQueue(label: "xmpp_socket_queue", attributes: []);
-        self.queueTag = DispatchSpecificKey<DispatchQueue?>();
-        queue.setSpecific(key: queueTag, value: queue);
+        self.queue = QueueDispatcher(label: "xmpp_socket_queue");
         self.dnsResolver = context.connectionConfiguration.dnsResolver ?? XMPPDNSSrvResolver();
         self.sessionObject = context.sessionObject;
         self.context = context;
+        
+        super.init();
+        
+        var oldState: State = .disconnected;
+        self.stateSubscription = $state.sink(receiveValue: { [weak self] newState in
+            guard let that = self else {
+                return;
+            }
+            that.queue.sync {
+            switch newState {
+            case .disconnected:
+                if oldState != .disconnected {
+                    DispatchQueue.main.async {
+                        that.connectionTimer?.invalidate();
+                        that.connectionTimer = nil;
+                    }
+                    that.context.eventBus.fire(DisconnectedEvent(sessionObject: that.sessionObject, connectionDetails: that.currentConnectionDetails, clean: State.disconnecting == oldState));
+                }
+            case .connected:
+                if oldState == .connecting {
+                    DispatchQueue.main.async {
+                        that.connectionTimer?.invalidate();
+                        that.connectionTimer = nil;
+                    }
+                    that.context.eventBus.fire(ConnectedEvent(sessionObject: that.sessionObject));
+                }
+            case .connecting:
+                if let timeout: Double = context.connectionConfiguration.conntectionTimeout {
+                    that.logger.debug("\(that.context) - scheduling timer for: \(timeout)");
+                    DispatchQueue.main.async {
+                        that.connectionTimer = Foundation.Timer.scheduledTimer(timeInterval: timeout, target: that, selector: #selector(that.connectionTimedOut), userInfo: nil, repeats: false)
+                    }
+                }
+            default:
+                break;
+            }
+            oldState = newState;
+            }
+        })
     }
     
     deinit {
-        queue.setSpecific(key: queueTag, value: nil);
+        stateSubscription?.cancel();
     }
     
     /**
@@ -415,15 +392,15 @@ open class SocketConnector : XMPPDelegate, StreamDelegate {
      [see-other-host]: http://xmpp.org/rfcs/rfc6120.html#streams-error-conditions-see-other-host
      */
     open func reconnect() {
-        dispatch_sync_local_queue() {
+        queue.sync {
             self.logger.debug("closing socket before reconnecting using see-other-host!")
-            self.state_ = .disconnecting;
+            self.state = .disconnecting;
             DispatchQueue.main.async {
                 self.connectionTimer?.invalidate();
                 self.connectionTimer = nil;
             }
             self.closeSocket(newState: nil);
-            self.state_ = .disconnected;
+            self.state = .disconnected;
             self.sessionObject.clear();
         }
         queue.async {

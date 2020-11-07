@@ -67,26 +67,35 @@ open class PEPBookmarksModule: AbstractPEPModule {
     
     public func publish(bookmarks: Bookmarks) {
         let pepJID = JID(context.userBareJid);
-        discoModule.getInfo(for: pepJID, node: PEPBookmarksModule.ID, onInfoReceived: { (node, identities, features) in
-            self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
-        }) { (error) in
-            if (error ?? ErrorCondition.remote_server_timeout) == .item_not_found {
-                let config = JabberDataElement(type: .submit);
-                let formType = HiddenField(name: "FORM_TYPE");
-                formType.value = "http://jabber.org/protocol/pubsub#node_config";
-                config.addField(formType);
-                config.addField(BooleanField(name: "pubsub#persist_items", label: nil, desc: nil, required: false, value: true));
-                config.addField(TextSingleField(name: "pubsub#access_model", label: nil, desc: nil, required: false, value: "whitelist"));
-                self.pubsubModule.createNode(at: pepJID.bareJid, node: PEPBookmarksModule.ID, with: config, onSuccess: { (stanza: Stanza, node: String)->Void in
-                    guard node == PEPBookmarksModule.ID else {
-                        return;
-                    }
-                    self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
-                }, onError: nil);
+        discoModule.getInfo(for: pepJID, node: PEPBookmarksModule.ID, completionHandler: { result in
+            switch result {
+            case .success(let node, let identities, let features, let form):
+                self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
+            case .failure(let errorCondition, _):
+                switch errorCondition {
+                case .item_not_found:
+                    let config = JabberDataElement(type: .submit);
+                    let formType = HiddenField(name: "FORM_TYPE");
+                    formType.value = "http://jabber.org/protocol/pubsub#node_config";
+                    config.addField(formType);
+                    config.addField(BooleanField(name: "pubsub#persist_items", label: nil, desc: nil, required: false, value: true));
+                    config.addField(TextSingleField(name: "pubsub#access_model", label: nil, desc: nil, required: false, value: "whitelist"));
+                    self.pubsubModule.createNode(at: pepJID.bareJid, node: PEPBookmarksModule.ID, with: config, completionHandler: { result in
+                        switch result {
+                        case .success(let node):
+                            guard node == PEPBookmarksModule.ID else {
+                                return;
+                            }
+                            self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
+                        default:
+                            break;
+                        }
+                    });
+                default:
+                    break;
+                }
             }
-        }
-        
-        
+        });
     }
     
     public func handle(event: Event) {
@@ -101,14 +110,19 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }) {
                 // requesting Bookmarks!!
                 let pepJID = context.userBareJid;
-                pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, rsm: nil, lastItems: 1, itemIds: nil, onSuccess: { (stanza, node, items, rsm) in
-                    if let item = items.first {
-                        if let bookmarks = Bookmarks(from: item.payload) {
-                            self.currentBookmarks = bookmarks;
-                            self.context.eventBus.fire(BookmarksChangedEvent(sessionObject: e.sessionObject, bookmarks: bookmarks));
+                pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, rsm: nil, lastItems: 1, itemIds: nil, completionHandler: { result in
+                    switch result {
+                    case .success(_, _, let items, _):
+                        if let item = items.first {
+                            if let bookmarks = Bookmarks(from: item.payload) {
+                                self.currentBookmarks = bookmarks;
+                                self.context.eventBus.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
+                            }
                         }
+                    default:
+                        break;
                     }
-                }, onError: nil);
+                });
             }
             
         case let e as PubSubModule.NotificationReceivedEvent:
@@ -117,29 +131,26 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }
             if let bookmarks = Bookmarks(from: e.payload) {
                 self.currentBookmarks = bookmarks;
-                context.eventBus.fire(BookmarksChangedEvent(sessionObject: e.sessionObject, bookmarks: bookmarks));
+                context.eventBus.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
             }
         default:
             break;
         }
     }
 
-    open class BookmarksChangedEvent: Event {
+    open class BookmarksChangedEvent: AbstractEvent {
         public static let TYPE = BookmarksChangedEvent();
         
-        public let type = "PEPBookmarksChanged";
-        
-        public let sessionObject: SessionObject!;
         public let bookmarks: Bookmarks!;
         
         init() {
-            self.sessionObject = nil;
             self.bookmarks = nil;
+            super.init(type: "PEPBookmarksChanged");
         }
         
-        init(sessionObject: SessionObject, bookmarks: Bookmarks) {
-            self.sessionObject = sessionObject;
+        init(context: Context, bookmarks: Bookmarks) {
             self.bookmarks = bookmarks;
+            super.init(type: "PEPBookmarksChanged", context: context);
         }
         
     }

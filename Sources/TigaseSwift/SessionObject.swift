@@ -25,6 +25,7 @@ import TigaseLogging
 /**
  Instances of this class keep configuration properties for connections and commonly used state values.
  */
+@available(* , deprecated, message: "Class will be removed soon")
 open class SessionObject {
     
     /**

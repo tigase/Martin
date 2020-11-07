@@ -64,55 +64,46 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         throw ErrorCondition.bad_request;
     }
     
-    open func findHttpUploadComponent(onSuccess: @escaping ([JID:Int?])->Void, onError: @escaping (ErrorCondition?)->Void) {        
+    open func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], ErrorCondition>)->Void) {
         let serverJid = JID(context.userBareJid.domain);
-        discoModule.getItems(for: serverJid, onItemsReceived: { (_, items) in
-            var components: [JID:Int?] = [:];
-            var queries = items.count;
-            let callback = { (jid: JID?, maxFileSize: Int?) in
-                DispatchQueue.main.async {
-                    if (jid != nil) {
-                        components[jid!] = maxFileSize;
+        discoModule.getItems(for: serverJid, completionHandler: { result in
+            switch result {
+            case .failure(let errorCondition, _):
+                completionHandler(.failure(errorCondition));
+            case .success(_, let items):
+                var results: [UploadComponent] = [];
+                let group = DispatchGroup();
+                
+                group.notify(queue: DispatchQueue.main, execute: {
+                    guard !results.isEmpty else {
+                        completionHandler(.failure(.item_not_found));
+                        return;
                     }
-                    queries = queries - 1;
-                    if queries == 0 {
-                        if components.count > 0 {
-                            DispatchQueue.global().async {
-                                onSuccess(components);
+                    completionHandler(.success(results));
+                })
+                
+                group.enter();
+                for item in items {
+                    group.enter();
+                    self.discoModule.getInfo(for: item.jid, node: nil, completionHandler: { result in
+                        switch result {
+                        case .failure(_, _):
+                            break;
+                        case .success(_, _, let features, let form):
+                            if features.contains(HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS) {
+                                DispatchQueue.main.async {
+                                    let maxSizeField: TextSingleField? = form?.getField(named: "max-file-size");
+                                    let maxSize = Int(maxSizeField?.value ?? "") ?? Int.max;
+                                    results.append(UploadComponent(jid: item.jid, maxSize: maxSize));
+                                }
                             }
-                        } else {
-                            onError(ErrorCondition.item_not_found);
                         }
-                    }
+                        group.leave();
+                    });
                 }
-            };
-            items.forEach({ (item) in
-                self.discoModule.getInfo(for: item.jid, node: nil, callback: {(stanza: Stanza?) -> Void in
-                    let type = stanza?.type ?? StanzaType.error;
-                    switch type {
-                    case .result:
-                        let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
-                        let features = query!.mapChildren(transform: { e -> String in
-                            return e.getAttribute("var")!;
-                        }, filter: { (e:Element) -> Bool in
-                            return e.name == "feature" && e.getAttribute("var") != nil;
-                        })
-                        guard features.contains(HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS) else {
-                            callback(nil, nil);
-                            return;
-                        }
-                        let maxFileSizeField: TextSingleField? = JabberDataElement(from: query?.findChild(name: "x", xmlns: "jabber:x:data"))?.getField(named: "max-file-size");
-                        let maxFileSize = maxFileSizeField?.value != nil ? Int(maxFileSizeField!.value!) : nil;
-                        callback(stanza?.from!, maxFileSize);
-                    default:
-                        callback(nil, nil);
-                    }
-                });
-            });
-            if queries == 0 {
-                onError(ErrorCondition.item_not_found);
+                group.leave();
             }
-        }, onError: onError);
+        });
     }
     
     open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, callback: ((Stanza?)->Void)?) {
@@ -131,35 +122,37 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
-    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, onSuccess: @escaping (Slot)->Void, onError: @escaping (ErrorCondition?,String?)->Void) {
-        requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType) { (response) in
-            let type = response?.type ?? StanzaType.error;
-            switch (type) {
-            case .result:
-                let slotEl = response?.findChild(name: "slot", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS);
-                let getUri = slotEl?.findChild(name: "get")?.getAttribute("url");
-                let putUri = slotEl?.findChild(name: "put")?.getAttribute("url");
-                var putHeaders = [String:String]();
-                slotEl?.findChild(name: "put")?.forEachChild(name: "header", fn: { (header) in
+    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,ErrorCondition>)->Void) {
+        requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType, callback: { (stanza) in
+            if let response = stanza, response.type == .result {
+                guard let slotEl = response.findChild(name: "slot", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS), let getUri = slotEl.findChild(name: "get")?.getAttribute("url"), let putUri = slotEl.findChild(name: "put")?.getAttribute("url") else {
+                    completionHandler(.failure(.undefined_condition));
+                    return;
+                }
+                
+                var putHeaders: [String:String] = [:];
+                slotEl.findChild(name: "put")?.forEachChild(name: "header", fn: { (header) in
                     let name = header.getAttribute("name");
                     let value = header.value;
                     if name != nil && value != nil {
                         putHeaders[name!] = value!;
                     }
                 })
-                if (getUri != nil && putUri != nil) {
-                    if let slot = Slot(getUri: getUri!, putUri: putUri!, putHeaders: putHeaders) {
-                        onSuccess(slot);
-                    } else {
-                        onError(ErrorCondition.not_acceptable, "Invalid GET or PUT url!");
-                    }
+                
+                if let slot = Slot(getUri: getUri, putUri: putUri, putHeaders: putHeaders) {
+                    completionHandler(.success(slot));
                 } else {
-                    onError(ErrorCondition.undefined_condition, nil);
+                    completionHandler(.failure(.undefined_condition));
                 }
-            default:
-                onError(response?.errorCondition, response?.errorText);
+            } else {
+                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
             }
-        }
+        });
+    }
+    
+    public struct UploadComponent {
+        public let jid: JID;
+        public let maxSize: Int;
     }
     
     open class Slot {

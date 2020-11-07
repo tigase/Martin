@@ -154,14 +154,6 @@ open class VCard {
             self.binval = binval;
             super.init(types: types);
         }
-        
-//        convenience public init(uri: String?, types: [EntryType] = []) {
-//            self.init(uri: uri, types: types);
-//        }
-//        
-//        convenience public init(type: String?, binval: String?, types: [EntryType] = []) {
-//            self.init(type: type, binval: binval, types: types);
-//        }
     }
     
     open class Telephone: VCardEntryItemTypeAware, VCardEntryProtocol {

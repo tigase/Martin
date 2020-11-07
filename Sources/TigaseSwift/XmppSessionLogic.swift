@@ -64,32 +64,40 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         return context.userBareJid.stringValue;
     }
     
-    var quickstart: Bool = true;
-    
-    fileprivate let context:Context;
-    fileprivate let modulesManager:XmppModulesManager;
-    fileprivate let connector:SocketConnector;
-    fileprivate let responseManager:ResponseManager;
+    private let context: Context;
+    private var modulesManager: XmppModulesManager {
+        return context.modulesManager;
+    }
+    private let connector:SocketConnector;
+    private let responseManager:ResponseManager;
 
     /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
-    open var state:SocketConnector.State {
-        let s = connector.state;
-        if s == .connected && ResourceBinderModule.getBindedJid(context.sessionObject) == nil {
-            return .connecting;
-        }
-        return s;
-    }
-    
+    @Published
+    open private(set) var state:SocketConnector.State = .disconnected;
+
     private let dispatcher: QueueDispatcher;
     private var seeOtherHost: XMPPSrvRecord? = nil;
     
-    public init(connector:SocketConnector, modulesManager:XmppModulesManager, responseManager:ResponseManager, context:Context, queueDispatcher: QueueDispatcher, seeOtherHost: XMPPSrvRecord?) {
+    private var socketStateSubscription: Cancellable?;
+    
+    public init(connector:SocketConnector, responseManager:ResponseManager, context:Context, queueDispatcher: QueueDispatcher, seeOtherHost: XMPPSrvRecord?) {
         self.dispatcher = queueDispatcher;
         self.connector = connector;
         self.context = context;
-        self.modulesManager = modulesManager;
         self.responseManager = responseManager;
         self.seeOtherHost = seeOtherHost;
+        
+        socketStateSubscription = connector.$state.sink(receiveValue: { [weak self] newState in
+            guard newState != .connected else {
+                return;
+            }
+            self?.state = newState;
+        });
+    }
+    
+    deinit {
+        socketStateSubscription?.cancel();
+        self.state = .disconnected;
     }
     
     open func bind() {
@@ -267,15 +275,17 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
             }
         } else {
             //processSessionBindedAndEstablished(context.sessionObject);
-            context.eventBus.fire(SessionEstablishmentModule.SessionEstablishmentSuccessEvent(sessionObject:context.sessionObject));
+            context.eventBus.fire(SessionEstablishmentModule.SessionEstablishmentSuccessEvent(context: context));
+            state = .connected;
         }
     }
     
     func processSessionBindedAndEstablished(_ sessionObject:SessionObject) {
+        state = .connected;
         self.logger.debug("\(self.context) - session binded and established");
         if let discoveryModule = context.modulesManager.moduleOrNil(.disco) {
-            discoveryModule.discoverServerFeatures(onInfoReceived: nil, onError: nil);
-            discoveryModule.discoverAccountFeatures(onInfoReceived: nil, onError: nil);
+            discoveryModule.discoverServerFeatures(completionHandler: nil);
+            discoveryModule.discoverAccountFeatures(completionHandler: nil);
         }
         
         if let streamManagementModule = context.modulesManager.moduleOrNil(.streamManagement) {

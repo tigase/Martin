@@ -91,15 +91,15 @@ open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
         case is SaslModule.SaslAuthSuccessEvent:
             let saslEvent = event as! SaslModule.SaslAuthSuccessEvent;
             self.state = .authorized;
-            _context.eventBus.fire(AuthSuccessEvent(sessionObject: saslEvent.sessionObject));
+            _context.eventBus.fire(AuthSuccessEvent(context: context));
         case is SaslModule.SaslAuthFailedEvent:
             let saslEvent = event as! SaslModule.SaslAuthFailedEvent;
             self.state = .notAuthorized;
-            _context.eventBus.fire(AuthFailedEvent(sessionObject: saslEvent.sessionObject, error: saslEvent.error));
+            _context.eventBus.fire(AuthFailedEvent(context: saslEvent.context, error: saslEvent.error));
         case is SaslModule.SaslAuthStartEvent:
             let saslEvent = event as! SaslModule.SaslAuthStartEvent;
             self.state = .inProgress;
-            _context.eventBus.fire(AuthStartEvent(sessionObject: saslEvent.sessionObject));
+            _context.eventBus.fire(AuthStartEvent(context: saslEvent.context));
         default:
             logger.error("handing of unsupported event: \(event)");
         }
@@ -116,78 +116,63 @@ open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
     }
     
     /// Event fired on authentication failure
-    open class AuthFailedEvent: Event {
+    open class AuthFailedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthFailedEvent();
         
-        public let type = "AuthFailedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Error returned by server during authentication
         public let error:SaslError!;
         
         init() {
-            sessionObject = nil;
             error = nil;
+            super.init(type: "AuthFailedEvent");
         }
         
-        public init(sessionObject: SessionObject, error: SaslError) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, error: SaslError) {
             self.error = error;
+            super.init(type: "AuthFailedEvent", context: context);
         }
     }
     
     /// Event fired on start of authentication process
-    open class AuthStartEvent: Event {
+    open class AuthStartEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthStartEvent();
-        
-        public let type = "AuthStartEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
-        
+                
         init() {
-            sessionObject = nil;
+            super.init(type: "AuthStartEvent");
         }
         
-        public init(sessionObject: SessionObject) {
-            self.sessionObject = sessionObject;
+        public init(context: Context) {
+            super.init(type: "AuthStartEvent", context: context);
         }
     }
     
-    open class AuthFinishExpectedEvent: Event {
+    open class AuthFinishExpectedEvent: AbstractEvent {
         
         public static let TYPE = AuthFinishExpectedEvent();
         
-        public let type = "AuthFinishExpectedEvent";
-        
-        public let sessionObject: SessionObject!;
-        
         init() {
-            sessionObject = nil;
+            super.init(type: "AuthFinishExpectedEvent");
         }
         
-        public init(sessionObject: SessionObject) {
-            self.sessionObject = sessionObject;
+        public init(context: Context) {
+            super.init(type: "AuthFinishExpectedEvent", context: context);
         }
         
     }
     
     /// Event fired when after sucessful authentication
-    open class AuthSuccessEvent: Event {
+    open class AuthSuccessEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthSuccessEvent();
         
-        public let type = "AuthSuccessEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
-        
         init() {
-            sessionObject = nil;
+            super.init(type: "AuthSuccessEvent");
         }
         
-        public init(sessionObject: SessionObject) {
-            self.sessionObject = sessionObject;
+        public init(context: Context) {
+            super.init(type: "AuthSuccessEvent", context: context);
         }
     }
     

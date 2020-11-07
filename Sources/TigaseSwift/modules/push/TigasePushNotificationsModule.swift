@@ -36,17 +36,22 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             data.addField(TextSingleField(name: "device-second-token", value: pushkitDeviceId));
         }
         
-        adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data, onSuccess: { (stanza, resultData) in
-            
-            guard let result = RegistrationResult(form: resultData) else {
-                completionHandler(.failure(.undefined_condition));
-                return;
+        adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data, completionHandler: { result in
+            switch result {
+            case .success(_, let form, _, _):
+                guard let result = RegistrationResult(form: form) else {
+                    completionHandler(.failure(.undefined_condition));
+                    return;
+                }
+                completionHandler(.success(result));
+            case .failure(let error):
+                completionHandler(.failure(error));
             }
             
-            completionHandler(.success(result));
-        }, onError: { error in
-            completionHandler(.failure(error ?? ErrorCondition.undefined_condition));
         });
+//        , onError: { error in
+//            completionHandler(.failure(error ?? ErrorCondition.undefined_condition));
+//        });
     }
     
     open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, ErrorCondition>)->Void) {
@@ -56,40 +61,53 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         data.addField(TextSingleField(name: "provider", value: provider));
         data.addField(TextSingleField(name: "device-token", value: deviceId));
         
-        adhocModule.execute(on: serviceJid, command: "unregister-device", action: .execute, data: data, onSuccess: { (stanza, resultData) in
-            completionHandler(.success(Void()));
-        }, onError: { error in
-            completionHandler(.failure(error ?? ErrorCondition.undefined_condition));
-        })
+        adhocModule.execute(on: serviceJid, command: "unregister-device", action: .execute, data: data, completionHandler: { result in
+            switch result {
+            case .success(_, _, _, _):
+                completionHandler(.success(Void()));
+            case .failure(let error):
+                completionHandler(.failure(error));
+            }
+        });
     }
     
     open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,ErrorCondition>)->Void) {
         let discoModule = context.modulesManager.module(.disco);
-        discoModule.getItems(for: JID(context.userBareJid.domain), node: nil, onItemsReceived: {(node, items) in
-            let result = DiscoResults(items: items) { (jids) in
-                self.logger.debug("\(self.context) - found proper push components at \(jids)");
-                if let jid = jids.first {
-                    completionHandler(.success(jid));
-                } else {
-                    completionHandler(.failure(.item_not_found));
-                }
-            };
-            items.forEach({ (item) in
-                discoModule.getInfo(for: item.jid, node: item.node, onInfoReceived: { (node, identities, features) in
-                    if identities.filter({ (identity) -> Bool in
-                        identity.category == "pubsub" && identity.type == "push"
-                    }).isEmpty || !Set(requiredFeatures).isSubset(of: features) {
-                        result.failure();
+        discoModule.getItems(for: JID(context.userBareJid.domain), node: nil, completionHandler: { result in
+            switch result {
+            case .success(_, let items):
+                var found: [JID] = [];
+                let group = DispatchGroup();
+                group.notify(queue: DispatchQueue.main, execute: {
+                    if let jid = found.first {
+                        completionHandler(.success(jid));
                     } else {
-                        result.found(item.jid);
+                        completionHandler(.failure(.item_not_found));
                     }
-                }, onError: {(errorCondition) in
-                    result.failure();
-                });
-            });
-            result.checkFinished();
-        }, onError: {(errorCondition) in
-            completionHandler(.failure(errorCondition ?? .undefined_condition));
+                })
+                group.enter();
+                for item in items {
+                    group.enter();
+                    discoModule.getInfo(for: item.jid, node: item.node, completionHandler: { result in
+                        switch result {
+                        case .success(_, let identities, let features, _):
+                            if (!identities.filter({ (identity) -> Bool in
+                                identity.category == "pubsub" && identity.type == "push"
+                            }).isEmpty) && Set(requiredFeatures).isSubset(of: features) {
+                                DispatchQueue.main.async {
+                                    found.append(item.jid);
+                                }
+                            }
+                        case .failure(_, _):
+                            break;
+                        }
+                        group.leave();
+                    });
+                }
+                group.leave();
+            case .failure(let errorCondition, _):
+                completionHandler(.failure(errorCondition));
+            }
         });
     }
     

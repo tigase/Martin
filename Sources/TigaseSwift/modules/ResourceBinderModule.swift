@@ -54,6 +54,7 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
      - parameter sessionObject: instance of `SessionObject` to retrieve from
      - returns: binded JID
      */
+    @available(*, deprecated, message: "Use bindedJid property from ResourceBinderMobule")
     public static func getBindedJid(_ sessionObject:SessionObject) -> JID? {
         return sessionObject.context.module(.resourceBind).bindedJid;
     }
@@ -69,7 +70,7 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
     }
     
     /// Method called to bind resource
-    open func bind() {
+    open func bind(completionHandler: ((Result<JID,ErrorCondition>)->Void)? = nil) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let bind = Element(name:"bind");
@@ -85,7 +86,7 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
                     if let name = stanza!.element.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {
                         let jid = JID(name);
                         self.bindedJid = jid;
-                        self.context.eventBus.fire(ResourceBindSuccessEvent(sessionObject: self.context.sessionObject, bindedJid: jid));
+                        completionHandler?(.success(jid));
                         return;
                     }
                 default:
@@ -95,7 +96,8 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
                 }
             }
             
-            self.context.eventBus.fire(ResourceBindErrorEvent(sessionObject: self.context.sessionObject, errorCondition: errorCondition));
+            self.context.eventBus.fire(ResourceBindErrorEvent(context: self.context, errorCondition: errorCondition));
+            completionHandler?(.failure(errorCondition ?? .undefined_condition));
         }
             
     }
@@ -106,47 +108,41 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
     }
     
     /// Event fired when resource is binding fails
-    open class ResourceBindErrorEvent: Event {
+    open class ResourceBindErrorEvent: AbstractEvent {
         
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ResourceBindErrorEvent();
         
-        public let type = "ResourceBindErrorEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Error condition returned by server
         public let errorCondition:ErrorCondition?;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.errorCondition = nil;
+            super.init(type: "ResourceBindErrorEvent");
         }
         
-        public init(sessionObject:SessionObject, errorCondition:ErrorCondition?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, errorCondition:ErrorCondition?) {
             self.errorCondition = errorCondition;
+            super.init(type: "ResourceBindErrorEvent", context: context);
         }
     }
     
     /// Event fired when resource is binded
-    open class ResourceBindSuccessEvent: Event {
+    open class ResourceBindSuccessEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ResourceBindSuccessEvent();
         
-        public let type = "ResourceBindSuccessEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Full JID with binded resource
         public let bindedJid:JID!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.bindedJid = nil;
+            super.init(type: "ResourceBindSuccessEvent");
         }
         
-        public init(sessionObject:SessionObject, bindedJid:JID) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, bindedJid:JID) {
             self.bindedJid = bindedJid;
+            super.init(type: "ResourceBindSuccessEvent", context: context)
         }
     }
 }

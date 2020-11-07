@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0060: Publish-Subscribe]: http://www.xmpp.org/extensions/xep-0060.html
  */
-open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, PubSubModulePublisherExtension, PubSubModuleSubscriberExtension {    
+open class PubSubModule: XmppModule, ContextAware {
     
     public static let PUBSUB_XMLNS = "http://jabber.org/protocol/pubsub";
     
@@ -83,7 +83,7 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
                 let itemId = item.getAttribute("id");
                 let payload = item.firstChild();
                 
-                context.eventBus.fire(NotificationReceivedEvent(sessionObject: context.sessionObject, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: type));
+                context.eventBus.fire(NotificationReceivedEvent(context: context, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: type));
             }
         }
         
@@ -93,7 +93,7 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
                     guard let childNode = el.getAttribute("node"), let action = NotificationCollectionChildrenChangedEvent.Action(rawValue: el.name) else {
                         return nil;
                     }
-                    return NotificationCollectionChildrenChangedEvent(sessionObject: self.context.sessionObject, message: message, nodeName: nodeName, childNodeName: childNode, action: action, timestamp: timestamp);
+                    return NotificationCollectionChildrenChangedEvent(context: self.context, message: message, nodeName: nodeName, childNodeName: childNode, action: action, timestamp: timestamp);
                 }, filter: { (el) -> Bool in
                     el.name == NotificationCollectionChildrenChangedEvent.Action.associate.rawValue || el.name == NotificationCollectionChildrenChangedEvent.Action.dissociate.rawValue;
                 }).forEach { ev in
@@ -104,40 +104,17 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         
         if let deleteElem = event.findChild(name: "delete") {
             if let nodeName = deleteElem.getAttribute("node") {
-                self.context.eventBus.fire(NotificationNodeDeletedEvent(sessionObject: self.context.sessionObject, message: message, nodeName: nodeName));
+                self.context.eventBus.fire(NotificationNodeDeletedEvent(context: self.context, message: message, nodeName: nodeName));
             }
         }
         
     }
     
-
-    /**
-     Helper function for creation of callbacks for requests executed by PubSubModule
-     - parameter onSuccess: callback to execute when request returns success
-     - parameter onError: callback to execute when request fails
-     */
-    open func createCallback(onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?) -> Void)?) -> ((Stanza?)->Void)? {
-        return { (stanza: Stanza?) -> Void in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-                case .result:
-                onSuccess?(stanza!);
-            default:
-                let errorCondition = stanza?.errorCondition;
-                let pubsubErrorElem = stanza?.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
-                onError?(errorCondition, pubsubErrorElem == nil ? nil : PubSubErrorCondition(rawValue: pubsubErrorElem!.name));
-            }
-        };
-    }
-    
     /// Event fired when received message with PubSub notification/event with items
-    open class NotificationReceivedEvent: Event {
+    open class NotificationReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NotificationReceivedEvent();
         
-        public let type = "PubSubNotificationReceivedEvent"
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received message with notification
         public let message: Message!;
         /// Name of node which sent notification
@@ -160,34 +137,31 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         }
         
         init() {
-            self.sessionObject = nil;
             self.message = nil;
             self.nodeName = nil;
             self.itemId = nil;
             self.itemType = nil;
             self.payload = nil;
             self.timestamp = nil;
+            super.init(type: "PubSubNotificationReceivedEvent");
         }
         
-        init(sessionObject: SessionObject, message: Message, nodeName: String?, itemId: String?, payload: Element?, timestamp: Date, itemType: String) {
-            self.sessionObject = sessionObject;
+        init(context: Context, message: Message, nodeName: String?, itemId: String?, payload: Element?, timestamp: Date, itemType: String) {
             self.message = message;
             self.nodeName = nodeName;
             self.itemId = itemId;
             self.itemType = itemType;
             self.payload = payload;
             self.timestamp = timestamp;
+            super.init(type: "PubSubNotificationReceivedEvent", context: context);
         }
         
     }
     
-    open class NotificationCollectionChildrenChangedEvent: Event {
+    open class NotificationCollectionChildrenChangedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NotificationCollectionChildrenChangedEvent();
 
-        public let type = "NotificationCollectionChildrenChangedEvent"
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received message with notification
         public let message: Message!;
         /// Name of node which sent notification
@@ -200,21 +174,21 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         public let timestamp: Date!;
 
         init() {
-            self.sessionObject = nil;
             self.message = nil;
             self.nodeName = nil;
             self.childNodeName = nil;
             self.action = nil;
             self.timestamp = nil;
+            super.init(type: "NotificationCollectionChildrenChangedEvent")
         }
         
-        init(sessionObject: SessionObject, message: Message, nodeName: String, childNodeName: String, action: Action, timestamp: Date) {
-            self.sessionObject = sessionObject;
+        init(context: Context, message: Message, nodeName: String, childNodeName: String, action: Action, timestamp: Date) {
             self.message = message;
             self.nodeName = nodeName;
             self.childNodeName = childNodeName;
             self.action = action;
             self.timestamp = timestamp;
+            super.init(type: "NotificationCollectionChildrenChangedEvent", context: context);
         }
 
         public enum Action: String {
@@ -223,28 +197,25 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
         }
     }
     
-    open class NotificationNodeDeletedEvent: Event {
+    open class NotificationNodeDeletedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NotificationNodeDeletedEvent();
         
-        public let type = "NotificationNodeDeletedEvent"
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Received message with notification
         public let message: Message!;
         /// Name of node which sent notification
         public let nodeName: String!;
         
         init() {
-            self.sessionObject = nil;
             self.message = nil;
             self.nodeName = nil;
+            super.init(type: "NotificationNodeDeletedEvent")
         }
         
-        init(sessionObject: SessionObject, message: Message, nodeName: String) {
-            self.sessionObject = sessionObject;
+        init(context: Context, message: Message, nodeName: String) {
             self.message = message;
             self.nodeName = nodeName;
+            super.init(type: "NotificationNodeDeletedEvent", context: context);
         }
         
     }
@@ -268,3 +239,7 @@ open class PubSubModule: XmppModule, ContextAware, PubSubModuleOwnerExtension, P
     }
 }
 
+public enum PubSubResult<T> {
+    case success(T)
+    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
+}

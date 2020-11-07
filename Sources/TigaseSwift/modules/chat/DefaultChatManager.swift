@@ -45,7 +45,7 @@ open class DefaultChatManager: ChatManager {
     open func close(chat: Chat) -> Bool {
         let result = chatStore.close(chat: chat);
         if result {
-            context.eventBus.fire(MessageModule.ChatClosedEvent(sessionObject: context.sessionObject, chat: chat));
+            context.eventBus.fire(MessageModule.ChatClosedEvent(context: context, chat: chat));
         }
         return result;
     }
@@ -53,7 +53,7 @@ open class DefaultChatManager: ChatManager {
     open func createChat(with jid: JID, thread: String? = nil) -> Chat? {
         switch chatStore.createChat(jid: jid, thread: thread) {
         case .success(let chat):
-            context.eventBus.fire(MessageModule.ChatCreatedEvent(sessionObject: context.sessionObject, chat: chat));
+            context.eventBus.fire(MessageModule.ChatCreatedEvent(context: context, chat: chat));
             return chat;
         case .failure(_):
             return nil;

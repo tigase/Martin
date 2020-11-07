@@ -46,14 +46,8 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
     open func process(stanza: Stanza) throws {
         throw ErrorCondition.feature_not_implemented;
     }
-
-    open func execute(on to: JID?, command node: String, action: Action?, data: JabberDataElement?, onSuccess: @escaping (Stanza, JabberDataElement?)->Void, onError: @escaping (ErrorCondition?)->Void) {
-        execute(on: to, command: node, action: action, data: data, onSuccess: onSuccess, onError: { (stanza, errorCondition) in
-            onError(errorCondition);
-        });
-    }
     
-    open func execute(on to: JID?, command node: String, action: Action?, data: JabberDataElement?, onSuccess: @escaping (Stanza, JabberDataElement?)->Void, onError: @escaping (Stanza?,ErrorCondition?)->Void) {
+    open func execute(on to: JID?, command node: String, action: Action?, data: JabberDataElement?, completionHandler: @escaping (AdHocResult)->Void) {
         let iq = Iq();
         iq.type = .set;
         iq.to = to;
@@ -67,21 +61,29 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
         
         iq.addChild(command);
         
-        context.writer?.write(iq) { (stanza: Stanza?) in
-            var errorCondition:ErrorCondition?;
-            if let type = stanza?.type {
-                switch type {
-                case .result:
-                    onSuccess(stanza!, JabberDataElement(from: stanza!.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS)?.findChild(name: "x", xmlns: "jabber:x:data")));
-                    return;
-                default:
-                    if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
-                        errorCondition = ErrorCondition(rawValue: name);
-                    }
-                }
+        context.writer?.write(iq, callback: { response in
+            guard let stanza = response, stanza.type == .result else {
+                completionHandler(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout));
+                return;
             }
-            onError(stanza, errorCondition);
-        }
+            
+            guard let command = stanza.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
+                completionHandler(.failure(errorCondition: .undefined_condition));
+                return;
+            }
+            
+            let form = JabberDataElement(from: command.findChild(name: "x", xmlns: "jabber:x:data"));
+            let actions = command.findChild(name: "actions")?.mapChildren(transform: { Action(rawValue: $0.name) }) ?? [];
+            let notes = command.mapChildren(transform: { Note.from(element: $0) });
+            let status = Status(rawValue: command.getAttribute("status") ?? "") ?? Status.completed;
+            completionHandler(.success(status: status, form: form, actions: actions, notes: notes));
+        });
+    }
+    
+    public enum Status: String {
+        case executing
+        case completed
+        case canceled
     }
     
     public enum Action: String {
@@ -91,4 +93,29 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
         case next
         case prev
     }
+    
+    public enum Note {
+        case info(message: String)
+        case warn(message: String)
+        case error(message: String)
+        
+        static func from(element: Element) -> Note? {
+            guard element.name == "note" else {
+                return nil;
+            }
+            switch element.getAttribute("type") ?? "info" {
+            case "warn":
+                return .warn(message: element.value ?? "");
+            case "error":
+                return .error(message: element.value ?? "");
+            default:
+                return .info(message: element.value ?? "");
+            }
+        }
+    }
+}
+
+public enum AdHocResult {
+    case success(status: AdHocCommandsModule.Status, form: JabberDataElement?, actions: [AdHocCommandsModule.Action], notes: [AdHocCommandsModule.Note])
+    case failure(errorCondition: ErrorCondition)
 }

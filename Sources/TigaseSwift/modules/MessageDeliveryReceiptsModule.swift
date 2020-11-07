@@ -71,19 +71,16 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
             break;
         case .received(let id):
             // need to notify client - fire event
-            context.eventBus.fire(ReceiptEvent(sessionObject: context.sessionObject, message: message, messageId: id));
+            context.eventBus.fire(ReceiptEvent(context: context, message: message, messageId: id));
             break;
         }
     }
     
     /// Event fired when message delivery confirmation is received
-    open class ReceiptEvent: Event {
+    open class ReceiptEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ReceiptEvent();
         
-        public let type = "MessageDeliveryReceiptReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Received message
         public let message:Message!;
         /// ID of confirmed message
@@ -91,15 +88,15 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
         
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.messageId = nil;
             self.message = nil;
+            super.init(type: "MessageDeliveryReceiptReceivedEvent")
         }
         
-        public init(sessionObject:SessionObject, message:Message, messageId: String) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, message: Message, messageId: String) {
             self.message = message;
             self.messageId = messageId;
+            super.init(type: "MessageDeliveryReceiptReceivedEvent", context: context)
         }
     }
 }

@@ -101,29 +101,6 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
     }
 
     /**
-     Retrieve version of software used by recipient
-     - parameter for: address for which we want to retrieve software version
-     - parameter onResult: called on successful response
-     - parameter onError: called failure or request timeout
-     */
-    open func checkSoftwareVersion(for jid:JID, onResult: @escaping (_ name:String?, _ version:String?, _ os:String?)->Void, onError: @escaping (_ errorCondition:ErrorCondition?)->Void) {
-        checkSoftwareVersion(for: jid, callback: { (stanza) in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                let query = stanza?.findChild(name: "query", xmlns: "jabber:iq:version");
-                let name = query?.findChild(name: "name")?.value;
-                let version = query?.findChild(name: "version")?.value;
-                let os = query?.findChild(name: "os")?.value;
-                onResult(name, version, os);
-            default:
-                let errorCondition = stanza?.errorCondition;
-                onError(errorCondition);
-            }
-        })
-    }
-    
-    /**
      Method processes incoming stanzas
      - parameter stanza: stanza to process
      */

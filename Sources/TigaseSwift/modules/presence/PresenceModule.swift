@@ -93,7 +93,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
         case is StreamManagementModule.ResumedEvent:
             self.streamResumptionPresences?.forEach { presence in
                 let availabilityChanged = store.update(presence: presence);
-                context.eventBus.fire(ContactPresenceChanged(sessionObject: context.sessionObject, presence: presence, availabilityChanged: availabilityChanged));
+                context.eventBus.fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
             }
             self.streamResumptionPresences = nil;
         case is StreamManagementModule.FailedEvent:
@@ -116,11 +116,11 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
             switch type {
             case .available, .unavailable, .error:
                 let availabilityChanged = store.update(presence: presence);
-                context.eventBus.fire(ContactPresenceChanged(sessionObject: context.sessionObject, presence: presence, availabilityChanged: availabilityChanged));
+                context.eventBus.fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
             case .unsubscribed:
-                context.eventBus.fire(ContactUnsubscribedEvent(sessionObject: context.sessionObject, presence: presence));
+                context.eventBus.fire(ContactUnsubscribedEvent(context: context, presence: presence));
             case .subscribe:
-                context.eventBus.fire(SubscribeRequestEvent(sessionObject: context.sessionObject, presence: presence));
+                context.eventBus.fire(SubscribeRequestEvent(context: context, presence: presence));
             default:
                 logger.error("received presence with weird type: \(type, privacy: .public), \(presence)");
             }
@@ -238,74 +238,65 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
     }
 
     /// Event fired when contact changes presence
-    open class ContactPresenceChanged: Event {
+    open class ContactPresenceChanged: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ContactPresenceChanged();
         
-        public let type = "ContactPresenceChanged";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Received presence
         public let presence:Presence!;
         /// Contact become online or offline
         public let availabilityChanged:Bool;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.presence = nil;
             self.availabilityChanged = false;
+            super.init(type: "ContactPresenceChanged")
         }
         
-        public init(sessionObject:SessionObject, presence:Presence, availabilityChanged:Bool) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, presence: Presence, availabilityChanged: Bool) {
             self.presence = presence;
             self.availabilityChanged = availabilityChanged;
+            super.init(type: "ContactPresenceChanged", context: context);
         }
         
     }
 
     /// Event fired if we are unsubscribed from someone presence
-    open class ContactUnsubscribedEvent: Event {
+    open class ContactUnsubscribedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ContactUnsubscribedEvent();
         
-        public let type = "ContactUnsubscribedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Presence received
         public let presence:Presence!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.presence = nil;
+            super.init(type: "ContactUnsubscribedEvent")
         }
         
-        public init(sessionObject:SessionObject, presence:Presence) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, presence:Presence) {
             self.presence = presence;
+            super.init(type: "ContactUnsubscribedEvent", context: context);
         }
         
     }
     
     /// Event fired if someone wants to subscribe our presence
-    open class SubscribeRequestEvent: Event {
+    open class SubscribeRequestEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SubscribeRequestEvent();
         
-        public let type = "SubscribeRequestEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Presence received
         public let presence:Presence!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.presence = nil;
+            super.init(type: "SubscribeRequestEvent");
         }
         
-        public init(sessionObject:SessionObject, presence:Presence) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, presence: Presence) {
             self.presence = presence;
+            super.init(type: "SubscribeRequestEvent", context: context)
         }
     }
     
@@ -322,7 +313,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
             let offlinePresence = Presence();
             offlinePresence.type = StanzaType.unavailable;
             offlinePresence.from = JID(presence.from!.bareJid);
-            presenceModule.context.eventBus.fire(ContactPresenceChanged(sessionObject: presenceModule.context.sessionObject, presence: offlinePresence, availabilityChanged: true));
+            presenceModule.context.eventBus.fire(ContactPresenceChanged(context: presenceModule.context, presence: offlinePresence, availabilityChanged: true));
         }
         
         open func setPresence(show: Presence.Show, status: String?, priority: Int?) {

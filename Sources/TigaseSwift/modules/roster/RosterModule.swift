@@ -82,7 +82,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         case let ce as SessionObject.ClearedEvent:
             if ce.scopes.contains(.user) {
                 store.cleared();
-                context.eventBus.fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: nil, action: .removed, modifiedGroups: nil));
+                context.eventBus.fire(ItemUpdatedEvent(context: context, rosterItem: nil, action: .removed, modifiedGroups: nil));
             }
         default:
             logger.error("received unknown event: \(event)");
@@ -120,7 +120,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         
     }
     
-    fileprivate func processRosterItem(_ item:Element) {
+    private func processRosterItem(_ item:Element) {
         let jid = JID(item.getAttribute("jid")!);
         let name = item.getAttribute("name");
         let subscription:RosterItem.Subscription = item.getAttribute("subscription") == nil ? RosterItem.Subscription.none : RosterItem.Subscription(rawValue: item.getAttribute("subscription")!)!;
@@ -166,7 +166,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
             store.addItem(currentItem!);
             
         }
-        fire(ItemUpdatedEvent(sessionObject: context.sessionObject, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
+        fire(ItemUpdatedEvent(context: context, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
     }
     
     fileprivate func processRosterItemForAnnotations(item: Element) -> [RosterItemAnnotation] {
@@ -182,7 +182,12 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     /**
      Send roster retrieval request to server
      */
+    @available(*, deprecated, renamed: "requestRoster")
     open func rosterRequest() {
+        requestRoster(completionHandler: nil)
+    }
+    
+    open func requestRoster(completionHandler: ((Result<Void, ErrorCondition>)->Void)? = nil) {
         let iq = Iq();
         iq.type = .get;
         let query = Element(name:"query", xmlns:"jabber:iq:roster");
@@ -201,10 +206,13 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, callback: { (result:Stanza?) in
+        context.writer?.write(iq, callback: { result in
             if (result?.type == StanzaType.result) {
                 if let query = result!.findChild(name: "query", xmlns: "jabber:iq:roster") {
                     self.processRosterQuery(query, force: true);
+                    completionHandler?(.success(Void()));
+                } else {
+                    completionHandler?(.failure(result?.errorCondition ?? .remote_server_timeout));
                 }
             }
         })
@@ -279,13 +287,10 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     }
 
     /// Event fired when roster item is updated
-    open class ItemUpdatedEvent: Event {
+    open class ItemUpdatedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ItemUpdatedEvent();
         
-        public let type = "ItemUpdatedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Changed roster item
         public let rosterItem:RosterItem?;
         /// Action done to roster item
@@ -294,17 +299,17 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         public let modifiedGroups:[String]?;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.rosterItem = nil;
             self.action = nil;
             self.modifiedGroups = nil;
+            super.init(type: "ItemUpdatedEvent");
         }
         
-        public init(sessionObject:SessionObject, rosterItem: RosterItem?, action:Action, modifiedGroups:[String]?) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, rosterItem: RosterItem?, action: Action, modifiedGroups: [String]?) {
             self.rosterItem = rosterItem;
             self.action = action;
             self.modifiedGroups = modifiedGroups;
+            super.init(type: "ItemUpdatedEvent", context: context);
         }
     }
 

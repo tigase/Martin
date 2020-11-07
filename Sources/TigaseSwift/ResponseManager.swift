@@ -46,16 +46,15 @@ open class ResponseManager {
         }
     }
     
-    fileprivate let queue = DispatchQueue(label: "response_manager_queue", attributes: []);
+    private let queue = DispatchQueue(label: "response_manager_queue", attributes: []);
     
-    fileprivate var timer:Timer?;
+    private var timer:Timer?;
     
-    fileprivate var handlers = [String:Entry]();
+    private var handlers = [String:Entry]();
     
-    fileprivate let context:Context;
+    weak var context:Context?;
     
-    public init(context:Context) {
-        self.context = context;
+    public init() {
     }
 
     /**
@@ -70,7 +69,7 @@ open class ResponseManager {
         var callback: ((Stanza?)->Void)? = nil;
         queue.sync {
             if let entry = self.handlers[id] {
-                let userJid = ResourceBinderModule.getBindedJid(self.context.sessionObject);
+                let userJid = context?.moduleOrNil(.resourceBind)?.bindedJid;
                 if let from = stanza.from {
                     if entry.jid == from || (entry.jid == nil && from.bareJid == userJid?.bareJid && from.resource == nil) {
                         self.handlers.removeValue(forKey: id)

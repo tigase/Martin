@@ -360,16 +360,22 @@ open class Room: ChatProtocol, ContextAware {
                         if value {
                             valueField.value = value;
                             nicknameField.value = self.nickname;
-                            regModule.submitRegistrationForm(to: self.jid, form: form, onSuccess: {
-                                completionHandler(.success(value));
-                            }, onError: { (err, msg) in
-                                completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+                            regModule.submitRegistrationForm(to: self.jid, form: form, completionHandler: { result in
+                                switch result {
+                                case .success(_):
+                                    completionHandler(.success(value));
+                                case .failure(let errorCondition, _):
+                                    completionHandler(.failure(errorCondition));
+                                }
                             })
                         } else {
-                            regModule.unregister(from: self.jid, onSuccess: {
-                                completionHandler(.success(value));
-                            }, onError: { (err, msg) in
-                                completionHandler(.failure(err ?? ErrorCondition.internal_server_error));
+                            regModule.unregister(from: self.jid, completionHander: { result in
+                                switch result {
+                                case .success(_):
+                                    completionHandler(.success(value));
+                                case .failure(let errorCondition):
+                                    completionHandler(.failure(errorCondition));
+                                }
                             });
                         }
                     }

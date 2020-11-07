@@ -50,6 +50,7 @@ open class StreamFeaturesModule: XmppModule, ContextAware, Resetable {
      - parameter sessionObject: instance of `SessionObject` to retrieve cached stream features element
      - returns: element with stream features
      */
+    @available(*, deprecated, message: "Use stream features property on StreamFeaturesModule")
     public static func getStreamFeatures(_ sessionObject:SessionObject) -> Element? {
         return sessionObject.context.module(.streamFeatures).streamFeatures;
     }
@@ -82,25 +83,22 @@ open class StreamFeaturesModule: XmppModule, ContextAware, Resetable {
 }
 
 /// Event fired when stream features are received
-open class StreamFeaturesReceivedEvent: Event {
+open class StreamFeaturesReceivedEvent: AbstractEvent {
     
     /// Identifier of event which should be used during registration of `EventHandler`
     public static let TYPE = StreamFeaturesReceivedEvent();
     
-    public let type = "StreamFeaturesReceivedEvent";
-    /// Context of XMPP connection which received this event
-    public let context:Context!;
     /// Element with stream features
     public let featuresElement:Element!;
     
     init() {
-        context = nil;
         featuresElement = nil;
+        super.init(type: "StreamFeaturesReceivedEvent")
     }
     
     public init(context:Context, element:Element) {
-        self.context = context;
         self.featuresElement = element;
+        super.init(type: "StreamFeaturesReceivedEvent", context: context);
     }
     
 }

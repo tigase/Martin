@@ -39,14 +39,14 @@ open class DefaultChannelManager: ChannelManager {
                     return .success(channel);
                 } else {
                     if store.close(channel: channel) {
-                        self.context.eventBus.fire(ChannelClosedEvent(sessionObject: self.context.sessionObject, channel: channel));
+                        self.context.eventBus.fire(ChannelClosedEvent(context: self.context, channel: channel));
                     }
                 }
             }
             let result = store.createChannel(jid: jid, participantId: participantId, nick: nick, state: state);
             switch result {
             case .success(let channel):
-                self.context.eventBus.fire(ChannelCreatedEvent(sessionObject: self.context.sessionObject, channel: channel));
+                self.context.eventBus.fire(ChannelCreatedEvent(context: self.context, channel: channel));
             default:
                 break;
             }
@@ -64,7 +64,7 @@ open class DefaultChannelManager: ChannelManager {
     
     open func close(channel: Channel) -> Bool {
         if store.close(channel: channel) {
-            self.context.eventBus.fire(ChannelClosedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            self.context.eventBus.fire(ChannelClosedEvent(context: self.context, channel: channel));
             return true;
         }
         return false;
@@ -72,7 +72,7 @@ open class DefaultChannelManager: ChannelManager {
     
     open func update(channel: Channel, nick: String?) -> Bool {
         if store.update(channel: channel, nick: nick) {
-            self.context.eventBus.fire(ChannelUpdatedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            self.context.eventBus.fire(ChannelUpdatedEvent(context: self.context, channel: channel));
             return true;
         }
         return false;
@@ -83,7 +83,7 @@ open class DefaultChannelManager: ChannelManager {
             return false;
         }
         if store.update(channel: channel, info: info) {
-            self.context.eventBus.fire(ChannelUpdatedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            self.context.eventBus.fire(ChannelUpdatedEvent(context: self.context, channel: channel));
             return true;
         }
         return false;
@@ -94,72 +94,63 @@ open class DefaultChannelManager: ChannelManager {
             return false;
         }
         if store.update(channel: channel, state: state) {
-            self.context.eventBus.fire(ChannelUpdatedEvent(sessionObject: self.context.sessionObject, channel: channel));
+            self.context.eventBus.fire(ChannelUpdatedEvent(context: self.context, channel: channel));
             return true;
         }
         return false;
     }
 
-    open class ChannelCreatedEvent: Event {
+    open class ChannelCreatedEvent: AbstractEvent {
         
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChannelCreatedEvent();
 
-        public let type: String = "MixChannelManagerChannelCreatedEvent";
-
-        public let sessionObject: SessionObject!;
         public let channel: Channel!;
         
         private init() {
-            sessionObject = nil;
             channel = nil;
+            super.init(type: "MixChannelManagerChannelCreatedEvent")
         }
         
-        public init(sessionObject: SessionObject, channel: Channel) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, channel: Channel) {
             self.channel = channel;
+            super.init(type: "MixChannelManagerChannelCreatedEvent", context: context)
         }
     }
 
-    open class ChannelClosedEvent: Event {
+    open class ChannelClosedEvent: AbstractEvent {
         
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChannelClosedEvent();
 
-        public let type: String = "MixChannelManagerChannelClosedEvent";
-
-        public let sessionObject: SessionObject!;
         public let channel: Channel!;
         
         private init() {
-            sessionObject = nil;
             channel = nil;
+            super.init(type: "MixChannelManagerChannelClosedEvent")
         }
         
-        public init(sessionObject: SessionObject, channel: Channel) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, channel: Channel) {
             self.channel = channel;
+            super.init(type: "MixChannelManagerChannelClosedEvent", context: context)
         }
     }
 
-    open class ChannelUpdatedEvent: Event {
+    open class ChannelUpdatedEvent: AbstractEvent {
         
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChannelUpdatedEvent();
 
-        public let type: String = "MixChannelManagerChannelUpdatedEvent";
-
-        public let sessionObject: SessionObject!;
         public let channel: Channel!;
         
         private init() {
-            sessionObject = nil;
             channel = nil;
+            super.init(type: "MixChannelManagerChannelUpdatedEvent")
         }
         
-        public init(sessionObject: SessionObject, channel: Channel) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, channel: Channel) {
             self.channel = channel;
+            super.init(type: "MixChannelManagerChannelUpdatedEvent", context: context);
         }
     }
 

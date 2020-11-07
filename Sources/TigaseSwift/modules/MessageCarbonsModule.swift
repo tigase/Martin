@@ -88,7 +88,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to enable message carbons
      - parameter callback - called with result
      */
-    open func enable(_ callback: ((Bool) -> Void )? = nil) {
+    open func enable(_ callback: ((Result<Bool,ErrorCondition>) -> Void )? = nil) {
         setState(true, callback: callback);
     }
     
@@ -96,7 +96,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to disable message carbons
      - parameter callback - called with result
      */
-    open func disable(_ callback: ((Bool) -> Void )? = nil) {
+    open func disable(_ callback: ((Result<Bool,ErrorCondition>) -> Void )? = nil) {
         setState(false, callback: callback);
     }
     
@@ -104,13 +104,13 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to enable/disable message carbons
      - parameter callback - called with result
      */
-    open func setState(_ state: Bool, callback: ((Bool) -> Void )?) {
+    open func setState(_ state: Bool, callback: ((Result<Bool,ErrorCondition>) -> Void )?) {
         let actionName = state ? "enable" : "disable";
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
         context.writer?.write(iq, callback: {(stanza) -> Void in
-            callback?(stanza?.type == StanzaType.result);
+            callback?(stanza?.type == StanzaType.result ? .success(state) : .failure(stanza?.errorCondition ?? .remote_server_timeout));
         });
     }
     
@@ -129,7 +129,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     
     func processForwaredMessage(_ forwarded: Message, action: Action) {
         let chat = messageModule.processMessage(forwarded, interlocutorJid: action == .received ? forwarded.from : forwarded.to, fireEvents: false);
-        context.eventBus.fire(CarbonReceivedEvent(sessionObject: context.sessionObject, action: action, message: forwarded, chat: chat));
+        context.eventBus.fire(CarbonReceivedEvent(context: context, action: action, message: forwarded, chat: chat));
     }
     
     /**
@@ -143,13 +143,10 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     }
     
     /// Event fired when Message Carbon is received
-    open class CarbonReceivedEvent: Event {
+    open class CarbonReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = CarbonReceivedEvent();
         
-        public let type = "MessageCarbonReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Action due to which this carbon was created
         public let action: Action!;
         /// Forwarded message
@@ -158,17 +155,17 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
         public let chat: Chat?;
         
         init() {
-            self.sessionObject = nil;
             self.action = nil;
             self.message = nil;
             self.chat = nil;
+            super.init(type: "MessageCarbonReceivedEvent")
         }
         
-        init(sessionObject: SessionObject, action: Action, message: Message, chat: Chat?) {
-            self.sessionObject = sessionObject;
+        init(context: Context, action: Action, message: Message, chat: Chat?) {
             self.action = action;
             self.message = message;
             self.chat = chat;
+            super.init(type: "MessageCarbonReceivedEvent", context: context);
         }
     }
     

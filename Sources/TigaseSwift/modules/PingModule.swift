@@ -63,6 +63,17 @@ open class PingModule: AbstractIQModule, ContextAware {
         context.writer?.write(iq);
     }
     
+    open func ping(_ jid: JID, completionHandler: (Result<Void,ErrorCondition>)->Void) {
+        ping(jid, callback: { stanza in
+            let error = stanza?.errorCondition ?? .feature_not_implemented;
+            if error == .feature_not_implemented {
+                completionHandler(.success(Void()));
+            } else {
+                completionHandler(.failure(error));
+            }
+        })
+    }
+    
     /**
      Processes ping requests and responds properly
      */

@@ -62,7 +62,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         didSet {
             let added = (blockedJids ?? []).filter({ !(oldValue?.contains($0) ?? false) });
             let removed = (oldValue ?? []).filter({ !(blockedJids?.contains($0) ?? false) });
-            context.eventBus.fire(BlockedChangedEvent(sessionObject: context.sessionObject, blocked: blockedJids ?? [], added: added, removed: removed));
+            context.eventBus.fire(BlockedChangedEvent(context: context, blocked: blockedJids ?? [], added: added, removed: removed));
         }
     }
     
@@ -185,31 +185,27 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         completionHandler?(.success(blockedJids));
     }
  
-    open class BlockedChangedEvent: Event {
+    open class BlockedChangedEvent: AbstractEvent {
          /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = BlockedChangedEvent();
                
-        public let type = "BlockingCommandBlockChangedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
-        
         /// List of blocked JIDs
         public let blocked: [JID];
         public let added: [JID];
         public let removed: [JID];
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.blocked = [];
             self.added = [];
             self.removed = [];
+            super.init(type: "BlockingCommandBlockChangedEvent")
         }
         
-        public init(sessionObject: SessionObject, blocked: [JID], added: [JID], removed: [JID]) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, blocked: [JID], added: [JID], removed: [JID]) {
             self.blocked = blocked;
             self.added = added;
             self.removed = removed;
+            super.init(type: "BlockingCommandBlockChangedEvent", context: context);
         }
     }
 }

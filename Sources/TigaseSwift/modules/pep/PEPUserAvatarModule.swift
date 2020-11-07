@@ -75,17 +75,6 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     open func process(stanza: Stanza) throws {
         throw ErrorCondition.bad_request;
     }
-    
-    open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        self.publishAvatar(at: at, data: data, mimeType: mimeType, width: width, height: height, completionHandler: { result in
-            switch result {
-            case .success(_, _, _):
-                onSuccess();
-            case .failure(let errorCondition, let pubSubErrorCondition, _):
-                onError?(errorCondition, pubSubErrorCondition);
-            }
-        })
-    }
 
     open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         let id = Digest.sha1.digest(toHex: data)!;
@@ -102,32 +91,9 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         });
     }
 
-    open func retractAvatar(from: BareJID? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        self.retractAvatar(from: from, completionHandler: { result in
-            switch result {
-            case .success(_, _, _):
-                onSuccess();
-            case .failure(let errorCondition, let pubSubErrorCondition, _):
-                onError?(errorCondition, pubSubErrorCondition);
-            }
-        })
-    }
-
     open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
         pubsubModule.publishItem(at: from, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
-    }
-
-    open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, onSuccess: @escaping ()->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        self.publishAvatarMetaData(at: at, id: id, mimeType: mimeType, size: size, width: width, height: height, url: url, completionHandler: { result in
-            switch result {
-            case .success(_, _, _):
-                onSuccess();
-            case .failure(let errorCondition, let pubSubErrorCondition, _):
-                onError?(errorCondition, pubSubErrorCondition);
-            }
-            
-        });
     }
 
     open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
@@ -150,15 +116,20 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
     }
 
-    open func retrieveAvatar(from jid: BareJID, itemId: String? = nil, onSuccess: @escaping (BareJID,String,Data?)->Void, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
+    open func retrieveAvatar(from jid: BareJID, itemId: String? = nil, completionHandler: @escaping (Result<(String,Data),ErrorCondition>)->Void) {
         let itemIds: [String]? = itemId == nil ? nil : [itemId!];
-        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: itemIds, onSuccess: { (stanza,node,items,rsm) in
-            var data: Data? = nil;
-            if let cdata = items.first?.payload?.value {
-                data = Data(base64Encoded: cdata, options: NSData.Base64DecodingOptions(rawValue: 0))
+        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: itemIds, completionHandler: { result in
+            switch result {
+            case .success(_, _, let items, _):
+                if let item = items.first, let cdata = item.payload?.value, let data = Data(base64Encoded: cdata, options: []) {
+                    completionHandler(.success((item.id, data)));
+                } else {
+                    completionHandler(.failure(.item_not_found));
+                }
+            case .failure:
+                completionHandler(.failure(.item_not_found));
             }
-            onSuccess(stanza.from?.bareJid ?? jid, items.first?.id ?? itemId ?? "", data);
-            }, onError: onError);
+        })
     }
 
     
@@ -172,7 +143,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
-                self.context.eventBus.fire(AvatarChangedEvent(sessionObject: self.context.sessionObject, jid: JID(jid), itemId: item.id, info: [info]));
+                self.context.eventBus.fire(AvatarChangedEvent(context: self.context, jid: JID(jid), itemId: item.id, info: [info]));
                 completionHandler(.success(info));
             case .failure(let errorCondition, _, _):
                 completionHandler(.failure(errorCondition));
@@ -187,18 +158,23 @@ open class PEPUserAvatarModule: AbstractPEPModule {
                 return;
             }
             
-            onAvatarChangeNotification(sessionObject: nre.sessionObject, from: nre.message.from!, itemId: nre.itemId!, payload: nre.payload!);
+            onAvatarChangeNotification(context: nre.context, from: nre.message.from!, itemId: nre.itemId!, payload: nre.payload!);
         default:
             break;
         }
     }
     
-    open func onAvatarChangeNotification(sessionObject: SessionObject, from: JID, itemId: String, payload: Element) {
+    open func onAvatarChangeNotification(context: Context, from: JID, itemId: String, payload: Element) {
         let info: [Info] = payload.mapChildren(transform: Info.init(payload: ), filter: { (elem) -> Bool in
             return elem.name == "info";
         });
         
-        context.eventBus.fire(AvatarChangedEvent(sessionObject: sessionObject, jid: from, itemId: itemId, info: info));
+        context.eventBus.fire(AvatarChangedEvent(context: context, jid: from, itemId: itemId, info: info));
+    }
+    
+    public struct AvatarData {
+        public let id: String;
+        public let data: Data;
     }
     
     public struct Info {
@@ -226,28 +202,25 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         }
     }
     
-    open class AvatarChangedEvent: Event {
+    open class AvatarChangedEvent: AbstractEvent {
         public static let TYPE = AvatarChangedEvent();
         
-        public let type = "PEPAvatarChanged";
-        
-        public let sessionObject: SessionObject!;
         public let jid: JID!
         public let itemId: String!;
         public let info: [PEPUserAvatarModule.Info]!;
         
         init() {
-            self.sessionObject = nil;
             self.jid = nil;
             self.itemId = nil;
             self.info = nil;
+            super.init(type: "PEPAvatarChanged");
         }
         
-        init(sessionObject: SessionObject, jid: JID, itemId: String, info: [PEPUserAvatarModule.Info]) {
-            self.sessionObject = sessionObject;
+        init(context: Context, jid: JID, itemId: String, info: [PEPUserAvatarModule.Info]) {
             self.jid = jid;
             self.itemId = itemId;
             self.info = info;
+            super.init(type: "PEPAvatarChanged", context: context);
         }
     }
 }

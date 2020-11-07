@@ -116,7 +116,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
 //                let chat = messageModule.processMessage(message, interlocutorJid: from, fireEvents: false)
 //            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: chat));
 //            }
-            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
+            context.eventBus.fire(ArchivedMessageReceivedEvent(context: context, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
         });
     }
     
@@ -400,13 +400,10 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     }
     
     /// Event fired when message from archive is retrieved
-    open class ArchivedMessageReceivedEvent: Event {
+    open class ArchivedMessageReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ArchivedMessageReceivedEvent();
         
-        public let type = "ArchivedMessageReceivedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject: SessionObject!;
         /// Timestamp of a message
         public let timestamp: Date!;
         /// Forwarded message
@@ -419,21 +416,21 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         public let messageId: String!;
         
         init() {
-            self.sessionObject = nil;
             self.timestamp = nil;
             self.message = nil;
             self.version = nil;
             self.source = nil;
             self.messageId = nil;
+            super.init(type: "ArchivedMessageReceivedEvent");
         }
         
-        init(sessionObject: SessionObject, queryid: String, version: Version, messageId: String, source: BareJID, message: Message, timestamp: Date) {
-            self.sessionObject = sessionObject;
+        init(context: Context, queryid: String, version: Version, messageId: String, source: BareJID, message: Message, timestamp: Date) {
             self.message = message;
             self.version = version;
             self.messageId = messageId;
             self.source = source;
             self.timestamp = timestamp;
+            super.init(type: "ArchivedMessageReceivedEvent", context: context);
         }
     }
     

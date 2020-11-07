@@ -309,7 +309,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         let errorCondition = stanza.errorCondition ?? ErrorCondition.unexpected_request;
         
         logger.debug("stream resumption failed");
-        context.eventBus.fire(FailedEvent(sessionObject: context.sessionObject, errorCondition: errorCondition));
+        context.eventBus.fire(FailedEvent(context: context, errorCondition: errorCondition));
     }
     
     func processResumed(_ stanza: Stanza) {
@@ -327,7 +327,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         }
         
         logger.debug("stream resumed");
-        context.eventBus.fire(ResumedEvent(sessionObject: context.sessionObject, newH: newH, resumeId: stanza.getAttribute("previd")));
+        context.eventBus.fire(ResumedEvent(context: context, newH: newH, resumeId: stanza.getAttribute("previd")));
     }
     
     func processEnabled(_ stanza: Stanza) {
@@ -348,7 +348,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         }
         
         logger.debug("stream management enabled");
-        context.eventBus.fire(EnabledEvent(sessionObject: context.sessionObject, resume: resume, resumeId: id));
+        context.eventBus.fire(EnabledEvent(context: context, resume: resume, resumeId: id));
     }
     
     /// Internal class for holding incoming and outgoing counters
@@ -373,77 +373,68 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
     }
     
     /// Event fired when Stream Management is enabled
-    open class EnabledEvent: Event {
+    open class EnabledEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = EnabledEvent();
         
-        public let type = "StreamManagementEnabledEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Is resumption enabled?
         public let resume: Bool;
         /// ID of stream for resumption
         public let resumeId:String?;
         
         init() {
-            sessionObject = nil;
             resume = false;
             resumeId = nil
+            super.init(type: "StreamManagementEnabledEvent")
         }
         
-        init(sessionObject: SessionObject, resume: Bool, resumeId: String?) {
-            self.sessionObject = sessionObject;
+        init(context: Context, resume: Bool, resumeId: String?) {
             self.resume = resume;
             self.resumeId = resumeId;
+            super.init(type: "StreamManagementEnabledEvent", context: context);
         }
         
     }
     
     /// Event fired when Stream Management fails
-    open class FailedEvent: Event {
+    open class FailedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = FailedEvent();
         
-        public let type = "StreamManagementFailedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Received error condition
         public let errorCondition:ErrorCondition!;
         
         init() {
-            sessionObject = nil;
             errorCondition = nil
+            super.init(type: "StreamManagementFailedEvent");
         }
         
-        init(sessionObject: SessionObject, errorCondition: ErrorCondition) {
-            self.sessionObject = sessionObject;
+        init(context: Context, errorCondition: ErrorCondition) {
             self.errorCondition = errorCondition;
+            super.init(type: "StreamManagementFailedEvent", context: context);
         }
         
     }
     
-    open class ResumedEvent: Event {
+    open class ResumedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ResumedEvent();
         
-        public let type = "StreamManagementResumedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// Value of H attribute
         public let newH: UInt32?;
         /// ID of resumed stream
         public let resumeId:String?;
         
         init() {
-            sessionObject = nil;
             newH = nil;
             resumeId = nil
+            super.init(type: "StreamManagementResumedEvent")
         }
         
-        init(sessionObject: SessionObject, newH: UInt32, resumeId: String?) {
-            self.sessionObject = sessionObject;
+        init(context: Context, newH: UInt32, resumeId: String?) {
             self.newH = newH;
             self.resumeId = resumeId;
+            super.init(type: "StreamManagementResumedEvent", context: context);
         }
         
     }

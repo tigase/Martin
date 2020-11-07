@@ -1,5 +1,5 @@
 //
-// PubSubModulePublisherExtension.swift
+// PubSubModule+Publisher.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -21,18 +21,12 @@
 
 import Foundation
 
-public protocol PubSubModulePublisherExtension: class, ContextAware {
-    
-    func createCallback(onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?, PubSubErrorCondition?) -> Void)?) -> ((Stanza?)->Void)?;
-    
-}
-
 public enum PubSubPublishItemResult {
     case success(response: Stanza, node: String, itemId: String)
     case failure(errorCondition: ErrorCondition, pubSubErrorCondition: PubSubErrorCondition?, response: Stanza?);
 }
 
-extension PubSubModulePublisherExtension {
+extension PubSubModule {
         
     /**
      Publish item to PubSub node
@@ -62,31 +56,6 @@ extension PubSubModulePublisherExtension {
             }
         }
 
-        self.publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions, callback: callback);
-    }
-    
-    /**
-     Publish item to PubSub node
-     - parameter at: jid of PubSub service
-     - parameter to: node name
-     - parameter itemId: id of item
-     - parameter payload: item payload
-     - parameter publishOptions: publish options
-     - parameter onSuccess: called when request succeeds - passes instance of response stanza, node name and item id
-     - parameter onError: called when request failed - passes general and detailed error condition if available
-     */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: JabberDataElement? = nil, onSuccess: ((Stanza,String,String?)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: { (stanza) in
-            guard let publishEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "publish"), let node = publishEl.getAttribute("node") else {
-                onError?(ErrorCondition.undefined_condition, PubSubErrorCondition.unsupported);
-                return;
-            }
-            
-            let itemId = publishEl.findChild(name: "item")?.getAttribute("id");
-            
-            onSuccess?(stanza, node, itemId);
-        }, onError: onError);
-    
         self.publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions, callback: callback);
     }
     
@@ -151,20 +120,6 @@ extension PubSubModulePublisherExtension {
                 completionHandler(.failure(errorCondition: response.errorCondition ?? .remote_server_timeout, pubSubErrorCondition: pubsubError == nil ? nil : PubSubErrorCondition(rawValue: pubsubError!.name), response: response));
             }
         });
-    }
-
-    /**
-     Retract item from PubSub node
-     - parameter at: jid of PubSub service
-     - parameter from: node name
-     - parameter itemId: id of item
-     - parameter onSuccess: called when request succeeds - passes instance of response stanza
-     - parameter onError: called when request failed - passes general and detailed error condition if available
-     */
-    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, onSuccess: ((Stanza)->Void)?, onError: ((ErrorCondition?,PubSubErrorCondition?)->Void)?) {
-        let callback = createCallback(onSuccess: onSuccess, onError: onError);
-        
-        self.retractItem(at: pubSubJid, from: nodeName, itemId: itemId, callback: callback);
     }
     
     /**

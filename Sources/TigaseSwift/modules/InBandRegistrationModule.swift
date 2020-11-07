@@ -138,17 +138,6 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         });
     }
     
-    open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
-        submitRegistrationForm(to: jid, form: form, completionHandler: { result in
-            switch result {
-            case .success(_):
-                onSuccess();
-            case .failure(let errorCondition, let errorText):
-                onError(errorCondition, errorText);
-            }
-        })
-    }
-    
     open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, completionHandler: @escaping (AsyncResult<String>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
@@ -173,7 +162,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
      Unregisters currently connected and authenticated user
      - parameter callback: called when user is unregistrated
      */
-    open func unregister(from: JID? = nil, _ callback: @escaping (Stanza?)->Void) {
+    open func unregister(from: JID? = nil, callback: @escaping (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = from ?? ResourceBinderModule.getBindedJid(context.sessionObject);
@@ -185,16 +174,16 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         context.writer?.write(iq, callback: callback);
     }
     
-    open func unregister(from: JID? = nil, onSuccess: @escaping ()->Void, onError: @escaping (ErrorCondition?,String?)->Void) {
-        unregister(from: from) { (response) in
+    open func unregister(from: JID? = nil, completionHander: @escaping (Result<Void,ErrorCondition>)->Void) {
+        unregister(from: from, callback: { (response) in
             let type = response?.type ?? .error;
             switch type {
             case .result:
-                onSuccess();
+                completionHander(.success(Void()));
             default:
-                onError(response?.errorCondition, response?.findChild(name: "error")?.findChild(name: "text")?.value);
+                completionHander(.failure(response?.errorCondition ?? .remote_server_timeout));
             }
-        }
+        })
     }
     
     open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String, ErrorCondition>)->Void) {
