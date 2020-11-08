@@ -117,6 +117,12 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
+    open var error: XMPPError? {
+        get {
+            return XMPPError.parse(stanza: self);
+        }
+    }
+    
     /// Returns error condition due to which this response stanza is marked as an error
     open var errorCondition:ErrorCondition? {
         get {
@@ -223,10 +229,23 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
+    open func errorResult(of error: XMPPError) -> Stanza {
+        let elem = Element(element: element);
+        let response = Stanza.from(element: elem);
+        response.type = StanzaType.error;
+        response.to = self.from;
+        response.from = self.to;
+
+        response.element.addChild(error.element());
+
+        return response;
+    }
+    
     /**
      Creates stanza of type error with passsed error condition.
      - returns: response stanza based on this stanza with error condition set
      */
+    @available(* , deprecated, message: "Use errorResult(of:) method accepting XMPPError")
     open func errorResult(condition:ErrorCondition, text:String? = nil) -> Stanza {
         return errorResult(errorType: condition.type, errorCondition: condition.rawValue);
     }

@@ -61,7 +61,7 @@ open class PubSubModule: XmppModule, ContextAware {
         case let msg as Message:
             try process(message: msg);
         default:
-            throw ErrorCondition.bad_request;
+            throw XMPPError.feature_not_implemented;
         }
     }
     
@@ -239,7 +239,4 @@ open class PubSubModule: XmppModule, ContextAware {
     }
 }
 
-public enum PubSubResult<T> {
-    case success(T)
-    case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition? = nil, response: Stanza?)
-}
+public typealias PubSubResult<T> = Result<T,PubSubError>

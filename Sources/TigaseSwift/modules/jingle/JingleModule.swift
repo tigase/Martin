@@ -142,26 +142,33 @@ open class JingleModule: XmppModule, ContextAware {
                 guard message.type != .error else {
                     return;
                 }
-                throw ErrorCondition.feature_not_implemented;
+                throw XMPPError.feature_not_implemented;
             }
             try process(message: message);
         case let iq as Iq:
             try process(iq: iq);
         default:
-            throw ErrorCondition.feature_not_implemented;
+            throw XMPPError.feature_not_implemented;
         }
     }
     
     open func process(iq stanza: Iq) throws {
         guard stanza.type ?? StanzaType.get == .set else {
-            throw ErrorCondition.feature_not_implemented;
+            throw XMPPError.bad_request("All messages should be of type 'set'");
         }
         
         let jingle = stanza.findChild(name: "jingle", xmlns: JingleModule.XMLNS)!;
         
         // sid is required but Movim is not sending it so we are adding another workaround!
-        guard let action = Jingle.Action(rawValue: jingle.getAttribute("action") ?? ""), let from = stanza.from, let sid = jingle.getAttribute("sid") ?? sessionManager.activeSessionSid(for: context.userBareJid, with: from), let initiator = JID(jingle.getAttribute("initiator")) ?? stanza.from else {
-            throw ErrorCondition.bad_request;
+        guard let action = Jingle.Action(rawValue: jingle.getAttribute("action") ?? ""), let from = stanza.from else {
+            throw XMPPError.bad_request("Missing or invalid action attribute");
+        }
+        
+        guard let sid = jingle.getAttribute("sid") ?? sessionManager.activeSessionSid(for: context.userBareJid, with: from) else {
+            throw XMPPError.bad_request("Missing sid attributed")
+        }
+        guard let initiator = JID(jingle.getAttribute("initiator")) ?? stanza.from else {
+            throw XMPPError.bad_request("Missing initiator attribute");
         }
         
         let contents = jingle.getChildren(name: "content").map({ contentEl in
@@ -227,9 +234,9 @@ open class JingleModule: XmppModule, ContextAware {
         context.writer?.write(response);
     }
     
-    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard let initiatior = ResourceBinderModule.getBindedJid(context.sessionObject) else {
-            completionHandler(.failure(.unexpected_request));
+            completionHandler(.failure(.undefined_condition));
             return;
         }
         let iq = Iq();
@@ -256,18 +263,14 @@ open class JingleModule: XmppModule, ContextAware {
             jingle.addChild(group);
         }
         
-        context.writer?.write(iq, callback: { (response) in
-            if let error = response == nil ? ErrorCondition.remote_server_timeout : response!.errorCondition {
-                completionHandler(.failure(error));
-            } else {
-                completionHandler(.success(Void()));
-            }
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         });
     }
     
-    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard let responder = ResourceBinderModule.getBindedJid(context.sessionObject) else {
-            completionHandler(.failure(.unexpected_request));
+            completionHandler(.failure(.undefined_condition));
             return;
         }
         let iq = Iq();
@@ -294,12 +297,8 @@ open class JingleModule: XmppModule, ContextAware {
             jingle.addChild(group);
         }
         
-        context.writer?.write(iq, callback: { (response) in
-            if let error = response == nil ? ErrorCondition.remote_server_timeout : response!.errorCondition {
-                completionHandler(.failure(error));
-            } else {
-                completionHandler(.success(Void()));
-            }
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         });
     }
     
@@ -316,8 +315,8 @@ open class JingleModule: XmppModule, ContextAware {
 
         jingle.addChild(reason.toReasonElement());
         
-        context.writer?.write(iq, callback: { response in
-            print("session terminated and answer received", response as Any);
+        context.writer?.write(iq, completionHandler: { result in
+            print("session terminated and answer received", result);
         });
     }
     

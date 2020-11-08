@@ -119,12 +119,13 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
             context.eventBus.fire(ArchivedMessageReceivedEvent(context: context, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
         });
     }
-    
-    public enum QueryResult {
-        case success(queryId: String, complete: Bool, rsm: RSM.Result?)
-        case failure(errorCondition: ErrorCondition, response: Stanza?)
+        
+    public struct QueryResult {
+        let queryId: String;
+        let complete: Bool;
+        let rsm: RSM.Result?;
     }
-    
+
     /**
      Query archived messages
      - parameter componentJid: jid of an archiving component
@@ -136,9 +137,9 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
      - parameter rsm: instance defining result set Management
      - parameter completionHandler: callback called when query results
      */
-    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (QueryResult)->Void) {
+    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
         guard let version = version ?? self.availableVersion else {
-            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            completionHandler(.failure(.feature_not_implemented));
             return;
         }
         
@@ -174,50 +175,23 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
      - parameter rsm: instance defining result set Management
      - parameter completionHandler: callback called when query results
      */
-    open func queryItems(version: Version? = nil,componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (QueryResult)->Void)
+    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
     {
         guard let version = version ?? self.availableVersion else {
-            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil))
+            completionHandler(.failure(.feature_not_implemented))
             return;
         }
 
-        self.dispatcher.async {
-            self.queries[queryId] = Query(id: queryId, version: version);
-        }
-        
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = componentJid;
-        
-        let queryEl = Element(name: "query", xmlns: version.rawValue);
-        iq.addChild(queryEl);
-        
-        queryEl.setAttribute("queryid", value: queryId);
-        queryEl.setAttribute("node", value: node);
-        
-        queryEl.addChild(query.submitableElement(type: .submit));
-        
-        if (rsm != nil) {
-            queryEl.addChild(rsm!.element);
-        }
-        
-        context.writer?.write(iq, completionHandler: { (result: AsyncResult<Stanza>) in
-            self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
-                self.queries.removeValue(forKey: queryId);
-            });
-            switch result {
-            case .success(let response):
+        queryItems(version: version, componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap { response in
                 guard let fin = response.findChild(name: "fin", xmlns: version.rawValue) else {
-                    completionHandler(.failure(errorCondition: .bad_request, response: response));
-                    return;
+                    return .failure(.undefined_condition);
                 }
                 
                 let rsmResult = RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
                 let complete = ("true" == fin.getAttribute("complete")) || ((rsmResult?.count ?? 0) == 0);
-                completionHandler(.success(queryId: queryId, complete: complete, rsm: rsmResult));
-            case .failure(let errorCondition, let response):
-                completionHandler(.failure(errorCondition: errorCondition, response: response));
-            }
+                return .success(QueryResult(queryId: queryId, complete: complete, rsm: rsmResult));
+            })
         });
     }
 
@@ -230,8 +204,9 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
      - parameter rsm: instance defining result set Management
      - parameter callback: callback called when response for a query is received
      */
-    open func queryItems(version: Version = Version.MAM1, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, callback: ((Stanza?)->Void)?)
+    open func queryItems<Failure: Error>(version: Version, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void)
     {
+
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = componentJid;
@@ -248,34 +223,36 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
             queryEl.addChild(rsm!.element);
         }
         
-        context.writer?.write(iq, callback: callback);
+        self.dispatcher.async {
+            self.queries[queryId] = Query(id: queryId, version: version);
+        }
+
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
+            self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
+                self.queries.removeValue(forKey: queryId);
+            });
+            completionHandler(result);
+        });
     }
     
-    public enum RetrieveFormResult {
-        case success(form: JabberDataElement)
-        case failure(errorCondition: ErrorCondition, response: Stanza?)
-    }
     /**
      Retrieve query form a for querying archvived messages
      - parameter componentJid: jid of an archiving component
      - parameter completionHandler: called with result
      */
-    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (RetrieveFormResult)->Void) {
+    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (Result<JabberDataElement,XMPPError>)->Void) {
         guard let version = version ?? availableVersion else {
-            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            completionHandler(.failure(.feature_not_implemented));
             return;
         }
-        retieveForm(version: version, componentJid: componentJid) { (stanza: Stanza?) in
-            if let stanza = stanza {
-                if stanza.type == .result, let query = stanza.findChild(name: "query", xmlns: version.rawValue), let x = query.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: x) {
-                    completionHandler(.success(form: form));
-                } else {
-                    completionHandler(.failure(errorCondition: stanza.errorCondition ?? .undefined_condition, response: stanza));
+        retieveForm(version: version, componentJid: componentJid, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
+            completionHandler(result.flatMap { stanza in
+                guard let query = stanza.findChild(name: "query", xmlns: version.rawValue), let x = query.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: x) else {
+                    return .failure(.undefined_condition);
                 }
-            } else {
-                completionHandler(.failure(errorCondition: .remote_server_timeout, response: nil));
-            }
-        }
+                return .success(form);
+            })
+        });
     }
     
     /**
@@ -283,7 +260,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
      - parameter componentJid: jid of an archiving component
      - parameter callback: called when response for a query is received
      */
-    open func retieveForm(version: Version = Version.MAM1, componentJid: JID? = nil, callback: ((Stanza?)->Void)?) {
+    open func retieveForm<Failure: Error>(version: Version, componentJid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = componentJid;
@@ -291,100 +268,94 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
      
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
-    public enum SettingsResult {
-        case success(defValue: DefaultValue, always: [JID], never: [JID])
-        case failure(errorCondition: ErrorCondition, response: Stanza?)
+    public struct Settings {
+        var defaultValue: DefaultValue;
+        var always: [JID];
+        var never: [JID];
     }
     
     /**
      Retrieve message archiving settings
      - parameter completionHandler: called with result
      */
-    open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (SettingsResult)->Void) {
+    open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
         guard let version = version ?? availableVersion else {
-            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            completionHandler(.failure(.feature_not_implemented));
             return;
         }
-        retrieveSettings(version: version, callback: prepareSettingsCallback(version: version, completionHandler: completionHandler));
+        retrieveSettings(version: version, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap({ stanza in MessageArchiveManagementModule.parseSettings(fromIq: stanza, version: version) }));
+        });
     }
     
     /**
      Retrieve message archiving settings
      - parameter callback: called when response is received
      */
-    open func retrieveSettings(version: Version = Version.MAM1, callback: ((Stanza?)->Void)?) {
+    open func retrieveSettings<Failure: Error>(version: Version, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.addChild(Element(name: "prefs", xmlns: version.rawValue));
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
-     - parameter defaultValue: default value for archiving messages
-     - parameter always: list of jids for which messages should be always archived
-     - parameter never: list of jids for which messages should not be archived
+     - parameter settings: settings to set on the server
      - parameter completionHandler: called with result
      */
-    open func updateSettings(version: Version? = nil, defaultValue: DefaultValue, always: [JID], never: [JID], completionHandler: @escaping (SettingsResult)->Void) {
+    open func updateSettings(version: Version? = nil, settings: Settings, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
         guard let version = version ?? availableVersion else {
-            completionHandler(.failure(errorCondition: .feature_not_implemented, response: nil));
+            completionHandler(.failure(.feature_not_implemented));
             return;
         }
-        updateSettings(version: version, defaultValue: defaultValue, always: always, never: never, callback: prepareSettingsCallback(version: version, completionHandler: completionHandler));
+        updateSettings(version: version, settings: settings, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap({ stanza in MessageArchiveManagementModule.parseSettings(fromIq: stanza, version: version) }));
+        });
     }
     
     /**
-     - parameter defaultValue: default value for archiving messages
-     - parameter always: list of jids for which messages should be always archived
-     - parameter never: list of jids for which messages should not be archived
+     - parameter settings: settings to set on the server
      - parameter callback: called when response is received
      */
-    open func updateSettings(version: Version = Version.MAM1, defaultValue: DefaultValue, always: [JID], never: [JID], callback: ((Stanza?)->Void)?) {
+    open func updateSettings<Failure: Error>(version: Version, settings: Settings, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let prefs = Element(name: "prefs", xmlns: version.rawValue);
-        prefs.setAttribute("default", value: defaultValue.rawValue);
+        prefs.setAttribute("default", value: settings.defaultValue.rawValue);
         iq.addChild(prefs);
-        if !always.isEmpty {
+        if !settings.always.isEmpty {
             let alwaysEl = Element(name: "always");
-            alwaysEl.addChildren(always.map({ (jid) -> Element in Element(name: "jid", cdata: jid.stringValue) }));
+            alwaysEl.addChildren(settings.always.map({ (jid) -> Element in Element(name: "jid", cdata: jid.stringValue) }));
             prefs.addChild(alwaysEl);
         }
-        if !never.isEmpty {
+        if !settings.never.isEmpty {
             let neverEl = Element(name: "always");
-            neverEl.addChildren(never.map({ (jid) -> Element in Element(name: "jid", cdata: jid.stringValue) }));
+            neverEl.addChildren(settings.never.map({ (jid) -> Element in Element(name: "jid", cdata: jid.stringValue) }));
             prefs.addChild(neverEl);
         }
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
-    fileprivate func prepareSettingsCallback(version: Version, completionHandler: @escaping (SettingsResult)->Void) -> ((Stanza?)->Void)? {
-        return  { (stanza: Stanza?)->Void in
-            let type = stanza?.type ?? StanzaType.error;
-            if (type == .result) {
-                if let prefs = stanza?.findChild(name: "prefs", xmlns: version.rawValue) {
-                    let defValue = DefaultValue(rawValue: prefs.getAttribute("default") ?? "always") ?? DefaultValue.always;
-                    let always: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
-                        return JID(elem.value);
-                    }) ?? [JID]();
-                    let never: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
-                        return JID(elem.value);
-                    }) ?? [JID]();
-                    completionHandler(.success(defValue: defValue, always: always, never: never));
-                    return;
-                }
-                completionHandler(.failure(errorCondition: .bad_request, response: stanza));
-            } else {
-                completionHandler(.failure(errorCondition: stanza?.errorCondition ?? .remote_server_timeout, response: stanza));
-            }
-        };
+    private static func parseSettings(fromIq stanza: Iq, version: Version) -> Result<Settings,XMPPError> {
+        if let prefs = stanza.findChild(name: "prefs", xmlns: version.rawValue) {
+            let defValue = DefaultValue(rawValue: prefs.getAttribute("default") ?? "always") ?? DefaultValue.always;
+            let always: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
+                return JID(elem.value);
+            }) ?? [JID]();
+            let never: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
+                return JID(elem.value);
+            }) ?? [JID]();
+            return .success(Settings(defaultValue: defValue, always: always, never: never));
+        } else {
+            return .failure(.from(stanza: stanza));
+        }
     }
-    
+        
     fileprivate func mapElemValueToJid(elem: Element) -> JID? {
         return JID(elem.value);
     }

@@ -57,8 +57,8 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
     
     public let identity: Identity;
     
-    public private(set) var serverDiscoResult: DiscoveryResult?;
-    public private(set) var accountDiscoResult: DiscoveryResult?;
+    public private(set) var serverDiscoResult: DiscoveryInfoResult?;
+    public private(set) var accountDiscoResult: DiscoveryInfoResult?;
     
     public init(identity: Identity = Identity(category: "client", type: "pc", name: SoftwareVersionModule.DEFAULT_NAME_VAL)) {
         self.identity = identity;
@@ -80,13 +80,13 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    open func discoverServerFeatures(completionHandler: ((DiscoveryModuleInfoResult)->Void)?) {
+    open func discoverServerFeatures(completionHandler: ((Result<DiscoveryInfoResult,XMPPError>)->Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
             getInfo(for: JID(jid.domain), completionHandler: { result in
                 switch result {
-                case .success(_, let identities, let features, _):
-                    self.serverDiscoResult = DiscoveryResult(identities: identities, features: features);
-                    self.context.eventBus.fire(ServerFeaturesReceivedEvent(context: self.context, features: features, identities: identities));
+                case .success(let info):
+                    self.serverDiscoResult = info;
+                    self.context.eventBus.fire(ServerFeaturesReceivedEvent(context: self.context, features: info.features, identities: info.identities));
                 default:
                     break;
                 }
@@ -100,13 +100,13 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    open func discoverAccountFeatures(completionHandler:((DiscoveryModuleInfoResult) -> Void)?) {
+    open func discoverAccountFeatures(completionHandler:((Result<DiscoveryInfoResult,XMPPError>) -> Void)?) {
         if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
             getInfo(for: jid.withoutResource, completionHandler: { result in
                 switch result {
-                case .success(_, let identities, let features, _):
-                    self.accountDiscoResult = DiscoveryResult(identities: identities, features: features);
-                    self.context.eventBus.fire(AccountFeaturesReceivedEvent(context: self.context, features: features));
+                case .success(let info):
+                    self.accountDiscoResult = info;
+                    self.context.eventBus.fire(AccountFeaturesReceivedEvent(context: self.context, features: info.features));
                 default:
                     break;
                 }
@@ -121,7 +121,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter node: node to query for informations
      - parameter callback: called on result or failure
      */
-    open func getInfo(for jid: JID, node: String?, callback: @escaping (Stanza?) -> Void) {
+    open func getInfo<Failure: Error>(for jid: JID, node: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>) -> Void) {
         let iq = Iq();
         iq.to  = jid;
         iq.type = StanzaType.get;
@@ -131,7 +131,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -140,14 +140,11 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter node: node to query for informations
      - parameter completionHandler: called where result is available
      */
-    open func getInfo(for jid:JID, node requestedNode:String? = nil, completionHandler: @escaping (DiscoveryModuleInfoResult) -> Void) {
-        getInfo(for: jid, node: requestedNode, callback: {(stanza: Stanza?) -> Void in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
-                    completionHandler(.success(node: requestedNode, identities: [], features: [], form: nil));
-                    return;
+    open func getInfo(for jid:JID, node requestedNode:String? = nil, completionHandler: @escaping (Result<DiscoveryInfoResult,XMPPError>) -> Void) {
+        getInfo(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
+            completionHandler(result.map { stanza in
+                guard let query = stanza.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
+                    return DiscoveryInfoResult(identities: [], features: [], form: nil);
                 }
                 let identities = query.mapChildren(transform: { e -> Identity in
                     return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
@@ -160,11 +157,8 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
                         return e.name == "feature" && e.getAttribute("var") != nil;
                 })
                 let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data"));
-                completionHandler(.success(node: query.getAttribute("node") ?? requestedNode, identities: identities, features: features, form: form));
-            default:
-                let errorCondition = stanza?.errorCondition;
-                completionHandler(.failure(errorCondition: errorCondition ?? .remote_server_timeout, response: stanza));
-            }
+                return DiscoveryInfoResult(identities: identities, features: features, form: form);
+            });
         })
     }
 
@@ -174,7 +168,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter node: node to query for items
      - parameter callback: called on result or failure
      */
-    open func getItems(for jid:JID, node:String? = nil, callback: @escaping (Stanza?) -> Void) {
+    open func getItems<Failure: Error>(for jid: JID, node: String? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>) -> Void) {
         let iq = Iq();
         iq.to  = jid;
         iq.type = StanzaType.get;
@@ -184,7 +178,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -193,25 +187,19 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter node: node to query for items
      - parameter completionHandler: called where result is available
      */
-    open func getItems(for jid: JID, node requestedNode: String? = nil, completionHandler: @escaping (DiscoveryModuleItemsResult) -> Void) {
-        getItems(for: jid, node: requestedNode, callback: {(stanza:Stanza?) -> Void in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                guard let query = stanza!.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
-                    completionHandler(.success(node: requestedNode, items: []));
-                    return;
+    open func getItems(for jid: JID, node requestedNode: String? = nil, completionHandler: @escaping (Result<DiscoveryItemsResult,XMPPError>) -> Void) {
+        getItems(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
+            completionHandler(result.map({ stanza in
+                guard let query = stanza.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
+                    return DiscoveryItemsResult(node: requestedNode, items: []);
                 }
                 let items = query.mapChildren(transform: { i -> Item in
                         return Item(jid: JID(i.getAttribute("jid")!), node: i.getAttribute("node"), name: i.getAttribute("name"));
                     }, filter: { (e) -> Bool in
                         return e.name == "item" && e.getAttribute("jid") != nil;
                 })
-                completionHandler(.success(node: query.getAttribute("node") ?? requestedNode, items: items));
-            default:
-                let errorCondition = stanza?.errorCondition;
-                completionHandler(.failure(errorCondition: errorCondition ?? .remote_server_timeout, response: stanza));
-            }
+                return DiscoveryItemsResult(node: query.getAttribute("node") ?? requestedNode, items: items);
+            }))
         });
     }
 
@@ -408,18 +396,14 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
     }
 
-    public struct DiscoveryResult {
+    public struct DiscoveryInfoResult {
         public let identities: [Identity];
         public let features: [String];
+        public let form: JabberDataElement?;
     }
-}
-
-public enum DiscoveryModuleInfoResult {
-    case success(node: String?, identities: [DiscoveryModule.Identity], features: [String], form: JabberDataElement?)
-    case failure(errorCondition: ErrorCondition, response: Stanza?)
-}
-
-public enum DiscoveryModuleItemsResult {
-    case success(node: String?, items: [DiscoveryModule.Item])
-    case failure(errorCondition: ErrorCondition, response: Stanza?)
+    
+    public struct DiscoveryItemsResult {
+        public let node: String?;
+        public let items: [Item];
+    }
 }

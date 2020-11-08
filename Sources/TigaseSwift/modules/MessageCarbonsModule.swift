@@ -88,7 +88,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to enable message carbons
      - parameter callback - called with result
      */
-    open func enable(_ callback: ((Result<Bool,ErrorCondition>) -> Void )? = nil) {
+    open func enable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
         setState(true, callback: callback);
     }
     
@@ -96,7 +96,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to disable message carbons
      - parameter callback - called with result
      */
-    open func disable(_ callback: ((Result<Bool,ErrorCondition>) -> Void )? = nil) {
+    open func disable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
         setState(false, callback: callback);
     }
     
@@ -104,13 +104,13 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
      Tries to enable/disable message carbons
      - parameter callback - called with result
      */
-    open func setState(_ state: Bool, callback: ((Result<Bool,ErrorCondition>) -> Void )?) {
+    open func setState(_ state: Bool, callback: ((Result<Bool,XMPPError>) -> Void )?) {
         let actionName = state ? "enable" : "disable";
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
-        context.writer?.write(iq, callback: {(stanza) -> Void in
-            callback?(stanza?.type == StanzaType.result ? .success(state) : .failure(stanza?.errorCondition ?? .remote_server_timeout));
+        context.writer?.write(iq, completionHandler: { result in
+            callback?(result.map({ _ in state }));
         });
     }
     

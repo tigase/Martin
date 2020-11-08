@@ -53,7 +53,7 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
         throw ErrorCondition.feature_not_implemented;
     }
     
-    public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],ErrorCondition>)->Void) {
+    public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],XMPPError>)->Void) {
         let iq = Iq();
         iq.to = jid ?? JID(context.userBareJid.domain);
         iq.type = .get;
@@ -64,13 +64,9 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
         iq.addChild(servicesEl);
         
         context.writer?.write(iq, completionHandler: { result in
-            switch result {
-            case .success(let response):
-                let services = response.findChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.mapChildren(transform: Service.parse(_:)) ?? [];
-                completionHandler(.success(services));
-            case .failure(let errorCondition, _):
-                completionHandler(.failure(errorCondition));
-            }
+            completionHandler(result.map { response in
+                return response.findChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.mapChildren(transform: Service.parse(_:)) ?? [];
+            })
         })
     }
     

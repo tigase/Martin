@@ -45,21 +45,28 @@ open class EntityTimeModule: AbstractIQModule, ContextAware {
     public init() {
         
     }
-    
-    open func getEntityTime(from jid: JID, completionHandler: @escaping (JID, String?, Date?, ErrorCondition?)->Void) {
+
+    public struct QueryResult {
+        let timeZone: String?;
+        let timestamp: Date?;
+    }
+        
+    open func getEntityTime(from jid: JID, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
         let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.get;
         
         iq.addChild(Element(name: "time", xmlns: EntityTimeModule.XMLNS));
         
-        context.writer?.write(iq, callback: { response in
-            let timeEl = response?.findChild(name: "time", xmlns: EntityTimeModule.XMLNS);
-            var date: Date? = nil;
-            if let utc = timeEl?.findChild(name: "utc")?.value {
-                date = EntityTimeModule.stampFormatter.date(from: utc);
-            }
-            completionHandler(iq.from!, timeEl?.findChild(name: "tzo")?.value, date, response == nil ? ErrorCondition.remote_server_timeout : response!.errorCondition);
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map { response in
+                let timeEl = response.findChild(name: "time", xmlns: EntityTimeModule.XMLNS);
+                var date: Date? = nil;
+                if let utc = timeEl?.findChild(name: "utc")?.value {
+                    date = EntityTimeModule.stampFormatter.date(from: utc);
+                }
+                return QueryResult(timeZone: timeEl?.findChild(name: "tzo")?.value, timestamp: date);
+            })
         });
     }
     

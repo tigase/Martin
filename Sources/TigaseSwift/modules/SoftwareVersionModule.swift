@@ -57,13 +57,13 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
      - parameter for: address for which we want to retrieve software version
      - parameter callback: called on response or failure
      */
-    open func checkSoftwareVersion(for jid:JID, callback: @escaping (Stanza?)->Void) {
+    open func checkSoftwareVersion<Failure: Error>(for jid:JID, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.get;
         iq.addChild(Element(name:"query", xmlns:"jabber:iq:version"));
 
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     public class SoftwareVersion {
@@ -83,20 +83,15 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
      - parameter for: address for which we want to retrieve software version
      - parameter completionHandler: called when result is available
      */
-    open func checkSoftwareVersion(for jid:JID, completionHandler: @escaping (Result<SoftwareVersion,ErrorCondition>)->Void) {
-        self.checkSoftwareVersion(for: jid, callback: { (stanza) in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                guard let query = stanza?.findChild(name: "query", xmlns: "jabber:iq:version"), let name = query.findChild(name: "name")?.value, let version = query.findChild(name: "version")?.value else {
-                    completionHandler(.failure(.undefined_condition));
-                    return;
+    open func checkSoftwareVersion(for jid:JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
+        self.checkSoftwareVersion(for: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap({ stanza in
+                guard let query = stanza.findChild(name: "query", xmlns: "jabber:iq:version"), let name = query.findChild(name: "name")?.value, let version = query.findChild(name: "version")?.value else {
+                    return .failure(.undefined_condition);
                 }
                 let os = query.findChild(name: "os")?.value;
-                completionHandler(.success(SoftwareVersion(name: name, version: version, os: os)));
-            default:
-                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
-            }
+                return .success(SoftwareVersion(name: name, version: version, os: os));
+            }))
         });
     }
 

@@ -152,13 +152,12 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         
             context.eventBus.fire(SaslAuthStartEvent(context: context, mechanism: mechanism.name))
         
-            context.writer!.write(auth);
-            
-            if mechanism.status == .completedExpected {
-                context.writer?.execAfterWrite {
+            context.writer!.write(auth, writeCompleted: { _ in
+                if mechanism.status == .completedExpected {
                     self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
                 }
-            }
+            });
+            
         } catch _ {
             context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.aborted));
         }
@@ -191,20 +190,19 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             return;
         }
         if mechanism.status == .completed {
-            throw ErrorCondition.bad_request;
+            throw XMPPError.bad_request("Authentication is already completed!");
         }
         let challenge = stanza.element.value;
         let response = try mechanism.evaluateChallenge(challenge, context: context);
         let responseEl = Stanza(name: "response");
         responseEl.element.xmlns = SaslModule.SASL_XMLNS;
         responseEl.element.value = response;
-        context.writer?.write(responseEl);
-        
-        if mechanism.status == .completedExpected {
-            context.writer?.execAfterWrite {
+        context.writer?.write(responseEl, writeCompleted: { result in
+            if mechanism.status == .completedExpected {
                 self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
             }
-        }
+        });
+        
     }
     
     func getSupportedMechanisms() -> [String] {

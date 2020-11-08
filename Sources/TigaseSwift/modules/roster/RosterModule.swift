@@ -90,13 +90,13 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     }
     
     open func processGet(stanza: Stanza) throws {
-        throw ErrorCondition.not_allowed;
+        throw XMPPError.feature_not_implemented;
     }
     
     open func processSet(stanza: Stanza) throws {
         let bindedJid = ResourceBinderModule.getBindedJid(context.sessionObject);
         if (stanza.from != nil && stanza.from != bindedJid && (stanza.from?.bareJid != bindedJid?.bareJid)) {
-            throw ErrorCondition.not_allowed;
+            throw XMPPError.not_allowed("You are not allowed to send this to me!");
         }
         
         if let query = stanza.findChild(name: "query", xmlns: "jabber:iq:roster") {
@@ -187,7 +187,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         requestRoster(completionHandler: nil)
     }
     
-    open func requestRoster(completionHandler: ((Result<Void, ErrorCondition>)->Void)? = nil) {
+    open func requestRoster(completionHandler: ((Result<Void, XMPPError>)->Void)? = nil) {
         let iq = Iq();
         iq.type = .get;
         let query = Element(name:"query", xmlns:"jabber:iq:roster");
@@ -206,19 +206,20 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, callback: { result in
-            if (result?.type == StanzaType.result) {
-                if let query = result!.findChild(name: "query", xmlns: "jabber:iq:roster") {
+        context.writer?.write(iq, completionHandler: { result in
+            switch result {
+            case .success(let iq):
+                if let query = iq.findChild(name: "query", xmlns: "jabber:iq:roster") {
                     self.processRosterQuery(query, force: true);
-                    completionHandler?(.success(Void()));
-                } else {
-                    completionHandler?(.failure(result?.errorCondition ?? .remote_server_timeout));
                 }
+            default:
+                break;
             }
+            completionHandler?(result.map({ _ in Void() }));
         })
     }
     
-    func updateItem(_ jid:JID, name:String?, groups:[String], subscription:RosterItem.Subscription? = nil, onSuccess:((_ stanza:Stanza)->Void)?, onError:((_ errorCondition:ErrorCondition?)->Void)?) {
+    func updateItem(_ jid:JID, name:String?, groups:[String], subscription:RosterItem.Subscription? = nil, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
         let iq = Iq();
         iq.type = .set;
         
@@ -239,13 +240,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         }
         query.addChild(item);
         
-        context.writer?.write(iq, callback: {(result:Stanza?) -> Void in
-            if result?.type == StanzaType.result {
-                onSuccess?(result!);
-            } else {
-                onError?(result?.errorCondition);
-            }
-        });
+        context.writer?.write(iq, completionHandler: completionHandler);
     }
     
     fileprivate func fire(_ event:Event) {
@@ -321,21 +316,20 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
             self.rosterModule = module;
         }
         
-        func
-            add(jid: JID, name: String?, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
-            self.rosterModule.updateItem(jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
+        func add(jid: JID, name: String?, groups: [String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+            self.rosterModule.updateItem(jid, name: name, groups: groups, completionHandler: completionHandler);
         }
         
-        func remove(jid: JID, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
-            self.rosterModule.updateItem(jid, name: nil, groups: [String](), subscription: RosterItem.Subscription.remove, onSuccess: onSuccess, onError: onError);
+        func remove(jid: JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+            self.rosterModule.updateItem(jid, name: nil, groups: [String](), subscription: RosterItem.Subscription.remove, completionHandler: completionHandler);
         }
         
-        func update(item: RosterItem, name: String?, groups: [String]? = nil, onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
-            self.rosterModule.updateItem(item.jid, name: name, groups: groups ?? item.groups, onSuccess: onSuccess, onError: onError);
+        func update(item: RosterItem, name: String?, groups: [String]? = nil, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+            self.rosterModule.updateItem(item.jid, name: name, groups: groups ?? item.groups, completionHandler: completionHandler);
         }
 
-        func update(item: RosterItem, groups: [String], onSuccess: ((_ stanza: Stanza) -> Void)?, onError: ((_ errorCondition: ErrorCondition?) -> Void)?) {
-            self.rosterModule.updateItem(item.jid, name: item.name, groups: groups, onSuccess: onSuccess, onError: onError);
+        func update(item: RosterItem, groups: [String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+            self.rosterModule.updateItem(item.jid, name: item.name, groups: groups, completionHandler: completionHandler);
         }
         
         func cleared() {

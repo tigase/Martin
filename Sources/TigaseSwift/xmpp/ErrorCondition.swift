@@ -51,7 +51,7 @@ public enum ErrorCondition: String, Error {
     case undefined_condition = "undefined-condition"
     case unexpected_request = "unexpected-request"
     
-    var type: String? {
+    public var type: String {
         switch self {
         case .bad_request:
             return "modify";
@@ -96,7 +96,7 @@ public enum ErrorCondition: String, Error {
         case .subscription_required:
             return "auth";
         case .undefined_condition:
-            return nil;
+            return "cancel";
         case .unexpected_request:
             return "wait";
         }

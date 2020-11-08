@@ -63,7 +63,13 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
      - parameter email: email for registration
      - parameter callback: called on registration response
      */
-    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, callback: @escaping (Stanza?)->Void) {
+    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        register(jid, username: username, password: password, email: email, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.map { _ in Void() });
+        })
+    }
+    
+    open func register<Failure: Error>(_ jid: JID? = nil, username: String?, password: String?, email: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
@@ -80,27 +86,19 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
      Retrieves registration form and call provided callback
      - parameter from: destination JID for registration - useful for registration in transports
-     - parameter onSuccess: called when form is retrieved. First parameter determine if server supports registration using Data Forms and second parameter provides list of fields to pass.
-     - parameter onError: called when server returned error
+     - parameter completionHandler: called when result is available
      */
-    open func retrieveRegistrationForm(from jid: JID? = nil, onSuccess: @escaping (Bool, JabberDataElement)->Void, onError: @escaping (ErrorCondition?, String?)->Void) {
-        self.retrieveRegistrationForm(from: jid, completionHandler: { result in
-            switch result {
-            case .success(let type, let form, _):
-                onSuccess(type == .plain, form);
-            case .failure(let errorCondition, let errorText):
-                onError(errorCondition, errorText);
-            }
-        })
+    open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult<XMPPError>)->Void) {
+        retrieveRegistrationForm(from: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: completionHandler);
     }
     
-    open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult)->Void) {
+    open func retrieveRegistrationForm<Failure: Error>(from jid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (RetrieveFormResult<Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
@@ -108,15 +106,13 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         
         iq.addChild(query);
-        context.writer?.write(iq, callback: {(response) in
-            let type = response?.type ?? .error;
-            switch type {
-            case .result:
-                if let query = response?.findChild(name: "query", xmlns: "jabber:iq:register"), let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data")) {
-                    completionHandler(.success(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: ))));
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: { result in
+            completionHandler(result.map { response in
+                if let query = response.findChild(name: "query", xmlns: "jabber:iq:register"), let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data")) {
+                    return FormResult(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
                 } else {
                     let form = JabberDataElement(type: .form);
-                    if let query = response?.findChild(name: "query", xmlns: "jabber:iq:register") {
+                    if let query = response.findChild(name: "query", xmlns: "jabber:iq:register") {
                         if let instructions = query.findChild(name: "instructions")?.value {
                             form.instructions = [instructions];
                         }
@@ -130,15 +126,19 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                             form.addField(TextSingleField(name: "email", required: true));
                         }
                     }
-                    completionHandler(.success(type: .plain, form: form, bob: []));
+                    return FormResult(type: .plain, form: form, bob: []);
                 }
-            default:
-                completionHandler(.failure(errorCondition: response?.errorCondition ?? ErrorCondition.remote_server_timeout, errorText: response?.findChild(name: "error")?.findChild(name: "text")?.value));
-            }
+            });
         });
     }
+
+    open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        submitRegistrationForm(to: jid, form: form, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
+        })
+    }
     
-    open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, completionHandler: @escaping (AsyncResult<String>)->Void) {
+    open func submitRegistrationForm<Failure: Error>(to jid: JID? = nil, form: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
@@ -147,22 +147,14 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         query.addChild(form.submitableElement(type: .submit));
         
         iq.addChild(query);
-        context.writer?.write(iq, callback: {(response) in
-            let type = response?.type ?? .error;
-            switch type {
-            case .result:
-                completionHandler(.success(response: ""));
-            default:
-                completionHandler(.failure(errorCondition: response?.errorCondition ?? ErrorCondition.remote_server_timeout, response: response?.findChild(name: "error")?.findChild(name: "text")?.value ?? nil));
-            }
-        });
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
      Unregisters currently connected and authenticated user
      - parameter callback: called when user is unregistrated
      */
-    open func unregister(from: JID? = nil, callback: @escaping (Stanza?)->Void) {
+    open func unregister<Failure: Error>(from: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = from ?? ResourceBinderModule.getBindedJid(context.sessionObject);
@@ -171,34 +163,22 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         query.addChild(Element(name: "remove"));
         iq.addChild(query);
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
-    open func unregister(from: JID? = nil, completionHander: @escaping (Result<Void,ErrorCondition>)->Void) {
-        unregister(from: from, callback: { (response) in
-            let type = response?.type ?? .error;
-            switch type {
-            case .result:
-                completionHander(.success(Void()));
-            default:
-                completionHander(.failure(response?.errorCondition ?? .remote_server_timeout));
-            }
+    open func unregister(from: JID? = nil, completionHander: @escaping (Result<Void,XMPPError>)->Void) {
+        unregister(from: from, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHander(result.map { _ in Void() });
         })
     }
     
-    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String, ErrorCondition>)->Void) {
-        changePassword(for: serviceJid, newPassword: newPassword, callback: { (response) in
-            let type = response?.type ?? .error;
-            switch type {
-            case .result:
-                completionHandler(.success(newPassword));
-            default:
-                completionHandler(.failure(response?.errorCondition ?? ErrorCondition.remote_server_timeout));
-            }
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String, XMPPError>)->Void) {
+        changePassword(for: serviceJid, newPassword: newPassword, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
+            completionHandler(result.map { _ in newPassword});
         });
     }
     
-    open func changePassword(for serviceJid: JID? = nil, newPassword: String, callback: @escaping (Stanza?)->Void) {
+    open func changePassword<Failure: Error>(for serviceJid: JID? = nil, newPassword: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         guard let username = self.context.userBareJid.localPart else {
             return;
         }
@@ -211,7 +191,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         query.addChild(Element(name: "password", cdata: newPassword));
         iq.addChild(query);
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -286,25 +266,24 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                         if let completionHandler = callback {
                             completionHandler(.success);
                         }
-                    case .failure(let errorCondition, let response):
-                        self.onErrorFn(errorCondition: errorCondition, message: response);
+                    case .failure(let error):
+                        self.onErrorFn(error);
                     }
                 });
             } else {
                 let username = (form.getField(named: "username") as? TextSingleField)?.value;
                 let password = (form.getField(named: "password") as? TextPrivateField)?.value;
                 let email = (form.getField(named: "email") as? TextSingleField)?.value;
-                inBandRegistrationModule.register(username: username, password: password, email: email, callback: { (response) in
-                    let type = response?.type ?? .error;
-                    switch (type) {
-                    case .result:
+                inBandRegistrationModule.register(username: username, password: password, email: email, completionHandler: { result in
+                    switch result {
+                    case .success(_):
                         let callback = self.completionHandler;
                         self.finish();
                         if let completionHandler = callback {
                             completionHandler(.success);
                         }
-                    default:
-                        self.onErrorFn(errorCondition: response?.errorCondition ?? ErrorCondition.remote_server_timeout, message: response?.findChild(name: "error")?.findChild(name: "text")?.value);
+                    case .failure(let error):
+                        self.onErrorFn(error);
                     }
                 })
             }
@@ -339,7 +318,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             case is SocketConnector.DisconnectedEvent:
                 self.preauthDone = false;
                 if !serverAvailable {
-                    onErrorFn(errorCondition: ErrorCondition.service_unavailable, message: nil);
+                    onErrorFn(.service_unavailable("Could not connect to the server"));
                 }
             default:
                 break;
@@ -349,21 +328,21 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         private func startIBR() {
             let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
             guard InBandRegistrationModule.isRegistrationAvailable(featuresElement) else {
-                onErrorFn(errorCondition: ErrorCondition.feature_not_implemented, message: nil);
+                onErrorFn(.feature_not_implemented);
                 return;
             }
             
             inBandRegistrationModule.retrieveRegistrationForm(completionHandler: { result in
                 switch result {
-                case .success(let type, let form, let bob):
-                    self.usesDataForm = type == .dataForm;
+                case .success(let formResult):
+                    self.usesDataForm = formResult.type == .dataForm;
                     if self.formToSubmit == nil {
-                        self.onForm?(form, bob, self);
+                        self.onForm?(formResult.form, formResult.bob, self);
                     } else {
                         var sameForm = true;
                         var labelsChanged = false;
-                        form.fieldNames.forEach({(name) in
-                            let newField = form.getField(named: name);
+                        formResult.form.fieldNames.forEach({(name) in
+                            let newField = formResult.form.getField(named: name);
                             let oldField = self.formToSubmit!.getField(named: name);
                             if newField != nil && oldField != nil {
                                 labelsChanged = newField?.label != oldField?.label;
@@ -379,17 +358,17 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                         });
                         DispatchQueue.global().async {
                             if (!sameForm) {
-                                self.onForm?(form, bob, self);
+                                self.onForm?(formResult.form, formResult.bob, self);
                             } else if (labelsChanged) {
-                                self.onForm?(self.formToSubmit!, bob, self);
+                                self.onForm?(self.formToSubmit!, formResult.bob, self);
                             } else {
                                 self.submit(form: self.formToSubmit!);
                             }
                             self.formToSubmit = nil;
                         }
                     }
-                case .failure(let errorCondition, let errorText):
-                    self.onErrorFn(errorCondition: errorCondition, message: errorText);
+                case .failure(let error):
+                    self.onErrorFn(error);
                 }
             });
         }
@@ -402,15 +381,15 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
             self.client = client;
         }
         
-        fileprivate func onErrorFn(errorCondition: ErrorCondition, message: String?) -> Void {
-            let callback = self.completionHandler;
-            if (callback != nil) {
-                callback!(.failure(errorCondition: errorCondition, errorText: message));
-            } else {
-                self.finish();
+        fileprivate func onErrorFn(_ error: XMPPError) {
+            guard let callback = self.completionHandler else {
+                return;
             }
+            completionHandler = nil;
+            callback(.failure(error));
+            self.finish();
         }
-        
+                
         open var preauthToken: String?;
         private var preauthDone = false;
         
@@ -432,13 +411,13 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 let domain: String = client.context.userBareJid.domain
                 iq.to = JID(domain);
                 iq.addChild(Element(name: "preauth", attributes: ["token": preauth, "xmlns": "urn:xmpp:pars:0"]));
-                client.context.writer?.write(iq, callback: { result in
-                    if result?.type ?? .error == .result {
+                client.context.writer?.write(iq, completionHandler: { result in
+                    switch result {
+                    case .success(_):
                         self.preauthDone = true;
                         self.startIBR();
-                    } else {
-                        let error: ErrorCondition = result?.errorCondition ?? ErrorCondition.remote_server_timeout;
-                        self.onErrorFn(errorCondition: error, message: result?.errorText ?? (error == ErrorCondition.item_not_found ? "The provided token is invalid or expired" : nil));
+                    case .failure(let error):
+                        self.onErrorFn(error);
                     }
                 })
                 return false;
@@ -455,7 +434,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         
         public enum RegistrationResult {
             case success
-            case failure(errorCondition: ErrorCondition, errorText: String?)
+            case failure(XMPPError)
         }
         
     }
@@ -465,9 +444,10 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         case dataForm
     }
     
-    public enum RetrieveFormResult {
-        case success(type: FormType, form: JabberDataElement, bob: [BobData])
-        case failure(errorCondition: ErrorCondition, errorText: String?)
+    public struct FormResult {
+        let type: FormType;
+        let form: JabberDataElement;
+        let bob: [BobData];
     }
-    
+    public typealias RetrieveFormResult<Failure: Error> = Result<FormResult, Failure>
 }

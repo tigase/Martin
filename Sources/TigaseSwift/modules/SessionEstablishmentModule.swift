@@ -71,24 +71,22 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
     }
     
     /// Method called to start session establishemnt
-    open func establish(completionHandler: ((Result<Void,ErrorCondition>)->Void)? = nil) {
+    open func establish(completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let session = Element(name:"session");
         session.xmlns = SessionEstablishmentModule.SESSION_XMLNS;
         iq.element.addChild(session);
 
-        context.writer?.write(iq) { (stanza:Stanza?) in
-            switch stanza?.type ?? .error {
-            case .result:
+        context.writer?.write(iq, completionHandler: { result in
+            switch result {
+            case .success(_):
                 self.context.eventBus.fire(SessionEstablishmentSuccessEvent(context: self.context));
-                completionHandler?(.success(Void()));
-            default:
-                let error = stanza?.errorCondition ?? .remote_server_timeout;
-                self.context.eventBus.fire(SessionEstablishmentErrorEvent(context: self.context, errorCondition: error));
-                completionHandler?(.failure(error))
+            case .failure(let error):
+                self.context.eventBus.fire(SessionEstablishmentErrorEvent(context: self.context, error: error));
             }
-        }
+            completionHandler?(result.map({ _ in Void() }));
+        })
     }
     
     /// Event fired when session establishment process fails
@@ -97,15 +95,15 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
         public static let TYPE = SessionEstablishmentErrorEvent();
         
         /// Error condition returned by server
-        public let errorCondition:ErrorCondition!;
+        public let error: XMPPError!;
         
         fileprivate init() {
-            self.errorCondition = nil;
+            self.error = nil;
             super.init(type: "SessionEstablishmentErrorEvent")
         }
         
-        public init(context: Context, errorCondition:ErrorCondition) {
-            self.errorCondition = errorCondition;
+        public init(context: Context, error: XMPPError) {
+            self.error = error;
             super.init(type: "SessionEstablishmentErrorEvent", context: context);
         }
     }

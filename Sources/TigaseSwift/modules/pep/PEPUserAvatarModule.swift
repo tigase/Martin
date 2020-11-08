@@ -73,7 +73,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     }
     
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+        throw XMPPError.feature_not_implemented;
     }
 
     open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
@@ -83,9 +83,9 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         
         pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: id, payload: Element(name: "data", cdata: value, xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
             switch result {
-            case .success(_, _, let itemId):
+            case .success(let itemId):
                 self.publishAvatarMetaData(at: at, id: itemId, mimeType: mimeType, size: size, width: width, height: height, completionHandler: completionHandler);
-            case .failure(_, _, _):
+            case .failure(_):
                 completionHandler(result);
             }
         });
@@ -116,12 +116,11 @@ open class PEPUserAvatarModule: AbstractPEPModule {
         pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
     }
 
-    open func retrieveAvatar(from jid: BareJID, itemId: String? = nil, completionHandler: @escaping (Result<(String,Data),ErrorCondition>)->Void) {
-        let itemIds: [String]? = itemId == nil ? nil : [itemId!];
-        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, itemIds: itemIds, completionHandler: { result in
+    open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<(String,Data),XMPPError>)->Void) {
+        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, limit: .items(withIds: [itemId]), completionHandler: { result in
             switch result {
-            case .success(_, _, let items, _):
-                if let item = items.first, let cdata = item.payload?.value, let data = Data(base64Encoded: cdata, options: []) {
+            case .success(let items):
+                if let item = items.items.first, let cdata = item.payload?.value, let data = Data(base64Encoded: cdata, options: []) {
                     completionHandler(.success((item.id, data)));
                 } else {
                     completionHandler(.failure(.item_not_found));
@@ -134,19 +133,19 @@ open class PEPUserAvatarModule: AbstractPEPModule {
 
     
     
-    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,ErrorCondition>)->Void) {
-        let itemIds: [String]? = itemId == nil ? nil : [itemId!];
-        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, itemIds: itemIds, completionHandler: { result in
+    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,XMPPError>)->Void) {
+        let limit: PubSubModule.QueryLimit = itemId == nil ? .lastItems(1) : .items(withIds: [itemId!]);
+        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, limit: limit, completionHandler: { result in
             switch result {
-            case .success(_, _, let items, _):
-                guard let item = items.first, let info = item.payload?.mapChildren(transform: { Info(payload: $0)}).first else {
+            case .success(let items):
+                guard let item = items.items.first, let info = item.payload?.mapChildren(transform: { Info(payload: $0)}).first else {
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
                 self.context.eventBus.fire(AvatarChangedEvent(context: self.context, jid: JID(jid), itemId: item.id, info: [info]));
                 completionHandler(.success(info));
-            case .failure(let errorCondition, _, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let pubsubError):
+                completionHandler(.failure(pubsubError.error));
             }
         });
     }

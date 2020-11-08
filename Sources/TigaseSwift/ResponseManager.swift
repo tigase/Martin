@@ -33,9 +33,9 @@ open class ResponseManager {
     fileprivate class Entry {
         let jid: JID?;
         let timestamp: Date;
-        let callback: (Stanza?)->Void;
+        let callback: (Iq?)->Void;
         
-        init(jid:JID?, callback:@escaping (Stanza?)->Void, timeout:TimeInterval) {
+        init(jid:JID?, callback:@escaping (Iq?)->Void, timeout:TimeInterval) {
             self.jid = jid;
             self.callback = callback;
             self.timestamp = Date(timeIntervalSinceNow: timeout);
@@ -62,28 +62,28 @@ open class ResponseManager {
      - paramater stanza: stanza to process
      - returns: callback handler if any
      */
-    open func getResponseHandler(for stanza:Stanza)-> ((Stanza?)->Void)? {
+    open func getResponseHandler(for stanza: Iq)-> ((Iq?)->Void)? {
         guard let type = stanza.type, let id = stanza.id, (type == StanzaType.error || type == StanzaType.result) else {
             return nil;
         }
-        var callback: ((Stanza?)->Void)? = nil;
-        queue.sync {
+
+        return queue.sync {
             if let entry = self.handlers[id] {
                 let userJid = context?.moduleOrNil(.resourceBind)?.bindedJid;
                 if let from = stanza.from {
                     if entry.jid == from || (entry.jid == nil && from.bareJid == userJid?.bareJid && from.resource == nil) {
                         self.handlers.removeValue(forKey: id)
-                        callback = entry.callback;
+                        return entry.callback;
                     }
                 } else {
                     if entry.jid == nil || (entry.jid?.bareJid == userJid?.bareJid && entry.jid?.resource == nil) {
                         self.handlers.removeValue(forKey: id)
-                        callback = entry.callback;
+                        return entry.callback;
                     }
                 }
             }
+            return nil;
         }
-        return callback;
     }
         
     /**
@@ -92,7 +92,7 @@ open class ResponseManager {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback to execute on response or timeout
      */
-    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, callback:((Stanza?)->Void)?) {
+    open func registerResponseHandler(for stanza: Iq, timeout:TimeInterval, callback:((Iq?)->Void)?) {
         guard callback != nil else {
             return;
         }
@@ -114,8 +114,8 @@ open class ResponseManager {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback to execute on response or timeout
      */
-    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, callback:((AsyncResult<Stanza>)->Void)?) {
-        guard let callback = callback else {
+    open func registerResponseHandler<Failure: Error>(for stanza:Stanza, timeout:TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>)->Void)?) {
+        guard let callback = completionHandler else {
             return;
         }
         
@@ -127,61 +127,12 @@ open class ResponseManager {
         
         queue.async {
             self.handlers[id!] = Entry(jid: stanza.to, callback: { response in
-                if response == nil {
-                    callback(.failure(errorCondition: .remote_server_timeout, response: response));
+                if let stanza = response, stanza.type == .result {
+                    callback(.success(stanza))
                 } else {
-                    if response!.type == .error {
-                        callback(.failure(errorCondition: response!.errorCondition ?? ErrorCondition.undefined_condition, response: response));
-                    } else {
-                        callback(.success(response: response!));
-                    }
+                    callback(.failure(errorDecoder(stanza) as! Failure));
                 }
             }, timeout: timeout);
-        }
-    }
-    
-    /**
-     Method registers callback for stanza for time
-     - parameter stanza: stanza for which to wait for response
-     - parameter timeout: maximal time for which should wait for response
-     - parameter onSuccess: callback to execute on successful response
-     - parameter onError: callback to execute on failure or timeout
-     */
-    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, onSuccess:((Stanza)->Void)?, onError:((Stanza,ErrorCondition?)->Void)?, onTimeout:(()->Void)?) {
-        guard (onSuccess != nil) || (onError != nil) || (onTimeout != nil) else {
-            return;
-        }
-        
-        self.registerResponseHandler(for: stanza, timeout: timeout) { (response:Stanza?)->Void in
-            if response == nil {
-                onTimeout?();
-            } else {
-                if response!.type == StanzaType.error {
-                    onError?(response!, response!.errorCondition);
-                } else {
-                    onSuccess?(response!);
-                }
-            }
-        }
-    }
-    
-    /**
-     Method registers callback for stanza for time
-     - parameter stanza: stanza for which to wait for response
-     - parameter timeout: maximal time for which should wait for response
-     - parameter callback: callback with methods to execute on response or timeout
-     */
-    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, callback:AsyncCallback) {
-        self.registerResponseHandler(for: stanza, timeout: timeout) { (response:Stanza?)->Void in
-            if response == nil {
-                callback.onTimeout();
-            } else {
-                if response!.type == StanzaType.error {
-                    callback.onError(response: response!, error: response!.errorCondition);
-                } else {
-                    callback.onSuccess(response: response!);
-                }
-            }
         }
     }
     
@@ -220,15 +171,4 @@ open class ResponseManager {
             }
         }
     }
-}
-
-/**
- Protocol for classes which may be used as callbacks for `ResponseManager`
- */
-public protocol AsyncCallback {
-    
-    func onError(response:Stanza, error:ErrorCondition?);
-    func onSuccess(response:Stanza);
-    func onTimeout();
-    
 }

@@ -62,17 +62,17 @@ open class PEPBookmarksModule: AbstractPEPModule {
     }
  
     public func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+        throw XMPPError.feature_not_implemented;
     }
     
     public func publish(bookmarks: Bookmarks) {
         let pepJID = JID(context.userBareJid);
         discoModule.getInfo(for: pepJID, node: PEPBookmarksModule.ID, completionHandler: { result in
             switch result {
-            case .success(let node, let identities, let features, let form):
-                self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
-            case .failure(let errorCondition, _):
-                switch errorCondition {
+            case .success(_):
+                self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), completionHandler: { _ in });
+            case .failure(let error):
+                switch error {
                 case .item_not_found:
                     let config = JabberDataElement(type: .submit);
                     let formType = HiddenField(name: "FORM_TYPE");
@@ -86,7 +86,7 @@ open class PEPBookmarksModule: AbstractPEPModule {
                             guard node == PEPBookmarksModule.ID else {
                                 return;
                             }
-                            self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), callback: nil);
+                            self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), completionHandler: { _ in});
                         default:
                             break;
                         }
@@ -110,10 +110,10 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }) {
                 // requesting Bookmarks!!
                 let pepJID = context.userBareJid;
-                pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, rsm: nil, lastItems: 1, itemIds: nil, completionHandler: { result in
+                pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, limit: .lastItems(1), completionHandler: { result in
                     switch result {
-                    case .success(_, _, let items, _):
-                        if let item = items.first {
+                    case .success(let items):
+                        if let item = items.items.first {
                             if let bookmarks = Bookmarks(from: item.payload) {
                                 self.currentBookmarks = bookmarks;
                                 self.context.eventBus.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));

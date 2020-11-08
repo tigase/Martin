@@ -233,7 +233,7 @@ open class XMPPClient: Context, EventHandler {
     /**
      Implementation of `PacketWriter` protocol passed to `Context` instance
      */
-    fileprivate class SocketPacketWriter: PacketWriter {
+    private class SocketPacketWriter: PacketWriter {
         
         let connector: SocketConnector;
         let responseManager: ResponseManager;
@@ -244,39 +244,27 @@ open class XMPPClient: Context, EventHandler {
             self.responseManager = responseManager;
             self.dispatcher = queueDispatcher;
         }
-        
-        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: ((Stanza?) -> Void)?) {
-            responseManager.registerResponseHandler(for: stanza, timeout: timeout, callback: callback);
-            self.write(stanza);
+          
+        func write<Failure: Error>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) {
+            responseManager.registerResponseHandler(for: iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: completionHandler);
+            self.write(iq);
         }
         
-        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, onSuccess: ((Stanza) -> Void)?, onError: ((Stanza,ErrorCondition?) -> Void)?, onTimeout: (() -> Void)?) {
-            responseManager.registerResponseHandler(for: stanza, timeout: timeout, onSuccess: onSuccess, onError: onError, onTimeout: onTimeout);
-            self.write(stanza);
+        func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
+            write(stanza);
+            if writeCompleted != nil {
+                dispatcher.async {
+                    writeCompleted?(.success(Void()));
+                }
+            }
         }
         
-        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, completionHandler: ((AsyncResult<Stanza>) -> Void)?) {
-            responseManager.registerResponseHandler(for: stanza, timeout: timeout, callback: completionHandler);
-            self.write(stanza);
-        }
-
-        override func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: AsyncCallback) {
-            responseManager.registerResponseHandler(for: stanza, timeout: timeout, callback: callback);
-            self.write(stanza);
-        }
-
-        override func write(_ stanza: Stanza) {
+        private func write(stanza: Stanza) {
             if stanza.name == "iq" && stanza.id == nil {
                 stanza.id = UUID().uuidString;
             }
             dispatcher.async {
                 self.connector.send(stanza: stanza);
-            }
-        }
-        
-        override func execAfterWrite(handler: @escaping () -> Void) {
-            dispatcher.async {
-                handler();
             }
         }
     }

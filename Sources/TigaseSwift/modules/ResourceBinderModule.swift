@@ -70,7 +70,7 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
     }
     
     /// Method called to bind resource
-    open func bind(completionHandler: ((Result<JID,ErrorCondition>)->Void)? = nil) {
+    open func bind(completionHandler: ((Result<JID,XMPPError>)->Void)? = nil) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let bind = Element(name:"bind");
@@ -78,28 +78,23 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
         iq.element.addChild(bind);
         let resource:String? = context.connectionConfiguration.resource;
         bind.addChild(Element(name: "resource", cdata:resource));
-        context.writer?.write(iq) { (stanza:Stanza?) in
-            var errorCondition:ErrorCondition?;
-            if let type = stanza?.type {
-                switch type {
-                case .result:
-                    if let name = stanza!.element.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {
-                        let jid = JID(name);
-                        self.bindedJid = jid;
-                        completionHandler?(.success(jid));
-                        return;
-                    }
-                default:
-                    if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
-                        errorCondition = ErrorCondition(rawValue: name);
-                    }
+        context.writer?.write(iq, completionHandler: { result in
+            switch result {
+            case .success(let stanza):
+                if let name = stanza.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {
+                    let jid = JID(name);
+                    self.bindedJid = jid;
+                    completionHandler?(.success(jid));
+                    return;
+                } else {
+                    self.context.eventBus.fire(ResourceBindErrorEvent(context: self.context, error: .undefined_condition));
+                    completionHandler?(.failure(.undefined_condition));
                 }
+            case .failure(let error):
+                self.context.eventBus.fire(ResourceBindErrorEvent(context: self.context, error: error));
+                completionHandler?(.failure(error));
             }
-            
-            self.context.eventBus.fire(ResourceBindErrorEvent(context: self.context, errorCondition: errorCondition));
-            completionHandler?(.failure(errorCondition ?? .undefined_condition));
-        }
-            
+        })
     }
     
     /// Method should not be called due to empty `criteria` property
@@ -114,15 +109,15 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
         public static let TYPE = ResourceBindErrorEvent();
         
         /// Error condition returned by server
-        public let errorCondition:ErrorCondition?;
+        public let error:XMPPError?;
         
         fileprivate init() {
-            self.errorCondition = nil;
+            self.error = nil;
             super.init(type: "ResourceBindErrorEvent");
         }
         
-        public init(context: Context, errorCondition:ErrorCondition?) {
-            self.errorCondition = errorCondition;
+        public init(context: Context, error:XMPPError?) {
+            self.error = error;
             super.init(type: "ResourceBindErrorEvent", context: context);
         }
     }

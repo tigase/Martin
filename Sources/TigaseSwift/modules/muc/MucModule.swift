@@ -121,25 +121,20 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
      - parameter onSuccess: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func getRoomConfiguration(roomJid: JID, completionHandler: @escaping (Result<JabberDataElement,ErrorCondition>)->Void) {
+    open func getRoomConfiguration(roomJid: JID, completionHandler: @escaping (Result<JabberDataElement,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = roomJid;
         
         iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
-        context.writer?.write(iq, callback: {(stanza:Stanza?) in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                
-                if let data = JabberDataElement(from: stanza!.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data")) {
-                    completionHandler(.success(data));
-                } else {
-                    completionHandler(.failure(.undefined_condition));
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.flatMap({ stanza in
+                guard let data = JabberDataElement(from: stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data")) else {
+                    return .failure(.undefined_condition);
                 }
-            default:
-                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
-            }
+                
+                return .success(data);
+            }))
         });
     }
     
@@ -150,7 +145,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
      - parameter onSuccess: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func setRoomConfiguration(roomJid: JID, configuration: JabberDataElement, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func setRoomConfiguration(roomJid: JID, configuration: JabberDataElement, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = roomJid;
@@ -159,22 +154,15 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         iq.addChild(query);
         query.addChild(configuration.submitableElement(type: .submit));
         
-        context.writer?.write(iq, callback: {(stanza:Stanza?) in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                completionHandler(.success(Void()));
-            default:
-                let errorCondition = stanza?.errorCondition;
-                completionHandler(.failure(errorCondition ?? .remote_server_timeout));
-            }
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map { _ in Void() });
         });
     }
     
-    open func getRoomAffiliations(from room: Room, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],ErrorCondition>)->Void) {
+    open func getRoomAffiliations(from room: Room, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
         let userRole = (room.presences[room.nickname]?.role ?? .none);
         guard userRole == .participant || userRole == .moderator else {
-            completionHandler(.failure(.forbidden));
+            completionHandler(.failure(.forbidden("Only participant or moderator can ask for room affiliations!")));
             return;
         };
         
@@ -186,25 +174,19 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         iq.addChild(query);
         query.addChild(Element(name: "item", attributes: ["affiliation": affiliation.rawValue]));
         
-        context.writer?.write(iq, callback: { (stanza: Stanza?) in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                let affiliations = stanza?.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.mapChildren(transform: { el in
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map({ stanza in
+                return stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.mapChildren(transform: { el in
                     return RoomAffiliation(from: el);
                 }, filter: { el -> Bool in return el.name == "item"}) ?? [];
-                completionHandler(.success(affiliations));
-            default:
-                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
-                break;
-            }
+            }))
         });
     }
     
-    open func setRoomAffiliations(to room: Room, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func setRoomAffiliations(to room: Room, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         let userAffiliation = (room.presences[room.nickname]?.affiliation ?? .none);
         guard userAffiliation == .admin || userAffiliation == .owner else {
-            completionHandler(.failure(.forbidden));
+            completionHandler(.failure(.forbidden("Only room admin or owner can set room affiliations!")));
             return;
         };
 
@@ -221,14 +203,8 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             return el;
         }));
         
-        context.writer?.write(iq, callback: { (stanza: Stanza?) in
-            let type = stanza?.type ?? StanzaType.error;
-            switch type {
-            case .result:
-                completionHandler(.success(Void()));
-            default:
-                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
-            }
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         });
     }
     
@@ -350,7 +326,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
                 processMessage(m);
             }
         default:
-            throw ErrorCondition.feature_not_implemented;
+            throw XMPPError.feature_not_implemented;
         }
     }
     

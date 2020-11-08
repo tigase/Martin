@@ -44,7 +44,7 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
     }
     
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.feature_not_implemented;
+        throw XMPPError.feature_not_implemented;
     }
     
     open func execute(on to: JID?, command node: String, action: Action?, data: JabberDataElement?, completionHandler: @escaping (AdHocResult)->Void) {
@@ -61,22 +61,18 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
         
         iq.addChild(command);
         
-        context.writer?.write(iq, callback: { response in
-            guard let stanza = response, stanza.type == .result else {
-                completionHandler(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout));
-                return;
-            }
-            
-            guard let command = stanza.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
-                completionHandler(.failure(errorCondition: .undefined_condition));
-                return;
-            }
-            
-            let form = JabberDataElement(from: command.findChild(name: "x", xmlns: "jabber:x:data"));
-            let actions = command.findChild(name: "actions")?.mapChildren(transform: { Action(rawValue: $0.name) }) ?? [];
-            let notes = command.mapChildren(transform: { Note.from(element: $0) });
-            let status = Status(rawValue: command.getAttribute("status") ?? "") ?? Status.completed;
-            completionHandler(.success(status: status, form: form, actions: actions, notes: notes));
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.flatMap({ stanza in
+                guard let command = stanza.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
+                    return .failure(.undefined_condition);
+                }
+                let form = JabberDataElement(from: command.findChild(name: "x", xmlns: "jabber:x:data"));
+                let actions = command.findChild(name: "actions")?.mapChildren(transform: { Action(rawValue: $0.name) }) ?? [];
+                let notes = command.mapChildren(transform: { Note.from(element: $0) });
+                let status = Status(rawValue: command.getAttribute("status") ?? "") ?? Status.completed;
+                
+                return .success(Response(status: status, form: form, actions: actions, notes: notes));
+            }))
         });
     }
     
@@ -113,9 +109,13 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
             }
         }
     }
+    
+    public struct Response {
+        public let status: AdHocCommandsModule.Status;
+        public let form: JabberDataElement?;
+        public let actions: [AdHocCommandsModule.Action];
+        public let notes: [AdHocCommandsModule.Note];
+    }
 }
 
-public enum AdHocResult {
-    case success(status: AdHocCommandsModule.Status, form: JabberDataElement?, actions: [AdHocCommandsModule.Action], notes: [AdHocCommandsModule.Note])
-    case failure(errorCondition: ErrorCondition)
-}
+public typealias AdHocResult = Result<AdHocCommandsModule.Response, XMPPError>

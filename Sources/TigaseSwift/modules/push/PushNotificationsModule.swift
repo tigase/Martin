@@ -93,7 +93,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         context.eventBus.fire(NotificationsDisabledEvent(context: context, service: from, node: node));
     }
     
-    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil, completionHandler: @escaping (Result<Stanza,ErrorCondition>)->Void) {
+    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
@@ -106,24 +106,10 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             enable.addChild(publishOptions!.submitableElement(type: .submit));
         }
         iq.addChild(enable);
-        context.writer?.write(iq) { (stanza: Stanza?) in
-            var errorCondition:ErrorCondition?;
-            if let type = stanza?.type {
-                switch type {
-                case .result:
-                    completionHandler(.success(stanza!));
-                    return;
-                default:
-                    if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
-                        errorCondition = ErrorCondition(rawValue: name);
-                    }
-                }
-            }
-            completionHandler(.failure(errorCondition ?? .undefined_condition));
-        }
+        context.writer?.write(iq, completionHandler: completionHandler);
     }
     
-    open func disable(serviceJid: JID, node: String, completionHandler: ((Result<Stanza,ErrorCondition>)->Void)?) {
+    open func disable(serviceJid: JID, node: String, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let disable = Element(name: "disable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
@@ -131,21 +117,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         disable.setAttribute("node", value: node);
         iq.addChild(disable);
         
-        context.writer?.write(iq) { (stanza: Stanza?) in
-            var errorCondition:ErrorCondition?;
-            if let type = stanza?.type {
-                switch type {
-                case .result:
-                    completionHandler?(.success(stanza!));
-                    return;
-                default:
-                    if let name = stanza!.element.findChild(name: "error")?.firstChild()?.name {
-                        errorCondition = ErrorCondition(rawValue: name);
-                    }
-                }
-            }
-            completionHandler?(.failure(errorCondition ?? .undefined_condition));
-        }
+        context.writer?.write(iq, completionHandler: completionHandler);
     }
     
     open class NotificationsDisabledEvent : AbstractEvent {

@@ -64,13 +64,13 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         throw ErrorCondition.bad_request;
     }
     
-    open func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], ErrorCondition>)->Void) {
+    open func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], XMPPError>)->Void) {
         let serverJid = JID(context.userBareJid.domain);
         discoModule.getItems(for: serverJid, completionHandler: { result in
             switch result {
-            case .failure(let errorCondition, _):
-                completionHandler(.failure(errorCondition));
-            case .success(_, let items):
+            case .failure(let error):
+                completionHandler(.failure(error));
+            case .success(let items):
                 var results: [UploadComponent] = [];
                 let group = DispatchGroup();
                 
@@ -83,16 +83,16 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
                 })
                 
                 group.enter();
-                for item in items {
+                for item in items.items {
                     group.enter();
                     self.discoModule.getInfo(for: item.jid, node: nil, completionHandler: { result in
                         switch result {
-                        case .failure(_, _):
+                        case .failure(_):
                             break;
-                        case .success(_, _, let features, let form):
-                            if features.contains(HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS) {
+                        case .success(let info):
+                            if info.features.contains(HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS) {
                                 DispatchQueue.main.async {
-                                    let maxSizeField: TextSingleField? = form?.getField(named: "max-file-size");
+                                    let maxSizeField: TextSingleField? = info.form?.getField(named: "max-file-size");
                                     let maxSize = Int(maxSizeField?.value ?? "") ?? Int.max;
                                     results.append(UploadComponent(jid: item.jid, maxSize: maxSize));
                                 }
@@ -106,7 +106,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         });
     }
     
-    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, callback: ((Stanza?)->Void)?) {
+    open func requestUploadSlot<Failure: Error>(componentJid: JID, filename: String, size: Int, contentType: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = componentJid;
@@ -119,15 +119,14 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         }
         iq.addChild(requestEl);
         
-        context.writer?.write(iq, callback: callback);
+        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
-    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,ErrorCondition>)->Void) {
-        requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType, callback: { (stanza) in
-            if let response = stanza, response.type == .result {
+    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {
+        requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap { response in
                 guard let slotEl = response.findChild(name: "slot", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS), let getUri = slotEl.findChild(name: "get")?.getAttribute("url"), let putUri = slotEl.findChild(name: "put")?.getAttribute("url") else {
-                    completionHandler(.failure(.undefined_condition));
-                    return;
+                    return .failure(.undefined_condition);
                 }
                 
                 var putHeaders: [String:String] = [:];
@@ -140,13 +139,11 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
                 })
                 
                 if let slot = Slot(getUri: getUri, putUri: putUri, putHeaders: putHeaders) {
-                    completionHandler(.success(slot));
+                    return .success(slot);
                 } else {
-                    completionHandler(.failure(.undefined_condition));
+                    return .failure(.undefined_condition);
                 }
-            } else {
-                completionHandler(.failure(stanza?.errorCondition ?? .remote_server_timeout));
-            }
+            });
         });
     }
     

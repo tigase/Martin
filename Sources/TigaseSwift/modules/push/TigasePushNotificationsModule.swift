@@ -26,7 +26,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "TigasePushNotificationsModule");
     
-    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,ErrorCondition>)->Void) {
+    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,XMPPError>)->Void) {
         let adhocModule = context.modulesManager.module(.adhoc);
         
         let data = JabberDataElement(type: .submit);
@@ -37,24 +37,16 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         }
         
         adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data, completionHandler: { result in
-            switch result {
-            case .success(_, let form, _, _):
-                guard let result = RegistrationResult(form: form) else {
-                    completionHandler(.failure(.undefined_condition));
-                    return;
+            completionHandler(result.flatMap({ response in
+                guard let result = RegistrationResult(form: response.form) else {
+                    return .failure(.undefined_condition);
                 }
-                completionHandler(.success(result));
-            case .failure(let error):
-                completionHandler(.failure(error));
-            }
-            
+                return .success(result);
+            }))
         });
-//        , onError: { error in
-//            completionHandler(.failure(error ?? ErrorCondition.undefined_condition));
-//        });
     }
     
-    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, ErrorCondition>)->Void) {
+    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, XMPPError>)->Void) {
         let adhocModule: AdHocCommandsModule = context.modulesManager.module(.adhoc);
         
         let data = JabberDataElement(type: .submit);
@@ -63,7 +55,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         
         adhocModule.execute(on: serviceJid, command: "unregister-device", action: .execute, data: data, completionHandler: { result in
             switch result {
-            case .success(_, _, _, _):
+            case .success(_):
                 completionHandler(.success(Void()));
             case .failure(let error):
                 completionHandler(.failure(error));
@@ -71,11 +63,11 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         });
     }
     
-    open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,ErrorCondition>)->Void) {
+    open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
         let discoModule = context.modulesManager.module(.disco);
         discoModule.getItems(for: JID(context.userBareJid.domain), node: nil, completionHandler: { result in
             switch result {
-            case .success(_, let items):
+            case .success(let items):
                 var found: [JID] = [];
                 let group = DispatchGroup();
                 group.notify(queue: DispatchQueue.main, execute: {
@@ -86,27 +78,27 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                     }
                 })
                 group.enter();
-                for item in items {
+                for item in items.items {
                     group.enter();
                     discoModule.getInfo(for: item.jid, node: item.node, completionHandler: { result in
                         switch result {
-                        case .success(_, let identities, let features, _):
-                            if (!identities.filter({ (identity) -> Bool in
+                        case .success(let info):
+                            if (!info.identities.filter({ (identity) -> Bool in
                                 identity.category == "pubsub" && identity.type == "push"
-                            }).isEmpty) && Set(requiredFeatures).isSubset(of: features) {
+                            }).isEmpty) && Set(requiredFeatures).isSubset(of: info.features) {
                                 DispatchQueue.main.async {
                                     found.append(item.jid);
                                 }
                             }
-                        case .failure(_, _):
+                        case .failure(_):
                             break;
                         }
                         group.leave();
                     });
                 }
                 group.leave();
-            case .failure(let errorCondition, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let error):
+                completionHandler(.failure(error));
             }
         });
     }

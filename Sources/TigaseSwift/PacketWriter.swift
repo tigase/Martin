@@ -22,67 +22,31 @@
 import Foundation
 
 /** 
- Class defined to act as a protocol for classes extending it
- 
- Needs to be a class due to default values for parameters.
+ Protocol defined to act as a protocol for classes extending it
  */
+public typealias PacketErrorDecoder<Failure: Error> = (Stanza?) -> Error;
 
-open class PacketWriter {
+public protocol PacketWriter {
     
-    /**
-     Write packet to stream
-     - parameter stanza: stanza to write
-     */
-    open func write(_ stanza: Stanza) {
+    func write<Failure: Error>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?)
         
-    }
-    
-    /**
-     Write packet to stream
-     - parameter stanza: stanza to write
-     - parameter timeout: timeout to wait for response
-     - parameter callback: called when response is received or request timed out
-     */
-    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback: ((Stanza?)->Void)?) {
-    }
+    func write(_ stanza: Stanza, writeCompleted: ((Result<Void,XMPPError>)->Void)?)
 
-    /**
-     Write packet to stream
-     - parameter stanza: stanza to write
-     - parameter timeout: timeout to wait for response
-     - parameter callback: called when response is received or request timed out
-     */
-    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, completionHandler: ((AsyncResult<Stanza>)->Void)?) {
-    }
-
-    /**
-     Write packet to stream
-     - parameter stanza: stanza to write
-     - parameter timeout: timeout to wait for response
-     - parameter onSuccess: called when successful response is received
-     - parameter onError: called when failure response is received or request timed out
-     */
-    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, onSuccess: ((Stanza)->Void)?, onError: ((Stanza,ErrorCondition?)->Void)?, onTimeout: (()->Void)?) {
-    }
     
-    /**
-     Write packet to stream
-     - parameter stanza: stanza to write
-     - parameter timeout: timeout to wait for response
-     - parameter callback: methods of this class are called when response is received or request timed out
-     */
-    open func write(_ stanza: Stanza, timeout: TimeInterval = 30, callback:AsyncCallback) {
-    
-    }
-    
-    open func execAfterWrite(handler: @escaping () -> Void) {
-        
-    }
 }
 
-public enum AsyncResult<T> {
-    
-    case success(response: T);
-    case failure(errorCondition: ErrorCondition, response: T?);
-    
+extension PacketWriter {
+
+    public func write(_ iq: Iq, timeout: TimeInterval = 30.0, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+        write(iq, timeout: timeout, errorDecoder: XMPPError.from(stanza: ), completionHandler: completionHandler);
+    }
+
+    public func write<Failure: Error>(_ iq: Iq, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>)->Void)?) {
+        write(iq, timeout: 30.0, errorDecoder: errorDecoder, completionHandler: completionHandler);
+    }
+
+    public func write(_ stanza: Stanza) {
+        write(stanza, writeCompleted: nil);
+    }
+
 }

@@ -32,16 +32,14 @@ extension PubSubModule {
      */
     public func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: JabberDataElement? = nil, completionHandler: ((PubSubNodeCreationResult)->Void)?) {
                 
-        self.createNode(at: pubSubJid, node: nodeName, with: configuration, callback: { stanza in
-            guard let response = stanza else {
-                completionHandler?(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
-                return;
-            }
-            if response.type == .result, let node = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "create")?.getAttribute("node") ?? nodeName {
-                completionHandler?(.success(node));
-            } else {
-                completionHandler?(.failure(errorCondition: response.errorCondition ?? .undefined_condition, pubsubErrorCondition: nil, response: response));
-            }
+        self.createNode(at: pubSubJid, node: nodeName, with: configuration, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler?(result.flatMap({ response in
+                if let node = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "create")?.getAttribute("node") ?? nodeName {
+                    return .success(node);
+                } else {
+                    return .failure(.undefined_condition);
+                }
+            }))
         });
     }
 
@@ -50,9 +48,10 @@ extension PubSubModule {
      - parameter at: address of PubSub service
      - parameter node: name of node to create
      - parameter with: option configuration for new node
-     - parameter callback: called when response is received or request times out
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: JabberDataElement? = nil, callback: ((Stanza?) -> Void)?) {
+    public func createNode<Failure: Error>(at pubSubJid: BareJID, node nodeName: String?, with configuration: JabberDataElement? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -72,7 +71,7 @@ extension PubSubModule {
             pubsub.addChild(configure);
         }
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -83,13 +82,8 @@ extension PubSubModule {
      - parameter completionHandler: called when result is available
      */
     public func configureNode(at pubSubJid: BareJID, node nodeName: String, with configuration: JabberDataElement, completionHandler: @escaping (PubSubNodeConfigurationResult)->Void) {
-        configureNode(at: pubSubJid, node: nodeName, with: configuration, callback: { response in
-            if response?.type == StanzaType.result {
-                completionHandler(.success(Void()));
-            } else {
-                let pubsubErrorElem = response?.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
-                completionHandler(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubErrorElem == nil ? nil : PubSubErrorCondition(rawValue: pubsubErrorElem!.name), response: response));
-            }
+        configureNode(at: pubSubJid, node: nodeName, with: configuration, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         });
     }
 
@@ -98,9 +92,10 @@ extension PubSubModule {
      - parameter at: address of PubSub service
      - parameter node: name of node to create
      - parameter with: configuration to apply for node
-     - parameter callback: called when response is received or request times out
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func configureNode(at pubSubJid: BareJID, node nodeName: String, with configuration: JabberDataElement, callback: ((Stanza?) -> Void)? = nil) {
+    public func configureNode<Failure: Error>(at pubSubJid: BareJID, node nodeName: String, with configuration: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -113,36 +108,32 @@ extension PubSubModule {
         configure.addChild(configuration.submitableElement(type: .submit));
         pubsub.addChild(configure);
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
      Retrieve default node configuration from PubSub service
      - parameter from: address of PubSub service
-     - parameter onSuccess: called when request succeeds - passes response stanza and default node configuration
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when result is available
      */
     public func requestDefaultNodeConfiguration(from pubSubJid: BareJID, completionHandler: @escaping (PubSubRetrieveNodeConfigurationResult)->Void) {
-        requestDefaultNodeConfiguration(from: pubSubJid, callback: { response in
-            if let stanza = response, stanza.type == .result {
-                guard let defaultConfigElem = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "default")?.findChild(name: "x", xmlns: "jabber:x:data") else {
-                    completionHandler(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: nil, response: stanza));
-                    return;
+        requestDefaultNodeConfiguration(from: pubSubJid, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap { stanza in
+                guard let defaultConfigElem = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "default")?.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: defaultConfigElem) else {
+                    return .failure(.undefined_condition)
                 }
-                completionHandler(.success(JabberDataElement(from: defaultConfigElem)!));
-            } else {
-                let pubsubErrorElem = response?.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
-                completionHandler(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubErrorElem == nil ? nil : PubSubErrorCondition(rawValue: pubsubErrorElem!.name), response: response));
-            }
+                return .success(form);
+            });
         });
     }
 
     /**
      Retrieve default node configuration from PubSub service
      - parameter from: address of PubSub service
-     - parameter callback: called when response is received or request times out     
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func requestDefaultNodeConfiguration(from pubSubJid: BareJID, callback: ((Stanza?)->Void)?) {
+    public func requestDefaultNodeConfiguration<Failure: Error>(from pubSubJid: BareJID, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
@@ -152,7 +143,7 @@ extension PubSubModule {
 
         pubsub.addChild(Element(name: "default"));
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -162,17 +153,14 @@ extension PubSubModule {
      - parameter completionHandler: called when result of the request is available
      */
     public func retrieveNodeConfiguration(from pubSubJid: BareJID, node: String, completionHandler: @escaping (PubSubRetrieveNodeConfigurationResult)->Void) {
-        retrieveNodeConfiguration(from: pubSubJid, node: node, callback: { response in
-            if response?.type == StanzaType.result {
-                if let config = response?.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "configure")?.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: config) {
-                    completionHandler(.success(form));
+        retrieveNodeConfiguration(from: pubSubJid, node: node, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap({ response in
+                if let config = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "configure")?.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: config) {
+                    return .success(form);
                 } else {
-                    completionHandler(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: .unsupported, response: nil));
+                    return .failure(.undefined_condition);
                 }
-            } else {
-                let pubsubErrorElem = response?.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
-                completionHandler(.failure(errorCondition: response?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubErrorElem == nil ? nil : PubSubErrorCondition(rawValue: pubsubErrorElem!.name), response: response));
-            }
+            }))
         });
     }
     
@@ -180,9 +168,10 @@ extension PubSubModule {
      Retrieve node configuration from PubSub service
      - parameter from: address of PubSub service
      - parameter node: node to retrieve configuration
-     - parameter callback: called when response is received or request times out
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func retrieveNodeConfiguration(from pubSubJid: BareJID, node: String, callback: ((Stanza?)->Void)?) {
+    public func retrieveNodeConfiguration<Failure: Error>(from pubSubJid: BareJID, node: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
@@ -195,7 +184,7 @@ extension PubSubModule {
         
         pubsub.addChild(Element(name: "default"));
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -205,16 +194,13 @@ extension PubSubModule {
      - parameter completionHandler: called when result is available
      */
     public func deleteNode(from pubSubJid: BareJID, node nodeName: String, completionHandler: ((PubSubNodeDeletionResult)->Void)?) {
-        self.deleteNode(from: pubSubJid, node: nodeName, callback: { stanza in
-            guard let response = stanza else {
-                completionHandler?(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
-                return;
-            }
-            if response.type == .result || response.errorCondition == .item_not_found {
-                completionHandler?(.success(nodeName));
-            } else {
-                completionHandler?(.failure(errorCondition: response.errorCondition ?? .undefined_condition, pubsubErrorCondition: nil, response: response));
-            }
+        self.deleteNode(from: pubSubJid, node: nodeName, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler?(result.map({ _ in nodeName }).flatMapError({ (error: PubSubError) in
+                guard error.error == .item_not_found else {
+                    return .failure(error);
+                }
+                return .success(nodeName);
+            }));
         });
     }
     
@@ -222,9 +208,10 @@ extension PubSubModule {
      Delete node from PubSub service
      - parameter from: address of PubSub service
      - parameter node: name of node to delete
-     - parameter callback: called when response is received or request times out
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func deleteNode(from pubSubJid: BareJID, node nodeName: String, callback: ((Stanza?)->Void)?) {
+    public func deleteNode<Failure: Error>(from pubSubJid: BareJID, node nodeName: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -236,27 +223,18 @@ extension PubSubModule {
         delete.setAttribute("node", value: nodeName);
         pubsub.addChild(delete);
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
      Delete all items published to node
      - parameter at: address of PubSub service
      - parameter from: name of node to delete all items
-     - parameter onSuccess: called when request succeeds - passes response stanza
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when result is available
      */
-    public func purgeItems(at pubSubJid: BareJID, from nodeName: String, completionHandler: @escaping (PubSubResult<Void>)->Void ) {
-        self.purgeItems(at: pubSubJid, from: nodeName, callback: { stanza in
-            guard let response = stanza else {
-                completionHandler(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
-                return;
-            }
-            if response.type == .result || response.errorCondition == .item_not_found {
-                completionHandler(.success(Void()));
-            } else {
-                completionHandler(.failure(errorCondition: response.errorCondition ?? .undefined_condition, pubsubErrorCondition: nil, response: response));
-            }
+    public func purgeItems(at pubSubJid: BareJID, from nodeName: String, completionHandler: @escaping (PubSubResult<Void>)->Void) {
+        self.purgeItems(at: pubSubJid, from: nodeName, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         });
     }
     
@@ -264,9 +242,10 @@ extension PubSubModule {
      Delete all items published to node
      - parameter at: address of PubSub service
      - parameter from: name of node to delete all items
-     - parameter callback: called when response is received or request times out
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func purgeItems(at pubSubJid: BareJID, from nodeName: String, callback: ((Stanza?)->Void)?) {
+    public func purgeItems<Failure: Error>(at pubSubJid: BareJID, from nodeName: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -278,7 +257,7 @@ extension PubSubModule {
         purge.setAttribute("node", value: nodeName)
         pubsub.addChild(purge);
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -288,17 +267,10 @@ extension PubSubModule {
      - parameter completionHandler: called when result is available
      */
     public func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String = PubSubModule.PUBSUB_OWNER_XMLNS, completionHandler: @escaping (PubSubResult<[PubSubSubscriptionElement]>)->Void) {
-        self.retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: xmlns, callback: { stanza in
-            guard let response = stanza else {
-                completionHandler(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
-                return;
-            }
-            if response.type == .result {
-                let subscriptions = response.findChild(name: "pubsub", xmlns: xmlns)?.findChild(name: "subscriptions")?.mapChildren(transform: PubSubSubscriptionElement.init(from: )) ?? [];
-                completionHandler(.success(subscriptions));
-            } else {
-                completionHandler(.failure(errorCondition: response.errorCondition ?? .undefined_condition, pubsubErrorCondition: nil, response: response));
-            }
+        self.retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: xmlns, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler(result.map({ response in
+                return response.findChild(name: "pubsub", xmlns: xmlns)?.findChild(name: "subscriptions")?.mapChildren(transform: PubSubSubscriptionElement.init(from: )) ?? [];
+            }))
         });
     }
     
@@ -306,9 +278,10 @@ extension PubSubModule {
      Retrieve all subscriptions to node
      - parameter from: address of PubSub service
      - parameter for: name of node
-     - parameter callback: called when response is received or request times out
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String = PubSubModule.PUBSUB_OWNER_XMLNS, callback: ((Stanza?)->Void)?) {
+    public func retrieveSubscriptions<Failure: Error>(from pubSubJid: BareJID, for nodeName: String, xmlns: String = PubSubModule.PUBSUB_OWNER_XMLNS, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
@@ -320,7 +293,7 @@ extension PubSubModule {
         subscriptions.setAttribute("node", value: nodeName)
         pubsub.addChild(subscriptions);
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
  
     /**
@@ -328,17 +301,11 @@ extension PubSubModule {
      - parameter at: address of PubSub service
      - parameter for: name of node
      - parameter subscriptions: array of subscription items to modify
-     - parameter onSuccess: called when request succeeds - passes response stanza
-     - parameter onError: called when request failed - passes general and detailed error condition if available
+     - parameter completionHandler: called when result is available
      */
     public func setSubscriptions(at pubSubJid: BareJID, for nodeName: String, subscriptions values: [PubSubSubscriptionElement], completionHandler: ((PubSubResult<Void>)->Void)?) {
-        self.setSubscriptions(at: pubSubJid, for: nodeName, subscriptions: values, callback: { stanza in
-            if stanza?.type == .result {
-                completionHandler?(.success(Void()));
-            } else {
-                let pubsubErrorElem = stanza?.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
-                completionHandler?(.failure(errorCondition: stanza?.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubErrorElem == nil ? nil : PubSubErrorCondition(rawValue: pubsubErrorElem!.name), response: stanza));
-            }
+        self.setSubscriptions(at: pubSubJid, for: nodeName, subscriptions: values, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler?(result.map({ _ in Void() }));
         });
     }
     
@@ -347,9 +314,10 @@ extension PubSubModule {
      - parameter at: address of PubSub service
      - parameter for: name of node
      - parameter subscriptions: array of subscription items to modify
-     - parameter callback: called when response is received or request times out
+     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
+     - parameter completionHandler: called when result is available
      */
-    public func setSubscriptions(at pubSubJid: BareJID, for nodeName: String, subscriptions values: [PubSubSubscriptionElement], callback: ((Stanza?)->Void)?) {
+    public func setSubscriptions<Failure: Error>(at pubSubJid: BareJID, for nodeName: String, subscriptions values: [PubSubSubscriptionElement], errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -365,7 +333,7 @@ extension PubSubModule {
             subscriptions.addChild(v.element);
         }
         
-        self.context.writer?.write(iq, callback: callback);
+        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     @discardableResult
@@ -414,30 +382,21 @@ extension PubSubModule {
         
         let xmlns = pubsub.xmlns!;
         
-        self.context.writer?.write(iq, callback: { stanza in
-            guard let response = stanza else {
-                completionHandler(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
-                return;
-            }
-            switch response.type ?? .error {
-            case .result:
+        self.context.writer?.write(iq, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
+            completionHandler(result.flatMap({ response in
                 guard let affiliationsEl = response.findChild(name: "pubsub", xmlns: xmlns)?.findChild(name: "affiliations") else {
-                    completionHandler(.failure(errorCondition: .undefined_condition, pubsubErrorCondition: .unsupported, response: response));
-                    return;
+                    return .failure(.undefined_condition);
                 }
                 switch source {
                 case .node(let node):
                     let affiliations = affiliationsEl.mapChildren(transform: { el in PubSubAffiliationItem(from: el, node: node) });
-                    completionHandler(.success(affiliations));
+                    return .success(affiliations);
                 case .own:
                     let jid = response.to!.withoutResource;
                     let affiliations = affiliationsEl.mapChildren(transform: { el in PubSubAffiliationItem(from: el, jid: jid) });
-                    completionHandler(.success(affiliations));
+                    return .success(affiliations);
                 }
-            default:
-                let pubsubError = response.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
-                completionHandler(.failure(errorCondition: response.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubError == nil ? nil : PubSubErrorCondition(rawValue: pubsubError!.name), response: response));
-            }
+            }));
         });
     }
     
@@ -464,18 +423,8 @@ extension PubSubModule {
             affiliations.addChild(v.element());
         }
         
-        self.context.writer?.write(iq, callback: { stanza in
-            guard let response = stanza else {
-                completionHandler(.failure(errorCondition: .remote_server_timeout, pubsubErrorCondition: nil, response: nil));
-                return;
-            }
-            switch response.type ?? .error {
-            case .result:
-                completionHandler(.success(Void()));
-            default:
-                let pubsubError = response.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
-                completionHandler(.failure(errorCondition: response.errorCondition ?? .remote_server_timeout, pubsubErrorCondition: pubsubError == nil ? nil : PubSubErrorCondition(rawValue: pubsubError!.name), response: response));
-            }
+        self.context.writer?.write(iq, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         });
     }
 }

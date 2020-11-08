@@ -23,26 +23,26 @@ import Foundation
 
 public protocol VCardModuleProtocol {
     
-    func publishVCard(_ vcard: VCard, to: BareJID?, callback: ((Stanza?) -> Void)?);
+    func publishVCard<Failure: Error>(_ vcard: VCard, to jid: BareJID?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>) -> Void)?);
 
-    func publishVCard(_ vcard: VCard, to: BareJID?, completionHandler: ((Result<Void,ErrorCondition>) -> Void)?);
+    func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: ((Result<Void,XMPPError>)->Void)?);
     
-    func retrieveVCard(from jid: JID?, callback: @escaping (Stanza?) -> Void);
+    func retrieveVCard<Failure: Error>(from jid: JID?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>) -> Void);
     
-    func retrieveVCard(from jid: JID?, completionHandler: @escaping (Result<VCard,ErrorCondition>)->Void);
+    func retrieveVCard(from jid: JID?, completionHandler: @escaping (Result<VCard,XMPPError>)->Void)
 }
 
 public extension VCardModuleProtocol {
 
-    func publishVCard(_ vcard: VCard, callback: ((Stanza?) -> Void)?) {
-        publishVCard(vcard, to: nil, callback: callback);
+    func publishVCard<Failure: Error>(_ vcard: VCard, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>) -> Void)?) {
+        publishVCard(vcard, to: nil, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
-    func publishVCard(_ vcard: VCard, completionHandler: ((Result<Void,ErrorCondition>) -> Void)?) {
+    func publishVCard(_ vcard: VCard, completionHandler: ((Result<Void,XMPPError>) -> Void)?) {
         publishVCard(vcard, to: nil, completionHandler: completionHandler);
     }
     
-    func retrieveVCard(completionHandler: @escaping (Result<VCard,ErrorCondition>)->Void) {
+    func retrieveVCard(completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
         retrieveVCard(from: nil, completionHandler: completionHandler);
     }
     

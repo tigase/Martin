@@ -324,7 +324,7 @@ open class Room: ChatProtocol, ContextAware {
         return result;
     }
     
-    open func checkTigasePushNotificationRegistrationStatus(completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
+    open func checkTigasePushNotificationRegistrationStatus(completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
         guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
             completionHandler(.failure(.undefined_condition));
             return;
@@ -332,19 +332,19 @@ open class Room: ChatProtocol, ContextAware {
         
         regModule.retrieveRegistrationForm(from: self.jid, completionHandler: { result in
             switch result {
-            case .success(let type, let form, let bob):
-                if type == .dataForm, let field: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline") {
+            case .success(let formResult):
+                if formResult.type == .dataForm, let field: BooleanField = formResult.form.getField(named: "{http://tigase.org/protocol/muc}offline") {
                     completionHandler(.success(field.value));
                 } else {
-                    completionHandler(.failure(.feature_not_implemented));
+                    completionHandler(.failure(.undefined_condition));
                 }
-            case .failure(let errorCondition, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let error):
+                completionHandler(.failure(error));
             }
         });
     }
     
-    open func registerForTigasePushNotification(_ value: Bool, completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
+    open func registerForTigasePushNotification(_ value: Bool, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
         guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
             completionHandler(.failure(.undefined_condition));
             return;
@@ -352,20 +352,20 @@ open class Room: ChatProtocol, ContextAware {
         
         regModule.retrieveRegistrationForm(from: self.jid, completionHandler: { result in
             switch result {
-            case .success(let type, let form, let bob):
-                if type == .dataForm, let valueField: BooleanField = form.getField(named: "{http://tigase.org/protocol/muc}offline"), let nicknameField: TextSingleField = form.getField(named: "muc#register_roomnick") {
+            case .success(let formResult):
+                if formResult.type == .dataForm, let valueField: BooleanField = formResult.form.getField(named: "{http://tigase.org/protocol/muc}offline"), let nicknameField: TextSingleField = formResult.form.getField(named: "muc#register_roomnick") {
                     if valueField.value == value {
                         completionHandler(.success(value));
                     } else {
                         if value {
                             valueField.value = value;
                             nicknameField.value = self.nickname;
-                            regModule.submitRegistrationForm(to: self.jid, form: form, completionHandler: { result in
+                            regModule.submitRegistrationForm(to: self.jid, form: formResult.form, completionHandler: { result in
                                 switch result {
                                 case .success(_):
                                     completionHandler(.success(value));
-                                case .failure(let errorCondition, _):
-                                    completionHandler(.failure(errorCondition));
+                                case .failure(let error):
+                                    completionHandler(.failure(error));
                                 }
                             })
                         } else {
@@ -373,17 +373,17 @@ open class Room: ChatProtocol, ContextAware {
                                 switch result {
                                 case .success(_):
                                     completionHandler(.success(value));
-                                case .failure(let errorCondition):
-                                    completionHandler(.failure(errorCondition));
+                                case .failure(let error):
+                                    completionHandler(.failure(error));
                                 }
                             });
                         }
                     }
                 } else {
-                    completionHandler(.failure(ErrorCondition.feature_not_implemented));
+                    completionHandler(.failure(.undefined_condition));
                 }
-            case .failure(let errorCondition, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let error):
+                completionHandler(.failure(error));
             }
         })
     }

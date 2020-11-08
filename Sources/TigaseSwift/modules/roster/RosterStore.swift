@@ -68,8 +68,8 @@ open class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    open func add(jid:JID, name:String?, groups:[String] = [String](), onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
-        handler?.add(jid: jid, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
+    open func add(jid:JID, name:String?, groups:[String] = [String](), completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+        handler?.add(jid: jid, name: name, groups: groups, completionHandler: completionHandler);
     }
     
     open func cleared() {
@@ -83,8 +83,8 @@ open class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    open func remove(jid:JID, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
-        handler?.remove(jid: jid, onSuccess: onSuccess, onError: onError);
+    open func remove(jid:JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+        handler?.remove(jid: jid, completionHandler: completionHandler);
     }
 
     /**
@@ -95,8 +95,8 @@ open class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    open func update(item:RosterItem, name: String?, groups:[String]? = nil, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
-        handler?.update(item: item, name: name, groups: groups, onSuccess: onSuccess, onError: onError);
+    open func update(item:RosterItem, name: String?, groups:[String]? = nil, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+        handler?.update(item: item, name: name, groups: groups, completionHandler: completionHandler);
     }
 
     /**
@@ -106,8 +106,8 @@ open class RosterStore {
      - parameter onSuccess: called after item is added
      - parameter onError: called on failure
      */
-    open func update(item:RosterItem, groups:[String], onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?) {
-        handler?.update(item: item, groups: groups, onSuccess: onSuccess, onError: onError);
+    open func update(item:RosterItem, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+        handler?.update(item: item, groups: groups, completionHandler: completionHandler);
     }
     
     open func addItem(_ item:RosterItem) {
@@ -140,10 +140,10 @@ open class RosterStore {
  */
 public protocol RosterStoreHandler {
 
-    func add(jid:JID, name:String?, groups:[String], onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
+    func add(jid:JID, name:String?, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?);
     func cleared();
-    func remove(jid:JID, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
-    func update(item:RosterItem, name:String?, groups:[String]?, onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
-    func update(item:RosterItem, groups:[String], onSuccess:((_ stanza:Stanza) -> Void)?, onError:((_ errorCondition:ErrorCondition?) -> Void)?);
+    func remove(jid:JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?);
+    func update(item:RosterItem, name:String?, groups:[String]?, completionHandler: ((Result<Iq,XMPPError>)->Void)?);
+    func update(item:RosterItem, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?);
     
 }

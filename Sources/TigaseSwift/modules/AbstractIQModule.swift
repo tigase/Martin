@@ -56,7 +56,7 @@ extension AbstractIQModule {
                 break;
             }
         }
-        throw ErrorCondition.bad_request;
+        throw XMPPError.bad_request("Invalid type of <iq/> request!");
     }
     
 }

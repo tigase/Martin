@@ -90,7 +90,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
     
     open func process(stanza: Stanza) throws {
         guard let actionEl = stanza.findChild(xmlns: BlockingCommandModule.BC_XMLNS) else {
-            throw ErrorCondition.feature_not_implemented;
+            throw XMPPError.feature_not_implemented;
         }
         
         switch actionEl.name {
@@ -112,7 +112,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
                 self.blockedJids = blocked.filter({ jid in !newJids.contains(jid)});
             }
         default:
-            throw ErrorCondition.feature_not_implemented;
+            throw XMPPError.feature_not_implemented;
         }
     }
     
@@ -120,7 +120,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
      Block communication with jid
      - paramater jid: jid to block
      */
-    open func block(jids: [JID], completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func block(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard !jids.isEmpty else {
             completionHandler(.success(Void()));
             return;
@@ -130,12 +130,8 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         iq.type = StanzaType.set;
         let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
         iq.addChild(block);
-        context.writer?.write(iq, callback: { result in
-            if (result?.type ?? .error) == .error {
-                completionHandler(.failure(result?.errorCondition ?? ErrorCondition.remote_server_timeout));
-            } else {
-                completionHandler(.success(Void()));
-            }
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         })
     }
     
@@ -143,7 +139,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
      Unblock communication with jid
      - paramater jid: to unblock
      */
-    open func unblock(jids: [JID], completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func unblock(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard !jids.isEmpty else {
             completionHandler(.success(Void()));
             return;
@@ -153,31 +149,28 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         iq.type = StanzaType.set;
         let unblock = Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
         iq.addChild(unblock);
-        context.writer?.write(iq, callback: { result in
-            if (result?.type ?? .error) == .error {
-                completionHandler(.failure(result?.errorCondition ?? ErrorCondition.remote_server_timeout));
-            } else {
-                completionHandler(.success(Void()));
-            }
+        context.writer?.write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         })
     }
     
-    open func retrieveBlockedJids(completionHandler: ((Result<[JID],ErrorCondition>)->Void)?) {
+    open func retrieveBlockedJids(completionHandler: ((Result<[JID],XMPPError>)->Void)?) {
         guard let blockedJids = self.blockedJids else {
             let iq = Iq();
             iq.type = StanzaType.get;
             let list = Element(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS);
             iq.addChild(list);
 
-            context.writer?.write(iq, callback: { result in
-                if (result?.type ?? .error) == .error {
-                    completionHandler?(.failure(result?.errorCondition ?? ErrorCondition.remote_server_timeout));
-                } else {
-                    let blockedJids = result!.findChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.mapChildren(transform: { (el) -> JID? in
-                    return JID(el.getAttribute("jid"));
+            context.writer?.write(iq, completionHandler: { result in
+                switch result {
+                case .success(let iq):
+                    let blockedJids = iq.findChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.mapChildren(transform: { (el) -> JID? in
+                        return JID(el.getAttribute("jid"));
                     }) ?? [];
                     self.blockedJids = blockedJids;
                     completionHandler?(.success(blockedJids));
+                case .failure(let error):
+                    completionHandler?(.failure(error));
                 }
             })
             return;

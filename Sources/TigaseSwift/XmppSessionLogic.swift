@@ -168,8 +168,8 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                     }
                 }
             
-                if let handler = self.responseManager.getResponseHandler(for: stanza) {
-                    handler(stanza);
+                if let iq = stanza as? Iq, let handler = self.responseManager.getResponseHandler(for: iq) {
+                    handler(iq);
                     return;
                 }
             
@@ -187,6 +187,9 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                     self.logger.debug("\(self.context) - feature-not-implemented \(stanza, privacy: .public)");
                     throw ErrorCondition.feature_not_implemented;
                 }
+            } catch let error as XMPPError {
+                let errorStanza = error.createResponse(stanza);
+                self.context.writer?.write(errorStanza);
             } catch let error as ErrorCondition {
                 let errorStanza = error.createResponse(stanza);
                 self.context.writer?.write(errorStanza);

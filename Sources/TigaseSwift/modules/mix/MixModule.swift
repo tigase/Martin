@@ -108,9 +108,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         self.channelManager = channelManager;
     }
     
-    open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,ErrorCondition>)->Void) {
+    open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,XMPPError>)->Void) {
         guard componentJid.localPart == nil else {
-            completionHandler(.failure(.bad_request));
+            completionHandler(.failure(.bad_request("MIX component JID cannot have local part set!")));
             return;
         }
         
@@ -128,17 +128,17 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 if let channel = response.findChild(name: "create", xmlns: MixModule.CORE_XMLNS)?.getAttribute("channel") {
                     completionHandler(.success(BareJID(localPart: channel, domain: componentJid.domain)));
                 } else {
-                    completionHandler(.failure(.unexpected_request));
+                    completionHandler(.failure(.undefined_condition));
                 }
-            case .failure(let errorCondition, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let error):
+                completionHandler(.failure(error));
             }
         });
     }
         
-    open func destroy(channel channelJid: BareJID, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func destroy(channel channelJid: BareJID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard channelJid.localPart != nil else {
-            completionHandler(.failure(.bad_request));
+            completionHandler(.failure(.bad_request("Channel JID must have a local part!")));
             return;
         }
         
@@ -154,15 +154,15 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 if let channel = self.channelManager.channel(for: channelJid) {
                     _  = self.channelManager.close(channel: channel);
                 }
-                self.rosterModule.store.remove(jid: JID(channelJid), onSuccess: nil, onError: nil);
+                self.rosterModule.store.remove(jid: JID(channelJid), completionHandler: nil);
                 completionHandler(.success(Void()));
-            case .failure(let errorCondition, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let error):
+                completionHandler(.failure(error));
             }
         });
     }
     
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, completionHandler: @escaping (AsyncResult<Stanza>) -> Void) {
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
             iq.to = JID(context.userBareJid);
@@ -218,7 +218,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         }
     }
     
-    open func leave(channel: Channel, completionHandler: @escaping (AsyncResult<Stanza>)->Void) {
+    open func leave(channel: Channel, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         if isPAM2SupportAvailable {
             let iq = Iq();
             iq.to = JID(context.userBareJid);
@@ -326,7 +326,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                     break;
                 }
                 channel.update(permissions: permissions);
-            case .failure(_, _, _):
+            case .failure(_):
                 channel.update(permissions: []);
             }
             self.context.eventBus.fire(ChannelPermissionsChangedEvent(context: self.context, channel: channel));
@@ -336,8 +336,8 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     open func retrieveParticipants(for channel: Channel, completionHandler: ((ParticipantsResult)->Void)?) {
         pubsubModule.retrieveItems(from: channel.channelJid, for: "urn:xmpp:mix:nodes:participants", completionHandler: { result in
             switch result {
-            case .success(_, _, let items, _):
-                let participants = items.map({ (item) -> MixParticipant? in
+            case .success(let items):
+                let participants = items.items.map({ (item) -> MixParticipant? in
                     return MixParticipant(from: item);
                 }).filter({ $0 != nil }).map({ $0! });
                 let oldParticipants = channel.participants.values;
@@ -349,79 +349,79 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 }
                 channel.update(participants: participants);
                 self.context.eventBus.fire(ParticipantsChangedEvent(context: self.context, channel: channel, joined: participants, left: left));
-                completionHandler?(.success(participants: participants));
-            case .failure(let errorCondition, let pubsubErrorCondition, let response):
-                completionHandler?(.failure(errorCondition: errorCondition, pubsubErrorCondition: pubsubErrorCondition, errorText: response?.errorText));
+                completionHandler?(.success(participants));
+            case .failure(let pubsubError):
+                completionHandler?(.failure(pubsubError.error));
             }
         })
     }
     
-    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: ((Result<Void,ErrorCondition>)->Void)?) {
+    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
         pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().submitableElement(type: .result), completionHandler: { response in
             switch response {
-            case .success(_, _, _):
+            case .success(_):
                 completionHandler?(.success(Void()));
-            case .failure(let errorCondition, _, _):
-                completionHandler?(.failure(errorCondition));
+            case .failure(let error):
+                completionHandler?(.failure(error.error));
             }
         });
     }
     
-    open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,ErrorCondition>)->Void)?) {
+    open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,XMPPError>)->Void)?) {
         pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:info", completionHandler: { result in
             switch result {
-            case .success(_, _, let items, _):
-                guard let item = items.sorted(by: { (i1, i2) in return i1.id > i2.id }).first else {
+            case .success(let items):
+                guard let item = items.items.sorted(by: { (i1, i2) in return i1.id > i2.id }).first else {
                     completionHandler?(.failure(.item_not_found));
                     return;
                 }
                 guard let info = ChannelInfo(form: JabberDataElement(from: item.payload)) else {
-                    completionHandler?(.failure(.unexpected_request));
+                    completionHandler?(.failure(.undefined_condition));
                     return;
                 }
                 _ = self.channelManager.update(channel: channelJid, info: info)
                 completionHandler?(.success(info));
-            case .failure(let errorCondition, _, _):
-                completionHandler?(.failure(errorCondition));
+            case .failure(let pubsubError):
+                completionHandler?(.failure(pubsubError.error));
             }
         });
     }
 
-    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<JabberDataElement,ErrorCondition>)->Void) {
-        pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", lastItems: 1, completionHandler: { result in
+    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<JabberDataElement,XMPPError>)->Void) {
+        pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", limit: .lastItems(1), completionHandler: { result in
             switch result {
-            case .success(_, _, let items, _):
-                guard let item = items.first else {
+            case .success(let items):
+                guard let item = items.items.first else {
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
                 guard let config = JabberDataElement(from: item.payload) else {
-                    completionHandler(.failure(.unexpected_request));
+                    completionHandler(.failure(.undefined_condition));
                     return;
                 }
                 completionHandler(.success(config));
-            case .failure(let errorCondition, _, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let pubsubError):
+                completionHandler(.failure(pubsubError.error));
             }
         });
     }
     
-    open func updateConfig(for channelJid: BareJID, config: JabberDataElement, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func updateConfig(for channelJid: BareJID, config: JabberDataElement, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.submitableElement(type: .submit), completionHandler: { response in
             switch response {
-            case .success(_, _, _):
+            case .success(_):
                 completionHandler(.success(Void()));
-            case .failure(let errorCondition, _, _):
-                completionHandler(.failure(errorCondition));
+            case .failure(let pubsubError):
+                completionHandler(.failure(pubsubError.error));
             }
         });
     }
     
-    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         publishAccessRule(to: channelJid, for: jid, rule: .allow, value: value, completionHandler: completionHandler);
     }
     
-    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: { result in
             switch result {
             case.success(let r):
@@ -435,8 +435,8 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                     switch result {
                     case .success(_):
                         self.publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: completionHandler);
-                    case .failure(let errorCondition, _, _):
-                        completionHandler(.failure(errorCondition));
+                    case .failure(let pubsubError):
+                        completionHandler(.failure(pubsubError.error));
                     }
                 })
             }
@@ -453,36 +453,36 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         return message;
     }
     
-    private func publishAccessRule(to channelJid: BareJID, for jid: BareJID, rule: AccessRule, value: Bool, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    private func publishAccessRule(to channelJid: BareJID, for jid: BareJID, rule: AccessRule, value: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         if value {
             pubsubModule.publishItem(at: channelJid, to: rule.node, itemId: jid.stringValue, payload: nil, completionHandler: { result in
                 switch result {
-                case .success(_, _, _):
+                case .success(_):
                     completionHandler(.success(Void()));
-                case .failure(let errorCondition, _, _):
-                    completionHandler(.failure(errorCondition));
+                case .failure(let pubsubError):
+                    completionHandler(.failure(pubsubError.error));
                 }
             })
         } else {
             pubsubModule.retractItem(at: channelJid, from: rule.node, itemId: jid.stringValue, completionHandler: { result in
                 switch result {
-                case .success(_, _, _):
+                case .success(_):
                     completionHandler(.success(Void()));
-                case .failure(let errorCondition, _, _):
-                    completionHandler(.failure(errorCondition));
+                case .failure(let pubsubError):
+                    completionHandler(.failure(pubsubError.error));
                 }
             })
         }
     }
     
-    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
+    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         if isPrivate {
             pubsubModule.createNode(at: channelJid, node: AccessRule.allow.node, completionHandler: { result in
                 switch result {
                 case .success(_):
                     self.allowAccess(to: channelJid, for: self.context.userBareJid, completionHandler: completionHandler);
-                case .failure(let errorCondition, _, _):
-                    completionHandler(.failure(errorCondition));
+                case .failure(let pubsubError):
+                    completionHandler(.failure(pubsubError.error));
                 }
             })
         } else {
@@ -490,14 +490,14 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                 switch result {
                 case .success(_):
                     completionHandler(.success(Void()));
-                case .failure(let errorCondition, _, _):
-                    completionHandler(.failure(errorCondition));
+                case .failure(let pubsubError):
+                    completionHandler(.failure(pubsubError.error));
                 }
             })
         }
     }
     
-    open func checkAccessPolicy(of channelJid: BareJID, completionHandler: @escaping (Result<Bool,ErrorCondition>)->Void) {
+    open func checkAccessPolicy(of channelJid: BareJID, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
         self.retrieveAccessRules(for: channelJid, rule: .allow, completionHandler: { result in
             switch result {
             case .success(_):
@@ -512,21 +512,21 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         });
     }
     
-    open func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],ErrorCondition>)->Void) {
+    open func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
         self.retrieveAccessRules(for: channelJid, rule: .allow, completionHandler: completionHandler);
     }
     
-    open func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],ErrorCondition>)->Void) {
+    open func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
         self.retrieveAccessRules(for: channelJid, rule: .deny, completionHandler: completionHandler);
     }
     
-    private func retrieveAccessRules(for channelJid: BareJID, rule: AccessRule, completionHandler: @escaping (Result<[BareJID],ErrorCondition>)->Void) {
+    private func retrieveAccessRules(for channelJid: BareJID, rule: AccessRule, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
         pubsubModule.retrieveItems(from: channelJid, for: rule.node, completionHandler: { result in
             switch result {
-            case .success(_, _, let items, _):
-                completionHandler(.success(items.map({ BareJID($0.id) })));
-            case .failure(let errorCondition, _, _):
-                completionHandler(.failure(errorCondition));
+            case .success(let items):
+                completionHandler(.success(items.items.map({ BareJID($0.id) })));
+            case .failure(let pubsubError):
+                completionHandler(.failure(pubsubError.error));
             }
         })
     }
@@ -674,18 +674,18 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         // should we query MIX messages node? or just MAM at MIX channel without a node?
         mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: "urn:xmpp:mix:nodes:messages", start: nil, queryId: queryId, rsm: rsm, completionHandler: { result in
             switch result {
-            case .success(_, let complete, let rsm):
-                guard !complete, let rsmQuery = rsm?.next() else {
+            case .success(let queryResult):
+                guard !queryResult.complete, let rsmQuery = queryResult.rsm?.next() else {
                     return;
                 }
                 self.retrieveHistory(fromChannel: jid, start: start, rsm: rsmQuery);
-            case .failure(_, _):
+            case .failure(_):
                 break;
             }
         });
     }
     
-    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, ErrorCondition>)->Void)?) {
+    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) {
         avatarModule.retrieveAvatarMetadata(from: jid, itemId: nil, fireEvents: true, completionHandler: { result in
             completionHandler?(result);
         });
@@ -789,16 +789,8 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         }
     }
 
-    
-    public enum ParticipantsResult {
-        case success(participants: [MixParticipant])
-        case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition?, errorText: String?)
-    }
-    
-    public enum PermissionsResult {
-        case success(permissions: [Channel.Permission])
-        case failure(errorCondition: ErrorCondition, pubsubErrorCondition: PubSubErrorCondition?, errorText: String?);
-    }
+    public typealias ParticipantsResult = Result<[MixParticipant],XMPPError>
+    public typealias PermissionsResult = Result<[Channel.Permission],XMPPError>
     
 }
 

@@ -86,7 +86,7 @@ open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
     
     /// Method do noting
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+        throw XMPPError.bad_request(nil);
     }
         
     open func handle(event: Event) {
@@ -158,9 +158,9 @@ open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
                                 self.logger.debug("\(self.context) - caps disco#info received from: \(from, privacy: .public) result: \(result, privacy: .public)");
                             }
                             switch result {
-                            case .success(let node, let identities, let features, _):
-                                let identity = identities.first;
-                                self.cache.store(node: node!, identity: identity, features: features);
+                            case .success(let info):
+                                let identity = info.identities.first;
+                                self.cache.store(node: nodeName, identity: identity, features: info.features);
                             default:
                                 break;
                             }
