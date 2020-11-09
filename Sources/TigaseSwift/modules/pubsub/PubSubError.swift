@@ -36,6 +36,11 @@ public struct PubSubError: Error, CustomStringConvertible {
         }
     }
         
+    public init(error: XMPPError, pubsubErrorCondition: PubSubErrorCondition?) {
+        self.error = error;
+        self.pubsubErrorCondition = pubsubErrorCondition;
+    }
+    
     public static func from(stanza: Stanza?) -> PubSubError {
         return parseError(stanza: stanza);
     }

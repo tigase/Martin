@@ -121,9 +121,9 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     }
         
     public struct QueryResult {
-        let queryId: String;
-        let complete: Bool;
-        let rsm: RSM.Result?;
+        public let queryId: String;
+        public let complete: Bool;
+        public let rsm: RSM.Result?;
     }
 
     /**
@@ -272,9 +272,15 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     }
     
     public struct Settings {
-        var defaultValue: DefaultValue;
-        var always: [JID];
-        var never: [JID];
+        public var defaultValue: DefaultValue;
+        public var always: [JID];
+        public var never: [JID];
+        
+        public init(defaultValue: DefaultValue, always: [JID], never: [JID]) {
+            self.defaultValue = defaultValue;
+            self.always = always;
+            self.never = never;
+        }
     }
     
     /**

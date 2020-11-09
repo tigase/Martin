@@ -400,10 +400,21 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         public let identities: [Identity];
         public let features: [String];
         public let form: JabberDataElement?;
+        
+        public init(identities: [Identity], features: [String], form: JabberDataElement?) {
+            self.identities = identities;
+            self.features = features;
+            self.form = form;
+        }
     }
     
     public struct DiscoveryItemsResult {
         public let node: String?;
         public let items: [Item];
+        
+        public init(node: String?, items: [Item]) {
+            self.node = node;
+            self.items = items;
+        }
     }
 }
