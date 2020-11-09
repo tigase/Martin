@@ -85,6 +85,7 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
                     let jid = JID(name);
                     self.bindedJid = jid;
                     completionHandler?(.success(jid));
+                    self.context.eventBus.fire(ResourceBindSuccessEvent(context: self.context, bindedJid: jid));
                     return;
                 } else {
                     self.context.eventBus.fire(ResourceBindErrorEvent(context: self.context, error: .undefined_condition));

@@ -247,11 +247,11 @@ open class XMPPClient: Context, EventHandler {
           
         func write<Failure: Error>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) {
             responseManager.registerResponseHandler(for: iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: completionHandler);
-            self.write(iq);
+            self.write(stanza: iq);
         }
         
         func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
-            write(stanza);
+            write(stanza: stanza);
             if writeCompleted != nil {
                 dispatcher.async {
                     writeCompleted?(.success(Void()));
