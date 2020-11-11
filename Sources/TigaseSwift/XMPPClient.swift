@@ -156,8 +156,8 @@ open class XMPPClient: Context, EventHandler {
         logger.debug("starting connection......");
         dispatcher.sync {
             let socketConnector = SocketConnector(context: context);
-            let sessionLogic: XmppSessionLogic = SocketSessionLogic(connector: socketConnector, responseManager: responseManager, context: context, queueDispatcher: dispatcher, seeOtherHost: lastSeeOtherHost);
-            context.writer = SocketPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager, queueDispatcher: dispatcher);
+            let sessionLogic: XmppSessionLogic = SocketSessionLogic(connector: socketConnector, responseManager: responseManager, context: context, seeOtherHost: lastSeeOtherHost);
+            context.writer = LogicPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager);
             self.sessionLogic = sessionLogic;
             sessionLogic.bind();
             sessionLogic.statePublisher.sink(receiveValue: { [weak self] newState in
@@ -227,42 +227,4 @@ open class XMPPClient: Context, EventHandler {
         }
     }
     
-    /**
-     Implementation of `PacketWriter` protocol passed to `Context` instance
-     */
-    private class SocketPacketWriter: PacketWriter {
-        
-        let sessionLogic: XmppSessionLogic;
-        let responseManager: ResponseManager;
-        let dispatcher: QueueDispatcher;
-        
-        init(sessionLogic: XmppSessionLogic, responseManager: ResponseManager, queueDispatcher: QueueDispatcher) {
-            self.sessionLogic = sessionLogic;
-            self.responseManager = responseManager;
-            self.dispatcher = queueDispatcher;
-        }
-          
-        func write<Failure: Error>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) {
-            responseManager.registerResponseHandler(for: iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: completionHandler);
-            self.write(stanza: iq);
-        }
-        
-        func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
-            write(stanza: stanza);
-            if writeCompleted != nil {
-                dispatcher.async {
-                    writeCompleted?(.success(Void()));
-                }
-            }
-        }
-        
-        private func write(stanza: Stanza) {
-            if stanza.name == "iq" && stanza.id == nil {
-                stanza.id = UUID().uuidString;
-            }
-            dispatcher.async {
-                self.sessionLogic.sendingOutgoingStanza(stanza);
-            }
-        }
-    }
 }

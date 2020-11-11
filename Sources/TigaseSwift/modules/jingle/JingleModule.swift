@@ -192,7 +192,7 @@ open class JingleModule: XmppModule, ContextAware {
         
         context.eventBus.fire(JingleEvent(context: context, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));//, session: session));
         
-        context.writer?.write(stanza.makeResult(type: .result));
+        context.writer.write(stanza.makeResult(type: .result));
     }
     
     public func process(message: Message) throws {
@@ -231,7 +231,7 @@ open class JingleModule: XmppModule, ContextAware {
         response.type = .chat;
         response.to = jid;
         response.jingleMessageInitiationAction = action;
-        context.writer?.write(response);
+        context.writer.write(response);
     }
     
     public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
@@ -263,7 +263,7 @@ open class JingleModule: XmppModule, ContextAware {
             jingle.addChild(group);
         }
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -297,7 +297,7 @@ open class JingleModule: XmppModule, ContextAware {
             jingle.addChild(group);
         }
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -315,7 +315,7 @@ open class JingleModule: XmppModule, ContextAware {
 
         jingle.addChild(reason.toReasonElement());
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             print("session terminated and answer received", result);
         });
     }
@@ -335,7 +335,7 @@ open class JingleModule: XmppModule, ContextAware {
         
         iq.addChild(jingle);
         
-        context.writer?.write(iq, completionHandler: { response in
+        context.writer.write(iq, completionHandler: { response in
             print("session transport-info response received:", response as Any);
         });
     }

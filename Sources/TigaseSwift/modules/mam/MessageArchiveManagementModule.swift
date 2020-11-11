@@ -227,7 +227,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
             self.queries[queryId] = Query(id: queryId, version: version);
         }
 
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
             self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
                 self.queries.removeValue(forKey: queryId);
             });
@@ -268,7 +268,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
      
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     public struct Settings {
@@ -306,7 +306,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         iq.type = StanzaType.get;
         iq.addChild(Element(name: "prefs", xmlns: version.rawValue));
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -344,7 +344,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
             prefs.addChild(neverEl);
         }
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     private static func parseSettings(fromIq stanza: Iq, version: Version) -> Result<Settings,XMPPError> {

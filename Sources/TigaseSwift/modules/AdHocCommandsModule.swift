@@ -61,7 +61,7 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
         
         iq.addChild(command);
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
                 guard let command = stanza.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
                     return .failure(.undefined_condition);

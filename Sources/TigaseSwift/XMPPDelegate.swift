@@ -30,7 +30,7 @@ open class XMPPDelegate : NSObject, XMPPStreamDelegate {
     
     open func onStreamTerminate() {
         if let logger = streamLogger {
-            logger.incoming("</stream:stream>");
+            logger.incoming(.string("</stream:stream>"));
         }
     }
     
@@ -39,13 +39,13 @@ open class XMPPDelegate : NSObject, XMPPStreamDelegate {
             let content = attributes.map { (k,v) -> String in
                 return "\(k)='\(EscapeUtils.escape(v))'";
             }
-            logger.incoming("<stream:stream\(content.isEmpty ? "" : ("" + content.joined(separator: " ")))>");
+            logger.incoming(.string("<stream:stream\(content.isEmpty ? "" : ("" + content.joined(separator: " ")))>"));
         }
     }
     
     open func process(element packet: Element) {
         if let logger = streamLogger {
-            logger.incoming(element: packet);
+            logger.incoming(.stanza(Stanza.from(element: packet)));
         }
     }
     

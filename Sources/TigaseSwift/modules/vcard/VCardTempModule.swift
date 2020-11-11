@@ -67,7 +67,7 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
         iq.type = StanzaType.set;
         iq.addChild(vcard.toVCardTemp());
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
         
     /**
@@ -92,7 +92,7 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
         iq.to = jid;
         iq.addChild(Element(name:"vCard", xmlns: VCardTempModule.VCARD_XMLNS));
         
-        context.writer?.write(iq, timeout: 10, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, timeout: 10, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**

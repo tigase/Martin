@@ -63,7 +63,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
         iq.type = StanzaType.get;
         iq.addChild(Element(name:"query", xmlns:"jabber:iq:version"));
 
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     public class SoftwareVersion {
@@ -111,7 +111,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
             query.addChild(Element(name: "os", cdata: os));
         }
         
-        context.writer?.write(result);
+        context.writer.write(result);
     }
     
     open func processSet(stanza: Stanza) throws {

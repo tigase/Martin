@@ -63,7 +63,7 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
         }
         iq.addChild(servicesEl);
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map { response in
                 return response.findChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.mapChildren(transform: Service.parse(_:)) ?? [];
             })

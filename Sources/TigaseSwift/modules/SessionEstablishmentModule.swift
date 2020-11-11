@@ -90,7 +90,7 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
         session.xmlns = SessionEstablishmentModule.SESSION_XMLNS;
         iq.element.addChild(session);
 
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             switch result {
             case .success(_):
                 self.context.eventBus.fire(SessionEstablishmentSuccessEvent(context: self.context));

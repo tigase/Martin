@@ -109,7 +109,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             callback?(result.map({ _ in state }));
         });
     }

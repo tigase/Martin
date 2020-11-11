@@ -111,7 +111,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             x.addChild(decline);
             
             message.addChild(x);
-            context.writer?.write(message);
+            context.writer.write(message);
         }
     }
     
@@ -127,7 +127,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         iq.to = roomJid;
         
         iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
                 guard let data = JabberDataElement(from: stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data")) else {
                     return .failure(.undefined_condition);
@@ -154,7 +154,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         iq.addChild(query);
         query.addChild(configuration.submitableElement(type: .submit));
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map { _ in Void() });
         });
     }
@@ -174,7 +174,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         iq.addChild(query);
         query.addChild(Element(name: "item", attributes: ["affiliation": affiliation.rawValue]));
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map({ stanza in
                 return stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.mapChildren(transform: { el in
                     return RoomAffiliation(from: el);
@@ -203,7 +203,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             return el;
         }));
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -217,7 +217,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         if newSubject == nil {
             message.element.addChild(Element(name: "subject"));
         }
-        context.writer?.write(message)
+        context.writer.write(message)
     }
     
     
@@ -281,7 +281,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
         
         iq.addChild(query);
         
-        context.writer?.write(iq);
+        context.writer.write(iq);
         
         roomsManager.close(room: room);
         
@@ -302,7 +302,7 @@ open class MucModule: XmppModule, ContextAware, EventHandler {
             let presence = Presence();
             presence.type = StanzaType.unavailable;
             presence.to = JID(room.roomJid, resource: room.nickname);
-            context.writer?.write(presence);
+            context.writer.write(presence);
         }
         
         roomsManager.close(room: room);

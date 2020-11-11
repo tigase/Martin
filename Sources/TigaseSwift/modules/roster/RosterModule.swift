@@ -206,7 +206,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             switch result {
             case .success(let iq):
                 if let query = iq.findChild(name: "query", xmlns: "jabber:iq:roster") {
@@ -240,7 +240,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         }
         query.addChild(item);
         
-        context.writer?.write(iq, completionHandler: completionHandler);
+        context.writer.write(iq, completionHandler: completionHandler);
     }
     
     fileprivate func fire(_ event:Event) {

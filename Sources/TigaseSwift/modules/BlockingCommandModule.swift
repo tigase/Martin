@@ -130,7 +130,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         iq.type = StanzaType.set;
         let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
         iq.addChild(block);
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
     }
@@ -149,7 +149,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         iq.type = StanzaType.set;
         let unblock = Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
         iq.addChild(unblock);
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
     }
@@ -161,7 +161,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
             let list = Element(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS);
             iq.addChild(list);
 
-            context.writer?.write(iq, completionHandler: { result in
+            context.writer.write(iq, completionHandler: { result in
                 switch result {
                 case .success(let iq):
                     let blockedJids = iq.findChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.mapChildren(transform: { (el) -> JID? in

@@ -152,7 +152,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         
             context.eventBus.fire(SaslAuthStartEvent(context: context, mechanism: mechanism.name))
         
-            context.writer!.write(auth, writeCompleted: { _ in
+            context.writer.write(auth, writeCompleted: { _ in
                 if mechanism.status == .completedExpected {
                     self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
                 }
@@ -197,7 +197,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         let responseEl = Stanza(name: "response");
         responseEl.element.xmlns = SaslModule.SASL_XMLNS;
         responseEl.element.value = response;
-        context.writer?.write(responseEl, writeCompleted: { result in
+        context.writer.write(responseEl, writeCompleted: { result in
             if mechanism.status == .completedExpected {
                 self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
             }

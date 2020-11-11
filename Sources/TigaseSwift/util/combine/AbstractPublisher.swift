@@ -23,7 +23,7 @@ import Foundation
 
 public class AbstractPublisher<Output,Failure: Error>: Publisher {
     
-    private let queue = DispatchQueue(label: "Published.Publisher.Queue");
+    let queue = DispatchQueue(label: "Published.Publisher.Queue");
     private var subscribers = SubscribersList<Output,Failure>.empty;
 
     init() {}

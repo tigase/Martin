@@ -28,11 +28,7 @@ public struct Published<Value> {
         public typealias Output = Value
         public typealias Failure = Never
     
-        fileprivate var value: Output {
-            didSet {
-                offer(value);
-            }
-        }
+        fileprivate var value: Output;
         
         fileprivate init(_ value: Value) {
             self.value = value;
@@ -51,10 +47,15 @@ public struct Published<Value> {
     
     public var wrappedValue: Value {
         get {
-            return storage.value;
+            return storage.queue.sync {
+                return storage.value
+            };
         }
         set {
-            storage.value = newValue;
+            storage.queue.sync {
+                storage.value = newValue;
+            }
+            storage.offer(newValue);
         }
     }
     

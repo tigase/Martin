@@ -154,7 +154,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
         }
         context.eventBus.fire(BeforePresenceSendEvent(sessionObject: context.sessionObject, presence: presence));
         
-        context.writer?.write(presence);
+        context.writer.write(presence);
     }
     
     /**
@@ -169,7 +169,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
             presence.addChild(Element(name: "preauth", attributes: ["xmlns": "urn:xmpp:pars:0", "token": preauth!]));
         }
         
-        context.writer?.write(presence);
+        context.writer.write(presence);
     }
 
     /**
@@ -181,7 +181,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
         presence.to = jid;
         presence.type = StanzaType.subscribed;
         
-        context.writer?.write(presence);
+        context.writer.write(presence);
     }
 
     /**
@@ -193,7 +193,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
         presence.to = jid;
         presence.type = StanzaType.unsubscribe;
         
-        context.writer?.write(presence);
+        context.writer.write(presence);
     }
     
     /**
@@ -205,7 +205,7 @@ open class PresenceModule: XmppModule, ContextAware, EventHandler {
         presence.to = jid;
         presence.type = StanzaType.unsubscribed;
         
-        context.writer?.write(presence);
+        context.writer.write(presence);
     }
     
     /**

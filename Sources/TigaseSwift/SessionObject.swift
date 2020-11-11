@@ -167,7 +167,7 @@ open class SessionObject {
     }
     
     /// Event fired when `SessionObject` instance is being cleared
-    open class ClearedEvent: Event {
+    open class ClearedEvent: Event, SerialEvent {
         /// Identified of event which should be used during registration of `EventHandler`
         public static let TYPE = ClearedEvent();
         

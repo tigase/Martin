@@ -31,11 +31,13 @@ open class ResponseManager {
     private let logger = Logger(subsystem: "TigaseSwift", category: "ResponseManager")
     /// Internal class holding information about request and callbacks
     fileprivate class Entry {
+        let id: String;
         let jid: JID?;
         let timestamp: Date;
         let callback: (Iq?)->Void;
         
-        init(jid:JID?, callback:@escaping (Iq?)->Void, timeout:TimeInterval) {
+        init(id: String, jid:JID?, callback:@escaping (Iq?)->Void, timeout:TimeInterval) {
+            self.id = id;
             self.jid = jid;
             self.callback = callback;
             self.timestamp = Date(timeIntervalSinceNow: timeout);
@@ -85,28 +87,6 @@ open class ResponseManager {
             return nil;
         }
     }
-        
-    /**
-     Method registers callback for stanza for time
-     - parameter stanza: stanza for which to wait for response
-     - parameter timeout: maximal time for which should wait for response
-     - parameter callback: callback to execute on response or timeout
-     */
-    open func registerResponseHandler(for stanza: Iq, timeout:TimeInterval, callback:((Iq?)->Void)?) {
-        guard callback != nil else {
-            return;
-        }
-        
-        var id = stanza.id;
-        if id == nil {
-            id = nextUid();
-            stanza.id = id;
-        }
-        
-        queue.async {
-            self.handlers[id!] = Entry(jid: stanza.to, callback: callback!, timeout: timeout);
-        }
-    }
     
     /**
      Method registers callback for stanza for time
@@ -114,10 +94,7 @@ open class ResponseManager {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback to execute on response or timeout
      */
-    open func registerResponseHandler<Failure: Error>(for stanza:Stanza, timeout:TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>)->Void)?) {
-        guard let callback = completionHandler else {
-            return;
-        }
+    open func registerResponseHandler<Failure: Error>(for stanza:Stanza, timeout:TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) -> Cancellable {
         
         var id = stanza.id;
         if id == nil {
@@ -125,15 +102,18 @@ open class ResponseManager {
             stanza.id = id;
         }
         
+        let entry = Entry(id: id!, jid: stanza.to, callback: { response in
+            if let stanza = response, stanza.type == .result {
+                completionHandler(.success(stanza))
+            } else {
+                completionHandler(.failure(errorDecoder(stanza) as! Failure));
+            }
+        }, timeout: timeout);
         queue.async {
-            self.handlers[id!] = Entry(jid: stanza.to, callback: { response in
-                if let stanza = response, stanza.type == .result {
-                    callback(.success(stanza))
-                } else {
-                    callback(.failure(errorDecoder(stanza) as! Failure));
-                }
-            }, timeout: timeout);
+            self.handlers[id!] = entry;
         }
+        
+        return CancellableEntry(responseManager: self, entry: entry);
     }
     
     /// Activate response manager
@@ -169,6 +149,27 @@ open class ResponseManager {
                     handler.callback(nil);
                 }
             }
+        }
+    }
+    
+    fileprivate func cancel(entry: Entry) {
+        queue.async {
+            self.handlers.removeValue(forKey: entry.id);
+        }
+    }
+    
+    private class CancellableEntry: Cancellable {
+        
+        private let responseManager: ResponseManager;
+        private let entry: Entry;
+        
+        fileprivate init(responseManager: ResponseManager, entry: Entry) {
+            self.responseManager = responseManager;
+            self.entry = entry;
+        }
+        
+        public func cancel() {
+            responseManager.cancel(entry: entry);
         }
     }
 }

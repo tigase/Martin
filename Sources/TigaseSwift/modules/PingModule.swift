@@ -60,7 +60,7 @@ open class PingModule: AbstractIQModule, ContextAware {
         iq.to = jid;
         iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
         
-        context.writer?.write(iq);
+        context.writer.write(iq);
     }
     
     open func ping(_ jid: JID, completionHandler: (Result<Void,ErrorCondition>)->Void) {
@@ -79,7 +79,7 @@ open class PingModule: AbstractIQModule, ContextAware {
      */
     open func processGet(stanza: Stanza) throws {
         let result = stanza.makeResult(type: StanzaType.result);
-        context.writer?.write(result);
+        context.writer.write(result);
     }
     
     open func processSet(stanza: Stanza) throws {

@@ -112,7 +112,7 @@ open class ClientStateIndicationModule: XmppModule, ContextAware, EventHandler {
             _state = state;
             let stanza = Stanza(name: state ? "active" : "inactive");
             stanza.element.xmlns = ClientStateIndicationModule.CSI_XMLNS;
-            context.writer?.write(stanza);
+            context.writer.write(stanza);
             return true;
         }
         return false;

@@ -120,7 +120,7 @@ open class MobileModeModule: XmppModule, ContextAware, EventHandler {
             let mobile = Element(name: "mobile", xmlns: mode!.rawValue);
             mobile.setAttribute("enable", value: state ? "true" : "false");
             iq.addChild(mobile);
-            context.writer?.write(iq);
+            context.writer.write(iq);
             return true;
         }
         return false;

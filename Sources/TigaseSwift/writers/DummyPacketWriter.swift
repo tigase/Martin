@@ -1,8 +1,8 @@
 //
-// StreamLogger.swift
+// DummyPacketWriter.swift
 //
 // TigaseSwift
-// Copyright (C) 2019 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,10 +21,14 @@
 
 import Foundation
 
-public protocol StreamLogger: class {
+open class DummyPacketWriter: PacketWriter {
     
-    func incoming(_ value: StreamData);
+    public func write<Failure>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) where Failure : Error {
+        completionHandler?(.failure(errorDecoder(nil) as! Failure));
+    }
+    
+    public func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
+        writeCompleted?(.failure(XMPPError.remote_server_timeout));
+    }
 
-    func outgoing(_ value: StreamData);
-    
 }

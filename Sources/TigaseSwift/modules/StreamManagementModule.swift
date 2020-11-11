@@ -118,7 +118,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
             }
         }
         
-        context.writer?.write(enable);
+        context.writer.write(enable);
     }
     
     /**
@@ -232,7 +232,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         }
         
         let r = Stanza(name: "r", xmlns: StreamManagementModule.SM_XMLNS);
-        context.writer?.write(r);
+        context.writer.write(r);
         lastRequestTimestamp = Date();
     }
     
@@ -253,7 +253,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         resume.setAttribute("h", value: String(ackH.incomingCounter));
         resume.setAttribute("previd", value: resumptionId);
         
-        context.writer?.write(resume);
+        context.writer.write(resume);
     }
     
     /// Send ACK to server
@@ -261,7 +261,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         guard let a = prepareAck() else {
             return;
         }
-        context.writer?.write(a);
+        context.writer.write(a);
     }
     
     func prepareAck() -> Stanza? {
@@ -299,7 +299,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
             
             let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
             a.setAttribute("h", value: String(value));
-            self.context.writer?.write(a);
+            self.context.writer.write(a);
         }
     }
     
@@ -323,7 +323,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         let oldOutgoingQueue = outgoingQueue;
         outgoingQueue = Queue<Stanza>();
         while let s = oldOutgoingQueue.poll() {
-            context.writer?.write(s);
+            context.writer.write(s);
         }
         
         logger.debug("stream resumed");

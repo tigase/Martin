@@ -58,7 +58,7 @@ open class EntityTimeModule: AbstractIQModule, ContextAware {
         
         iq.addChild(Element(name: "time", xmlns: EntityTimeModule.XMLNS));
         
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             completionHandler(result.map { response in
                 let timeEl = response.findChild(name: "time", xmlns: EntityTimeModule.XMLNS);
                 var date: Date? = nil;
@@ -92,7 +92,7 @@ open class EntityTimeModule: AbstractIQModule, ContextAware {
         
         iq.addChild(timeEl);
         
-        context.writer?.write(iq);
+        context.writer.write(iq);
     }
     
     open func processSet(stanza: Stanza) throws {

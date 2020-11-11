@@ -106,7 +106,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             enable.addChild(publishOptions!.submitableElement(type: .submit));
         }
         iq.addChild(enable);
-        context.writer?.write(iq, completionHandler: completionHandler);
+        context.writer.write(iq, completionHandler: completionHandler);
     }
     
     open func disable(serviceJid: JID, node: String, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
@@ -117,7 +117,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         disable.setAttribute("node", value: node);
         iq.addChild(disable);
         
-        context.writer?.write(iq, completionHandler: completionHandler);
+        context.writer.write(iq, completionHandler: completionHandler);
     }
     
     open class NotificationsDisabledEvent : AbstractEvent {

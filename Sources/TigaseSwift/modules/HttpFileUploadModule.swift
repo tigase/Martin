@@ -119,7 +119,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         }
         iq.addChild(requestEl);
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {

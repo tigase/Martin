@@ -86,7 +86,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -106,7 +106,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         
         iq.addChild(query);
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: { result in
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: { result in
             completionHandler(result.map { response in
                 if let query = response.findChild(name: "query", xmlns: "jabber:iq:register"), let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data")) {
                     return FormResult(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
@@ -147,7 +147,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         query.addChild(form.submitableElement(type: .submit));
         
         iq.addChild(query);
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -163,7 +163,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         query.addChild(Element(name: "remove"));
         iq.addChild(query);
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     open func unregister(from: JID? = nil, completionHander: @escaping (Result<Void,XMPPError>)->Void) {
@@ -191,7 +191,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         query.addChild(Element(name: "password", cdata: newPassword));
         iq.addChild(query);
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -412,7 +412,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
                 let domain: String = client.context.userBareJid.domain
                 iq.to = JID(domain);
                 iq.addChild(Element(name: "preauth", attributes: ["token": preauth, "xmlns": "urn:xmpp:pars:0"]));
-                client.context.writer?.write(iq, completionHandler: { result in
+                client.context.writer.write(iq, completionHandler: { result in
                     switch result {
                     case .success(_):
                         self.preauthDone = true;

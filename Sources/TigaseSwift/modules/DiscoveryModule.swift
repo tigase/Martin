@@ -131,7 +131,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -178,7 +178,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         iq.addChild(query);
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -271,7 +271,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
             }
         }
         
-        context.writer?.write(result);
+        context.writer.write(result);
     }
     
     private func processGetItems(_ stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
@@ -293,7 +293,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
             }
         }
 
-        context.writer?.write(result);
+        context.writer.write(result);
     }
  
     public func reset(scope: ResetableScope) {

@@ -40,12 +40,13 @@ open class Context {
     // Instance of `XmppModuleManager` which keeps instances of every registered module for this connection/client
     public let modulesManager: XmppModulesManager;
     // Instance of `PacketWriter` to use for sending stanzas
-    open var writer: PacketWriter?;
+    open var writer: PacketWriter;
     
-    init(eventBus: EventBus, modulesManager: XmppModulesManager) {
+    init(eventBus: EventBus, modulesManager: XmppModulesManager, writer: PacketWriter = DummyPacketWriter()) {
         self.sessionObject = SessionObject(eventBus: eventBus);
         self.eventBus = eventBus;
         self.modulesManager = modulesManager;
+        self.writer = writer;
         self.sessionObject.context = self;
         self.modulesManager.context = self;
     }

@@ -83,7 +83,7 @@ extension PubSubModule {
             pubsub.addChild(publishOptionsEl);
         }
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -125,7 +125,7 @@ extension PubSubModule {
         item.setAttribute("id", value: itemId);
         retract.addChild(item);
         
-        context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
 }

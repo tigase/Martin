@@ -67,7 +67,7 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
             response.to = message.from;
             response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
             response.hints = [.store];
-            context.writer?.write(response);
+            context.writer.write(response);
             break;
         case .received(let id):
             // need to notify client - fire event

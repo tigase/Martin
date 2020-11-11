@@ -78,7 +78,7 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
         iq.element.addChild(bind);
         let resource:String? = context.connectionConfiguration.resource;
         bind.addChild(Element(name: "resource", cdata:resource));
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             switch result {
             case .success(let stanza):
                 if let name = stanza.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {

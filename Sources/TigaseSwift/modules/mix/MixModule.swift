@@ -122,7 +122,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             createEl.setAttribute("channel", value: channel);
         }
         iq.addChild(createEl);
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             switch result {
             case .success(let response):
                 if let channel = response.findChild(name: "create", xmlns: MixModule.CORE_XMLNS)?.getAttribute("channel") {
@@ -148,7 +148,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         let destroyEl = Element(name: "destroy", xmlns: MixModule.CORE_XMLNS);
         destroyEl.setAttribute("channel", value: channelJid.localPart);
         iq.addChild(destroyEl);
-        context.writer?.write(iq, completionHandler: { result in
+        context.writer.write(iq, completionHandler: { result in
             switch result {
             case .success(_):
                 if let channel = self.channelManager.channel(for: channelJid) {
@@ -172,7 +172,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             clientJoin.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
             iq.addChild(clientJoin);
             
-            context.writer?.write(iq, completionHandler: { result in
+            context.writer.write(iq, completionHandler: { result in
                 switch result {
                 case .success(let response):
                     if let joinEl = response.findChild(name: "client-join", xmlns: MixModule.PAM2_XMLNS)?.findChild(name: "join", xmlns: MixModule.CORE_XMLNS) {
@@ -204,7 +204,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             iq.to = JID(channelJid);
             iq.type = .set;
             iq.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
-            context.writer?.write(iq, completionHandler: { result in
+            context.writer.write(iq, completionHandler: { result in
                 switch result {
                 case .success(let response):
                     if let joinEl = response.findChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.getAttribute("id") {
@@ -228,7 +228,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             clientLeave.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
             iq.addChild(clientLeave);
             
-            context.writer?.write(iq, completionHandler: { result in
+            context.writer.write(iq, completionHandler: { result in
                 switch result {
                 case .success(_):
                     self.channelLeft(channel: channel);
@@ -242,7 +242,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             iq.to = channel.jid;
             iq.type = .set;
             iq.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
-            context.writer?.write(iq, completionHandler: { result in
+            context.writer.write(iq, completionHandler: { result in
                 switch result {
                 case .success(_):
                     self.channelLeft(channel: channel);

@@ -71,7 +71,7 @@ extension PubSubModule {
             pubsub.addChild(configure);
         }
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -108,7 +108,7 @@ extension PubSubModule {
         configure.addChild(configuration.submitableElement(type: .submit));
         pubsub.addChild(configure);
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -143,7 +143,7 @@ extension PubSubModule {
 
         pubsub.addChild(Element(name: "default"));
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -184,7 +184,7 @@ extension PubSubModule {
         
         pubsub.addChild(Element(name: "default"));
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -223,7 +223,7 @@ extension PubSubModule {
         delete.setAttribute("node", value: nodeName);
         pubsub.addChild(delete);
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -257,7 +257,7 @@ extension PubSubModule {
         purge.setAttribute("node", value: nodeName)
         pubsub.addChild(purge);
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -293,7 +293,7 @@ extension PubSubModule {
         subscriptions.setAttribute("node", value: nodeName)
         pubsub.addChild(subscriptions);
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
  
     /**
@@ -333,7 +333,7 @@ extension PubSubModule {
             subscriptions.addChild(v.element);
         }
         
-        self.context.writer?.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        self.context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     @discardableResult
@@ -382,7 +382,7 @@ extension PubSubModule {
         
         let xmlns = pubsub.xmlns!;
         
-        self.context.writer?.write(iq, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
+        self.context.writer.write(iq, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
             completionHandler(result.flatMap({ response in
                 guard let affiliationsEl = response.findChild(name: "pubsub", xmlns: xmlns)?.findChild(name: "affiliations") else {
                     return .failure(.undefined_condition);
@@ -423,7 +423,7 @@ extension PubSubModule {
             affiliations.addChild(v.element());
         }
         
-        self.context.writer?.write(iq, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
+        self.context.writer.write(iq, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }

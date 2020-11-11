@@ -104,7 +104,7 @@ open class MessageModule: XmppModule, ContextAware {
      */
     open func sendMessage(in chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
         let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
-        context.writer?.write(msg);
+        context.writer.write(msg);
         return msg;
     }
     
