@@ -394,16 +394,17 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         private var preauthDone = false;
         
         fileprivate func isStreamReady() -> Bool {
-            let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
-            
-            guard (client.socketConnector?.isTLSActive ?? false) || client.connectionConfiguration.disableTLS || ((featuresElement?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
+            guard let featuresElement = client.module(.streamFeatures).streamFeatures else {
                 return false;
             }
-            
-            guard (client.socketConnector?.isCompressionActive ?? false) || client.connectionConfiguration.disableCompression || ((featuresElement?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+            guard (client.connector?.isTLSActive ?? false) || client.connectionConfiguration.disableTLS || ((featuresElement.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
                 return false;
             }
-            
+
+            guard (client.connector?.isCompressionActive ?? false) || client.connectionConfiguration.disableCompression || ((featuresElement.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+                return false;
+            }
+
             let preauthSupported: Bool = client.context.module(.streamFeatures).streamFeatures?.findChild(name: "register", xmlns: "urn:xmpp:invite") != nil;
             if preauthSupported && !preauthDone, let preauth: String = preauthToken {
                 let iq = Iq();

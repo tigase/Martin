@@ -97,17 +97,20 @@ import TigaseLogging
 open class XMPPClient: Context, EventHandler {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPClient");
-    open var socketConnector:SocketConnector? {
-        willSet {
-            sessionLogic?.unbind();
-            newValue?.streamLogger = streamLogger;
-            writer = nil;
-        }
-    }
     public var context:Context {
         return self;
     }
-    private var sessionLogic:XmppSessionLogic?;
+    var connector: Connector? {
+        return sessionLogic?.connector;
+    }
+    private var sessionLogic:XmppSessionLogic? {
+        willSet {
+            sessionLogic?.streamLogger = nil;
+        }
+        didSet {
+            sessionLogic?.streamLogger = streamLogger;
+        }
+    }
     private let responseManager:ResponseManager;
     
     fileprivate var keepaliveTimer: Timer?;
@@ -115,7 +118,7 @@ open class XMPPClient: Context, EventHandler {
     
     open weak var streamLogger: StreamLogger? {
         didSet {
-            socketConnector?.streamLogger = streamLogger;
+            sessionLogic?.streamLogger = streamLogger;
         }
     }
     
@@ -152,12 +155,12 @@ open class XMPPClient: Context, EventHandler {
         }
         logger.debug("starting connection......");
         dispatcher.sync {
-            socketConnector = SocketConnector(context: context);
-            context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queueDispatcher: dispatcher);
-            let sessionLogic = SocketSessionLogic(connector: socketConnector!, responseManager: responseManager, context: context, queueDispatcher: dispatcher, seeOtherHost: lastSeeOtherHost);
+            let socketConnector = SocketConnector(context: context);
+            let sessionLogic: XmppSessionLogic = SocketSessionLogic(connector: socketConnector, responseManager: responseManager, context: context, queueDispatcher: dispatcher, seeOtherHost: lastSeeOtherHost);
+            context.writer = SocketPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager, queueDispatcher: dispatcher);
             self.sessionLogic = sessionLogic;
             sessionLogic.bind();
-            sessionLogic.$state.sink(receiveValue: { [weak self] newState in
+            sessionLogic.statePublisher.sink(receiveValue: { [weak self] newState in
                 self?.state = newState;
             });
             
@@ -167,8 +170,7 @@ open class XMPPClient: Context, EventHandler {
             } else {
                 keepaliveTimer = nil;
             }
-            
-            socketConnector?.start()
+            sessionLogic.start();
         }
     }
 
@@ -185,11 +187,7 @@ open class XMPPClient: Context, EventHandler {
             return;
         }
         
-        if force {
-            socketConnector?.forceStop(completionHandler: completionHandler);
-        } else {
-            socketConnector?.stop(completionHandler: completionHandler);
-        }
+        sessionLogic?.stop(force: force, completionHandler: completionHandler);
     }
     
     /**
@@ -199,7 +197,7 @@ open class XMPPClient: Context, EventHandler {
         guard state == .connected else {
             return;
         }
-        socketConnector?.keepAlive();
+        sessionLogic?.keepalive();
     }
     
     /**
@@ -221,7 +219,6 @@ open class XMPPClient: Context, EventHandler {
                 stateSubscription?.cancel();
                 stateSubscription = nil;
                 self.state = .disconnected;
-                socketConnector = nil;
                 sessionLogic = nil;
             }
             logger.debug("connection stopped......");
@@ -235,12 +232,12 @@ open class XMPPClient: Context, EventHandler {
      */
     private class SocketPacketWriter: PacketWriter {
         
-        let connector: SocketConnector;
+        let sessionLogic: XmppSessionLogic;
         let responseManager: ResponseManager;
         let dispatcher: QueueDispatcher;
         
-        init(connector: SocketConnector, responseManager: ResponseManager, queueDispatcher: QueueDispatcher) {
-            self.connector = connector;
+        init(sessionLogic: XmppSessionLogic, responseManager: ResponseManager, queueDispatcher: QueueDispatcher) {
+            self.sessionLogic = sessionLogic;
             self.responseManager = responseManager;
             self.dispatcher = queueDispatcher;
         }
@@ -264,7 +261,7 @@ open class XMPPClient: Context, EventHandler {
                 stanza.id = UUID().uuidString;
             }
             dispatcher.async {
-                self.connector.send(stanza: stanza);
+                self.sessionLogic.sendingOutgoingStanza(stanza);
             }
         }
     }

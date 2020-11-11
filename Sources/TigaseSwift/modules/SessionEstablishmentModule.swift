@@ -61,6 +61,13 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
         return false;
     }
     
+    public var isSessionEstablishmentRequired: Bool {
+        guard context.module(.streamFeatures).streamFeatures?.findChild(name: "session", xmlns: SessionEstablishmentModule.SESSION_XMLNS)?.findChild(name: "optional") == nil else {
+            return false;
+        }
+        return true;
+    }
+    
     public init() {
         
     }
@@ -72,6 +79,11 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
     
     /// Method called to start session establishemnt
     open func establish(completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
+        guard isSessionEstablishmentRequired else {
+            self.context.eventBus.fire(SessionEstablishmentSuccessEvent(context: self.context));
+            completionHandler?(.success(Void()));
+            return;
+        }
         let iq = Iq();
         iq.type = StanzaType.set;
         let session = Element(name:"session");
