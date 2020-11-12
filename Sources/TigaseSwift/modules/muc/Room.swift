@@ -54,7 +54,7 @@ open class Room: ChatProtocol, ContextAware {
     public let allowFullJid: Bool = false;
     
     // specific variables
-    open var context: Context!;
+    open weak var context: Context?;
     
     fileprivate var _lastMessageDate: Date? = nil;
     /// Timestamp of last received message
@@ -184,7 +184,7 @@ open class Room: ChatProtocol, ContextAware {
         }
         
         _state = .requested;
-        context.writer.write(presence);
+        context?.writer.write(presence);
         
         return presence;
     }
@@ -204,7 +204,7 @@ open class Room: ChatProtocol, ContextAware {
                 msg.addChild(elem);
             }
         }
-        context.writer.write(msg);
+        context?.writer.write(msg);
     }
     
     /**
@@ -237,7 +237,7 @@ open class Room: ChatProtocol, ContextAware {
     open func invite(_ invitee: JID, reason: String?) {
         let message = self.createInvitation(invitee, reason: reason);
         
-        context.writer.write(message);
+        context?.writer.write(message);
     }
     
     /**
@@ -270,7 +270,7 @@ open class Room: ChatProtocol, ContextAware {
      */
     open func inviteDirectly(_ invitee: JID, reason: String?, threadId: String?) {
         let message = createDirectInvitation(invitee, reason: reason, threadId: threadId);
-        context.writer.write(message);
+        context?.writer.write(message);
     }
     
     /**

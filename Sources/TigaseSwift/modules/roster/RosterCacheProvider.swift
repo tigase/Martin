@@ -31,20 +31,20 @@ public protocol RosterCacheProvider {
      - parameter sessionObject: instance of `SessionObject`
      - returns: cached version
      */
-    func getCachedVersion(_ sessionObject:SessionObject) -> String?;
+    func getCachedVersion(_ context: Context) -> String?;
     
     /**
      Load cached roster items
      - parameter sessionObject: instance of `SessionObject`
      - returns: array of loaded `RosterItem`s
      */
-    func loadCachedRoster(_ sessionObject:SessionObject) -> [RosterItem];
+    func loadCachedRoster(_ context: Context) -> [RosterItem];
     
     /**
      Update cached version
      - parameter sessionObject: instance of `SessionObject`
      - paremeter ver: cached version
      */
-    func updateReceivedVersion(_ sessionObject:SessionObject, ver:String?);
+    func updateReceivedVersion(_ context: Context, ver:String?);
     
 }

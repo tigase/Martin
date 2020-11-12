@@ -133,7 +133,8 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     private let connectionConfiguration: ConnectionConfiguration;
     private let eventBus: EventBus;
     
-    required public init(context:Context) {
+    required public init(context: Context) {
+        self.context = context;
         self.connectionConfiguration = context.connectionConfiguration;
         self.dnsResolver = connectionConfiguration.dnsResolver ?? XMPPDNSSrvResolver();
         self.eventBus = context.eventBus;
@@ -168,7 +169,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
                     }
                 }
             case .connecting:
-                if let timeout: Double = context.connectionConfiguration.conntectionTimeout {
+                if let timeout: Double = that.context?.connectionConfiguration.conntectionTimeout {
                     that.logger.debug("\(that.connectionConfiguration.userJid) - scheduling timer for: \(timeout)");
                     DispatchQueue.main.async {
                         that.connectionTimer = Foundation.Timer.scheduledTimer(timeInterval: timeout, target: that, selector: #selector(that.connectionTimedOut), userInfo: nil, repeats: false)
@@ -328,7 +329,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
             self.streamEvents.send(.streamClose)
             // TODO: I'm not sure about that!!
             self.queue.async {
-                self.send(.string("</stream:stream>")) {
+                self.sendSync("</stream:stream>") {
                     self.closeSocket(newState: State.disconnected);
                     completionHandler?();
                 }

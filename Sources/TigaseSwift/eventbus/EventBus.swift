@@ -27,7 +27,7 @@ import Foundation
  */
 open class EventBus {
     
-    fileprivate var handlersByEvent:[String:[EventHandler]];
+    private var handlersByEvent:[String:[Wrapper]];
     
     private let dispatcher: QueueDispatcher;
     
@@ -60,10 +60,10 @@ open class EventBus {
                 let type = event.type;
                 var handlers = self.handlersByEvent[type];
                 if handlers == nil {
-                    handlers = [EventHandler]();
+                    handlers = [Wrapper]();
                 }
                 if (handlers!.firstIndex(where: { $0 === handler }) == nil) {
-                    handlers!.append(handler);
+                    handlers!.append(Wrapper(handler));
                 }
                 self.handlersByEvent[type] = handlers;
             }
@@ -89,7 +89,7 @@ open class EventBus {
             for event in events {
                 let type = event.type;
                 if var handlers = self.handlersByEvent[type] {
-                    if let idx = handlers.firstIndex(where: { $0 === handler }) {
+                    if let idx = handlers.firstIndex(where: { $0.eventHandler === handler }) {
                         handlers.remove(at: idx);
                     }
                     self.handlersByEvent[type] = handlers;
@@ -122,5 +122,19 @@ open class EventBus {
                 }
             }
         }
+    }
+    
+    private class Wrapper: EventHandler {
+        
+        internal weak var eventHandler: EventHandler?;
+        
+        public init(_ eventHandler: EventHandler) {
+            self.eventHandler = eventHandler;
+        }
+        
+        func handle(event: Event) {
+            eventHandler?.handle(event: event);
+        }
+        
     }
 }

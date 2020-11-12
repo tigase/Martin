@@ -29,7 +29,7 @@ extension XmppModuleIdentifier {
 /**
  Module provides features responsible for handling messages
  */
-open class MessageModule: XmppModule, ContextAware {
+open class MessageModule: XmppModuleBase, XmppModule {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "message";
     public static let IDENTIFIER = XmppModuleIdentifier<MessageModule>();
@@ -40,8 +40,6 @@ open class MessageModule: XmppModule, ContextAware {
     
     /// Instance of `ChatManager`
     public let chatManager:ChatManager!;
-    
-    open var context:Context!
     
     public convenience init(client: XMPPClient) {
         self.init(chatManager: DefaultChatManager(context: client.context));
@@ -68,7 +66,9 @@ open class MessageModule: XmppModule, ContextAware {
     
     open func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
         guard let jid = interlocutorJid, let chat = getOrCreateChatForProcessing(message: message, interlocutorJid: jid) else {
-            fire(MessageReceivedEvent(context: context, chat: nil, message: message));
+            if let context = context {
+                fire(MessageReceivedEvent(context: context, chat: nil, message: message));
+            }
             return nil;
         }
         
@@ -79,7 +79,7 @@ open class MessageModule: XmppModule, ContextAware {
             chat.thread = message.thread;
         }
         
-        if fireEvents {
+        if fireEvents, let context = context {
             fire(MessageReceivedEvent(context: context, chat: chat, message: message));
         }
         
@@ -87,7 +87,7 @@ open class MessageModule: XmppModule, ContextAware {
     }
     
     fileprivate func getOrCreateChatForProcessing(message: Message, interlocutorJid: JID) -> Chat? {
-        if message.body != nil && (message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || !context.modulesManager.hasModule(.muc)) {
+        if message.body != nil && (message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || context?.modulesManager.moduleOrNil(.muc) == nil) {
             return chatManager.getChatOrCreate(with: interlocutorJid, thread: message.thread);
         } else {
             return chatManager.getChat(with: interlocutorJid, thread: message.thread);
@@ -104,14 +104,10 @@ open class MessageModule: XmppModule, ContextAware {
      */
     open func sendMessage(in chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
         let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
-        context.writer.write(msg);
+        write(msg);
         return msg;
     }
-    
-    func fire(_ event:Event) {
-        context.eventBus.fire(event);
-    }
-    
+        
     /// Event fired when Chat is created/opened
     open class ChatCreatedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`

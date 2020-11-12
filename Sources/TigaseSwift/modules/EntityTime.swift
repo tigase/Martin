@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class EntityTimeModule: AbstractIQModule, ContextAware {
+open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
 
     public static let XMLNS = "urn:xmpp:time";
     public static let ID = XMLNS;
@@ -34,15 +34,13 @@ open class EntityTimeModule: AbstractIQModule, ContextAware {
         return f;
     })();
     
-    open var context: Context!;
-    
     public var id: String = ID;
     
     public let criteria = Criteria.name("iq").add(Criteria.name("time", xmlns: XMLNS));
     
     public let features: [String] = [XMLNS];
 
-    public init() {
+    public override init() {
         
     }
 
@@ -58,7 +56,7 @@ open class EntityTimeModule: AbstractIQModule, ContextAware {
         
         iq.addChild(Element(name: "time", xmlns: EntityTimeModule.XMLNS));
         
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             completionHandler(result.map { response in
                 let timeEl = response.findChild(name: "time", xmlns: EntityTimeModule.XMLNS);
                 var date: Date? = nil;
@@ -92,7 +90,7 @@ open class EntityTimeModule: AbstractIQModule, ContextAware {
         
         iq.addChild(timeEl);
         
-        context.writer.write(iq);
+        write(iq);
     }
     
     open func processSet(stanza: Stanza) throws {

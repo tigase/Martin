@@ -54,9 +54,13 @@ open class ResponseManager {
     
     private var handlers = [String:Entry]();
     
-    weak var context:Context?;
+    open weak var context: Context?;
     
     public init() {
+    }
+    
+    deinit {
+        timer?.invalidate();
     }
 
     /**
@@ -118,14 +122,22 @@ open class ResponseManager {
     
     /// Activate response manager
     open func start() {
-        timer = Timer(delayInSeconds: 30, repeats: true) {
-            self.checkTimeouts();
+        let timer = Timer(timeInterval: 30.0, repeats: true, block: { [weak self] timer in
+            self?.checkTimeouts();
+        })
+        DispatchQueue.main.async {
+            RunLoop.current.add(timer, forMode: .common);
         }
+        self.timer = timer;
     }
     
     /// Deactivates response manager
     open func stop() {
-        timer?.cancel();
+        if let timer = timer {
+            DispatchQueue.main.async {
+                timer.invalidate();
+            }
+        }
         timer = nil;
         queue.sync {
             for (id,handler) in self.handlers {

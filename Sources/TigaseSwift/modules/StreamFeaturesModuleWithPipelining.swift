@@ -30,9 +30,9 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
     open private(set) var active: Bool = false;
     open var enabled: Bool = false;
     
-    override open var context: Context! {
+    override open weak var context: Context? {
         willSet {
-            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
+            context?.eventBus.unregister(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
         }
         didSet {
             context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
@@ -62,7 +62,7 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
     }
     
     func streamStarted() {
-        if enabled, let cached = cache?.getFeatures(for: context.sessionObject, embeddedStreamNo: counter) {
+        if enabled, let context = context, let cached = cache?.getFeatures(for: context, embeddedStreamNo: counter) {
             active = true;
             setStreamFeatures(cached);
         } else {
@@ -77,16 +77,16 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
             let pipeliningSupported = newCachedFeatures.count > 0 && newCachedFeatures.count == newCachedFeatures.filter({ features in
                 return features.findChild(name: "pipelining", xmlns: "urn:xmpp:features:pipelining") != nil;
             }).count;
-            cache?.set(for: e.sessionObject, features: pipeliningSupported ? newCachedFeatures : nil);
+            cache?.set(for: e.context, features: pipeliningSupported ? newCachedFeatures : nil);
             newCachedFeatures.removeAll();
         case let e as SocketSessionLogic.ErrorEvent:
             connectionRestarted();
-            cache?.set(for: e.sessionObject, features: nil);
+            cache?.set(for: e.context, features: nil);
         case is SocketConnector.DisconnectedEvent:
             connectionRestarted();
         case let e as AuthModule.AuthFailedEvent:
             connectionRestarted();
-            cache?.set(for: e.sessionObject, features: nil);
+            cache?.set(for: e.context, features: nil);
         default:
             break;
         }
@@ -96,8 +96,8 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
 
 public protocol StreamFeaturesModuleWithPipeliningCacheProtocol {
     
-    func getFeatures(for: SessionObject, embeddedStreamNo: Int) -> Element?;
+    func getFeatures(for: Context, embeddedStreamNo: Int) -> Element?;
     
-    func set(for: SessionObject, features: [Element]?);
+    func set(for: Context, features: [Element]?);
     
 }

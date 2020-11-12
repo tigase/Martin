@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [SASL negotiation and authentication]: https://tools.ietf.org/html/rfc6120#section-6
  */
-open class SaslModule: XmppModule, ContextAware, Resetable {
+open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     /// Namespace used SASL negotiation and authentication
     static let SASL_XMLNS = "urn:ietf:params:xml:ns:xmpp-sasl";
     /// ID of module for lookup in `XmppModulesManager`
@@ -49,8 +49,6 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
     );
     
     public let features = [String]();
-    
-    open var context:Context!;
     
     private var mechanisms = [String:SaslMechanism]();
     private var _mechanismsOrder = [String]();
@@ -82,7 +80,8 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         }
     }
     
-    public init() {
+    public override init() {
+        super.init();
         self.addMechanism(ScramMechanism.ScramSha256());
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
@@ -108,6 +107,9 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
     }
     
     open func process(stanza elem: Stanza) throws {
+        guard  let context = context else {
+            return;
+        }
         do {
         switch elem.name {
             case "success":
@@ -121,16 +123,16 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             }
         } catch ClientSaslException.badChallenge(let msg) {
             logger.debug("Received bad challenge from server: \(msg ?? "nil")");
-            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.temporary_auth_failure));
+            fire(SaslAuthFailedEvent(context: context, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.genericError(let msg) {
             logger.debug("Generic error happened: \(msg ?? "nil")");
-            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.temporary_auth_failure));
+            fire(SaslAuthFailedEvent(context: context, error: SaslError.temporary_auth_failure));
         } catch ClientSaslException.invalidServerSignature {
             logger.debug("Received answer from server with invalid server signature!");
-            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
+            fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
         } catch ClientSaslException.wrongNonce {
             logger.debug("Received answer from server with wrong nonce!");
-            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
+            fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
         }
     }
     
@@ -139,7 +141,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
      */
     open func login() {
         guard let mechanism = guessSaslMechanism() else {
-            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.invalid_mechanism));
+            fire(SaslAuthFailedEvent(context: context!, error: SaslError.invalid_mechanism));
             return;
         }
         self.mechanismInUse = mechanism;
@@ -148,31 +150,31 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             let auth = Stanza(name: "auth");
             auth.element.xmlns = SaslModule.SASL_XMLNS;
             auth.element.setAttribute("mechanism", value: mechanism.name);
-            auth.element.value = try mechanism.evaluateChallenge(nil, context: context);
+            auth.element.value = try mechanism.evaluateChallenge(nil, context: context!);
         
-            context.eventBus.fire(SaslAuthStartEvent(context: context, mechanism: mechanism.name))
+            fire(SaslAuthStartEvent(context: context!, mechanism: mechanism.name))
         
-            context.writer.write(auth, writeCompleted: { _ in
+            write(auth, writeCompleted: { _ in
                 if mechanism.status == .completedExpected {
-                    self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
+                    self.fire(AuthModule.AuthFinishExpectedEvent(context: self.context!));
                 }
             });
             
         } catch _ {
-            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.aborted));
+            fire(SaslAuthFailedEvent(context: context!, error: SaslError.aborted));
         }
     }
     
     func processSuccess(_ stanza: Stanza) throws {
         let mechanism: SaslMechanism? = self.mechanismInUse;
-        _ = try mechanism!.evaluateChallenge(stanza.element.value, context: context);
+        _ = try mechanism!.evaluateChallenge(stanza.element.value, context: context!);
         
         if mechanism!.status == .completed {
             logger.debug("Authenticated");
-            context.eventBus.fire(SaslAuthSuccessEvent(context: context));
+            fire(SaslAuthSuccessEvent(context: context!));
         } else {
             logger.debug("Authenticated by server but responses not accepted by client.");
-            context.eventBus.fire(SaslAuthFailedEvent(context: context, error: SaslError.server_not_trusted));
+            fire(SaslAuthFailedEvent(context: context!, error: SaslError.server_not_trusted));
         }
     }
     
@@ -182,7 +184,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
         let error = errorName == nil ? nil : SaslError(rawValue: errorName!);
         logger.error("Authentication failed with error: \(error), \(errorName)");
         
-        context.eventBus.fire(SaslAuthFailedEvent(context: context, error: error ?? SaslError.not_authorized));
+        fire(SaslAuthFailedEvent(context: context!, error: error ?? SaslError.not_authorized));
     }
     
     func processChallenge(_ stanza: Stanza) throws {
@@ -193,24 +195,20 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
             throw XMPPError.bad_request("Authentication is already completed!");
         }
         let challenge = stanza.element.value;
-        let response = try mechanism.evaluateChallenge(challenge, context: context);
+        let response = try mechanism.evaluateChallenge(challenge, context: context!);
         let responseEl = Stanza(name: "response");
         responseEl.element.xmlns = SaslModule.SASL_XMLNS;
         responseEl.element.value = response;
-        context.writer.write(responseEl, writeCompleted: { result in
+        write(responseEl, writeCompleted: { result in
             if mechanism.status == .completedExpected {
-                self.context.eventBus.fire(AuthModule.AuthFinishExpectedEvent(context: self.context));
+                self.fire(AuthModule.AuthFinishExpectedEvent(context: self.context!));
             }
         });
         
     }
     
     func getSupportedMechanisms() -> [String] {
-        var result = [String]();
-        StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild(name: "mechanisms")?.forEachChild(name: "mechanism", fn: { (mech:Element) -> Void in
-            result.append(mech.value!);
-        });
-        return result;
+        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "mechanisms")?.mapChildren(transform: { $0.value }, filter: { $0.name == "mechanism" }) ?? [];
     }
     
     func guessSaslMechanism() -> SaslMechanism? {
@@ -220,7 +218,7 @@ open class SaslModule: XmppModule, ContextAware, Resetable {
                 if (!supported.contains(name)) {
                     continue;
                 }
-                if (mechanism.isAllowedToUse(context)) {
+                if (mechanism.isAllowedToUse(context!)) {
                     return mechanism;
                 }
             }

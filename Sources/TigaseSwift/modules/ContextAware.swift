@@ -26,6 +26,6 @@ import Foundation
  */
 public protocol ContextAware {
     
-    var context:Context! { get set }
+    var context: Context? { get set }
     
 }

@@ -34,16 +34,15 @@ extension XmppModuleIdentifier {
  
  [XEP-0077: In-Band Registration]: http://xmpp.org/extensions/xep-0077.html
  */
-open class InBandRegistrationModule: AbstractIQModule, ContextAware {
+open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "InBandRegistrationModule";
     public static let IDENTIFIER = XmppModuleIdentifier<InBandRegistrationModule>();
     
-    open var context: Context!;
     public let features = [String]();
     public let criteria = Criteria.empty();
     
-    public init() {
+    public override init() {
         
     }
     
@@ -70,9 +69,13 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     }
     
     open func register<Failure: Error>(_ jid: JID? = nil, username: String?, password: String?, email: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            return;
+        }
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
+        iq.to = jid ?? JID((context.boundJid?.bareJid ?? context.userBareJid)?.domain);
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         if username != nil && !username!.isEmpty {
@@ -86,7 +89,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
         }
         iq.addChild(query);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -99,14 +102,18 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     }
     
     open func retrieveRegistrationForm<Failure: Error>(from jid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (RetrieveFormResult<Failure>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            return;
+        }
         let iq = Iq();
         iq.type = StanzaType.get;
-        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
+        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
     
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         
         iq.addChild(query);
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: { result in
+        write(iq, errorDecoder: errorDecoder, completionHandler: { result in
             completionHandler(result.map { response in
                 if let query = response.findChild(name: "query", xmlns: "jabber:iq:register"), let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data")) {
                     return FormResult(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
@@ -139,15 +146,19 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     }
     
     open func submitRegistrationForm<Failure: Error>(to jid: JID? = nil, form: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            return;
+        }
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = jid ?? JID(ResourceBinderModule.getBindedJid(context.sessionObject)?.domain ?? context.userBareJid.domain);
+        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(form.submitableElement(type: .submit));
         
         iq.addChild(query);
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -155,15 +166,19 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
      - parameter callback: called when user is unregistrated
      */
     open func unregister<Failure: Error>(from: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            return;
+        }
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = from ?? ResourceBinderModule.getBindedJid(context.sessionObject);
+        iq.to = from ?? context.boundJid;
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(Element(name: "remove"));
         iq.addChild(query);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     open func unregister(from: JID? = nil, completionHander: @escaping (Result<Void,XMPPError>)->Void) {
@@ -179,19 +194,19 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     }
     
     open func changePassword<Failure: Error>(for serviceJid: JID? = nil, newPassword: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
-        guard let username = self.context.userBareJid.localPart else {
+        guard let context = context, let username = context.userBareJid.localPart else {
             return;
         }
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = serviceJid ?? ResourceBinderModule.getBindedJid(context.sessionObject);
+        iq.to = serviceJid ?? context.boundJid;
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(Element(name: "username", cdata: username));
         query.addChild(Element(name: "password", cdata: newPassword));
         iq.addChild(query);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -199,7 +214,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
      - returns: true - if in-band registration is supported
      */
     open func isRegistrationAvailable() -> Bool {
-        let featuresElement = StreamFeaturesModule.getStreamFeatures(context.sessionObject);
+        let featuresElement = context?.module(.streamFeatures).streamFeatures;
         return InBandRegistrationModule.isRegistrationAvailable(featuresElement);
     }
     

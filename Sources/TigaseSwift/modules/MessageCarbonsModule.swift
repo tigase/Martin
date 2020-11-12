@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0280: Message Carbons]: http://xmpp.org/extensions/xep-0280.html
  */
-open class MessageCarbonsModule: XmppModule, ContextAware {
+open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     /// Namespace used by Message Carbons
     public static let MC_XMLNS = "urn:xmpp:carbons:2";
     /// Namepsace used for forwarding messages
@@ -45,9 +45,9 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     
     public let features = [MC_XMLNS];
     
-    open var context: Context! {
+    open override weak var context: Context? {
         didSet {
-            messageModule = context.modulesManager.module(.message);
+            messageModule = context?.modulesManager.module(.message);
         }
     }
     
@@ -60,7 +60,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     
     private var messageModule: MessageModule!;
     
-    public init() {
+    public override init() {
         
     }
     
@@ -109,7 +109,7 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             callback?(result.map({ _ in state }));
         });
     }
@@ -129,7 +129,9 @@ open class MessageCarbonsModule: XmppModule, ContextAware {
     
     func processForwaredMessage(_ forwarded: Message, action: Action) {
         let chat = messageModule.processMessage(forwarded, interlocutorJid: action == .received ? forwarded.from : forwarded.to, fireEvents: false);
-        context.eventBus.fire(CarbonReceivedEvent(context: context, action: action, message: forwarded, chat: chat));
+        if let context = context {
+            fire(CarbonReceivedEvent(context: context, action: action, message: forwarded, chat: chat));
+        }
     }
     
     /**

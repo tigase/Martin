@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
+open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
 
     public static let XMLNS = "urn:xmpp:extdisco:2";
     public static let ID = XMLNS;
@@ -36,8 +36,6 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
     public let criteria: Criteria = Criteria.empty();
     public let features: [String] = [];
     
-    open var context:Context!;
-    
     open var isAvailable: Bool {
         guard let serverFeatures: [String] = context?.module(.disco).serverDiscoResult?.features else {
             return false;
@@ -45,7 +43,7 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
         return serverFeatures.contains(ExternalServiceDiscoveryModule.XMLNS);
     }
     
-    public init() {
+    public override init() {
         
     }
     
@@ -54,6 +52,10 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
     }
     
     public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],XMPPError>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
+        }
         let iq = Iq();
         iq.to = jid ?? JID(context.userBareJid.domain);
         iq.type = .get;
@@ -63,7 +65,7 @@ open class ExternalServiceDiscoveryModule: XmppModule, ContextAware {
         }
         iq.addChild(servicesEl);
         
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             completionHandler(result.map { response in
                 return response.findChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.mapChildren(transform: Service.parse(_:)) ?? [];
             })

@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
+open class BlockingCommandModule: XmppModuleBase, XmppModule, EventHandler {
     
     public static let BC_XMLNS = "urn:xmpp:blocking";
     /// ID of module to lookup for in `XmppModulesManager`
@@ -38,18 +38,19 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
     
     public let features = [String]();
     
-    open var context:Context! {
+    open override weak var context: Context? {
         didSet {
-            if context != nil {
-                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE]);
-            } else if oldValue != nil {
+            if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE]);
+            }
+            if let context = context {
+                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE]);
             }
         }
     }
     
     open var isAvailable: Bool {
-        if let features: [String] = context.module(.disco).serverDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).serverDiscoResult?.features {
             if features.contains(BlockingCommandModule.BC_XMLNS) {
                 return true;
             }
@@ -62,13 +63,15 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         didSet {
             let added = (blockedJids ?? []).filter({ !(oldValue?.contains($0) ?? false) });
             let removed = (oldValue ?? []).filter({ !(blockedJids?.contains($0) ?? false) });
-            context.eventBus.fire(BlockedChangedEvent(context: context, blocked: blockedJids ?? [], added: added, removed: removed));
+            if let context = self.context {
+                fire(BlockedChangedEvent(context: context, blocked: blockedJids ?? [], added: added, removed: removed));
+            }
         }
     }
     
     open var automaticallyRetrieve: Bool = true;
     
-    public init() {
+    public override init() {
     }
         
     public func handle(event: Event) {
@@ -130,7 +133,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         iq.type = StanzaType.set;
         let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
         iq.addChild(block);
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
     }
@@ -149,7 +152,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
         iq.type = StanzaType.set;
         let unblock = Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
         iq.addChild(unblock);
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
     }
@@ -161,7 +164,7 @@ open class BlockingCommandModule: XmppModule, ContextAware, EventHandler {
             let list = Element(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS);
             iq.addChild(list);
 
-            context.writer.write(iq, completionHandler: { result in
+            write(iq, completionHandler: { result in
                 switch result {
                 case .success(let iq):
                     let blockedJids = iq.findChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.mapChildren(transform: { (el) -> JID? in

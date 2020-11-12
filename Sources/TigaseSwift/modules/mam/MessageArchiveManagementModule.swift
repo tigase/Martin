@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0313: Message Archive Management]: http://xmpp.org/extensions/xep-0313.html
  */
-open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandler {
+open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, EventHandler {
     
     // namespace used by XEP-0313
     public static let MAM_XMLNS = "urn:xmpp:mam:1";
@@ -48,7 +48,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     private let dispatcher = QueueDispatcher(label: "MAMQueries");
     private var queries: [String: Query] = [:];
     
-    open var context: Context! {
+    open override weak var context: Context? {
         didSet {
             oldValue?.eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
             context?.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
@@ -69,7 +69,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         return nil;
     }
     
-    public init() {}
+    public override init() {}
     
     open func handle(event: Event) {
         switch event {
@@ -84,7 +84,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
     }
     
     open func process(stanza: Stanza) throws {
-        stanza.element.forEachChild(fn: { (result) in
+        for result in stanza.element.getChildren() {
             guard Version.isSupported(xmlns: result.xmlns) else {
                 return;
             }
@@ -116,8 +116,10 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
 //                let chat = messageModule.processMessage(message, interlocutorJid: from, fireEvents: false)
 //            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: chat));
 //            }
-            context.eventBus.fire(ArchivedMessageReceivedEvent(context: context, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
-        });
+            if let context = context {
+                fire(ArchivedMessageReceivedEvent(context: context, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
+            }
+        }
     }
         
     public struct QueryResult {
@@ -227,7 +229,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
             self.queries[queryId] = Query(id: queryId, version: version);
         }
 
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
+        write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
             self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
                 self.queries.removeValue(forKey: queryId);
             });
@@ -268,7 +270,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
      
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     public struct Settings {
@@ -306,7 +308,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
         iq.type = StanzaType.get;
         iq.addChild(Element(name: "prefs", xmlns: version.rawValue));
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -344,7 +346,7 @@ open class MessageArchiveManagementModule: XmppModule, ContextAware, EventHandle
             prefs.addChild(neverEl);
         }
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     private static func parseSettings(fromIq stanza: Iq, version: Version) -> Result<Settings,XMPPError> {

@@ -24,7 +24,7 @@ import Foundation
 /**
  Module provides support for Tigase Mobile Optimizations feature
  */
-open class MobileModeModule: XmppModule, ContextAware, EventHandler {
+open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler {
     
     /// Base part of namespace used by Mobile Optimizations
     public static let MM_XMLNS = "http://tigase.org/protocol/mobile";
@@ -37,12 +37,13 @@ open class MobileModeModule: XmppModule, ContextAware, EventHandler {
     
     public let features = [String]();
     
-    open var context:Context! {
+    open override weak var context: Context? {
         didSet {
-            if context != nil {
-                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
-            } else if oldValue != nil {
+            if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
+            }
+            if let context = context {
+                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
             }
         }
     }
@@ -55,15 +56,15 @@ open class MobileModeModule: XmppModule, ContextAware, EventHandler {
     /// Available optimization modes on server
     open var availableModes:[Mode] {
         get {
-            return (StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.mapChildren(transform: {(f)-> Mode in
+            return (context?.module(.streamFeatures).streamFeatures?.mapChildren(transform: {(f)-> Mode in
                 return Mode(rawValue: f.xmlns!)!
                 }, filter: { (f) -> Bool in
                     return f.name == "mobile" && f.xmlns != nil && Mode(rawValue: f.xmlns!) != nil;
-            }));
+            }) ?? []);
         }
     }
     
-    public init() {
+    public override init() {
     }
     
     public func handle(event: Event) {
@@ -120,7 +121,7 @@ open class MobileModeModule: XmppModule, ContextAware, EventHandler {
             let mobile = Element(name: "mobile", xmlns: mode!.rawValue);
             mobile.setAttribute("enable", value: state ? "true" : "false");
             iq.addChild(mobile);
-            context.writer.write(iq);
+            write(iq);
             return true;
         }
         return false;

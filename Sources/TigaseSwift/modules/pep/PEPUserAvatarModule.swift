@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PEPUserAvatarModule: AbstractPEPModule {
+open class PEPUserAvatarModule: XmppModuleBase, AbstractPEPModule {
 
     public static let METADATA_XMLNS = ID + ":metadata";
     public static let DATA_XMLNS = ID + ":data";
@@ -38,12 +38,12 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     public static let FEATURES_NOTIFY = [ METADATA_XMLNS + "+notify" ];
     public static let FEATURES_NONE = [String]();
     
-    open var context: Context! {
+    open override weak var context: Context? {
         didSet {
-            if oldValue != nil {
+            if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
             }
-            if context != nil {
+            if let context = context {
                 context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
                 pubsubModule = context.modulesManager.module(.pubsub);
             } else {
@@ -68,7 +68,7 @@ open class PEPUserAvatarModule: AbstractPEPModule {
     
     private var pubsubModule: PubSubModule!;
     
-    public init() {
+    public override init() {
         
     }
     
@@ -142,7 +142,9 @@ open class PEPUserAvatarModule: AbstractPEPModule {
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
-                self.context.eventBus.fire(AvatarChangedEvent(context: self.context, jid: JID(jid), itemId: item.id, info: [info]));
+                if let context = self.context {
+                    self.fire(AvatarChangedEvent(context: context, jid: JID(jid), itemId: item.id, info: [info]));
+                }
                 completionHandler(.success(info));
             case .failure(let pubsubError):
                 completionHandler(.failure(pubsubError.error));

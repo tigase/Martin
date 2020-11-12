@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0352: Client State Inidication]:https://xmpp.org/extensions/xep-0352.html
  */
-open class ClientStateIndicationModule: XmppModule, ContextAware, EventHandler {
+open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler {
     
     /// Client State Indication XMLNS
     public static let CSI_XMLNS = "urn:xmpp:csi:0";
@@ -44,11 +44,12 @@ open class ClientStateIndicationModule: XmppModule, ContextAware, EventHandler {
     
     public let features = [String]();
     
-    open var context:Context! {
+    open override weak var context: Context? {
         didSet {
-            if context != nil {
+            if let context = context {
                 context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
-            } else if oldValue != nil {
+            }
+            if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
             }
         }
@@ -62,11 +63,11 @@ open class ClientStateIndicationModule: XmppModule, ContextAware, EventHandler {
     /// Available optimization modes on server
     open var available: Bool {
         get {
-            return StreamFeaturesModule.getStreamFeatures(context.sessionObject)!.findChild(name: "csi", xmlns: ClientStateIndicationModule.CSI_XMLNS) != nil;
+            return context?.module(.streamFeatures).streamFeatures?.findChild(name: "csi", xmlns: ClientStateIndicationModule.CSI_XMLNS) != nil;
         }
     }
     
-    public init() {
+    public override init() {
     }
     
     public func handle(event: Event) {
@@ -112,7 +113,7 @@ open class ClientStateIndicationModule: XmppModule, ContextAware, EventHandler {
             _state = state;
             let stanza = Stanza(name: state ? "active" : "inactive");
             stanza.element.xmlns = ClientStateIndicationModule.CSI_XMLNS;
-            context.writer.write(stanza);
+            write(stanza);
             return true;
         }
         return false;

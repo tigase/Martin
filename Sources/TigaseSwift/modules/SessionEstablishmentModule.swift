@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [session establishment]: http://xmpp.org/rfcs/rfc3921.html#session
  */
-open class SessionEstablishmentModule: XmppModule, ContextAware {
+open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
 
     /// Namespace used in session establishment process
     static let SESSION_XMLNS = "urn:ietf:params:xml:ns:xmpp-session";
@@ -40,8 +40,6 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "session";
     public static let IDENTIFIER = XmppModuleIdentifier<SessionEstablishmentModule>();
-    
-    open var context:Context!;
     
     public let criteria = Criteria.empty();
     
@@ -62,13 +60,13 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
     }
     
     public var isSessionEstablishmentRequired: Bool {
-        guard context.module(.streamFeatures).streamFeatures?.findChild(name: "session", xmlns: SessionEstablishmentModule.SESSION_XMLNS)?.findChild(name: "optional") == nil else {
+        guard context?.module(.streamFeatures).streamFeatures?.findChild(name: "session", xmlns: SessionEstablishmentModule.SESSION_XMLNS)?.findChild(name: "optional") == nil else {
             return false;
         }
         return true;
     }
     
-    public init() {
+    public override init() {
         
     }
     
@@ -80,7 +78,9 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
     /// Method called to start session establishemnt
     open func establish(completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
         guard isSessionEstablishmentRequired else {
-            self.context.eventBus.fire(SessionEstablishmentSuccessEvent(context: self.context));
+            if let context = context {
+                fire(SessionEstablishmentSuccessEvent(context: context));
+            }
             completionHandler?(.success(Void()));
             return;
         }
@@ -90,12 +90,14 @@ open class SessionEstablishmentModule: XmppModule, ContextAware {
         session.xmlns = SessionEstablishmentModule.SESSION_XMLNS;
         iq.element.addChild(session);
 
-        context.writer.write(iq, completionHandler: { result in
-            switch result {
-            case .success(_):
-                self.context.eventBus.fire(SessionEstablishmentSuccessEvent(context: self.context));
-            case .failure(let error):
-                self.context.eventBus.fire(SessionEstablishmentErrorEvent(context: self.context, error: error));
+        write(iq, completionHandler: { result in
+            if let context = self.context {
+                switch result {
+                case .success(_):
+                    self.fire(SessionEstablishmentSuccessEvent(context: context));
+                case .failure(let error):
+                    self.fire(SessionEstablishmentErrorEvent(context: context, error: error));
+                }
             }
             completionHandler?(result.map({ _ in Void() }));
         })

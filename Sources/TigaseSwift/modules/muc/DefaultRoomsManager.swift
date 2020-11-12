@@ -26,7 +26,7 @@ import Foundation
  */
 open class DefaultRoomsManager: ContextAware {
     
-    open var context: Context! {
+    open weak var context: Context? {
         didSet {
             for room in rooms.values {
                 room.context = context;

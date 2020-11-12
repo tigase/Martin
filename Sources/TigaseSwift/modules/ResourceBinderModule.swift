@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [resource binding]: http://xmpp.org/rfcs/rfc6120.html#bind
  */
-open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
+open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
  
     /// Namespace used by resource binding
     static let BIND_XMLNS = "urn:ietf:params:xml:ns:xmpp-bind";
@@ -44,8 +44,6 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
     public let criteria = Criteria.empty();
     
     public let features = [String]();
-    
-    open var context:Context!;
     
     open private(set) var bindedJid: JID?;
     
@@ -59,7 +57,7 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
         return sessionObject.context.module(.resourceBind).bindedJid;
     }
     
-    public init() {
+    public override init() {
         
     }
     
@@ -76,23 +74,29 @@ open class ResourceBinderModule: XmppModule, ContextAware, Resetable {
         let bind = Element(name:"bind");
         bind.xmlns = ResourceBinderModule.BIND_XMLNS;
         iq.element.addChild(bind);
-        let resource:String? = context.connectionConfiguration.resource;
+        let resource:String? = context?.connectionConfiguration.resource;
         bind.addChild(Element(name: "resource", cdata:resource));
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             switch result {
             case .success(let stanza):
                 if let name = stanza.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {
                     let jid = JID(name);
                     self.bindedJid = jid;
                     completionHandler?(.success(jid));
-                    self.context.eventBus.fire(ResourceBindSuccessEvent(context: self.context, bindedJid: jid));
+                    if let context = self.context {
+                        self.fire(ResourceBindSuccessEvent(context: context, bindedJid: jid));
+                    }
                     return;
                 } else {
-                    self.context.eventBus.fire(ResourceBindErrorEvent(context: self.context, error: .undefined_condition));
+                    if let context = self.context {
+                        self.fire(ResourceBindErrorEvent(context: context, error: .undefined_condition));
+                    }
                     completionHandler?(.failure(.undefined_condition));
                 }
             case .failure(let error):
-                self.context.eventBus.fire(ResourceBindErrorEvent(context: self.context, error: error));
+                if let context = self.context {
+                    self.fire(ResourceBindErrorEvent(context: context, error: error));
+                }
                 completionHandler?(.failure(error));
             }
         })

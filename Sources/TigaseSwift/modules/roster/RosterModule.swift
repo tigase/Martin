@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
  */
-open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
+open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
     
     public static let IDENTIFIER = XmppModuleIdentifier<RosterModule>();
     /// ID of module for looup in `XmppModulesManager`
@@ -41,12 +41,12 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     
     public let logger = Logger(subsystem: "TigaseSwift", category: "RosterModule");
     
-    open var context:Context! {
+    open weak override var context: Context? {
         didSet {
-            if oldValue != nil {
+            if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
-            if context != nil {
+            if let context = context {
                 context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
             }
         }
@@ -71,6 +71,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     
     public init(store: RosterStore = DefaultRosterStore()) {
         self.store = store;
+        super.init();
         store.handler = RosterStoreHandlerImpl(module: self);
         loadFromCache();
     }
@@ -78,11 +79,11 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     open func handle(event: Event) {
         switch event {
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
-            rosterRequest();
+            requestRoster();
         case let ce as SessionObject.ClearedEvent:
             if ce.scopes.contains(.user) {
                 store.cleared();
-                context.eventBus.fire(ItemUpdatedEvent(context: context, rosterItem: nil, action: .removed, modifiedGroups: nil));
+                fire(ItemUpdatedEvent(context: ce.context, rosterItem: nil, action: .removed, modifiedGroups: nil));
             }
         default:
             logger.error("received unknown event: \(event)");
@@ -94,7 +95,7 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
     }
     
     open func processSet(stanza: Stanza) throws {
-        let bindedJid = ResourceBinderModule.getBindedJid(context.sessionObject);
+        let bindedJid = context?.boundJid;
         if (stanza.from != nil && stanza.from != bindedJid && (stanza.from?.bareJid != bindedJid?.bareJid)) {
             throw XMPPError.not_allowed("You are not allowed to send this to me!");
         }
@@ -114,8 +115,8 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
             self.processRosterItem(item);
         }
     
-        if ver != nil {
-            versionProvider?.updateReceivedVersion(context.sessionObject, ver: ver);
+        if ver != nil, let context = context {
+            versionProvider?.updateReceivedVersion(context, ver: ver);
         }
         
     }
@@ -166,17 +167,19 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
             store.addItem(currentItem!);
             
         }
-        fire(ItemUpdatedEvent(context: context, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
+        if let context = context {
+            fire(ItemUpdatedEvent(context: context, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
+        }
     }
     
     fileprivate func processRosterItemForAnnotations(item: Element) -> [RosterItemAnnotation] {
-        return context.modulesManager.modules.map({ (module) -> RosterItemAnnotation? in
+        return context?.modulesManager.modules.map({ (module) -> RosterItemAnnotation? in
             if let aware = (module as? RosterAnnotationAwareProtocol) {
                 return aware.process(rosterItemElem: item);
             } else {
                 return nil;
             }
-        }).filter({ $0 != nil}).map({ $0! });
+        }).filter({ $0 != nil}).map({ $0! }) ?? [];
     }
     
     /**
@@ -192,21 +195,21 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         iq.type = .get;
         let query = Element(name:"query", xmlns:"jabber:iq:roster");
         
-        for module in context.modulesManager.modules {
+        for module in context?.modulesManager.modules ?? [] {
             (module as? RosterAnnotationAwareProtocol)?.prepareRosterGetRequest(queryElem: query);
         }
         
-        if isRosterVersioningAvailable() {
-            var x = versionProvider?.getCachedVersion(context.sessionObject) ?? "";
+        if isRosterVersioningAvailable(), let context = self.context {
+            var x = versionProvider?.getCachedVersion(context) ?? "";
             if (store.count == 0) {
                 x = "";
-                versionProvider?.updateReceivedVersion(context.sessionObject, ver: x);
+                versionProvider?.updateReceivedVersion(context, ver: x);
             }
             query.setAttribute("ver", value: x);
         }
         iq.addChild(query);
         
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             switch result {
             case .success(let iq):
                 if let query = iq.findChild(name: "query", xmlns: "jabber:iq:roster") {
@@ -240,24 +243,20 @@ open class RosterModule: AbstractIQModule, ContextAware, EventHandler {
         }
         query.addChild(item);
         
-        context.writer.write(iq, completionHandler: completionHandler);
-    }
-    
-    fileprivate func fire(_ event:Event) {
-        context.eventBus.fire(event);
+        write(iq, completionHandler: completionHandler);
     }
     
     fileprivate func isRosterVersioningAvailable() -> Bool {
         if (versionProvider == nil) {
             return false;
         }
-        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild(name: "ver", xmlns: "urn:xmpp:features:rosterver") != nil;
+        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "ver", xmlns: "urn:xmpp:features:rosterver") != nil;
     }
     
     fileprivate func loadFromCache() {
-        if versionProvider != nil {
+        if versionProvider != nil, let context = context {
             let store = self.store;
-            versionProvider?.loadCachedRoster(context.sessionObject).forEach({ (item:RosterItem) in
+            versionProvider?.loadCachedRoster(context).forEach({ (item:RosterItem) in
                 store.addItem(item);
             })
         }

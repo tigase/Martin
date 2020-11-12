@@ -111,7 +111,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     private var socketSubscriptions: [Cancellable] = [];
     
-    public init(connector:SocketConnector, responseManager:ResponseManager, context:Context, seeOtherHost: XMPPSrvRecord?) {
+    public init(connector: SocketConnector, responseManager: ResponseManager, context: Context, seeOtherHost: XMPPSrvRecord?) {
         self.modulesManager = context.modulesManager;
         self.socketConnector = connector;
         self.eventBus = context.eventBus;

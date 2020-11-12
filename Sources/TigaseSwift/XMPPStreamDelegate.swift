@@ -21,7 +21,7 @@
 
 import Foundation
 
-public protocol XMPPStreamDelegate {
+public protocol XMPPStreamDelegate: class {
     
     func onStreamStart(attributes:[String:String])
     func onStreamTerminate();

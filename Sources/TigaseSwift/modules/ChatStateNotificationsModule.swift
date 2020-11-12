@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class ChatStateNotificationsModule: XmppModule, ContextAware {
+open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
     
     public static let XMLNS = "http://jabber.org/protocol/chatstates";
     
@@ -42,7 +42,7 @@ open class ChatStateNotificationsModule: XmppModule, ContextAware {
         throw ErrorCondition.bad_request;
     }
     
-    public var context: Context! {
+    public override weak var context: Context? {
         didSet {
             if let context = self.context {
                 presenceModule = context.modulesManager.module(.presence);
@@ -70,7 +70,7 @@ open class ChatStateNotificationsModule: XmppModule, ContextAware {
     }
     
     open func hasSupport(jid: BareJID) -> Bool {
-        guard let presences = presenceModule.store.getPresences(for: jid) else {
+        guard let presences = presenceModule?.store.getPresences(for: jid) else {
             return false;
         }
         

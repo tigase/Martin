@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0363: HTTP File Upload]: https://xmpp.org/extensions/xep-0363.html
  */
-open class HttpFileUploadModule: XmppModule, ContextAware {
+open class HttpFileUploadModule: XmppModuleBase, XmppModule {
     
     static let HTTP_FILE_UPLOAD_XMLNS = "urn:xmpp:http:upload:0";
     
@@ -44,7 +44,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
     
     public let features = [String]();
     
-    open var context: Context! {
+    open weak override var context: Context? {
         didSet {
             if let context = self.context {
                 discoModule = context.modulesManager.module(.disco);
@@ -54,9 +54,9 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         }
     }
     
-    private var discoModule: DiscoveryModule!;
+    private var discoModule: DiscoveryModule?;
     
-    public init() {
+    public override init() {
         
     }
     
@@ -65,6 +65,10 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
     }
     
     open func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], XMPPError>)->Void) {
+        guard let context = self.context, let discoModule = discoModule else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
+        }
         let serverJid = JID(context.userBareJid.domain);
         discoModule.getItems(for: serverJid, completionHandler: { result in
             switch result {
@@ -85,7 +89,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
                 group.enter();
                 for item in items.items {
                     group.enter();
-                    self.discoModule.getInfo(for: item.jid, node: nil, completionHandler: { result in
+                    discoModule.getInfo(for: item.jid, node: nil, completionHandler: { result in
                         switch result {
                         case .failure(_):
                             break;
@@ -119,7 +123,7 @@ open class HttpFileUploadModule: XmppModule, ContextAware {
         }
         iq.addChild(requestEl);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {

@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0054: vcard-temp]: http://xmpp.org/extensions/xep-0054.html
  */
-open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
+open class VCardTempModule: XmppModuleBase, XmppModule, VCardModuleProtocol {
 
     /// Namespace used by vcard-temp feature
     fileprivate static let VCARD_XMLNS = "vcard-temp";
@@ -44,9 +44,7 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
     
     public let features = [VCARD_XMLNS];
     
-    open var context: Context!
-    
-    public init() {
+    public override init() {
         
     }
     
@@ -67,7 +65,7 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
         iq.type = StanzaType.set;
         iq.addChild(vcard.toVCardTemp());
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
         
     /**
@@ -92,7 +90,7 @@ open class VCardTempModule: XmppModule, ContextAware, VCardModuleProtocol {
         iq.to = jid;
         iq.addChild(Element(name:"vCard", xmlns: VCardTempModule.VCARD_XMLNS));
         
-        context.writer.write(iq, timeout: 10, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, timeout: 10, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**

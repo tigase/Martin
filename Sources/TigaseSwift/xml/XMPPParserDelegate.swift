@@ -28,7 +28,7 @@ import Foundation
 open class XMPPParserDelegate: XMLParserDelegate {
     
     var xmlnss = [String:String]();
-    open var delegate:XMPPStreamDelegate?;
+    open weak var delegate:XMPPStreamDelegate?;
     var el_stack = [Element]()
     var all_roots = [Element]()
     

@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0060: Publish-Subscribe]: http://www.xmpp.org/extensions/xep-0060.html
  */
-open class PubSubModule: XmppModule, ContextAware {
+open class PubSubModule: XmppModuleBase, XmppModule {
     
     public static let PUBSUB_XMLNS = "http://jabber.org/protocol/pubsub";
     
@@ -46,13 +46,11 @@ open class PubSubModule: XmppModule, ContextAware {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = PUBSUB_XMLNS;
         
-    open var context: Context!;
-    
     public let criteria = Criteria.name("message").add(Criteria.name("event", xmlns: PUBSUB_EVENT_XMLNS));
     
     public let features = [String]();
     
-    public init() {
+    public override init() {
         
     }
     
@@ -83,28 +81,30 @@ open class PubSubModule: XmppModule, ContextAware {
                 let itemId = item.getAttribute("id");
                 let payload = item.firstChild();
                 
-                context.eventBus.fire(NotificationReceivedEvent(context: context, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: type));
-            }
-        }
-        
-        if let collectionElem = event.findChild(name: "collection") {
-            if let nodeName = collectionElem.getAttribute("node") {
-                collectionElem.mapChildren(transform: { (el) -> NotificationCollectionChildrenChangedEvent? in
-                    guard let childNode = el.getAttribute("node"), let action = NotificationCollectionChildrenChangedEvent.Action(rawValue: el.name) else {
-                        return nil;
-                    }
-                    return NotificationCollectionChildrenChangedEvent(context: self.context, message: message, nodeName: nodeName, childNodeName: childNode, action: action, timestamp: timestamp);
-                }, filter: { (el) -> Bool in
-                    el.name == NotificationCollectionChildrenChangedEvent.Action.associate.rawValue || el.name == NotificationCollectionChildrenChangedEvent.Action.dissociate.rawValue;
-                }).forEach { ev in
-                    self.context.eventBus.fire(ev);
+                if let context = context {
+                    fire(NotificationReceivedEvent(context: context, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: type));
                 }
             }
         }
         
-        if let deleteElem = event.findChild(name: "delete") {
+        if let collectionElem = event.findChild(name: "collection") {
+            if let nodeName = collectionElem.getAttribute("node"), let context = context {
+                collectionElem.mapChildren(transform: { (el) -> NotificationCollectionChildrenChangedEvent? in
+                    guard let childNode = el.getAttribute("node"), let action = NotificationCollectionChildrenChangedEvent.Action(rawValue: el.name) else {
+                        return nil;
+                    }
+                    return NotificationCollectionChildrenChangedEvent(context: context, message: message, nodeName: nodeName, childNodeName: childNode, action: action, timestamp: timestamp);
+                }, filter: { (el) -> Bool in
+                    el.name == NotificationCollectionChildrenChangedEvent.Action.associate.rawValue || el.name == NotificationCollectionChildrenChangedEvent.Action.dissociate.rawValue;
+                }).forEach { ev in
+                    self.fire(ev);
+                }
+            }
+        }
+        
+        if let deleteElem = event.findChild(name: "delete"), let context = context {
             if let nodeName = deleteElem.getAttribute("node") {
-                self.context.eventBus.fire(NotificationNodeDeletedEvent(context: self.context, message: message, nodeName: nodeName));
+                self.fire(NotificationNodeDeletedEvent(context: context, message: message, nodeName: nodeName));
             }
         }
         

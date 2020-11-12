@@ -186,6 +186,11 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
             self.completionHandler = completionHandler;
         }
         
+        deinit {
+            timeoutTimer?.cancel();
+            sdFdReadSource?.cancel();
+        }
+        
         func resolve(timeout: TimeInterval) {
             dispatcher.async {
             let result: DNSServiceErrorType = self.srvName.withCString { (srvNameC) -> DNSServiceErrorType in
@@ -256,16 +261,17 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         }
         
         private func complete(with result: Result<[XMPPSrvRecord],DNSError>) {
+            self.sdFdReadSource?.cancel();
+            self.timeoutTimer?.cancel();
+
             if let completionHandler = self.completionHandler {
                 self.completionHandler = nil;
                 completionHandler(result);
             }
-            self.sdFdReadSource?.cancel();
             self.sdFdReadSource = nil;
             self.sdFd = -1;
             self.sdRef = nil;
             
-            self.timeoutTimer?.cancel();
             self.timeoutTimer = nil;
         }
         

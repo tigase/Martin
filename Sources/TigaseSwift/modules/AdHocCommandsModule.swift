@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class AdHocCommandsModule: XmppModule, ContextAware {
+open class AdHocCommandsModule: XmppModuleBase, XmppModule {
     
     public static let COMMANDS_XMLNS = "http://jabber.org/protocol/commands";
     
@@ -36,11 +36,9 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
     
     public let criteria = Criteria.empty();
     
-    open var context: Context!;
-    
     public let features = [String]();
     
-    public init() {
+    public override init() {
     }
     
     open func process(stanza: Stanza) throws {
@@ -61,7 +59,7 @@ open class AdHocCommandsModule: XmppModule, ContextAware {
         
         iq.addChild(command);
         
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
                 guard let command = stanza.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
                     return .failure(.undefined_condition);

@@ -37,7 +37,7 @@ public struct XmppModuleIdentifier<T: XmppModule> {
  */
 open class XmppModulesManager : ContextAware, Resetable {
         
-    open var context:Context!;
+    open weak var context: Context?;
     
     /// List of registered instances of `XmppStanzaFilter` which needs to process packets
     open private(set) var filters = [XmppStanzaFilter]();

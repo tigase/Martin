@@ -32,20 +32,18 @@ extension XmppModuleIdentifier {
  
  [XEP-0199: XMPP Ping]: http://xmpp.org/extensions/xep-0199.html
  */
-open class PingModule: AbstractIQModule, ContextAware {
+open class PingModule: XmppModuleBase, AbstractIQModule {
     /// Namespace used by XMPP ping
     fileprivate static let PING_XMLNS = "urn:xmpp:ping";
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = PING_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<PingModule>();
     
-    open var context: Context!;
-    
     public let criteria = Criteria.name("iq").add(Criteria.name("ping", xmlns: PING_XMLNS));
     
     public let features = [PING_XMLNS];
     
-    public init() {
+    public override init() {
         
     }
     
@@ -60,7 +58,7 @@ open class PingModule: AbstractIQModule, ContextAware {
         iq.to = jid;
         iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
         
-        context.writer.write(iq);
+        write(iq);
     }
     
     open func ping(_ jid: JID, completionHandler: (Result<Void,ErrorCondition>)->Void) {
@@ -79,7 +77,7 @@ open class PingModule: AbstractIQModule, ContextAware {
      */
     open func processGet(stanza: Stanza) throws {
         let result = stanza.makeResult(type: StanzaType.result);
-        context.writer.write(result);
+        write(result);
     }
     
     open func processSet(stanza: Stanza) throws {

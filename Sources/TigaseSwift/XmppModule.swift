@@ -40,3 +40,30 @@ public protocol XmppModule: class {
     func process(stanza: Stanza) throws
     
 }
+
+open class XmppModuleBase: ContextAware, PacketWriter {
+        
+    open weak var context: Context?;
+    
+    public init() {}
+    
+    public func write<Failure>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) where Failure : Error {
+        guard let writer = context?.writer else {
+            completionHandler?(.failure(errorDecoder(nil) as! Failure));
+            return;
+        }
+        writer.write(iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: completionHandler);
+    }
+    
+    public func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
+        guard let writer = context?.writer else {
+            writeCompleted?(.failure(.remote_server_timeout));
+            return;
+        }
+        writer.write(stanza, writeCompleted: writeCompleted);
+    }
+
+    public func fire(_ event: Event) {
+        context?.eventBus.fire(event);
+    }
+}

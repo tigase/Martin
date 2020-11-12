@@ -35,7 +35,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0115: Entity Capabilities]:http://xmpp.org/extensions/xep-0115.html
  */
-open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
+open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
         
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "caps";
@@ -48,21 +48,19 @@ open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
         return ["http://jabber.org/protocol/caps"] + additionalFeatures.map({ $0.rawValue });
     }
     
-    open var context: Context! {
+    open override weak var context: Context? {
         willSet {
-            guard context != nil else {
-                return;
+            if let context = context {
+                context.eventBus.unregister(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
+                discoModule = nil;
             }
-            context.eventBus.unregister(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
-            discoModule = nil;
         }
         
         didSet {
-            guard context != nil else {
-                return;
+            if let context = context {
+                context.eventBus.register(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
+                discoModule = context.modulesManager.module(.disco);
             }
-            context.eventBus.register(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
-            discoModule = context.modulesManager.module(.disco);
         }
     }
     
@@ -176,6 +174,9 @@ open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
      - returns: calculated verification string
      */
     func calculateVerificationString() -> String? {
+        guard let context = self.context else {
+            return nil;
+        }
         let identity = "\(discoModule.identity.category)/\(discoModule.identity.type)//\(discoModule.identity.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL)";
         
         let ver = generateVerificationString([identity], features: Array(context.modulesManager.availableFeatures));
@@ -185,15 +186,15 @@ open class CapabilitiesModule: XmppModule, ContextAware, EventHandler {
             discoModule.setNodeCallback(nodeName + "#" + oldVer!, entry: nil);
         }
         if ver != nil {
-            let identity = self.discoModule.identity;
+            let identity = discoModule.identity;
             discoModule.setNodeCallback(nodeName + "#" + ver!, entry: DiscoveryModule.NodeDetailsEntry(
-                identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> DiscoveryModule.Identity? in
+                identity: { (context: Context, stanza: Stanza, node: String?) -> DiscoveryModule.Identity? in
                     return identity;
                 },
-                features: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]? in
-                    return Array(self.context.modulesManager.availableFeatures);
+                features: { (context: Context, stanza: Stanza, node: String?) -> [String]? in
+                    return Array(context.modulesManager.availableFeatures);
                 },
-                items: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [DiscoveryModule.Item]? in
+                items: { (context: Context, stanza: Stanza, node: String?) -> [DiscoveryModule.Item]? in
                     return nil;
             }));
         }

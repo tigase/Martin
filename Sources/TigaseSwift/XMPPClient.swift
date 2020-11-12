@@ -97,7 +97,7 @@ import TigaseLogging
 open class XMPPClient: Context, EventHandler {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPClient");
-    public var context:Context {
+    public var context: Context {
         return self;
     }
     var connector: Connector? {
@@ -141,8 +141,11 @@ open class XMPPClient: Context, EventHandler {
     }
     
     deinit {
+        releaseKeepAlive();
         stateSubscription?.cancel();
         eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
+        let jid = connectionConfiguration.userJid;
+        logger.error("deinitializing client for: \(jid)")
     }
     
     /**
@@ -162,18 +165,42 @@ open class XMPPClient: Context, EventHandler {
             sessionLogic.bind();
             sessionLogic.statePublisher.sink(receiveValue: { [weak self] newState in
                 self?.state = newState;
+                if newState == .connected {
+                    self?.scheduleKeepAlive();
+                } else {
+                    self?.releaseKeepAlive();
+                }
             });
             
-            keepaliveTimer?.cancel();
-            if keepaliveTimeout > 0 {
-                keepaliveTimer = Timer(delayInSeconds: keepaliveTimeout, repeats: true, callback: { self.keepalive() });
-            } else {
-                keepaliveTimer = nil;
-            }
+            keepaliveTimer?.invalidate();
+            keepaliveTimer = nil;
             sessionLogic.start();
         }
     }
 
+    private func scheduleKeepAlive() {
+        releaseKeepAlive();
+        
+        if keepaliveTimeout > 0 {
+            let timer = Timer(timeInterval: keepaliveTimeout, repeats: true, block: { [weak self] timer in
+                self?.keepalive();
+            })
+            DispatchQueue.main.async {
+                RunLoop.main.add(timer, forMode: .common);
+            }
+            self.keepaliveTimer = timer;
+        }
+    }
+    
+    private func releaseKeepAlive() {
+        if let timer = keepaliveTimer {
+            DispatchQueue.main.async {
+                timer.invalidate();
+            }
+        }
+        keepaliveTimer = nil;
+    }
+    
     /**
      Method closes connection to server.
      
@@ -187,6 +214,8 @@ open class XMPPClient: Context, EventHandler {
             return;
         }
         
+        keepaliveTimer?.invalidate();
+        keepaliveTimer = nil;
         sessionLogic?.stop(force: force, completionHandler: completionHandler);
     }
     
@@ -206,7 +235,7 @@ open class XMPPClient: Context, EventHandler {
     open func handle(event: Event) {
         switch event {
         case let de as SocketConnector.DisconnectedEvent:
-            keepaliveTimer?.cancel();
+            keepaliveTimer?.invalidate();
             keepaliveTimer = nil;
             modulesManager.reset(scope: de.clean ? .session : .stream);
             if de.clean {

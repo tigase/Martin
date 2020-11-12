@@ -29,7 +29,7 @@ import Foundation
 open class DefaultChatManager: ChatManager {
     
     public let chatStore:ChatStore;
-    public let context:Context;
+    open weak var context: Context!;
     
     open var count:Int {
         get {

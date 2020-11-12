@@ -26,9 +26,17 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "TigasePushNotificationsModule");
     
+    open override var context: Context? {
+        didSet {
+            adhocModule = context?.module(.adhoc);
+            discoModule = context?.module(.disco);
+        }
+    }
+    
+    private var adhocModule: AdHocCommandsModule!;
+    private var discoModule: DiscoveryModule!;
+    
     open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,XMPPError>)->Void) {
-        let adhocModule = context.modulesManager.module(.adhoc);
-        
         let data = JabberDataElement(type: .submit);
         data.addField(TextSingleField(name: "provider", value: provider));
         data.addField(TextSingleField(name: "device-token", value: deviceId));
@@ -47,8 +55,6 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     }
     
     open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, XMPPError>)->Void) {
-        let adhocModule: AdHocCommandsModule = context.modulesManager.module(.adhoc);
-        
         let data = JabberDataElement(type: .submit);
         data.addField(TextSingleField(name: "provider", value: provider));
         data.addField(TextSingleField(name: "device-token", value: deviceId));
@@ -64,7 +70,10 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     }
     
     open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
-        let discoModule = context.modulesManager.module(.disco);
+        guard let context = context else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
+        }
         discoModule.getItems(for: JID(context.userBareJid.domain), node: nil, completionHandler: { result in
             switch result {
             case .success(let items):
@@ -80,7 +89,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                 group.enter();
                 for item in items.items {
                     group.enter();
-                    discoModule.getInfo(for: item.jid, node: item.node, completionHandler: { result in
+                    self.discoModule.getInfo(for: item.jid, node: item.node, completionHandler: { result in
                         switch result {
                         case .success(let info):
                             if (!info.identities.filter({ (identity) -> Bool in

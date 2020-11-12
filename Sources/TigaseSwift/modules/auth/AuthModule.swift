@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  Other authentication module (like ie. `SaslModule`) may require this
  module to work properly.
  */
-open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
+open class AuthModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
     public static let IDENTIFIER = XmppModuleIdentifier<AuthModule>();
@@ -42,18 +42,14 @@ open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "AuthModule");
         
-    fileprivate var _context:Context!;
-    open var context:Context! {
-        get {
-            return _context;
-        }
-        set {
-            if newValue == nil {
-                _context.eventBus.unregister(handler: self, for: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
-            } else {
+    open weak override var context: Context? {
+        didSet {
+            if let context = oldValue {
+                context.eventBus.unregister(handler: self, for: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
+            }
+            if let newValue = context {
                 newValue.eventBus.register(handler: self, for: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
             }
-            _context = newValue;
         }
     }
     
@@ -63,7 +59,7 @@ open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
     
     open private(set) var state: AuthorizationStatus = .notAuthorized;
     
-    public init() {
+    public override init() {
         
     }
     
@@ -76,7 +72,7 @@ open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
      mechanisms for authentication
      */
     open func login() {
-        if let saslModule = _context.modulesManager.moduleOrNil(.sasl) {
+        if let saslModule = context?.modulesManager.moduleOrNil(.sasl) {
             saslModule.login();
         }
     }
@@ -91,15 +87,15 @@ open class AuthModule: XmppModule, ContextAware, EventHandler, Resetable {
         case is SaslModule.SaslAuthSuccessEvent:
             let saslEvent = event as! SaslModule.SaslAuthSuccessEvent;
             self.state = .authorized;
-            _context.eventBus.fire(AuthSuccessEvent(context: context));
+            fire(AuthSuccessEvent(context: saslEvent.context));
         case is SaslModule.SaslAuthFailedEvent:
             let saslEvent = event as! SaslModule.SaslAuthFailedEvent;
             self.state = .notAuthorized;
-            _context.eventBus.fire(AuthFailedEvent(context: saslEvent.context, error: saslEvent.error));
+            fire(AuthFailedEvent(context: saslEvent.context, error: saslEvent.error));
         case is SaslModule.SaslAuthStartEvent:
             let saslEvent = event as! SaslModule.SaslAuthStartEvent;
             self.state = .inProgress;
-            _context.eventBus.fire(AuthStartEvent(context: saslEvent.context));
+            fire(AuthStartEvent(context: saslEvent.context));
         default:
             logger.error("handing of unsupported event: \(event)");
         }

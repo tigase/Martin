@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAwareProtocol {
+open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotationAwareProtocol {
     func prepareRosterGetRequest(queryElem el: Element) {
         el.addChild(Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0"));
     }
@@ -51,7 +51,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     
     public let features: [String] = [CORE_XMLNS];
 
-    public var context: Context! {
+    public override weak var context: Context? {
         didSet {
             oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
             context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
@@ -83,7 +83,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     public let channelManager: ChannelManager;
     
     public var isPAM2SupportAvailable: Bool {
-        let accountFeatures: [String] = discoModule.accountDiscoResult?.features ?? [];
+        let accountFeatures: [String] = discoModule?.accountDiscoResult?.features ?? [];
         return accountFeatures.contains(MixModule.PAM2_XMLNS);
     }
     
@@ -122,7 +122,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             createEl.setAttribute("channel", value: channel);
         }
         iq.addChild(createEl);
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             switch result {
             case .success(let response):
                 if let channel = response.findChild(name: "create", xmlns: MixModule.CORE_XMLNS)?.getAttribute("channel") {
@@ -148,13 +148,13 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         let destroyEl = Element(name: "destroy", xmlns: MixModule.CORE_XMLNS);
         destroyEl.setAttribute("channel", value: channelJid.localPart);
         iq.addChild(destroyEl);
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             switch result {
             case .success(_):
                 if let channel = self.channelManager.channel(for: channelJid) {
                     _  = self.channelManager.close(channel: channel);
                 }
-                self.rosterModule.store.remove(jid: JID(channelJid), completionHandler: nil);
+                self.rosterModule?.store.remove(jid: JID(channelJid), completionHandler: nil);
                 completionHandler(.success(Void()));
             case .failure(let error):
                 completionHandler(.failure(error));
@@ -163,6 +163,10 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
+        guard let context = self.context else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
+        }
         if isPAM2SupportAvailable {
             let iq = Iq();
             iq.to = JID(context.userBareJid);
@@ -172,7 +176,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             clientJoin.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
             iq.addChild(clientJoin);
             
-            context.writer.write(iq, completionHandler: { result in
+            write(iq, completionHandler: { result in
                 switch result {
                 case .success(let response):
                     if let joinEl = response.findChild(name: "client-join", xmlns: MixModule.PAM2_XMLNS)?.findChild(name: "join", xmlns: MixModule.CORE_XMLNS) {
@@ -183,14 +187,14 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                             
                             self.retrieveHistory(fromChannel: channelJid, max: 100);
                             if presenceSubscription {
-                                self.presenceModule.subscribed(by: JID(channelJid));
-                                self.presenceModule.subscribe(to: JID(channelJid));
+                                self.presenceModule?.subscribed(by: JID(channelJid));
+                                self.presenceModule?.subscribe(to: JID(channelJid));
                             }
                         } else if let participantId = joinEl.getAttribute("id") {
                             self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                             if presenceSubscription {
-                                self.presenceModule.subscribed(by: JID(channelJid));
-                                self.presenceModule.subscribe(to: JID(channelJid));
+                                self.presenceModule?.subscribed(by: JID(channelJid));
+                                self.presenceModule?.subscribe(to: JID(channelJid));
                             }
                         }
                     }
@@ -204,7 +208,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             iq.to = JID(channelJid);
             iq.type = .set;
             iq.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
-            context.writer.write(iq, completionHandler: { result in
+            write(iq, completionHandler: { result in
                 switch result {
                 case .success(let response):
                     if let joinEl = response.findChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.getAttribute("id") {
@@ -219,6 +223,10 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func leave(channel: Channel, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
+        }
         if isPAM2SupportAvailable {
             let iq = Iq();
             iq.to = JID(context.userBareJid);
@@ -228,7 +236,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             clientLeave.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
             iq.addChild(clientLeave);
             
-            context.writer.write(iq, completionHandler: { result in
+            write(iq, completionHandler: { result in
                 switch result {
                 case .success(_):
                     self.channelLeft(channel: channel);
@@ -242,7 +250,7 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             iq.to = channel.jid;
             iq.type = .set;
             iq.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
-            context.writer.write(iq, completionHandler: { result in
+            write(iq, completionHandler: { result in
                 switch result {
                 case .success(_):
                     self.channelLeft(channel: channel);
@@ -292,10 +300,10 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
         switch stanza {
         case let message as Message:
             // we have received groupchat message..
-            guard let channel = channelManager.channel(for: message.from!.bareJid) else {
+            guard let channel = channelManager.channel(for: message.from!.bareJid), let context = context else {
                 return;
             }
-            self.context.eventBus.fire(MessageReceivedEvent(context: self.context, message: message, channel: channel, nickname: message.mix?.nickname, senderJid: message.mix?.jid, timestamp: message.delay?.stamp ?? Date()));
+            self.fire(MessageReceivedEvent(context: context, message: message, channel: channel, nickname: message.mix?.nickname, senderJid: message.mix?.jid, timestamp: message.delay?.stamp ?? Date()));
         default:
             break;
         }
@@ -329,7 +337,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             case .failure(_):
                 channel.update(permissions: []);
             }
-            self.context.eventBus.fire(ChannelPermissionsChangedEvent(context: self.context, channel: channel));
+            if let context = self.context {
+                self.fire(ChannelPermissionsChangedEvent(context: context, channel: channel));
+            }
         })
     }
     
@@ -348,7 +358,9 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                     _ = self.channelManager.update(channel: channel, nick: ownParticipant.nickname);
                 }
                 channel.update(participants: participants);
-                self.context.eventBus.fire(ParticipantsChangedEvent(context: self.context, channel: channel, joined: participants, left: left));
+                if let context = self.context {
+                    self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: participants, left: left));
+                }
                 completionHandler?(.success(participants));
             case .failure(let pubsubError):
                 completionHandler?(.failure(pubsubError.error));
@@ -427,11 +439,11 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             case.success(let r):
                 completionHandler(.success(r));
             case .failure(let errorCondition):
-                guard errorCondition == .item_not_found else {
+                guard errorCondition == .item_not_found, let pubsubModule = self.pubsubModule else {
                     completionHandler(.failure(errorCondition));
                     return;
                 }
-                self.pubsubModule.createNode(at: channelJid, node: AccessRule.deny.node, completionHandler: { result in
+                pubsubModule.createNode(at: channelJid, node: AccessRule.deny.node, completionHandler: { result in
                     switch result {
                     case .success(_):
                         self.publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: completionHandler);
@@ -476,11 +488,15 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
     }
     
     open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        guard let jid = context?.userBareJid else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
+        }
         if isPrivate {
             pubsubModule.createNode(at: channelJid, node: AccessRule.allow.node, completionHandler: { result in
                 switch result {
                 case .success(_):
-                    self.allowAccess(to: channelJid, for: self.context.userBareJid, completionHandler: completionHandler);
+                    self.allowAccess(to: channelJid, for: jid, completionHandler: completionHandler);
                 case .failure(let pubsubError):
                     completionHandler(.failure(pubsubError.error));
                 }
@@ -586,17 +602,19 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
                             _ = self.channelManager.update(channel: channel, nick: participant.nickname);
                         }
                         channel.update(participant: participant);
-                        self.context.eventBus.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
+                        if let context = context {
+                            self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
+                        }
                     }
                 case "retract":
                     if let id = e.itemId {
                         if channel.participantId == id {
-                            if self.channelManager.update(channel: channel.channelJid, state: .left) {
-                                self.context.eventBus.fire(ChannelStateChangedEvent(context: context, channel: channel));
+                            if self.channelManager.update(channel: channel.channelJid, state: .left), let context = context {
+                                self.fire(ChannelStateChangedEvent(context: context, channel: channel));
                             }
                         }
-                        if let participant = channel.participantLeft(participantId: id) {
-                            self.context.eventBus.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
+                        if let participant = channel.participantLeft(participantId: id), let context = context {
+                            self.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
                         }
                     }
                 default:
@@ -612,12 +630,16 @@ open class MixModule: XmppModule, ContextAware, EventHandler, RosterAnnotationAw
             }
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent, is StreamManagementModule.ResumedEvent:
             // we have reconnected, so lets update all channels statuses
-            for channel in self.channelManager.channels() {
-                self.context.eventBus.fire(ChannelStateChangedEvent(context: self.context, channel: channel));
+            if let context = context {
+                for channel in self.channelManager.channels() {
+                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
+                }
             }
         case is SessionObject.ClearedEvent:
-            for channel in self.channelManager.channels() {
-                self.context.eventBus.fire(ChannelStateChangedEvent(context: self.context, channel: channel));
+            if let context = context {
+                for channel in self.channelManager.channels() {
+                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
+                }
             }
         case is DiscoveryModule.AccountFeaturesReceivedEvent:
             if !localMAMStoresPubSubEvents {

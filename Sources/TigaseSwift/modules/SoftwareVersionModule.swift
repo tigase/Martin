@@ -32,15 +32,13 @@ extension XmppModuleIdentifier {
  
  [XEP-0092: Software Version]: https://xmpp.org/extensions/xep-0092.html
  */
-open class SoftwareVersionModule: AbstractIQModule, ContextAware {
+open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
     
     public static let DEFAULT_NAME_VAL = "Tigase based software";
         
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "softwareVersion";
     public static let IDENTIFIER = XmppModuleIdentifier<SoftwareVersionModule>();
-    
-    open var context:Context!;
     
     public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:version"));
     
@@ -63,7 +61,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
         iq.type = StanzaType.get;
         iq.addChild(Element(name:"query", xmlns:"jabber:iq:version"));
 
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     public class SoftwareVersion {
@@ -111,7 +109,7 @@ open class SoftwareVersionModule: AbstractIQModule, ContextAware {
             query.addChild(Element(name: "os", cdata: os));
         }
         
-        context.writer.write(result);
+        write(result);
     }
     
     open func processSet(stanza: Stanza) throws {

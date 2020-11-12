@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PEPBookmarksModule: AbstractPEPModule {
+open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
     
     public static let ID = "storage:bookmarks";
     public static let IDENTIFIER = XmppModuleIdentifier<PEPBookmarksModule>();
@@ -38,12 +38,12 @@ open class PEPBookmarksModule: AbstractPEPModule {
     
     public fileprivate(set) var currentBookmarks: Bookmarks = Bookmarks();
     
-    open var context: Context! {
+    open override weak var context: Context? {
         didSet {
-            if oldValue != nil {
+            if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE);
             }
-            if context != nil {
+            if let context = context {
                 context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE);
                 discoModule = context.modulesManager.module(.disco);
                 pubsubModule = context.modulesManager.module(.pubsub);
@@ -54,10 +54,10 @@ open class PEPBookmarksModule: AbstractPEPModule {
         }
     }
     
-    var discoModule: DiscoveryModule!;
-    var pubsubModule: PubSubModule!;
+    private var discoModule: DiscoveryModule!;
+    private var pubsubModule: PubSubModule!;
     
-    public init() {
+    public override init() {
         
     }
  
@@ -66,6 +66,9 @@ open class PEPBookmarksModule: AbstractPEPModule {
     }
     
     public func publish(bookmarks: Bookmarks) {
+        guard let context = context else {
+            return;
+        }
         let pepJID = JID(context.userBareJid);
         discoModule.getInfo(for: pepJID, node: PEPBookmarksModule.ID, completionHandler: { result in
             switch result {
@@ -101,7 +104,7 @@ open class PEPBookmarksModule: AbstractPEPModule {
     public func handle(event: Event) {
         switch event {
         case let e as DiscoveryModule.ServerFeaturesReceivedEvent:
-            if e.identities.contains(where: { (identity) -> Bool in
+            if let context = context, e.identities.contains(where: { (identity) -> Bool in
                 if let name = identity.name, "ejabberd" == name {
                     // ejabberd has buggy PEP support, we need to request Bookmarks on our own!!
                     return true;
@@ -110,13 +113,13 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }) {
                 // requesting Bookmarks!!
                 let pepJID = context.userBareJid;
-                pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, limit: .lastItems(1), completionHandler: { result in
+                self.pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, limit: .lastItems(1), completionHandler: { result in
                     switch result {
                     case .success(let items):
                         if let item = items.items.first {
                             if let bookmarks = Bookmarks(from: item.payload) {
                                 self.currentBookmarks = bookmarks;
-                                self.context.eventBus.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
+                                self.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
                             }
                         }
                     default:
@@ -126,12 +129,12 @@ open class PEPBookmarksModule: AbstractPEPModule {
             }
             
         case let e as PubSubModule.NotificationReceivedEvent:
-            guard let from = e.message.from?.bareJid, context.userBareJid == from else {
+            guard let from = e.message.from?.bareJid, context?.userBareJid == from else {
                 return;
             }
             if let bookmarks = Bookmarks(from: e.payload) {
                 self.currentBookmarks = bookmarks;
-                context.eventBus.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
+                self.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
             }
         default:
             break;

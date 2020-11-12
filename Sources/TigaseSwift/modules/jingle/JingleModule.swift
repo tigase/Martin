@@ -67,7 +67,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class JingleModule: XmppModule, ContextAware {
+open class JingleModule: XmppModuleBase, XmppModule {
     
     public static let XMLNS = "urn:xmpp:jingle:1";
     
@@ -77,8 +77,6 @@ open class JingleModule: XmppModule, ContextAware {
     public static let IDENTIFIER = XmppModuleIdentifier<JingleModule>();
     
     public let criteria = Criteria.or(Criteria.name("iq").add(Criteria.name("jingle", xmlns: XMLNS)), Criteria.name("message").add(Criteria.xmlns(MESSAGE_INITIATION_XMLNS)));
-    
-    public var context: Context!;
     
     public var features: [String] {
         get {
@@ -164,7 +162,7 @@ open class JingleModule: XmppModule, ContextAware {
             throw XMPPError.bad_request("Missing or invalid action attribute");
         }
         
-        guard let sid = jingle.getAttribute("sid") ?? sessionManager.activeSessionSid(for: context.userBareJid, with: from) else {
+        guard let sid = jingle.getAttribute("sid") ?? sessionManager.activeSessionSid(for: stanza.to!.bareJid, with: from) else {
             throw XMPPError.bad_request("Missing sid attributed")
         }
         guard let initiator = JID(jingle.getAttribute("initiator")) ?? stanza.from else {
@@ -190,9 +188,11 @@ open class JingleModule: XmppModule, ContextAware {
         });
         
         
-        context.eventBus.fire(JingleEvent(context: context, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));//, session: session));
+        if let context = context {
+            fire(JingleEvent(context: context, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));//, session: session));
+        }
         
-        context.writer.write(stanza.makeResult(type: .result));
+        write(stanza.makeResult(type: .result));
     }
     
     public func process(message: Message) throws {
@@ -207,22 +207,27 @@ open class JingleModule: XmppModule, ContextAware {
                 return;
             }
         case .accept(_):
-            guard from != ResourceBinderModule.getBindedJid(context.sessionObject) else {
+            guard from != context?.boundJid else {
                 return;
             }
         default:
             break;
         }
-        context.eventBus.fire(JingleMessageInitiationEvent(context: context, jid: from, action: action));
+        if let context = context {
+            fire(JingleMessageInitiationEvent(context: context, jid: from, action: action));
+        }
     }
     
     public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID) {
+        guard let userJid = context?.userBareJid else {
+            return;
+        }
         switch action {
         case .proceed(let id):
-            sendMessageInitiation(action: .accept(id: id), to: JID(context.userBareJid));
+            sendMessageInitiation(action: .accept(id: id), to: JID(userJid));
         case .reject(let id):
-            if jid.bareJid != context.userBareJid {
-                sendMessageInitiation(action: .reject(id: id), to: JID(context.userBareJid));
+            if jid.bareJid != userJid {
+                sendMessageInitiation(action: .reject(id: id), to: JID(userJid));
             }
         default:
             break;
@@ -231,11 +236,11 @@ open class JingleModule: XmppModule, ContextAware {
         response.type = .chat;
         response.to = jid;
         response.jingleMessageInitiationAction = action;
-        context.writer.write(response);
+        write(response);
     }
     
     public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        guard let initiatior = ResourceBinderModule.getBindedJid(context.sessionObject) else {
+        guard let initiatior = context?.boundJid else {
             completionHandler(.failure(.undefined_condition));
             return;
         }
@@ -263,13 +268,13 @@ open class JingleModule: XmppModule, ContextAware {
             jingle.addChild(group);
         }
         
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
     
     public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        guard let responder = ResourceBinderModule.getBindedJid(context.sessionObject) else {
+        guard let responder = context?.boundJid else {
             completionHandler(.failure(.undefined_condition));
             return;
         }
@@ -297,7 +302,7 @@ open class JingleModule: XmppModule, ContextAware {
             jingle.addChild(group);
         }
         
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -315,7 +320,7 @@ open class JingleModule: XmppModule, ContextAware {
 
         jingle.addChild(reason.toReasonElement());
         
-        context.writer.write(iq, completionHandler: { result in
+        write(iq, completionHandler: { result in
             print("session terminated and answer received", result);
         });
     }
@@ -335,7 +340,7 @@ open class JingleModule: XmppModule, ContextAware {
         
         iq.addChild(jingle);
         
-        context.writer.write(iq, completionHandler: { response in
+        write(iq, completionHandler: { response in
             print("session transport-info response received:", response as Any);
         });
     }

@@ -25,12 +25,19 @@ import Foundation
  Instances of this class holds information passed to classes with support for `ContextAware` 
  protocol - mostly for implementations of `XmppModule` protocol.
  */
-open class Context {
+open class Context: CustomStringConvertible {
+    
+    open var description: String {
+        return connectionConfiguration.userJid.stringValue;
+    }
     
     public var userBareJid: BareJID {
         return connectionConfiguration.userJid;
     }
     
+    public var boundJid: JID? {
+        return module(.resourceBind).bindedJid;
+    }
     public var currentConnectionDetails: XMPPSrvRecord?;
     public var connectionConfiguration: ConnectionConfiguration = ConnectionConfiguration();
     // Instance of `SessionObject` with properties for particular connection/client

@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PushNotificationsModule: XmppModule, ContextAware {
+open class PushNotificationsModule: XmppModuleBase, XmppModule {
     
     public static let PUSH_NOTIFICATIONS_XMLNS = "urn:xmpp:push:0";
     
@@ -38,17 +38,15 @@ open class PushNotificationsModule: XmppModule, ContextAware {
     
     public let features = [String]();
     
-    open var context:Context!;
-    
     open var isAvailable: Bool {
-        if let features: [String] = context.module(.disco).accountDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).accountDiscoResult?.features {
             if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
                 return true;
             }
         }
         
         // TODO: fallback to handle previous behavior - remove it later on...
-        if let features: [String] = context.module(.disco).serverDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).serverDiscoResult?.features {
             if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
                 return true;
             }
@@ -58,25 +56,28 @@ open class PushNotificationsModule: XmppModule, ContextAware {
     }
     
     open func isSupported(extension type: PushNotificationsModuleExtension.Type) -> Bool {
-        if let features: [String] = context.module(.disco).accountDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).accountDiscoResult?.features {
             return features.contains(type.XMLNS);
         }
         return false;
     }
     
     open func isSupported(feature: String) -> Bool {
-        if let features: [String] = context.module(.disco).accountDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).accountDiscoResult?.features {
             return features.contains(feature);
         }
         return false;
     }
 //    open var pushServiceJid: JID?;
     
-    public init() {
+    public override init() {
         
     }
     
     open func process(stanza: Stanza) throws {
+        guard let context = context else {
+            return;
+        }
         guard let from = stanza.from, let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS) else {
             return;
         }
@@ -90,7 +91,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             return;
         }
         
-        context.eventBus.fire(NotificationsDisabledEvent(context: context, service: from, node: node));
+        fire(NotificationsDisabledEvent(context: context, service: from, node: node));
     }
     
     open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
@@ -106,7 +107,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
             enable.addChild(publishOptions!.submitableElement(type: .submit));
         }
         iq.addChild(enable);
-        context.writer.write(iq, completionHandler: completionHandler);
+        write(iq, completionHandler: completionHandler);
     }
     
     open func disable(serviceJid: JID, node: String, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
@@ -117,7 +118,7 @@ open class PushNotificationsModule: XmppModule, ContextAware {
         disable.setAttribute("node", value: node);
         iq.addChild(disable);
         
-        context.writer.write(iq, completionHandler: completionHandler);
+        write(iq, completionHandler: completionHandler);
     }
     
     open class NotificationsDisabledEvent : AbstractEvent {

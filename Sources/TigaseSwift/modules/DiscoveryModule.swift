@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0030: Service Discovery]: http://xmpp.org/extensions/xep-0030.html
  */
-open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
+open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
 
     /// Namespace used by service discovery
     public static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
@@ -42,8 +42,6 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
     public static let ID = "discovery";
     public static let IDENTIFIER = XmppModuleIdentifier<DiscoveryModule>();
         
-    open var context:Context!;
-    
     public let criteria = Criteria.name("iq").add(
         Criteria.or(
             Criteria.name("query", xmlns: DiscoveryModule.ITEMS_XMLNS),
@@ -62,14 +60,15 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
     
     public init(identity: Identity = Identity(category: "client", type: "pc", name: SoftwareVersionModule.DEFAULT_NAME_VAL)) {
         self.identity = identity;
+        super.init();
         setNodeCallback(nil, entry: NodeDetailsEntry(
-            identity: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> Identity? in
+            identity: { (context: Context, stanza: Stanza, node: String?) -> Identity? in
                 return self.identity;
             },
-            features: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [String]? in
-                return Array(self.context.modulesManager.availableFeatures);
+            features: { (context: Context, stanza: Stanza, node: String?) -> [String]? in
+                return Array(context.modulesManager.availableFeatures);
             },
-            items: { (sessionObject: SessionObject, stanza: Stanza, node: String?) -> [Item]? in
+            items: { (context: Context, stanza: Stanza, node: String?) -> [Item]? in
                 return nil;
             }
         ));
@@ -81,12 +80,14 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter onError: called when received error or request timed out
      */
     open func discoverServerFeatures(completionHandler: ((Result<DiscoveryInfoResult,XMPPError>)->Void)?) {
-        if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
+        if let jid = context?.boundJid {
             getInfo(for: JID(jid.domain), completionHandler: { result in
                 switch result {
                 case .success(let info):
                     self.serverDiscoResult = info;
-                    self.context.eventBus.fire(ServerFeaturesReceivedEvent(context: self.context, features: info.features, identities: info.identities));
+                    if let context = self.context {
+                        self.fire(ServerFeaturesReceivedEvent(context: context, features: info.features, identities: info.identities));
+                    }
                 default:
                     break;
                 }
@@ -101,12 +102,12 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      - parameter onError: called when received error or request timed out
      */
     open func discoverAccountFeatures(completionHandler:((Result<DiscoveryInfoResult,XMPPError>) -> Void)?) {
-        if let jid = ResourceBinderModule.getBindedJid(context.sessionObject) {
+        if let jid = context?.boundJid, let context = context {
             getInfo(for: jid.withoutResource, completionHandler: { result in
                 switch result {
                 case .success(let info):
                     self.accountDiscoResult = info;
-                    self.context.eventBus.fire(AccountFeaturesReceivedEvent(context: self.context, features: info.features));
+                    self.fire(AccountFeaturesReceivedEvent(context: context, features: info.features));
                 default:
                     break;
                 }
@@ -131,7 +132,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         iq.addChild(query);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -178,7 +179,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         iq.addChild(query);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -256,7 +257,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         result.addChild(queryResult);
         
-        if let identity = nodeDetailsEntry.identity(context.sessionObject, stanza, node) {
+        if let context = context, let identity = nodeDetailsEntry.identity(context, stanza, node) {
             let identityElement = Element(name: "identity");
             identityElement.setAttribute("category", value: identity.category);
             identityElement.setAttribute("type", value: identity.type);
@@ -264,14 +265,14 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
             queryResult.addChild(identityElement);
         }
         
-        if let features = nodeDetailsEntry.features(context.sessionObject, stanza, node) {
+        if let context = context, let features = nodeDetailsEntry.features(context, stanza, node) {
             for feature in features {
                 let f = Element(name: "feature", attributes: [ "var" : feature ]);
                 queryResult.addChild(f);
             }
         }
         
-        context.writer.write(result);
+        write(result);
     }
     
     private func processGetItems(_ stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
@@ -283,7 +284,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
         }
         result.addChild(queryResult);
         
-        if let items = nodeDetailsEntry.items(context.sessionObject, stanza, node) {
+        if let context = context, let items = nodeDetailsEntry.items(context, stanza, node) {
             for item in items {
                 let e = Element(name: "item");
                 e.setAttribute("jid", value: item.jid.description);
@@ -293,7 +294,7 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
             }
         }
 
-        context.writer.write(result);
+        write(result);
     }
  
     public func reset(scope: ResetableScope) {
@@ -306,11 +307,11 @@ open class DiscoveryModule: AbstractIQModule, ContextAware, Resetable {
      discovery for particular node
      */
     open class NodeDetailsEntry {
-        public let identity: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> Identity?
-        public let features: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [String]?
-        public let items: (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [Item]?
+        public let identity: (_ context: Context, _ stanza: Stanza, _ node: String?) -> Identity?
+        public let features: (_ context: Context, _ stanza: Stanza, _ node: String?) -> [String]?
+        public let items: (_ context: Context, _ stanza: Stanza, _ node: String?) -> [Item]?
         
-        public init(identity: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> Identity?, features: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [String]?, items: @escaping (_ sessionObject: SessionObject, _ stanza: Stanza, _ node: String?) -> [Item]?) {
+        public init(identity: @escaping (_ context: Context, _ stanza: Stanza, _ node: String?) -> Identity?, features: @escaping (_ context: Context, _ stanza: Stanza, _ node: String?) -> [String]?, items: @escaping (_ context: Context, _ stanza: Stanza, _ node: String?) -> [Item]?) {
             self.identity = identity;
             self.features = features;
             self.items = items;

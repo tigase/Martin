@@ -74,7 +74,7 @@ extension PubSubModule {
             pubsub.addChild(optionsEl);
         }
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
@@ -111,7 +111,7 @@ extension PubSubModule {
         unsubscribe.setAttribute("jid", value: subscriber.stringValue);
         pubsub.addChild(unsubscribe);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -151,7 +151,7 @@ extension PubSubModule {
         optionsEl.addChild(options.element);
         pubsub.addChild(optionsEl);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -190,7 +190,7 @@ extension PubSubModule {
         optionsEl.setAttribute("node", value: nodeName);
         pubsub.addChild(optionsEl);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -232,7 +232,7 @@ extension PubSubModule {
         optionsEl.setAttribute("node", value: nodeName);
         pubsub.addChild(optionsEl);
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
 
     /**
@@ -302,7 +302,7 @@ extension PubSubModule {
             items.setAttribute("max_items", value: String(maxItems));
         }
         
-        context.writer.write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**

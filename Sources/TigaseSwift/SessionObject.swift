@@ -87,8 +87,9 @@ open class SessionObject {
                 }
             }
         }) 
-        
-        eventBus.fire(ClearedEvent(sessionObject: self, scopes: scopes));
+        if let context = self.context {
+            eventBus.fire(ClearedEvent(context: context, scopes: scopes));
+        }
     }
     
     /**
@@ -167,24 +168,21 @@ open class SessionObject {
     }
     
     /// Event fired when `SessionObject` instance is being cleared
-    open class ClearedEvent: Event, SerialEvent {
+    open class ClearedEvent: AbstractEvent, SerialEvent {
         /// Identified of event which should be used during registration of `EventHandler`
         public static let TYPE = ClearedEvent();
         
-        public let type = "ClearedEvent";
-        /// Instance of `SessionObject` allows to tell from which connection event was fired
-        public let sessionObject:SessionObject!;
         /// scopes which were cleared
         public let scopes:[Scope]!;
         
         fileprivate init() {
-            self.sessionObject = nil;
             self.scopes = nil;
+            super.init(type: "ClearedEvent")
         }
         
-        public init(sessionObject:SessionObject, scopes:[Scope]) {
-            self.sessionObject = sessionObject;
+        public init(context: Context, scopes:[Scope]) {
             self.scopes = scopes;
+            super.init(type: "ClearedEvent", context: context);
         }
     }
 }

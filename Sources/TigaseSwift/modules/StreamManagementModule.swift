@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
  */
-open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, EventHandler {
+open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, EventHandler {
     
     /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
@@ -48,12 +48,12 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
     
     public let features = [String]();
     
-    open var context: Context! {
+    open override weak var context: Context? {
         didSet {
-            if oldValue != nil {
+            if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE);
             }
-            if context != nil {
+            if let context = context {
                 context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE);
             }
         }
@@ -95,7 +95,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         return _resumptionTime;
     }
     
-    public init() {
+    public override init() {
     }
     
     /**
@@ -118,7 +118,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
             }
         }
         
-        context.writer.write(enable);
+        write(enable);
     }
     
     /**
@@ -147,7 +147,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
      - returns: true - if is supported
      */
     open func isAvailable() -> Bool {
-        return StreamFeaturesModule.getStreamFeatures(context.sessionObject)?.findChild(name: "sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
+        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
     }
     
     open func process(stanza: Stanza) throws {
@@ -232,7 +232,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         }
         
         let r = Stanza(name: "r", xmlns: StreamManagementModule.SM_XMLNS);
-        context.writer.write(r);
+        write(r);
         lastRequestTimestamp = Date();
     }
     
@@ -253,7 +253,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         resume.setAttribute("h", value: String(ackH.incomingCounter));
         resume.setAttribute("previd", value: resumptionId);
         
-        context.writer.write(resume);
+        write(resume);
     }
     
     /// Send ACK to server
@@ -261,7 +261,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         guard let a = prepareAck() else {
             return;
         }
-        context.writer.write(a);
+        write(a);
     }
     
     func prepareAck() -> Stanza? {
@@ -299,7 +299,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
             
             let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
             a.setAttribute("h", value: String(value));
-            self.context.writer.write(a);
+            self.write(a);
         }
     }
     
@@ -309,7 +309,9 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         let errorCondition = stanza.errorCondition ?? ErrorCondition.unexpected_request;
         
         logger.debug("stream resumption failed");
-        context.eventBus.fire(FailedEvent(context: context, errorCondition: errorCondition));
+        if let context = context {
+            fire(FailedEvent(context: context, errorCondition: errorCondition));
+        }
     }
     
     func processResumed(_ stanza: Stanza) {
@@ -323,11 +325,13 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         let oldOutgoingQueue = outgoingQueue;
         outgoingQueue = Queue<Stanza>();
         while let s = oldOutgoingQueue.poll() {
-            context.writer.write(s);
+            write(s);
         }
         
         logger.debug("stream resumed");
-        context.eventBus.fire(ResumedEvent(context: context, newH: newH, resumeId: stanza.getAttribute("previd")));
+        if let context = context {
+            fire(ResumedEvent(context: context, newH: newH, resumeId: stanza.getAttribute("previd")));
+        }
     }
     
     func processEnabled(_ stanza: Stanza) {
@@ -335,7 +339,7 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         let r = stanza.getAttribute("resume");
         let mx = stanza.getAttribute("max");
         let resume = r == "true" || r == "1";
-        if let location = SocketConnector.preprocessConnectionDetails(string: stanza.getAttribute("location")), let details: XMPPSrvRecord = self.context.currentConnectionDetails {
+        if let location = SocketConnector.preprocessConnectionDetails(string: stanza.getAttribute("location")), let details: XMPPSrvRecord = self.context?.currentConnectionDetails {
             _resumptionLocation = XMPPSrvRecord(port: location.1 ?? details.port, weight: 1, priority: 1, target: location.0, directTls: details.directTls)
         } else {
             _resumptionLocation = nil;
@@ -348,7 +352,9 @@ open class StreamManagementModule: XmppModule, ContextAware, XmppStanzaFilter, E
         }
         
         logger.debug("stream management enabled");
-        context.eventBus.fire(EnabledEvent(context: context, resume: resume, resumeId: id));
+        if let context = context {
+            context.eventBus.fire(EnabledEvent(context: context, resume: resume, resumeId: id));
+        }
     }
     
     /// Internal class for holding incoming and outgoing counters
@@ -495,17 +501,32 @@ class Queue<T> {
     }
     
     open func poll() -> T? {
-        if tail == nil {
+        guard let temp = tail else {
             return nil;
-        } else {
-            let temp = tail!;
-            tail = temp.prev;
-            if tail == nil {
-                head = nil;
-            }
-            self._count -= 1;
-            return temp.value;
         }
+        
+        tail = temp.prev;
+        tail?.next = nil;
+        temp.prev = nil;
+        
+        if tail == nil {
+            head = nil;
+        }
+        
+        self._count -= 1;
+        return temp.value;
+
+//        if tail == nil {
+//            return nil;
+//        } else {
+//            let temp = tail!;
+//            tail = temp.prev;
+//            if tail == nil {
+//                head = nil;
+//            }
+//            self._count -= 1;
+//            return temp.value;
+//        }
     }
 }
 

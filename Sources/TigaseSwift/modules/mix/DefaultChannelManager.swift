@@ -24,7 +24,7 @@ import Foundation
 open class DefaultChannelManager: ChannelManager {
     
     public let store: ChannelStore;
-    public let context:Context;
+    public weak var context: Context!;
     
     public init(context: Context, store: ChannelStore) {
         self.context = context;

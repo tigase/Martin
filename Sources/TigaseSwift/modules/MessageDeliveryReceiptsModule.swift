@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
+open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
     
     /// Namespace used by Message Carbons
     public static let XMLNS = "urn:xmpp:receipts";
@@ -39,11 +39,9 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
     
     public let features = [XMLNS];
     
-    open var context: Context!
-    
     open var sendReceived: Bool = true;
     
-    public init() {
+    public override init() {
         
     }
     
@@ -67,11 +65,13 @@ open class MessageDeliveryReceiptsModule: XmppModule, ContextAware {
             response.to = message.from;
             response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
             response.hints = [.store];
-            context.writer.write(response);
+            write(response);
             break;
         case .received(let id):
             // need to notify client - fire event
-            context.eventBus.fire(ReceiptEvent(context: context, message: message, messageId: id));
+            if let context = context {
+                fire(ReceiptEvent(context: context, message: message, messageId: id));
+            }
             break;
         }
     }
