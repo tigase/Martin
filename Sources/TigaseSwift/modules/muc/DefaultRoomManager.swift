@@ -1,5 +1,5 @@
 //
-// ChatStore.swift
+// DefaultRoomManager.swift
 //
 // TigaseSwift
 // Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
@@ -21,16 +21,13 @@
 
 import Foundation
 
-public protocol ChatStore: ContextLifecycleAware {
+/**
+ Default MUC room manager for local handling of rooms
+ */
+open class DefaultRoomManager: RoomManagerBase<DefaultRoomStore> {
+        
+    public override init(store: DefaultRoomStore) {
+        super.init(store: store);
+    }
     
-    associatedtype Chat: ChatProtocol
-    
-    func chats(for context: Context) -> [Chat];
-    
-    func chat(for context: Context, with: JID) -> Chat?;
-    
-    func createChat(for context: Context, with: JID) -> ConversationCreateResult<Chat>;
-    
-    func close(chat: Chat) -> Bool;
-
 }

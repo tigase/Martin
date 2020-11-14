@@ -108,6 +108,9 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
         try container.encode(self.stringValue);
     }
     
+    open func with(resource: String) -> JID {
+        return JID(bareJid, resource: resource);
+    }
 }
 
 public func ==(lhs: JID, rhs: JID) -> Bool {

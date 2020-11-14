@@ -125,16 +125,12 @@ open class XMPPClient: Context, EventHandler {
     open private(set) var state:SocketConnector.State = .disconnected;
 
     private var stateSubscription: Cancellable?;
-    
-    /// Internal processing queue
-    fileprivate let dispatcher: QueueDispatcher;
-    
+        
     public convenience init() {
         self.init(eventBus: nil);
     }
     
     public init(eventBus: EventBus?) {
-        dispatcher = QueueDispatcher(label: "xmpp_queue")
         responseManager = ResponseManager();
         super.init(eventBus: eventBus ?? EventBus(), modulesManager: XmppModulesManager());
         self.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);

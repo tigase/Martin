@@ -26,80 +26,10 @@ import Foundation
  
  It is only responsible for opening, closing and retrieving chats from chat store.
  */
-open class DefaultChatManager: ChatManager {
+open class DefaultChatManager: ChatManagerBase<DefaultChatStore> {
     
-    public let chatStore:ChatStore;
-    open weak var context: Context!;
-    
-    open var count:Int {
-        get {
-            return chatStore.count;
-        }
+    public override init(store: DefaultChatStore) {
+        super.init(store: store);
     }
     
-    public init(context: Context, chatStore:ChatStore = DefaultChatStore()) {
-        self.context = context;
-        self.chatStore = chatStore;
-    }
-    
-    open func close(chat: Chat) -> Bool {
-        let result = chatStore.close(chat: chat);
-        if result {
-            context.eventBus.fire(MessageModule.ChatClosedEvent(context: context, chat: chat));
-        }
-        return result;
-    }
-    
-    open func createChat(with jid: JID, thread: String? = nil) -> Chat? {
-        switch chatStore.createChat(jid: jid, thread: thread) {
-        case .success(let chat):
-            context.eventBus.fire(MessageModule.ChatCreatedEvent(context: context, chat: chat));
-            return chat;
-        case .failure(_):
-            return nil;
-        }
-    }
-    
-    open func getChatOrCreate(with jid:JID, thread:String? = nil) -> Chat? {
-        if let chat = getChat(with: jid, thread: thread) {
-            return chat;
-        }
-        return chatStore.dispatcher.sync(flags: .barrier) {
-            if let chat = getChat(with: jid, thread: thread) {
-                return chat;
-            }
-            
-            return createChat(with: jid, thread: thread);
-        }
-    }
-    
-    open func getChat(with jid: JID, thread: String?) -> Chat? {
-        if thread != nil {
-            if let chat: Chat = chatStore.chat(with: jid.bareJid, filter:{ (c) -> Bool in
-                return c.thread == thread;
-            }) {
-                return chat;
-            }
-        }
-        
-        if jid.resource != nil {
-            if let chat: Chat = chatStore.chat(with: jid.bareJid, filter: { (c) -> Bool in
-                return c.jid == jid;
-            }) {
-                return chat;
-            }
-        }
-        
-        return chatStore.chat(with: jid.bareJid, filter: { (c) -> Bool in
-            return c.jid.bareJid == jid.bareJid;
-        });
-    }
-    
-    open func getChats() -> [Chat] {
-        return chatStore.chats;
-    }
-    
-    open func isChatOpen(with jid: BareJID) -> Bool {
-        return chatStore.isFor(jid: jid);
-    }
 }

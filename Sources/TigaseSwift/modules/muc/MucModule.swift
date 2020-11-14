@@ -47,10 +47,11 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         didSet {
             if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
+                oldValue.unregister(lifecycleAware: roomManager);
             }
-            roomsManager.context = context;
             if let context = context {
                 context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
+                context.register(lifecycleAware: roomManager);
             }
         }
     }
@@ -65,15 +66,10 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
     
     public let features = [String]();
     
-    /// Instance of DefautRoomManager
-    public let roomsManager: DefaultRoomsManager;
+    public let roomManager: RoomManager;
     
-    public convenience init(client: XMPPClient, store: RoomStore) {
-        self.init(roomsManager: DefaultRoomsManager(store: store));
-    }
-
-    public init(roomsManager: DefaultRoomsManager) {
-        self.roomsManager = roomsManager;
+    public init(roomManager: RoomManager) {
+        self.roomManager = roomManager;
     }
         
     open func handle(event: Event) {
@@ -159,8 +155,8 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         });
     }
     
-    open func getRoomAffiliations(from room: Room, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
-        let userRole = (room.presences[room.nickname]?.role ?? .none);
+    open func getRoomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
+        let userRole = room.occupant(nickname: room.nickname)?.role ?? .none;
         guard userRole == .participant || userRole == .moderator else {
             completionHandler(.failure(.forbidden("Only participant or moderator can ask for room affiliations!")));
             return;
@@ -183,8 +179,8 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         });
     }
     
-    open func setRoomAffiliations(to room: Room, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let userAffiliation = (room.presences[room.nickname]?.affiliation ?? .none);
+    open func setRoomAffiliations(to room: RoomProtocol, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        let userAffiliation = room.occupant(nickname: room.nickname)?.affiliation ?? .none;
         guard userAffiliation == .admin || userAffiliation == .owner else {
             completionHandler(.failure(.forbidden("Only room admin or owner can set room affiliations!")));
             return;
@@ -227,7 +223,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
      - parameter invitee: user to invite
      - parameter reason: reason for invitation
      */
-    open func invite(to room: Room, invitee: JID, reason: String?) {
+    open func invite(to room: RoomProtocol, invitee: JID, reason: String?) {
         room.invite(invitee, reason: reason);
     }
     
@@ -238,9 +234,12 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
      - parameter reason: reason for invitation
      - parameter theadId: thread id for invitation
      */
-    open func inviteDirectly(to room: Room, invitee: JID, reason: String?, threadId: String?) {
+    open func inviteDirectly(to room: RoomProtocol, invitee: JID, reason: String?, threadId: String?) {
         room.inviteDirectly(invitee, reason: reason, threadId: threadId);
     }
+    
+    private var roomCreationHandlers: [BareJID: (RoomProtocol)->Void] = [:];
+    private var roomJoinedHandlers: [BareJID: (RoomProtocol)->Void] = [:];
     
     /**
      Join MUC room
@@ -250,18 +249,26 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
      - parameter password: password for room if needed
      - returns: instance of Room
      */
-    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, ifCreated: ((Room)->Void)? = nil, onJoined: ((Room)->Void)? = nil) -> Result<Room,ErrorCondition> {
+    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, ifCreated: ((RoomProtocol)->Void)? = nil, onJoined: ((RoomProtocol)->Void)? = nil) -> Result<RoomProtocol,ErrorCondition> {
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
-        let result = roomsManager.getRoomOrCreate(for: roomJid, nickname: nickname, password: password, onCreate: { (room) in
-            room.onRoomCreated = ifCreated;
-            room.onRoomJoined = onJoined;
-            let presence = room.rejoin();
-            if let context = self.context {
-                self.fire(JoinRequestedEvent(context: context, presence: presence, room: room, nickname: nickname));
+        guard let context = context else {
+            return .failure(.undefined_condition);
+        }
+        if let result = roomManager.createRoom(for: context, with: roomJid, nickname: nickname, password: password) {
+            context.dispatcher.async {
+                if let ifCreated = ifCreated {
+                    self.roomCreationHandlers[roomJid] = ifCreated
+                }
+                if let onJoined = onJoined {
+                    self.roomJoinedHandlers[roomJid] = onJoined;
+                }
             }
-        });
-        return result;
+            let presence = result.rejoin(fetchHistory: .initial);
+            self.fire(JoinRequestedEvent(context: context, presence: presence, room: result, nickname: nickname));
+            return .success(result);
+        }
+        return .failure(.undefined_condition);
     }
     
     /**
@@ -269,8 +276,8 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
      - parameter room: room to destroy
      */
     @discardableResult
-    open func destroy(room: Room) -> Bool {
-        guard room.state == .joined && room.presences[room.nickname]?.affiliation == .owner else {
+    open func destroy(room: RoomProtocol) -> Bool {
+        guard room.state == .joined && room.occupant(nickname: room.nickname)?.affiliation == .owner else {
             return false;
         }
         
@@ -285,9 +292,9 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         write(iq);
         
-        roomsManager.close(room: room);
+        roomManager.close(room: room);
         
-        room._state = .destroyed;
+        room.state = .destroyed;
         if let context = context {
             fire(RoomClosedEvent(context: context, presence: nil, room: room));
         }
@@ -299,19 +306,19 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
      Leave MUC room
      - parameter room: room to leave
      */
-    open func leave(room: Room) {
+    open func leave(room: RoomProtocol) {
         if room.state == .joined {
-            room._state = .not_joined;
+            room.state = .not_joined;
             
             let presence = Presence();
             presence.type = StanzaType.unavailable;
-            presence.to = JID(room.roomJid, resource: room.nickname);
+            presence.to = room.jid.with(resource: room.nickname);
             write(presence);
         }
         
-        roomsManager.close(room: room);
+        roomManager.close(room: room);
         
-        room._state = .destroyed;
+        room.state = .destroyed;
         if let context = context {
             fire(RoomClosedEvent(context: context, presence: nil, room: room));
         }
@@ -339,33 +346,31 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
     func processPresence(_ presence: Presence) throws {
         let from = presence.from!;
         let roomJid = from.bareJid;
-        let nickname = from.resource;
-        let room:Room! = roomsManager.getRoom(for: roomJid);
         let type = presence.type;
-        guard room != nil else {
+        guard let context = context, let room = roomManager.room(for: context, with: roomJid) else {
             return;
         }
         
         if type == StanzaType.error {
-            if room.state != .joined && nickname == nil {
-                room._state = .not_joined;
-                if let context = self.context {
-                    fire(RoomClosedEvent(context: context, presence: presence, room: room));
-                }
-            } else {
+            if room.state == .joined, let nickname = from.resource {
                 if let context = self.context {
                     fire(PresenceErrorEvent(context: context, presence: presence, room: room, nickname: nickname));
                 }
                 return;
+            } else {
+                room.state = .not_joined;
+                if let context = self.context {
+                    fire(RoomClosedEvent(context: context, presence: presence, room: room));
+                }
             }
         }
         
-        guard nickname != nil else {
+        guard let nickname = from.resource else {
             return;
         }
         
         if (type == StanzaType.unavailable && nickname == room.nickname) {
-            room._state = .not_joined;
+            room.state = .not_joined;
             if let context = self.context {
                 fire(RoomClosedEvent(context: context, presence: presence, room: room));
             }
@@ -374,7 +379,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         let xUser = XMucUserElement.extract(from: presence);
         
-        var occupant = room.presences[nickname!];
+        var occupant = room.occupant(nickname: nickname);
         let presenceOld = occupant?.presence;
         occupant = MucOccupant(occupant: occupant, presence: presence);
         
@@ -383,17 +388,17 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             room.remove(occupant: occupant!);
             room.addTemp(nickname: newNickName!, occupant: occupant!);
         } else if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
-            room._state = .joined;
+            room.state = .joined;
             room.add(occupant: occupant!);
             if xUser?.statuses.firstIndex(of: 201) == nil {
-                room.onRoomCreated = nil;
+                self.roomCreationHandlers.removeValue(forKey: roomJid);
             }
             if let context = self.context {
                 fire(YouJoinedEvent(context: context, room: room, nickname: nickname));
                 fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
             }
         } else if (presenceOld == nil || presenceOld?.type == StanzaType.unavailable) && type == nil {
-            if let tmp = room.removeTemp(nickname: nickname!) {
+            if let tmp = room.removeTemp(nickname: nickname) {
                 let oldNickname = tmp.nickname;
                 room.add(occupant: occupant!);
                 if let context = self.context {
@@ -417,8 +422,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         }
         
         if xUser != nil && xUser?.statuses.firstIndex(of: 201) != nil {
-            if let onRoomCreated = room.onRoomCreated {
-                room.onRoomCreated = nil;
+            if let onRoomCreated = self.roomCreationHandlers.removeValue(forKey: roomJid) {
                 onRoomCreated(room);
             }
 
@@ -433,20 +437,22 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         let roomJid = from.bareJid;
         let nickname = from.resource;
         
-        let room:Room! = roomsManager.getRoom(for: roomJid);
-        guard room != nil, let context = context else {
+        guard let context = context else {
+            return;
+        }
+        
+        guard let room = roomManager.room(for: context, with: roomJid) else {
             return;
         }
         
         let timestamp = message.delay?.stamp ?? Date();
         if room.state != .joined && message.type != StanzaType.error {
-            room._state = .joined;
+            room.state = .joined;
             logger.debug("\(context.userBareJid) - Message while not joined in room: \(room) with nickname: \(nickname)");
             
             fire(YouJoinedEvent(context: context, room: room, nickname: nickname ?? room.nickname));
         }
         fire(MessageReceivedEvent(context: context, message: message, room: room, nickname: nickname, timestamp: timestamp));
-        room.lastMessageDate = timestamp;
     }
     
     func processDirectInvitationMessage(_ message: Message) {
@@ -474,8 +480,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
     
     func processInvitationDeclinedMessage(_ message: Message) {
         let from = message.from!.bareJid;
-        let room = roomsManager.getRoom(for: from);
-        guard room != nil else {
+        guard let context = self.context,  let room = roomManager.room(for: context, with: from) else {
             return;
         }
         
@@ -484,15 +489,15 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         let invitee = decline?.getAttribute("from");
         
         if let context = self.context {
-            fire(InvitationDeclinedEvent(context: context, message: message, room: room!, invitee: JID(invitee), reason: reason));
+            fire(InvitationDeclinedEvent(context: context, message: message, room: room, invitee: JID(invitee), reason: reason));
         }
     }
 
     fileprivate func markRoomsAsNotJoined() {
-        for room in roomsManager.getRooms() {
-            room._state = .not_joined;
+        if let context = self.context {
+            for room in roomManager.rooms(for: context) {
+                room.state = .not_joined;
             
-            if let context = self.context {
                 fire(RoomClosedEvent(context: context, presence: nil, room: room));
             }
         }
@@ -507,8 +512,8 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         /// Presence sent
         public let presence: Presence!;
-        /// Room to join
-        public let room: Room!;
+        /// RoomProtocolto join
+        public let room: RoomProtocol!;
         /// Nickname to use in room
         public let nickname: String?;
         
@@ -519,7 +524,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleJoinRequestedEvent");
         }
         
-        public init(context: Context, presence: Presence, room: Room, nickname: String?) {
+        public init(context: Context, presence: Presence, room: RoomProtocol, nickname: String?) {
             self.presence = presence;
             self.room = room;
             self.nickname = nickname;
@@ -535,8 +540,8 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         /// Received message
         public let message: Message!;
-        /// Room which delivered message
-        public let room: Room!;
+        /// RoomProtocolwhich delivered message
+        public let room: RoomProtocol!;
         /// Nickname of message sender
         public let nickname: String?;
         /// Timestamp of message
@@ -550,7 +555,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleMessageReceivedEvent")
         }
         
-        public init(context: Context, message: Message, room: Room, nickname: String?, timestamp: Date) {
+        public init(context: Context, message: Message, room: RoomProtocol, nickname: String?, timestamp: Date) {
             self.message = message;
             self.room = room;
             self.nickname = nickname;
@@ -568,7 +573,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         /// Presence in room
         public let presence: Presence!;
         /// Created room
-        public let room: Room!;
+        public let room: RoomProtocol!;
         
         init() {
             self.presence = nil;
@@ -576,7 +581,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleNewRoomCreatedEvent");
         }
         
-        public init(context: Context, presence: Presence, room: Room) {
+        public init(context: Context, presence: Presence, room: RoomProtocol) {
             self.presence = presence;
             self.room = room;
             super.init(type: "MucModuleNewRoomCreatedEvent", context: context);
@@ -587,8 +592,8 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         /// New presence
         public let presence: Presence!;
-        /// Room in which occupant changed presence
-        public let room: Room!;
+        /// RoomProtocolin which occupant changed presence
+        public let room: RoomProtocol!;
         /// Occupant which changed presence
         public let occupant: MucOccupant!;
         /// Occupant nickname
@@ -605,7 +610,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: type);
         }
         
-        init(type: String, context: Context, presence: Presence?, room: Room?, occupant: MucOccupant?, nickname: String?, xUser: XMucUserElement? = nil) {
+        init(type: String, context: Context, presence: Presence?, room: RoomProtocol?, occupant: MucOccupant?, nickname: String?, xUser: XMucUserElement? = nil) {
             self.presence = presence;
             self.room = room;
             self.occupant = occupant;
@@ -624,7 +629,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleOccupantChangedNickEvent");
         }
         
-        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?) {
+        public init(context: Context, presence: Presence, room: RoomProtocol, occupant: MucOccupant, nickname: String?) {
             super.init(type: "MucModuleOccupantChangedNickEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: nil);
         }
     }
@@ -638,7 +643,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleOccupantChangedPresenceEvent");
         }
         
-        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+        public init(context: Context, presence: Presence, room: RoomProtocol, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
             super.init(type: "MucModuleOccupantChangedPresenceEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
     }
@@ -652,7 +657,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleOccupantComesEvent");
         }
         
-        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+        public init(context: Context, presence: Presence, room: RoomProtocol, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
             super.init(type: "MucModuleOccupantComesEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
         
@@ -667,7 +672,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleOccupantLeavedEvent");
         }
         
-        public init(context: Context, presence: Presence, room: Room, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
+        public init(context: Context, presence: Presence, room: RoomProtocol, occupant: MucOccupant, nickname: String?, xUser: XMucUserElement?) {
             super.init(type: "MucModuleOccupantLeavedEvent", context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser);
         }
         
@@ -680,8 +685,8 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         /// Received presence
         public let presence: Presence!;
-        /// Room which sent presence
-        public let room: Room!;
+        /// RoomProtocolwhich sent presence
+        public let room: RoomProtocol!;
         /// Nickname
         public let nickname: String?;
         
@@ -692,7 +697,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModulePresenceErrorEvent")
         }
         
-        public init(context: Context, presence: Presence, room: Room, nickname: String?) {
+        public init(context: Context, presence: Presence, room: RoomProtocol, nickname: String?) {
             self.presence = presence;
             self.room = room;
             self.nickname = nickname;
@@ -708,7 +713,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         /// Received presence
         public let presence: Presence?;
         /// Closed room
-        public let room: Room!;
+        public let room: RoomProtocol!;
         
         init() {
             self.presence = nil;
@@ -716,7 +721,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleRoomClosedEvent")
         }
         
-        public init(context: Context, presence: Presence?, room: Room) {
+        public init(context: Context, presence: Presence?, room: RoomProtocol) {
             self.presence = presence;
             self.room = room;
             super.init(type: "MucModuleRoomClosedEvent", context: context);
@@ -729,7 +734,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         public static let TYPE = YouJoinedEvent();
         
         /// Joined room
-        public let room: Room!;
+        public let room: RoomProtocol!;
         /// Joined under nickname
         public let nickname: String?;
         
@@ -739,7 +744,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleYouJoinedEvent");
         }
         
-        public init(context: Context, room: Room, nickname: String?) {
+        public init(context: Context, room: RoomProtocol, nickname: String?) {
             self.room = room;
             self.nickname = nickname;
             super.init(type: "MucModuleYouJoinedEvent", context: context);
@@ -754,7 +759,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         /// Received message
         public let message: Message!;
         /// Room
-        public let room: Room!;
+        public let room: RoomProtocol!;
         /// Invitation decliner
         public let invitee: JID?;
         /// Reason for declining invitation
@@ -768,7 +773,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             super.init(type: "MucModuleInvitationDeclinedEvent");
         }
     
-        public init(context: Context, message: Message, room: Room, invitee: JID?, reason: String?) {
+        public init(context: Context, message: Message, room: RoomProtocol, invitee: JID?, reason: String?) {
             self.message = message;
             self.room = room;
             self.invitee = invitee;
@@ -806,7 +811,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         }
         /// Received message
         public let message: Message;
-        /// Room JID
+        /// RoomProtocolJID
         public let roomJid: BareJID;
         /// Sender of invitation
         public let inviter: JID?;

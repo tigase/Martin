@@ -1,5 +1,5 @@
 //
-// DefaultChannelManager.swift
+// RoomOccupantsStoreBase.swift
 //
 // TigaseSwift
 // Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
@@ -21,10 +21,29 @@
 
 import Foundation
 
-open class DefaultChannelManager: ChannelManagerBase<DefaultChannelStore> {
+open class RoomOccupantsStoreBase: RoomOccupantsStoreProtocol {
     
-    public override init(store: DefaultChannelStore) {
-        super.init(store: store);
+    private var presences: [String: MucOccupant] = [:];
+    private var tempOccupants: [String: MucOccupant] = [:]
+    
+    public func occupant(nickname: String) -> MucOccupant? {
+        return presences[nickname];
+    }
+    
+    public func add(occupant: MucOccupant) {
+        self.presences[occupant.nickname] = occupant;
+    }
+    
+    public func remove(occupant: MucOccupant) {
+        self.presences.removeValue(forKey: occupant.nickname);
+    }
+    
+    public func addTemp(nickname: String, occupant: MucOccupant) {
+        self.tempOccupants[nickname] = occupant;
+    }
+    
+    public func removeTemp(nickname: String) -> MucOccupant? {
+        return self.tempOccupants.removeValue(forKey: nickname);
     }
     
 }

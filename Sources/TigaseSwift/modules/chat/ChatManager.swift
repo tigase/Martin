@@ -21,123 +21,20 @@
 
 import Foundation
 
-/**
- Protocol which needs to be implemented by classes responsible for handling Chats
- */
-public protocol ChatManager {
- 
-    /// Number of open chats
-    var count:Int { get }
+public protocol ChatManager: ContextLifecycleAware {
     
-    /**
-     Close chat
-     - parameter chat: chat to close
-     - returns: true - if chat was closed
-     */
-    func close(chat:Chat) ->Bool;
+    func chats(for context: Context) -> [ChatProtocol];
     
-    /**
-     Create chat
-     - parameter with: jid to exchange messages
-     - parameter thread: id of thread
-     - returns: instance of Chat if opened
-     */
-    func createChat(with jid:JID, thread:String?) -> Chat?;
-    /**
-     Get instance of already opened chat
-     - parameter with: jid to exchange messages
-     - parameter thread: id of thread
-     - returns: instance of Chat if any opened and matches
-     */
-    func getChat(with jid:JID, thread:String?) -> Chat?;
-    /**
-     Get instance of already opened chat or create a new one
-     - parameter with: jid to exchange messages
-     - parameter thread: id of thread
-     - returns: instance of Chat if any opened and matches
-     */
-    func getChatOrCreate(with jid:JID, thread:String?) -> Chat?;
-    /**
-     Get array of opened chats
-     - returns: array of all currently open chats
-     */
-    func getChats() -> [Chat];
-    /**
-     Check if there is any chat open with jid
-     - parameter with: jid to check
-     */
-    func isChatOpen(with jid:BareJID) -> Bool;
+    func chat(for context: Context, with: JID) -> ChatProtocol?;
+    
+    func createChat(for context: Context, with: JID) -> ChatProtocol?;
+    
+    func close(chat: ChatProtocol) -> Bool;
+    
 }
 
-/**
- Implementation of Chat
- */
-open class Chat: ChatProtocol {
-    
-    fileprivate static let queue = DispatchQueue(label: "chat_queue", attributes: DispatchQueue.Attributes.concurrent);
-    
-    // common variables
-    fileprivate var _jid: JID;
-    /// JID with which messages are exchanged
-    open var jid: JID {
-        get {
-            var r: JID!;
-            Chat.queue.sync {
-                r = self._jid;
-            }
-            return r;
-        }
-        set {
-            Chat.queue.async(flags: .barrier, execute: {
-                self._jid = newValue;
-            }) 
-        }
-    }
-    /// Is it possible to open many chats with same bare JID?
-    public let allowFullJid = true;
+public protocol ConversationsManager {
 
-    // class specific variables
-    /// Thread ID of message exchange
-    fileprivate var _thread: String?;
-    open var thread:String? {
-        get {
-            var r: String?;
-            Chat.queue.sync {
-                r = self._thread;
-            }
-            return r;
-        }
-        set {
-            Chat.queue.async(flags: .barrier, execute: {
-                self._thread = newValue;
-            }) 
-        }
-    }
-    
-    public init(jid:JID, thread:String?) {
-        self._jid = jid;
-        self._thread = thread;
-    }
-    
-    /**
-     Create message to send to recipient
-     - parameter body: text to send
-     - parameter type: type of message
-     - parameter subject: subject of message
-     - parameter additionalElements: additional elements to add to message
-     */
-    open func createMessage(_ body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
-        let msg = Message();
-        msg.to = jid;
-        msg.type = type;
-        msg.thread = thread;
-        msg.body = body;
-        msg.subject = subject;
-        if additionalElements != nil {
-            msg.addChildren(additionalElements!);
-        }
-        
-        return msg;
-    }
-    
+    func chat(for: Context, with: JID) -> ConversationProtocol?;
+
 }

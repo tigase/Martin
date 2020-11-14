@@ -27,6 +27,8 @@ import Foundation
  */
 open class Context: CustomStringConvertible {
     
+    let dispatcher: QueueDispatcher = QueueDispatcher(label: "context_queue");
+    
     open var description: String {
         return connectionConfiguration.userJid.stringValue;
     }
@@ -39,7 +41,26 @@ open class Context: CustomStringConvertible {
         return module(.resourceBind).bindedJid;
     }
     public var currentConnectionDetails: XMPPSrvRecord?;
-    public var connectionConfiguration: ConnectionConfiguration = ConnectionConfiguration();
+    public var connectionConfiguration: ConnectionConfiguration = ConnectionConfiguration() {
+        willSet {
+            if connectionConfiguration.userJid != newValue.userJid {
+                dispatcher.sync {
+                    for lifecycleAware in self.lifecycleAwares {
+                        lifecycleAware.deinitialize(context: self);
+                    }
+                }
+            }
+        }
+        didSet {
+            if connectionConfiguration.userJid != oldValue.userJid {
+                dispatcher.sync {
+                    for lifecycleAware in self.lifecycleAwares {
+                        lifecycleAware.initialize(context: self);
+                    }
+                }
+            }
+        }
+    }
     // Instance of `SessionObject` with properties for particular connection/client
     public let sessionObject: SessionObject;
     // Instance of `EventBus` which processes events for particular connection/client
@@ -49,6 +70,8 @@ open class Context: CustomStringConvertible {
     // Instance of `PacketWriter` to use for sending stanzas
     open var writer: PacketWriter;
     
+    private var lifecycleAwares: [ContextLifecycleAware] = [];
+    
     init(eventBus: EventBus, modulesManager: XmppModulesManager, writer: PacketWriter = DummyPacketWriter()) {
         self.sessionObject = SessionObject(eventBus: eventBus);
         self.eventBus = eventBus;
@@ -56,6 +79,14 @@ open class Context: CustomStringConvertible {
         self.writer = writer;
         self.sessionObject.context = self;
         self.modulesManager.context = self;
+    }
+    
+    deinit {
+        dispatcher.sync {
+            for lifecycleAware in lifecycleAwares {
+                lifecycleAware.deinitialize(context: self);
+            }
+        }
     }
     
     open func module<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T {
@@ -74,4 +105,17 @@ open class Context: CustomStringConvertible {
         return modulesManager.moduleOrNil(type);
     }
 
+    open func register(lifecycleAware: ContextLifecycleAware) {
+        dispatcher.async {
+            self.lifecycleAwares.append(lifecycleAware);
+            lifecycleAware.initialize(context: self);
+        }
+    }
+    
+    open func unregister(lifecycleAware: ContextLifecycleAware) {
+        dispatcher.async {
+            lifecycleAware.deinitialize(context: self);
+            self.lifecycleAwares.append(lifecycleAware);
+        }
+    }
 }

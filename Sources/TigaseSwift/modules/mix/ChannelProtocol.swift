@@ -1,8 +1,8 @@
 //
-// ChatStore.swift
+// ChannelProtocol.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,16 +21,26 @@
 
 import Foundation
 
-public protocol ChatStore: ContextLifecycleAware {
+public protocol ChannelProtocol: ConversationProtocol {
+ 
+    var nickname: String? { get }
+    var state: ChannelState { get }
+    var participantId: String { get }
     
-    associatedtype Chat: ChatProtocol
+    var permissions: Set<ChannelPermission>? { get }
+    var participants: MixParticipantsProtocol { get }
     
-    func chats(for context: Context) -> [Chat];
-    
-    func chat(for context: Context, with: JID) -> Chat?;
-    
-    func createChat(for context: Context, with: JID) -> ConversationCreateResult<Chat>;
-    
-    func close(chat: Chat) -> Bool;
+    func update(state: ChannelState) -> Bool;
+    func update(permissions: Set<ChannelPermission>)
+}
 
+public enum ChannelState: Int {
+    case left = 0
+    case joined = 1
+}
+
+public enum ChannelPermission {
+    case changeConfig
+    case changeInfo
+    case changeAvatar
 }

@@ -154,7 +154,7 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
         /// Forwarded message
         public let message: Message!;
         /// Chat for which this forwarded message belongs to
-        public let chat: Chat?;
+        public let chat: ChatProtocol?;
         
         init() {
             self.action = nil;
@@ -163,7 +163,7 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
             super.init(type: "MessageCarbonReceivedEvent")
         }
         
-        init(context: Context, action: Action, message: Message, chat: Chat?) {
+        init(context: Context, action: Action, message: Message, chat: ChatProtocol?) {
             self.action = action;
             self.message = message;
             self.chat = chat;

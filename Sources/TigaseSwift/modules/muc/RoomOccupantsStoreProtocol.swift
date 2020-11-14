@@ -1,8 +1,8 @@
 //
-// ChatStore.swift
+// RoomOccupantsStoreProtocol.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,16 +21,13 @@
 
 import Foundation
 
-public protocol ChatStore: ContextLifecycleAware {
+public protocol RoomOccupantsStoreProtocol {
     
-    associatedtype Chat: ChatProtocol
+    func occupant(nickname: String) -> MucOccupant?;
+    func add(occupant: MucOccupant);
+    func remove(occupant: MucOccupant);
     
-    func chats(for context: Context) -> [Chat];
+    func addTemp(nickname: String, occupant: MucOccupant);
+    func removeTemp(nickname: String) -> MucOccupant?;
     
-    func chat(for context: Context, with: JID) -> Chat?;
-    
-    func createChat(for context: Context, with: JID) -> ConversationCreateResult<Chat>;
-    
-    func close(chat: Chat) -> Bool;
-
 }

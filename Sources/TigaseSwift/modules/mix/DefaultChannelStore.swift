@@ -23,36 +23,38 @@ import Foundation
 
 open class DefaultChannelStore: ChannelStore {
         
+    public typealias Channel = ChannelBase
+    
     public let dispatcher = QueueDispatcher(label: "DefaultChannelStore");
     
     private var items: [BareJID: Channel] = [:];
 
-    open func channels() -> [Channel] {
+    open func channels(for context: Context) -> [Channel] {
         return dispatcher.sync {
             return Array(items.values);
         }
     }
     
-    open func channel(for channelJid: BareJID) -> Channel? {
+    open func channel(for context: Context, with channelJid: BareJID) -> Channel? {
         return dispatcher.sync {
             return self.items[channelJid];
         }
     }
     
-    open func createChannel(jid: BareJID, participantId: String, nick: String?, state: Channel.State) -> Result<Channel,ErrorCondition> {
+    open func createChannel(for context: Context, with jid: BareJID, participantId: String, nick: String?, state: ChannelState) -> ConversationCreateResult<Channel> {
         return dispatcher.sync {
             guard self.items[jid] == nil else {
-                return .failure(.conflict);
+                return .none;
             }
-            let channel = Channel(channelJid: jid, participantId: participantId, nickname: nick, state: state);
+            let channel = Channel(context: context, channelJid: jid, participantId: participantId, nickname: nick, state: state);
             self.items[jid] = channel;
-            return .success(channel);
+            return .created(channel);
         }
     }
     
     open func close(channel: Channel) -> Bool {
         return dispatcher.sync {
-            return self.items.removeValue(forKey: channel.channelJid) != nil;
+            return self.items.removeValue(forKey: channel.jid.bareJid) != nil;
         }
     }
 
@@ -71,9 +73,17 @@ open class DefaultChannelStore: ChannelStore {
         return false;
     }
     
-    public func update(channel: Channel, state: Channel.State) -> Bool {
+    public func update(channel: Channel, state: ChannelState) -> Bool {
         return dispatcher.sync {
             return channel.update(state: state);
         }
+    }
+    
+    public func initialize(context: Context) {
+        
+    }
+    
+    public func deinitialize(context: Context) {
+        
     }
 }

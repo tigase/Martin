@@ -21,15 +21,18 @@
 
 import Foundation
 
-public protocol ChannelStore {
+public protocol ChannelStore: ContextLifecycleAware {
 
+    associatedtype Channel: ChannelProtocol
+    
     var dispatcher: QueueDispatcher { get }
+//    var channelEvents: AnyPublisher<ConverstaionStoreAction<Channel>,Never> { get }
 
-    func channels() -> [Channel];
+    func channels(for context: Context) -> [Channel];
     
-    func channel(for: BareJID) -> Channel?;
+    func channel(for context: Context, with jid: BareJID) -> Channel?;
     
-    func createChannel(jid: BareJID, participantId: String, nick: String?, state: Channel.State) -> Result<Channel,ErrorCondition>;
+    func createChannel(for context: Context, with jid: BareJID, participantId: String, nick: String?, state: ChannelState) -> ConversationCreateResult<Channel>;
     
     func close(channel: Channel) -> Bool;
     
@@ -37,5 +40,12 @@ public protocol ChannelStore {
     
     func update(channel: Channel, info: ChannelInfo) -> Bool;
     
-    func update(channel: Channel, state: Channel.State) -> Bool;
+    func update(channel: Channel, state: ChannelState) -> Bool;
+    
 }
+
+//public enum ConverstaionStoreAction<Conversation: ConverstaionProtocol> {
+//    case added([Conversation])
+//    case updated([Conversation])
+//    case removed([Conversation])
+//}

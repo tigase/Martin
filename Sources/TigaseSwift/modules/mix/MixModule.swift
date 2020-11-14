@@ -54,7 +54,9 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
     public override weak var context: Context? {
         didSet {
             oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
+            oldValue?.unregister(lifecycleAware: channelManager);
             context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
+            context?.register(lifecycleAware: channelManager);
             if let context = context {
                 discoModule = context.modulesManager.module(.disco);
                 mamModule = context.modulesManager.module(.mam);
@@ -100,10 +102,6 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
     
     public var automaticRetrieve: Set<AutomaticRetriveActions> = [.participants,.info,.avatar,.affiliations];
     
-    public convenience init(client: XMPPClient) {
-        self.init(channelManager: DefaultChannelManager(context: client.context, store: DefaultChannelStore()));
-    }
-
     public init(channelManager: ChannelManager) {
         self.channelManager = channelManager;
     }
@@ -141,6 +139,10 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
             completionHandler(.failure(.bad_request("Channel JID must have a local part!")));
             return;
         }
+        guard let context = self.context else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
+        }
         
         let iq = Iq();
         iq.to = JID(channelJid.domain);
@@ -151,7 +153,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         write(iq, completionHandler: { result in
             switch result {
             case .success(_):
-                if let channel = self.channelManager.channel(for: channelJid) {
+                if let channel = self.channelManager.channel(for: context, with: channelJid) {
                     _  = self.channelManager.close(channel: channel);
                 }
                 self.rosterModule?.store.remove(jid: JID(channelJid), completionHandler: nil);
@@ -222,7 +224,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         }
     }
     
-    open func leave(channel: Channel, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    open func leave(channel: ChannelProtocol, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         guard let context = context else {
             completionHandler(.failure(.remote_server_timeout));
             return;
@@ -232,7 +234,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
             iq.to = JID(context.userBareJid);
             iq.type = .set;
             let clientLeave = Element(name: "client-leave", xmlns: MixModule.PAM2_XMLNS);
-            clientLeave.setAttribute("channel", value: channel.channelJid.stringValue);
+            clientLeave.setAttribute("channel", value: channel.jid.bareJid.stringValue);
             clientLeave.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
             iq.addChild(clientLeave);
             
@@ -263,22 +265,25 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
     }
     
     open func channelJoined(channelJid: BareJID, participantId: String, nick: String?) {
-        switch self.channelManager.createChannel(jid: channelJid, participantId: participantId, nick: nick, state: .joined) {
-        case .success(let channel):
+        guard let context = self.context else {
+            return;
+        }
+        switch self.channelManager.createChannel(for: context, with: channelJid, participantId: participantId, nick: nick, state: .joined) {
+        case .created(let channel):
             if self.automaticRetrieve.contains(.participants) {
                 retrieveParticipants(for: channel, completionHandler: nil);
             }
-            retrieveInfo(for: channel.channelJid, completionHandler: nil);
+            retrieveInfo(for: channel.jid.bareJid, completionHandler: nil);
             retrieveAffiliations(for: channel, completionHandler: nil);
             if self.automaticRetrieve.contains(.avatar) {
-                retrieveAvatar(for: channel.channelJid, completionHandler: nil);
+                retrieveAvatar(for: channel.jid.bareJid, completionHandler: nil);
             }
-        case .failure(_):
+        default:
             break;
         }
     }
 
-    open func channelLeft(channel: Channel) {
+    open func channelLeft(channel: ChannelProtocol) {
         _ = self.channelManager.close(channel: channel);
     }
     
@@ -300,7 +305,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         switch stanza {
         case let message as Message:
             // we have received groupchat message..
-            guard let channel = channelManager.channel(for: message.from!.bareJid), let context = context else {
+            guard let context = context, let channel = channelManager.channel(for: context, with: message.from!.bareJid) else {
                 return;
             }
             self.fire(MessageReceivedEvent(context: context, message: message, channel: channel, nickname: message.mix?.nickname, senderJid: message.mix?.jid, timestamp: message.delay?.stamp ?? Date()));
@@ -309,12 +314,12 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         }
     }
     
-    open func retrieveAffiliations(for channel: Channel, completionHandler: ((PermissionsResult)->Void)?) {
-        pubsubModule.retrieveOwnAffiliations(from: channel.channelJid, for: nil, completionHandler: { result in
+    open func retrieveAffiliations(for channel: ChannelProtocol, completionHandler: ((PermissionsResult)->Void)?) {
+        pubsubModule.retrieveOwnAffiliations(from: channel.jid.bareJid, for: nil, completionHandler: { result in
             switch result {
             case .success(let affiliations):
                 let values = Dictionary(affiliations.map({ ($0.node, $0.affiliation) }), uniquingKeysWith: { (first, _) in first });
-                var permissions: Set<Channel.Permission> = [];
+                var permissions: Set<ChannelPermission> = [];
                 switch values["urn:xmpp:mix:nodes:info"] ?? .none {
                 case .owner, .publisher:
                     permissions.insert(.changeInfo);
@@ -343,8 +348,8 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         })
     }
     
-    open func retrieveParticipants(for channel: Channel, completionHandler: ((ParticipantsResult)->Void)?) {
-        pubsubModule.retrieveItems(from: channel.channelJid, for: "urn:xmpp:mix:nodes:participants", completionHandler: { result in
+    open func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
+        pubsubModule.retrieveItems(from: channel.jid.bareJid, for: "urn:xmpp:mix:nodes:participants", completionHandler: { result in
             switch result {
             case .success(let items):
                 let participants = items.items.map({ (item) -> MixParticipant? in
@@ -357,7 +362,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 }) {
                     _ = self.channelManager.update(channel: channel, nick: ownParticipant.nickname);
                 }
-                channel.update(participants: participants);
+                channel.participants.set(participants: participants);
                 if let context = self.context {
                     self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: participants, left: left));
                 }
@@ -387,11 +392,11 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                     completionHandler?(.failure(.item_not_found));
                     return;
                 }
-                guard let info = ChannelInfo(form: JabberDataElement(from: item.payload)) else {
+                guard let context = self.context, let info = ChannelInfo(form: JabberDataElement(from: item.payload)) else {
                     completionHandler?(.failure(.undefined_condition));
                     return;
                 }
-                _ = self.channelManager.update(channel: channelJid, info: info)
+                _ = self.channelManager.update(for: context, channel: channelJid, info: info)
                 completionHandler?(.success(info));
             case .failure(let pubsubError):
                 completionHandler?(.failure(pubsubError.error));
@@ -571,7 +576,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
             
             switch e.action {
             case .removed:
-                guard let channel = channelManager.channel(for: ri.jid.bareJid) else {
+                guard let channel = channelManager.channel(for: e.context, with: ri.jid.bareJid) else {
                     return;
                 }
                 self.channelLeft(channel: channel);
@@ -589,7 +594,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
             }
             break;
         case let e as PubSubModule.NotificationReceivedEvent:
-            guard let from = e.message.from?.bareJid, let node = e.nodeName, let channel = channelManager.channel(for: from) else {
+            guard let from = e.message.from?.bareJid, let node = e.nodeName, let channel = channelManager.channel(for: e.context, with: from) else {
                 return;
             }
 
@@ -601,7 +606,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                         if participant.id == channel.participantId {
                             _ = self.channelManager.update(channel: channel, nick: participant.nickname);
                         }
-                        channel.update(participant: participant);
+                        channel.participants.update(participant: participant);
                         if let context = context {
                             self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
                         }
@@ -609,11 +614,11 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 case "retract":
                     if let id = e.itemId {
                         if channel.participantId == id {
-                            if self.channelManager.update(channel: channel.channelJid, state: .left), let context = context {
+                            if self.channelManager.update(for: e.context, channel: channel.jid.bareJid, state: .left), let context = context {
                                 self.fire(ChannelStateChangedEvent(context: context, channel: channel));
                             }
                         }
-                        if let participant = channel.participantLeft(participantId: id), let context = context {
+                        if let participant = channel.participants.removeParticipant(withId: id), let context = context {
                             self.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
                         }
                     }
@@ -624,46 +629,46 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 guard let info = ChannelInfo(form: JabberDataElement(from: e.payload)) else {
                     return;
                 }
-                _ = self.channelManager.update(channel: channel.channelJid, info: info);
+                _ = self.channelManager.update(for: e.context, channel: channel.jid.bareJid, info: info);
             default:
                 break;
             }
         case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent, is StreamManagementModule.ResumedEvent:
             // we have reconnected, so lets update all channels statuses
             if let context = context {
-                for channel in self.channelManager.channels() {
+                for channel in self.channelManager.channels(for: context) {
                     self.fire(ChannelStateChangedEvent(context: context, channel: channel));
                 }
             }
         case is SessionObject.ClearedEvent:
             if let context = context {
-                for channel in self.channelManager.channels() {
+                for channel in self.channelManager.channels(for: context) {
                     self.fire(ChannelStateChangedEvent(context: context, channel: channel));
                 }
             }
-        case is DiscoveryModule.AccountFeaturesReceivedEvent:
+        case let e as DiscoveryModule.AccountFeaturesReceivedEvent:
             if !localMAMStoresPubSubEvents {
                 if !isPAM2SupportAvailable {
-                    for channel in self.channelManager.channels() {
-                        if let lastMessageDate = channel.lastMessageDate {
-                            self.retrieveHistory(fromChannel: channel.channelJid, start: lastMessageDate, after: nil);
+                    for channel in self.channelManager.channels(for: e.context) {
+                        if let lastMessageDate = (channel as? LastMessageTimestampAware)?.lastMessageTimestamp {
+                            self.retrieveHistory(fromChannel: channel.jid.bareJid, start: lastMessageDate, after: nil);
                         } else {
-                            self.retrieveHistory(fromChannel: channel.channelJid, max: 100);
+                            self.retrieveHistory(fromChannel: channel.jid.bareJid, max: 100);
                         }
                     }
                 }
-                for channel in self.channelManager.channels() {
+                for channel in self.channelManager.channels(for: e.context) {
                     if self.automaticRetrieve.contains(.participants) {
                         retrieveParticipants(for: channel, completionHandler: nil);
                     }
                     if self.automaticRetrieve.contains(.info) {
-                        retrieveInfo(for: channel.channelJid, completionHandler: nil);
+                        retrieveInfo(for: channel.jid.bareJid, completionHandler: nil);
                     }
                     if self.automaticRetrieve.contains(.affiliations) {
                         retrieveAffiliations(for: channel, completionHandler: nil);
                     }
                     if self.automaticRetrieve.contains(.avatar) {
-                        retrieveAvatar(for: channel.channelJid, completionHandler: nil);
+                        retrieveAvatar(for: channel.jid.bareJid, completionHandler: nil);
                     }
                 }
             }
@@ -721,7 +726,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         /// Received message
         public let message: Message!;
         /// Room which delivered message
-        public let channel: Channel!;
+        public let channel: ChannelProtocol!;
         /// Nickname of message sender
         public let nickname: String?;
         /// Sender real JID
@@ -738,7 +743,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
             super.init(type: "MixModuleMessageReceivedEvent")
         }
         
-        public init(context: Context, message: Message, channel: Channel, nickname: String?, senderJid: BareJID?, timestamp: Date) {
+        public init(context: Context, message: Message, channel: ChannelProtocol, nickname: String?, senderJid: BareJID?, timestamp: Date) {
             self.message = message;
             self.channel = channel;
             self.nickname = nickname;
@@ -753,14 +758,14 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         
         public static let TYPE = ChannelStateChangedEvent();
 
-        public let channel: Channel!;
+        public let channel: ChannelProtocol!;
 
         init() {
             self.channel = nil;
             super.init(type: "MixModuleChannelStateChangedEvent");
         }
         
-        public init(context: Context, channel: Channel) {
+        public init(context: Context, channel: ChannelProtocol) {
             self.channel = channel;
             super.init(type: "MixModuleChannelStateChangedEvent", context: context)
         }
@@ -770,7 +775,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         
         public static let TYPE = ParticipantsChangedEvent();
 
-        public let channel: Channel!;
+        public let channel: ChannelProtocol!;
         public let joined: [MixParticipant];
         public let left: [MixParticipant];
         
@@ -781,7 +786,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
             super.init(type: "MixModuleParticipantChangedEvent")
         }
         
-        public init(context: Context, channel: Channel, joined: [MixParticipant] = [], left: [MixParticipant] = []) {
+        public init(context: Context, channel: ChannelProtocol, joined: [MixParticipant] = [], left: [MixParticipant] = []) {
             self.channel = channel;
             self.joined = joined;
             self.left = left;
@@ -798,21 +803,21 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         
         public static let TYPE = ChannelPermissionsChangedEvent();
 
-        public let channel: Channel!;
+        public let channel: ChannelProtocol!;
 
         init() {
             self.channel = nil;
             super.init(type: "MixModuleChannelPermissionsChangedEvent");
         }
         
-        public init(context: Context, channel: Channel) {
+        public init(context: Context, channel: ChannelProtocol) {
             self.channel = channel;
             super.init(type: "MixModuleChannelPermissionsChangedEvent", context: context);
         }
     }
 
     public typealias ParticipantsResult = Result<[MixParticipant],XMPPError>
-    public typealias PermissionsResult = Result<[Channel.Permission],XMPPError>
+    public typealias PermissionsResult = Result<[ChannelPermission],XMPPError>
     
 }
 

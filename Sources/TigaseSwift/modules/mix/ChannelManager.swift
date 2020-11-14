@@ -21,19 +21,20 @@
 
 import Foundation
 
-public protocol ChannelManager {
+public protocol ChannelManager: ContextLifecycleAware {
 
-    func channels() -> [Channel];
+    func channels(for context: Context) -> [ChannelProtocol];
     
-    func createChannel(jid: BareJID, participantId: String, nick: String?, state: Channel.State) -> Result<Channel,ErrorCondition>;
+    func createChannel(for context: Context, with jid: BareJID, participantId: String, nick: String?, state: ChannelState) -> ConversationCreateResult<ChannelProtocol>;
     
-    func channel(for channelJid: BareJID) -> Channel?;
+    func channel(for context: Context, with channelJid: BareJID) -> ChannelProtocol?;
     
-    func close(channel: Channel) -> Bool;
+    func close(channel: ChannelProtocol) -> Bool;
     
-    func update(channel: Channel, nick: String?) -> Bool;
+    func update(channel: ChannelProtocol, nick: String?) -> Bool;
     
-    func update(channel: BareJID, info: ChannelInfo) -> Bool;
+    func update(for context: Context, channel: BareJID, info: ChannelInfo) -> Bool;
     
-    func update(channel: BareJID, state: Channel.State) -> Bool;
+    func update(for context: Context, channel: BareJID, state: ChannelState) -> Bool;
+    
 }

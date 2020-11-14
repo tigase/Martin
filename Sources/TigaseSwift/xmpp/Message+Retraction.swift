@@ -52,9 +52,9 @@ extension CapabilitiesModule.AdditionalFeatures {
     
 }
 
-extension Chat {
+extension ChatProtocol {
     
-    open func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
+    public func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
         let message = Message();
         message.type = .chat;
         message.to = JID(jid);
@@ -66,9 +66,9 @@ extension Chat {
 
 }
 
-extension Room {
+extension RoomProtocol {
     
-    open func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
+    public func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
         let message = Message();
         message.type = .groupchat;
         message.to = JID(jid);
@@ -80,9 +80,9 @@ extension Room {
 
 }
 
-extension Channel {
+extension ChannelProtocol {
     
-    open func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
+    public func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
         let message = Message();
         message.type = .groupchat;
         message.to = JID(jid);

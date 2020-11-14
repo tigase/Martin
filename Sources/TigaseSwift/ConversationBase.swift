@@ -1,8 +1,8 @@
 //
-// ChatStore.swift
+// ConversationBase.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,16 +21,16 @@
 
 import Foundation
 
-public protocol ChatStore: ContextLifecycleAware {
+open class ConversationBase: ConversationProtocol {
     
-    associatedtype Chat: ChatProtocol
+    open weak var context: Context?;
+    public let account: BareJID;
+    public let jid: JID;
     
-    func chats(for context: Context) -> [Chat];
+    public init(context: Context, jid: JID) {
+        self.context = context;
+        self.jid = jid;
+        self.account = context.userBareJid;
+    }
     
-    func chat(for context: Context, with: JID) -> Chat?;
-    
-    func createChat(for context: Context, with: JID) -> ConversationCreateResult<Chat>;
-    
-    func close(chat: Chat) -> Bool;
-
 }

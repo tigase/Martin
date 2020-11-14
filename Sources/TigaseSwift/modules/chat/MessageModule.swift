@@ -38,60 +38,57 @@ open class MessageModule: XmppModuleBase, XmppModule {
     
     public let features = [String]();
     
-    /// Instance of `ChatManager`
-    public let chatManager:ChatManager!;
+    /// Instance of `chatsManager`
+    public let chatsManager: ChatManager;
     
-    public convenience init(client: XMPPClient) {
-        self.init(chatManager: DefaultChatManager(context: client.context));
+    open override var context: Context? {
+        didSet {
+            oldValue?.unregister(lifecycleAware: chatsManager);
+            context?.register(lifecycleAware: chatsManager);
+        }
     }
+//    public convenience init(client: XMPPClient) {
+//        self.init(chatsManager: DefaultchatsManager(context: client.context));
+//    }
     
-    public init(chatManager: ChatManager) {
-        self.chatManager = chatManager;
+    public init(chatsManager: ChatManager) {
+        self.chatsManager = chatsManager;
     }
-    
-    /**
-     Create chat for message exchange
-     - parameter jid: recipient of messages
-     - parameter thread: thread id of chat
-     - returns: instance of `Chat`
-     */
-    open func createChat(with jid:JID, thread: String? = UIDGenerator.nextUid) -> Chat? {
-        return chatManager.createChat(with: jid, thread: thread);
-    }
-    
+        
     open func process(stanza: Stanza) {
         let message = stanza as! Message;
         _ = processMessage(message, interlocutorJid: message.from);
     }
     
-    open func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> Chat? {
-        guard let jid = interlocutorJid, let chat = getOrCreateChatForProcessing(message: message, interlocutorJid: jid) else {
-            if let context = context {
-                fire(MessageReceivedEvent(context: context, chat: nil, message: message));
-            }
+    open func processMessage(_ message: Message, interlocutorJid: JID?, fireEvents: Bool = true) -> ChatProtocol? {
+        guard let context = self.context else {
             return nil;
         }
-        
-        if chat.jid != jid {
-            chat.jid = jid;
+        guard let jid = interlocutorJid, let chat = chat(forMessage: message, interlocutorJid: jid, context: context) else {
+            return nil;
         }
-        if chat.thread != message.thread {
-            chat.thread = message.thread;
-        }
-        
-        if fireEvents, let context = context {
+                
+        if fireEvents {
             fire(MessageReceivedEvent(context: context, chat: chat, message: message));
         }
         
         return chat;
     }
     
-    fileprivate func getOrCreateChatForProcessing(message: Message, interlocutorJid: JID) -> Chat? {
-        if message.body != nil && (message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || context?.modulesManager.moduleOrNil(.muc) == nil) {
-            return chatManager.getChatOrCreate(with: interlocutorJid, thread: message.thread);
-        } else {
-            return chatManager.getChat(with: interlocutorJid, thread: message.thread);
+    private func chat(forMessage message: Message, interlocutorJid: JID, context: Context) -> ChatProtocol? {
+        // do not process 1-1 chats for MUCs
+        guard message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || context.moduleOrNil(.muc) == nil else {
+            return nil;
         }
+        
+        guard let chat = chatsManager.chat(for: context, with: interlocutorJid) else {
+            guard message.body != nil else {
+                return nil;
+            }
+            return chatsManager.createChat(for: context, with: interlocutorJid.withoutResource);
+        }
+        
+        return chat;
     }
     
     /**
@@ -102,7 +99,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
      - parameter subject: subject of message
      - parameter additionalElements: array of additional elements to add to message
      */
-    open func sendMessage(in chat:Chat, body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
+    open func sendMessage(in chat: ChatProtocol, body: String, type: StanzaType = StanzaType.chat, subject: String? = nil, additionalElements: [Element]? = nil) -> Message {
         let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
         write(msg);
         return msg;
@@ -114,14 +111,14 @@ open class MessageModule: XmppModuleBase, XmppModule {
         public static let TYPE = ChatCreatedEvent();
         
         /// Instance of opened chat
-        public let chat:Chat!;
+        public let chat:ChatProtocol!;
         
         fileprivate init() {
             self.chat = nil;
             super.init(type: "ChatCreatedEvent");
         }
         
-        public init(context: Context, chat: Chat) {
+        public init(context: Context, chat: ChatProtocol) {
             self.chat = chat;
             super.init(type: "ChatCreatedEvent", context: context);
         }
@@ -133,14 +130,14 @@ open class MessageModule: XmppModuleBase, XmppModule {
         public static let TYPE = ChatClosedEvent();
         
         /// Instance of closed chat
-        public let chat:Chat!;
+        public let chat:ChatProtocol!;
         
         fileprivate init() {
             self.chat = nil;
             super.init(type: "ChatClosedEvent")
         }
         
-        public init(context: Context, chat:Chat) {
+        public init(context: Context, chat:ChatProtocol) {
             self.chat = chat;
             super.init(type: "ChatClosedEvent", context: context);
         }
@@ -151,7 +148,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = MessageReceivedEvent();
         
-        public let chat:Chat?;
+        public let chat:ChatProtocol?;
         /// Received message
         public let message:Message!;
         
@@ -161,7 +158,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
             super.init(type: "MessageReceivedEvent");
         }
         
-        public init(context: Context, chat:Chat?, message:Message) {
+        public init(context: Context, chat:ChatProtocol?, message:Message) {
             self.chat = chat;
             self.message = message;
             super.init(type: "MessageReceivedEvent", context: context);

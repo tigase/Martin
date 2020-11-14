@@ -2,7 +2,7 @@
 // RoomStore.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,15 +21,15 @@
 
 import Foundation
 
-public protocol RoomStore {
+public protocol RoomStore: ContextLifecycleAware {
     
-    var dispatcher: QueueDispatcher { get }
+    associatedtype Room: RoomProtocol
     
-    var rooms: [Room] { get }
+    func rooms(for context: Context) -> [Room];
     
-    func room(for jid: BareJID) -> Room?;
+    func room(for context: Context, with jid: BareJID) -> Room?;
     
-    func createRoom(roomJid: BareJID, nickname: String, password: String?) -> Result<Room, ErrorCondition>;
+    func createRoom(for context: Context, with jid: BareJID, nickname: String, password: String?) -> ConversationCreateResult<Room>;
     
     func close(room: Room) -> Bool;
     

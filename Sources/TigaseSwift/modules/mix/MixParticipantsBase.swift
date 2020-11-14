@@ -1,5 +1,5 @@
 //
-// DefaultChannelManager.swift
+// MixParticipantsBase.swift
 //
 // TigaseSwift
 // Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
@@ -21,10 +21,29 @@
 
 import Foundation
 
-open class DefaultChannelManager: ChannelManagerBase<DefaultChannelStore> {
+public class MixParticipantsBase: MixParticipantsProtocol {
     
-    public override init(store: DefaultChannelStore) {
-        super.init(store: store);
+    public private(set) var participants: [String: MixParticipant] = [:]
+    
+    init() {}
+    
+    public var values: [MixParticipant] {
+        return Array(participants.values);
+    }
+        
+    public func participant(withId id: String) -> MixParticipant? {
+        return participants[id];
     }
     
+    public func set(participants: [MixParticipant]) {
+        self.participants = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) });
+    }
+    
+    public func update(participant: MixParticipant) {
+        self.participants[participant.id] = participant;
+    }
+    
+    public func removeParticipant(withId id: String) -> MixParticipant? {
+        self.participants.removeValue(forKey: id);
+    }
 }
