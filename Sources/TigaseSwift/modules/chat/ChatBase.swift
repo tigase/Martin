@@ -23,7 +23,12 @@ import Foundation
 
 open class ChatBase: ConversationBase, ChatProtocol {
             
+    open override var defaultMessageType: StanzaType {
+        return .chat;
+    }
+    
     public override init(context: Context, jid: JID) {
         super.init(context: context, jid: jid);
     }
+    
 }

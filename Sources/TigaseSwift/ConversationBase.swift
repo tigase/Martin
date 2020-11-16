@@ -27,10 +27,41 @@ open class ConversationBase: ConversationProtocol {
     public let account: BareJID;
     public let jid: JID;
     
+    open var defaultMessageType: StanzaType {
+        return .normal;
+    }
+    
     public init(context: Context, jid: JID) {
         self.context = context;
         self.jid = jid;
         self.account = context.userBareJid;
+    }
+
+    open func createMessage(text: String, id: String, type: StanzaType) -> Message {
+        let msg = Message();
+        msg.to = jid;
+        msg.id = id;
+        msg.originId = id;
+        msg.type = type;
+        msg.body = text;
+        return msg;
+    }
+    
+    public func createMessage(text: String, id: String?) -> Message {
+        if let id = id {
+            return createMessage(text: text, id: id, type: defaultMessageType);
+        } else {
+            return createMessage(text: text);
+        }
+    }
+    
+    open func send(message: Message, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
+        message.to = self.jid;
+        guard let context = self.context else {
+            completionHandler?(.failure(.remote_server_timeout));
+            return;
+        }
+        context.writer.write(message, writeCompleted: completionHandler);
     }
     
 }

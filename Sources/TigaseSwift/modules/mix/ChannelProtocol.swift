@@ -34,6 +34,14 @@ public protocol ChannelProtocol: ConversationProtocol {
     func update(permissions: Set<ChannelPermission>)
 }
 
+extension ChannelProtocol {
+    
+    public func has(permission: ChannelPermission) -> Bool {
+        return permissions?.contains(permission) ?? false;
+    }
+    
+}
+
 public enum ChannelState: Int {
     case left = 0
     case joined = 1

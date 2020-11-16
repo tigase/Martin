@@ -25,7 +25,6 @@ public protocol ChannelStore: ContextLifecycleAware {
 
     associatedtype Channel: ChannelProtocol
     
-    var dispatcher: QueueDispatcher { get }
 //    var channelEvents: AnyPublisher<ConverstaionStoreAction<Channel>,Never> { get }
 
     func channels(for context: Context) -> [Channel];

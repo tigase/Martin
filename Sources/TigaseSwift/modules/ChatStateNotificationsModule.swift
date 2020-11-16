@@ -118,16 +118,3 @@ extension Message {
     }
     
 }
-
-extension ChatProtocol {
-    
-    public func createMessage(_ body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, chatState: ChatState?, additionalElements:[Element]? = nil) -> Message {
-        let msg = self.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
-        
-        if (chatState != nil) {
-            msg.chatState = chatState;
-        }
-        
-        return msg;
-    }
-}

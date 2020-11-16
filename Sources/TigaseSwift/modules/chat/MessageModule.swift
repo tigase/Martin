@@ -38,21 +38,21 @@ open class MessageModule: XmppModuleBase, XmppModule {
     
     public let features = [String]();
     
-    /// Instance of `chatsManager`
-    public let chatsManager: ChatManager;
+    /// Instance of `chatManager`
+    public let chatManager: ChatManager;
     
     open override var context: Context? {
         didSet {
-            oldValue?.unregister(lifecycleAware: chatsManager);
-            context?.register(lifecycleAware: chatsManager);
+            oldValue?.unregister(lifecycleAware: chatManager);
+            context?.register(lifecycleAware: chatManager);
         }
     }
 //    public convenience init(client: XMPPClient) {
 //        self.init(chatsManager: DefaultchatsManager(context: client.context));
 //    }
     
-    public init(chatsManager: ChatManager) {
-        self.chatsManager = chatsManager;
+    public init(chatManager: ChatManager) {
+        self.chatManager = chatManager;
     }
         
     open func process(stanza: Stanza) {
@@ -81,28 +81,14 @@ open class MessageModule: XmppModuleBase, XmppModule {
             return nil;
         }
         
-        guard let chat = chatsManager.chat(for: context, with: interlocutorJid) else {
+        guard let chat = chatManager.chat(for: context, with: interlocutorJid) else {
             guard message.body != nil else {
                 return nil;
             }
-            return chatsManager.createChat(for: context, with: interlocutorJid.withoutResource);
+            return chatManager.createChat(for: context, with: interlocutorJid.withoutResource);
         }
         
         return chat;
-    }
-    
-    /**
-     Send message as part of message exchange
-     - parameter chat: instance of Chat
-     - parameter body: text of message to send
-     - parameter type: type of message
-     - parameter subject: subject of message
-     - parameter additionalElements: array of additional elements to add to message
-     */
-    open func sendMessage(in chat: ChatProtocol, body: String, type: StanzaType = StanzaType.chat, subject: String? = nil, additionalElements: [Element]? = nil) -> Message {
-        let msg = chat.createMessage(body, type: type, subject: subject, additionalElements: additionalElements);
-        write(msg);
-        return msg;
     }
         
     /// Event fired when Chat is created/opened

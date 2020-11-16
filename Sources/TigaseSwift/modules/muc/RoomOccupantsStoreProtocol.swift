@@ -22,7 +22,7 @@
 import Foundation
 
 public protocol RoomOccupantsStoreProtocol {
-    
+    var occupants: [MucOccupant] { get }
     func occupant(nickname: String) -> MucOccupant?;
     func add(occupant: MucOccupant);
     func remove(occupant: MucOccupant);

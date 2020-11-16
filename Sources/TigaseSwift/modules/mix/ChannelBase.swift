@@ -23,6 +23,10 @@ import Foundation
 
 open class ChannelBase: ConversationBase, ChannelProtocol {
         
+    open override var defaultMessageType: StanzaType {
+        return .groupchat;
+    }
+    
     public let participantId: String;
     open var nickname: String?;
     open private(set) var state: ChannelState;

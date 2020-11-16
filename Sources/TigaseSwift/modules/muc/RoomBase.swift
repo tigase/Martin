@@ -23,6 +23,10 @@ import Foundation
 
 open class RoomBase: ConversationBase, RoomProtocol {
     
+    open override var defaultMessageType: StanzaType {
+        return .groupchat;
+    }
+
     private var _state: RoomState = .not_joined;
     public var state: RoomState {
         get {
@@ -39,22 +43,8 @@ open class RoomBase: ConversationBase, RoomProtocol {
     public let nickname: String;
     public let password: String?;
     
-    private let occupants = RoomOccupantsStoreBase();
+    private let occupantsStore = RoomOccupantsStoreBase();
     private let dispatcher: QueueDispatcher;
-    
-    private var _lastMessageDate: Date? = nil;
-    public var lastMessageDate: Date? {
-        get {
-            return dispatcher.sync {
-                return _lastMessageDate;
-            }
-        }
-        set {
-            dispatcher.async(flags: .barrier) {
-                self._lastMessageDate = newValue;
-            }
-        }
-    }
     
     public init(context: Context, jid: BareJID, nickname: String, password: String?, dispatcher: QueueDispatcher) {
         self.nickname = nickname;
@@ -63,33 +53,39 @@ open class RoomBase: ConversationBase, RoomProtocol {
         super.init(context: context, jid: JID(jid));
     }
     
+    public var occupants: [MucOccupant] {
+        return dispatcher.sync {
+            return self.occupantsStore.occupants;
+        }
+    }
+    
     public func occupant(nickname: String) -> MucOccupant? {
         return dispatcher.sync {
-            return occupants.occupant(nickname: nickname);
+            return occupantsStore.occupant(nickname: nickname);
         }
     }
     
     public func add(occupant: MucOccupant) {
         dispatcher.async(flags: .barrier) {
-            self.occupants.add(occupant: occupant);
+            self.occupantsStore.add(occupant: occupant);
         }
     }
     
     public func remove(occupant: MucOccupant) {
         dispatcher.async(flags: .barrier) {
-            self.occupants.remove(occupant: occupant);
+            self.occupantsStore.remove(occupant: occupant);
         }
     }
     
     public func addTemp(nickname: String, occupant: MucOccupant) {
         dispatcher.async(flags: .barrier) {
-            self.occupants.addTemp(nickname: nickname, occupant: occupant);
+            self.occupantsStore.addTemp(nickname: nickname, occupant: occupant);
         }
     }
     
     public func removeTemp(nickname: String) -> MucOccupant? {
         return dispatcher.sync(flags: .barrier) {
-            return occupants.removeTemp(nickname: nickname);
+            return occupantsStore.removeTemp(nickname: nickname);
         }
     }
 }

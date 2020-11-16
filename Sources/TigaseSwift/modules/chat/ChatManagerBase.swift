@@ -34,9 +34,9 @@ open class BaseChatManagerBase<Chat: ChatProtocol> {
 
 open class ChatManagerBase<Store: ChatStore>: BaseChatManagerBase<Store.Chat>, ChatManager {
     
-    public let store: DefaultChatStore;
+    public let store: Store;
 
-    public init(store: DefaultChatStore) {
+    public init(store: Store) {
         self.store = store;
     }
     
@@ -61,7 +61,7 @@ open class ChatManagerBase<Store: ChatStore>: BaseChatManagerBase<Store.Chat>, C
     }
     
     open func close(chat: ChatProtocol) -> Bool {
-        let result = store.close(chat: chat as! ChatBase);
+        let result = store.close(chat: chat as! Store.Chat);
         if result, let context = chat.context {
             context.eventBus.fire(MessageModule.ChatClosedEvent(context: context, chat: chat));
         }

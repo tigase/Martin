@@ -22,10 +22,29 @@
 import Foundation
 
 public protocol ConversationProtocol: class {
-
+    
     var context: Context? { get }
     var account: BareJID { get }
     var jid: JID { get }
+    
+    var defaultMessageType: StanzaType { get }
+    
+    func send(message: Message, completionHandler: ((Result<Void,XMPPError>)->Void)?);
+    
+    func createMessage(text: String, id: String, type: StanzaType) -> Message;
+
+    func createMessage(text: String, id: String?) -> Message;
+}
+
+extension ConversationProtocol {
+    
+    public func createMessage(text: String, type: StanzaType) -> Message {
+        return createMessage(text: text, id: UUID().uuidString, type: type);
+    }
+    
+    public func createMessage(text: String) -> Message {
+        return createMessage(text: text, type: defaultMessageType);
+    }
     
 }
 

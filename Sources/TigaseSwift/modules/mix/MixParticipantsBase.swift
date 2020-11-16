@@ -27,6 +27,10 @@ public class MixParticipantsBase: MixParticipantsProtocol {
     
     init() {}
     
+    public var count: Int {
+        return participants.count;
+    }
+    
     public var values: [MixParticipant] {
         return Array(participants.values);
     }

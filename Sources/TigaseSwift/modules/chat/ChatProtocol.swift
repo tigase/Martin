@@ -24,31 +24,3 @@ import Foundation
 public protocol ChatProtocol: ConversationProtocol {
     
 }
-
-extension ChatProtocol {
-    
-    public func sendMessage(_ body: String, subject: String?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        guard let context = context else {
-            completionHandler(.failure(.recipient_unavailable(nil)));
-            return;
-        }
-        
-        let message = createMessage(body, subject: subject);
-        context.writer.write(message, writeCompleted: completionHandler);
-    }
-    
-    public func createMessage(_ body:String, type:StanzaType = StanzaType.chat, subject:String? = nil, additionalElements:[Element]? = nil) -> Message {
-        let msg = Message();
-        msg.to = jid;
-        msg.type = type;
-        msg.body = body;
-        msg.subject = subject;
-        
-        if additionalElements != nil {
-            msg.addChildren(additionalElements!);
-        }
-    
-        return msg;
-    }
-    
-}

@@ -51,79 +51,16 @@ public enum RoomHistoryFetch {
 
 extension RoomProtocol {
     
-    public func rejoin() {
-        if let date = (self as? LastMessageTimestampAware)?.lastMessageTimestamp {
-            self.rejoin(fetchHistory: .from(date));
-        } else {
-            self.rejoin(fetchHistory: .initial);
+    public func rejoin(fetchHistory: RoomHistoryFetch, onJoined: ((RoomProtocol)->Void)? = nil) {
+        guard let context = self.context else {
+            return;
         }
+        context.module(.muc).join(room: self, fetchHistory: fetchHistory, onJoined: onJoined);
     }
     
-    public func rejoin(fetchHistory: RoomHistoryFetch) -> Presence {
-        let presence = Presence();
-        presence.to = jid.with(resource: nickname);
-        let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc");
-        presence.addChild(x);
-        if let password = password {
-            x.addChild(Element(name: "password", cdata: password));
-        }
-        
-        switch fetchHistory {
-        case .initial:
-            break;
-        case .from(let date):
-            let history = Element(name: "history");
-            history.setAttribute("since", value: TimestampHelper.format(date: date));
-            x.addChild(history);
-        case .skip:
-            let history = Element(name: "history");
-            history.setAttribute("maxchars", value: "0");
-            history.setAttribute("maxstanzas", value: "0");
-            x.addChild(history);
-        }
-        
-        state = .requested;
-        context?.writer.write(presence);
-        
-        return presence;
-    }
-    
-    /**
-     Send message to room
-     - parameter body: text to send
-     - parameter additionalElement: additional elements to add to message
-     */
-    public func sendMessage(_ body: String?, url: String? = nil, additionalElements: [Element]? = nil) {
-        let msg = createMessage(body);
-        if url != nil {
-            msg.oob = url;
-        }
-        if additionalElements != nil {
-            for elem in additionalElements! {
-                msg.addChild(elem);
-            }
-        }
-        context?.writer.write(msg);
-    }
-    
-    /**
-     Prepare message for sending to room
-     - parameter body: text to send
-     - returns: newly create message
-     */
-    public func createMessage(_ body: String?) -> Message {
-        let msg = Message();
-        msg.to = jid;
-        msg.type = StanzaType.groupchat;
-        msg.body = body;
-        return msg;
-    }
-    
-    public func createPrivateMessage(_ body: String?, recipientNickname: String) -> Message {
-        let msg = Message();
+    public func createPrivateMessage(_ body: String, recipientNickname: String) -> Message {
+        let msg = createMessage(text: body, id: UUID().uuidString, type: .chat);
         msg.to = jid.with(resource: recipientNickname);
-        msg.type = StanzaType.chat;
-        msg.body = body;
         msg.addChild(Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user"));
         return msg;
     }

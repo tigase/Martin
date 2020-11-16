@@ -26,6 +26,10 @@ open class RoomOccupantsStoreBase: RoomOccupantsStoreProtocol {
     private var presences: [String: MucOccupant] = [:];
     private var tempOccupants: [String: MucOccupant] = [:]
     
+    public var occupants: [MucOccupant] {
+        return Array(presences.values);
+    }
+    
     public func occupant(nickname: String) -> MucOccupant? {
         return presences[nickname];
     }

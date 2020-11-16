@@ -260,15 +260,48 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
                 if let ifCreated = ifCreated {
                     self.roomCreationHandlers[roomJid] = ifCreated
                 }
-                if let onJoined = onJoined {
-                    self.roomJoinedHandlers[roomJid] = onJoined;
-                }
             }
-            let presence = result.rejoin(fetchHistory: .initial);
-            self.fire(JoinRequestedEvent(context: context, presence: presence, room: result, nickname: nickname));
+            join(room: result, fetchHistory: .initial, onJoined: onJoined);
             return .success(result);
         }
         return .failure(.undefined_condition);
+    }
+    
+    open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch, onJoined: ((RoomProtocol)->Void)? = nil) {
+        guard let context = self.context else {
+            return;
+        }
+        context.dispatcher.async {
+            if let onJoined = onJoined {
+                self.roomJoinedHandlers[room.jid.bareJid] = onJoined;
+            }
+        }
+        
+        let presence = Presence();
+        presence.to = room.jid.with(resource: room.nickname);
+        let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc");
+        presence.addChild(x);
+        if let password = room.password {
+            x.addChild(Element(name: "password", cdata: password));
+        }
+        
+        switch fetchHistory {
+        case .initial:
+            break;
+        case .from(let date):
+            let history = Element(name: "history");
+            history.setAttribute("since", value: TimestampHelper.format(date: date));
+            x.addChild(history);
+        case .skip:
+            let history = Element(name: "history");
+            history.setAttribute("maxchars", value: "0");
+            history.setAttribute("maxstanzas", value: "0");
+            x.addChild(history);
+        }
+        
+        room.state = .requested;
+        self.fire(JoinRequestedEvent(context: context, presence: presence, room: room, nickname: room.nickname));
+        write(presence);
     }
     
     /**

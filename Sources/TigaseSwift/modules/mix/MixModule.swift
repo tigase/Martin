@@ -164,7 +164,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         });
     }
     
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
         guard let context = self.context else {
             completionHandler(.failure(.remote_server_timeout));
             return;
@@ -187,13 +187,14 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                             let jid = BareJID(String(resultJid[resultJid.index(after: idx)..<resultJid.endIndex]));
                             self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                             
-                            self.retrieveHistory(fromChannel: channelJid, max: 100);
+                            self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
                             if presenceSubscription {
                                 self.presenceModule?.subscribed(by: JID(channelJid));
                                 self.presenceModule?.subscribe(to: JID(channelJid));
                             }
                         } else if let participantId = joinEl.getAttribute("id") {
                             self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
+                            self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
                             if presenceSubscription {
                                 self.presenceModule?.subscribed(by: JID(channelJid));
                                 self.presenceModule?.subscribe(to: JID(channelJid));
@@ -214,6 +215,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 switch result {
                 case .success(let response):
                     if let joinEl = response.findChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.getAttribute("id") {
+                        self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
                         self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                     }
                 default:
