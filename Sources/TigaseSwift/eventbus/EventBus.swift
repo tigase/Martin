@@ -89,7 +89,12 @@ open class EventBus {
             for event in events {
                 let type = event.type;
                 if var handlers = self.handlersByEvent[type] {
-                    if let idx = handlers.firstIndex(where: { $0.eventHandler === handler }) {
+                    if let idx = handlers.firstIndex(where: {
+                        if let eventHandler = $0.eventHandler {
+                            return eventHandler === handler;
+                        }
+                        return false;
+                    }) {
                         handlers.remove(at: idx);
                     }
                     self.handlersByEvent[type] = handlers;

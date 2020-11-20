@@ -134,7 +134,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = MessageReceivedEvent();
         
-        public let chat:ChatProtocol?;
+        public let chat:ChatProtocol!;
         /// Received message
         public let message:Message!;
         
@@ -144,7 +144,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
             super.init(type: "MessageReceivedEvent");
         }
         
-        public init(context: Context, chat:ChatProtocol?, message:Message) {
+        public init(context: Context, chat:ChatProtocol, message:Message) {
             self.chat = chat;
             self.message = message;
             super.init(type: "MessageReceivedEvent", context: context);

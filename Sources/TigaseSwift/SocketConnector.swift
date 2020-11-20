@@ -185,6 +185,14 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     
     deinit {
         self.queue.sync {
+            if let inStream = self.inStream {
+                inStream.close();
+                inStream.remove(from: .main, forMode: .default);
+            }
+            if let outStream = self.outStream {
+                outStream.close();
+                outStream.remove(from: .main, forMode: .default);
+            }
             stateSubscription?.cancel();
         }
     }
@@ -296,6 +304,8 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
         if (ssl) {
             configureTLS(directTls: true);
         } else {
+            let inStream = self.inStream;
+            logger.debug("opening stream: \(inStream) in state: \(self.state) for \(addr)");
             self.inStream!.open();
             self.outStream!.open();
         }
