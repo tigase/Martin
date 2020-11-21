@@ -68,6 +68,10 @@ open class ScramMechanism: SaslMechanism {
         self.serverKeyData = serverKey;
     }
     
+    public func reset(scope: ResetableScope) {
+        status = .new;
+    }
+
     open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
         guard status != .completed else {
             guard input == nil else {

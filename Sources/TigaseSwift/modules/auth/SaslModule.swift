@@ -90,6 +90,9 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     
     open func reset(scope: ResetableScope) {
         self.mechanismInUse = nil;
+        for mechanism in mechanisms.values {
+            mechanism.reset(scope: scope);
+        }
     }
     
     /**

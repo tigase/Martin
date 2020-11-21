@@ -139,7 +139,6 @@ open class XMPPClient: Context, EventHandler {
     deinit {
         releaseKeepAlive();
         stateSubscription?.cancel();
-        eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
         let jid = connectionConfiguration.userJid;
         logger.error("deinitializing client for: \(jid)")
     }

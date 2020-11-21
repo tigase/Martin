@@ -25,7 +25,7 @@ import Foundation
  Protocol which must be implemented by every mechanism for SASL based 
  authentication.
  */
-public protocol SaslMechanism: class {
+public protocol SaslMechanism: class, Resetable {
 
     /// Mechanism name
     var name: String { get }

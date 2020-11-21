@@ -30,6 +30,10 @@ open class PlainMechanism: SaslMechanism {
 
     public private(set) var status: SaslMechanismStatus = .new;
     
+    public func reset(scope: ResetableScope) {
+        status = .new;
+    }
+    
     /**
      Process input data to generate response
      - parameter input: input data

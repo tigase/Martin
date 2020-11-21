@@ -35,6 +35,10 @@ open class AnonymousMechanism: SaslMechanism {
         
     }
     
+    public func reset(scope: ResetableScope) {
+        status = .new;
+    }
+    
     open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
         status = .completed;
         return nil;
