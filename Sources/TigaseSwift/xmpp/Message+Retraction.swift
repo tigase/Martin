@@ -52,40 +52,10 @@ extension CapabilitiesModule.AdditionalFeatures {
     
 }
 
-extension ChatProtocol {
+extension ConversationProtocol {
     
     public func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
-        let message = Message();
-        message.type = .chat;
-        message.to = JID(jid);
-        message.messageRetractionId = msgId;
-        message.addChildren([Element(name: "fallback", xmlns: "urn:xmpp:fallback:0"), Element(name: "body", cdata: body ?? "This person attempted to retract a previous message, but it's unsupported by your client.")]);
-        message.hints = [.store];
-        return message;
-    }
-
-}
-
-extension RoomProtocol {
-    
-    public func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
-        let message = Message();
-        message.type = .groupchat;
-        message.to = JID(jid);
-        message.messageRetractionId = msgId;
-        message.addChildren([Element(name: "fallback", xmlns: "urn:xmpp:fallback:0"), Element(name: "body", cdata: body ?? "This person attempted to retract a previous message, but it's unsupported by your client.")]);
-        message.hints = [.store];
-        return message;
-    }
-
-}
-
-extension ChannelProtocol {
-    
-    public func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
-        let message = Message();
-        message.type = .groupchat;
-        message.to = JID(jid);
+        let message = createMessage();
         message.messageRetractionId = msgId;
         message.addChildren([Element(name: "fallback", xmlns: "urn:xmpp:fallback:0"), Element(name: "body", cdata: body ?? "This person attempted to retract a previous message, but it's unsupported by your client.")]);
         message.hints = [.store];

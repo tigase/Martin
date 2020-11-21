@@ -27,6 +27,8 @@ public struct XmppModuleIdentifier<T: XmppModule> {
         return T.ID;
     }
 
+    public init() {}
+    
 }
 
 

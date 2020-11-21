@@ -31,12 +31,18 @@ public protocol ConversationProtocol: class {
     
     func send(message: Message, completionHandler: ((Result<Void,XMPPError>)->Void)?);
     
+    func createMessage(id: String, type: StanzaType) -> Message;
+    
     func createMessage(text: String, id: String, type: StanzaType) -> Message;
 
     func createMessage(text: String, id: String?) -> Message;
 }
 
 extension ConversationProtocol {
+    
+    public func createMessage() -> Message {
+        return createMessage(id: UUID().uuidString, type: defaultMessageType);
+    }
     
     public func createMessage(text: String, type: StanzaType) -> Message {
         return createMessage(text: text, id: UUID().uuidString, type: type);

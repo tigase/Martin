@@ -37,13 +37,19 @@ open class ConversationBase: ConversationProtocol {
         self.account = context.userBareJid;
     }
 
-    open func createMessage(text: String, id: String, type: StanzaType) -> Message {
+    public func createMessage(id: String, type: StanzaType) -> Message {
         let msg = Message();
         msg.to = jid;
         msg.id = id;
         msg.originId = id;
         msg.type = type;
+        return msg;
+    }
+    
+    open func createMessage(text: String, id: String, type: StanzaType) -> Message {
+        let msg = createMessage(id: id, type: type);
         msg.body = text;
+        msg.messageDelivery = .request;
         return msg;
     }
     
