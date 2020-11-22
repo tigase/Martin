@@ -24,7 +24,7 @@ import Foundation
 /**
  XMPP entity address form `localpart@domainpart/resourcepart`
  */
-open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringValue {
+public struct JID : CustomStringConvertible, Hashable, Equatable, Codable, StringValue {
     
     /// BareJID part of JID
     public let bareJid:BareJID;
@@ -38,19 +38,19 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
         return "\(bareJid)/\(resource)";
     }
     /// Local part
-    open var localPart:String? {
+    public var localPart:String? {
         return self.bareJid.localPart;
     }
     // Domain part
-    open var domain:String! {
+    public var domain:String! {
         return self.bareJid.domain;
     }
     
-    open var withoutResource: JID {
+    public var withoutResource: JID {
         return JID(bareJid);
     }
     
-    required public convenience init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         self.init(try decoder.singleValueContainer().decode(String.self));
     }
     
@@ -85,30 +85,30 @@ open class JID : CustomStringConvertible, Hashable, Equatable, Codable, StringVa
     /**
      Convenience constructor with support for `nil` string representation of `JID`
      */
-    public convenience init?(_ jid: String?) {
+    public init?(_ jid: String?) {
         guard jid != nil else {
             return nil;
         }
         self.init(jid!);
     }
     
-    open var description : String {
+    public var description : String {
         return self.stringValue;
     }
     
-    open func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(bareJid);
         if resource != nil {
             hasher.combine(resource);
         }
     }
     
-    open func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer();
         try container.encode(self.stringValue);
     }
     
-    open func with(resource: String) -> JID {
+    public func with(resource: String) -> JID {
         return JID(bareJid, resource: resource);
     }
 }
@@ -126,7 +126,7 @@ public func ==(lhs: JID, rhs: JID) -> Bool {
 
 extension BareJID {
     
-    open func with(resource: String) -> JID {
+    public func with(resource: String) -> JID {
         return JID(self, resource: resource);
     }
     

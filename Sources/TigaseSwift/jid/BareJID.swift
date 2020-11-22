@@ -24,7 +24,7 @@ import Foundation
 /**
  XMPP entity address for `localpart@domainpart`
  */
-open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, StringValue, Comparable {
+public struct BareJID :CustomStringConvertible, Hashable, Equatable, Codable, StringValue, Comparable {
     
     public static func < (lhs: BareJID, rhs: BareJID) -> Bool {
         return lhs.stringValue.compare(rhs.stringValue) == .orderedAscending;
@@ -43,7 +43,7 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
         return "\(localPart)@\(domain)";
     }
     
-    required public convenience init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         self.init(try decoder.singleValueContainer().decode(String.self));
     }
     
@@ -56,17 +56,6 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
         self.localPart = localPart;
         self.domain = domain;
         //self.stringValue = BareJID.toString(localPart, domain);
-    }
-    
-    /**
-     Create instance
-     
-     Useful for copying/cloning of `BareJID`
-     - parameter jid: instance of `BareJID`
-     */
-    public init(_ jid: BareJID) {
-        self.localPart = jid.localPart
-        self.domain = jid.domain
     }
     
     /**
@@ -89,32 +78,23 @@ open class BareJID :CustomStringConvertible, Hashable, Equatable, Codable, Strin
      Convenience constructor which allows nil as parameter
      - parameter jid: string representation of bare JID
      */
-    public convenience init?(_ jid: String?) {
-        guard jid != nil else {
+    public init?(_ jid: String?) {
+        guard let jid = jid else {
             return nil;
         }
-        self.init(jid!);
+        self.init(jid);
     }
     
-    /**
-     Create new instance of `BareJID` from instance of `JID`
-     - parameter jid: JID to copy from
-     */
-    public init(_ jid: JID) {
-        self.domain = jid.domain
-        self.localPart = jid.localPart
-    }
-    
-    open var description : String {
+    public var description : String {
         return stringValue;
     }
     
-    open func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer();
         try container.encode(self.stringValue);
     }
     
-    open func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         if let localPart = self.localPart?.lowercased() {
             hasher.combine(localPart);
         }
