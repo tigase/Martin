@@ -25,9 +25,9 @@ public protocol ChatManager: ContextLifecycleAware {
     
     func chats(for context: Context) -> [ChatProtocol];
     
-    func chat(for context: Context, with: JID) -> ChatProtocol?;
+    func chat(for context: Context, with: BareJID) -> ChatProtocol?;
     
-    func createChat(for context: Context, with: JID) -> ChatProtocol?;
+    func createChat(for context: Context, with: BareJID) -> ChatProtocol?;
     
     func close(chat: ChatProtocol) -> Bool;
     

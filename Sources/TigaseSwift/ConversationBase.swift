@@ -25,13 +25,13 @@ open class ConversationBase: ConversationProtocol {
     
     open weak var context: Context?;
     public let account: BareJID;
-    public let jid: JID;
+    public let jid: BareJID;
     
     open var defaultMessageType: StanzaType {
         return .normal;
     }
     
-    public init(context: Context, jid: JID) {
+    public init(context: Context, jid: BareJID) {
         self.context = context;
         self.jid = jid;
         self.account = context.userBareJid;
@@ -39,7 +39,7 @@ open class ConversationBase: ConversationProtocol {
 
     public func createMessage(id: String, type: StanzaType) -> Message {
         let msg = Message();
-        msg.to = jid;
+        msg.to = JID(jid);
         msg.id = id;
         msg.originId = id;
         msg.type = type;
@@ -62,7 +62,7 @@ open class ConversationBase: ConversationProtocol {
     }
     
     open func send(message: Message, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
-        message.to = self.jid;
+        message.to = JID(self.jid);
         guard let context = self.context else {
             completionHandler?(.failure(.remote_server_timeout));
             return;

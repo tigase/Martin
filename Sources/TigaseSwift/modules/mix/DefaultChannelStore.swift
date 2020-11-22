@@ -54,7 +54,7 @@ open class DefaultChannelStore: ChannelStore {
     
     open func close(channel: Channel) -> Bool {
         return dispatcher.sync {
-            return self.items.removeValue(forKey: channel.jid.bareJid) != nil;
+            return self.items.removeValue(forKey: channel.jid) != nil;
         }
     }
 

@@ -27,7 +27,7 @@ open class ChatBase: ConversationBase, ChatProtocol {
         return .chat;
     }
     
-    public override init(context: Context, jid: JID) {
+    public override init(context: Context, jid: BareJID) {
         super.init(context: context, jid: jid);
     }
     

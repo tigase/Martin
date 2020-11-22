@@ -81,11 +81,11 @@ open class MessageModule: XmppModuleBase, XmppModule {
             return nil;
         }
         
-        guard let chat = chatManager.chat(for: context, with: interlocutorJid) else {
+        guard let chat = chatManager.chat(for: context, with: interlocutorJid.bareJid) else {
             guard message.body != nil else {
                 return nil;
             }
-            return chatManager.createChat(for: context, with: interlocutorJid.withoutResource);
+            return chatManager.createChat(for: context, with: interlocutorJid.bareJid);
         }
         
         return chat;

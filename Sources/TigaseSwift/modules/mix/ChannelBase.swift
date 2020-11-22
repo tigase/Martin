@@ -38,7 +38,7 @@ open class ChannelBase: ConversationBase, ChannelProtocol {
         self.participantId = participantId;
         self.nickname = nickname;
         self.state = state;
-        super.init(context: context, jid: JID(channelJid));
+        super.init(context: context, jid: channelJid);
     }
     
     public func update(permissions: Set<ChannelPermission>) {

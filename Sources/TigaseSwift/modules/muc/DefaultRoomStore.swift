@@ -53,7 +53,7 @@ open class DefaultRoomStore: RoomStore {
     
     public func close(room: RoomBase) -> Bool {
         return dispatcher.sync {
-            return self.rooms.removeValue(forKey: room.jid.bareJid) != nil;
+            return self.rooms.removeValue(forKey: room.jid) != nil;
         }
     }
 

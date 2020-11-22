@@ -50,7 +50,7 @@ open class RoomBase: ConversationBase, RoomProtocol {
         self.nickname = nickname;
         self.password = password;
         self.dispatcher = dispatcher;
-        super.init(context: context, jid: JID(jid));
+        super.init(context: context, jid: jid);
     }
     
     public var occupants: [MucOccupant] {

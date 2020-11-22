@@ -163,7 +163,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         };
         
         let iq = Iq();
-        iq.to = room.jid;
+        iq.to = JID(room.jid);
         iq.type = StanzaType.get;
         
         let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin");
@@ -187,7 +187,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         };
 
         let iq = Iq();
-        iq.to = room.jid;
+        iq.to = JID(room.jid);
         iq.type = StanzaType.set;
         
         let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin");
@@ -273,7 +273,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         }
         context.dispatcher.async {
             if let onJoined = onJoined {
-                self.roomJoinedHandlers[room.jid.bareJid] = onJoined;
+                self.roomJoinedHandlers[room.jid] = onJoined;
             }
         }
         
@@ -316,7 +316,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         let iq = Iq();
         iq.type = .set;
-        iq.to = room.jid;
+        iq.to = JID(room.jid);
 
         let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
         query.addChild(Element(name: "destroy"));

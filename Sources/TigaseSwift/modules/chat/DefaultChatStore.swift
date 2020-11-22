@@ -25,7 +25,7 @@ open class DefaultChatStore: ChatStore {
 
     public typealias Chat = ChatBase;
     
-    private var chats = [JID: Chat]();
+    private var chats = [BareJID: Chat]();
     
     public let dispatcher: QueueDispatcher = QueueDispatcher(label: "DefaultChatStoreQueue");
     
@@ -39,13 +39,13 @@ open class DefaultChatStore: ChatStore {
         }
     }
     
-    public func chat(for: Context, with jid: JID) -> Chat? {
+    public func chat(for: Context, with jid: BareJID) -> Chat? {
         return dispatcher.sync {
             return chats[jid];
         }
     }
     
-    public func createChat(for context: Context, with jid: JID) -> ConversationCreateResult<Chat> {
+    public func createChat(for context: Context, with jid: BareJID) -> ConversationCreateResult<Chat> {
         return dispatcher.sync {
             guard let chat = chat(for: context, with: jid) else {
                 let chat = Chat(context: context, jid: jid);

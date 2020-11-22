@@ -84,7 +84,7 @@ extension RoomProtocol {
      */
     public func createInvitation(_ invitee: JID, reason: String?) -> Message {
         let message = Message();
-        message.to = jid;
+        message.to = JID(jid);
         
         let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         let invite = Element(name: "invite");

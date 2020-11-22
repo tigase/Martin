@@ -34,7 +34,7 @@ extension RoomWithPushSupportProtocol {
             return;
         };
         
-        regModule.retrieveRegistrationForm(from: self.jid, completionHandler: { result in
+        regModule.retrieveRegistrationForm(from: JID(self.jid), completionHandler: { result in
             switch result {
             case .success(let formResult):
                 if formResult.type == .dataForm, let field: BooleanField = formResult.form.getField(named: "{http://tigase.org/protocol/muc}offline") {
@@ -54,7 +54,7 @@ extension RoomWithPushSupportProtocol {
             return;
         };
         
-        regModule.retrieveRegistrationForm(from: self.jid, completionHandler: { result in
+        regModule.retrieveRegistrationForm(from: JID(self.jid), completionHandler: { result in
             switch result {
             case .success(let formResult):
                 if formResult.type == .dataForm, let valueField: BooleanField = formResult.form.getField(named: "{http://tigase.org/protocol/muc}offline"), let nicknameField: TextSingleField = formResult.form.getField(named: "muc#register_roomnick") {
@@ -64,7 +64,7 @@ extension RoomWithPushSupportProtocol {
                         if value {
                             valueField.value = value;
                             nicknameField.value = self.nickname;
-                            regModule.submitRegistrationForm(to: self.jid, form: formResult.form, completionHandler: { result in
+                            regModule.submitRegistrationForm(to: JID(self.jid), form: formResult.form, completionHandler: { result in
                                 switch result {
                                 case .success(_):
                                     completionHandler(.success(value));
@@ -73,7 +73,7 @@ extension RoomWithPushSupportProtocol {
                                 }
                             })
                         } else {
-                            regModule.unregister(from: self.jid, completionHander: { result in
+                            regModule.unregister(from: JID(self.jid), completionHander: { result in
                                 switch result {
                                 case .success(_):
                                     completionHandler(.success(value));

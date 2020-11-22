@@ -27,9 +27,9 @@ public protocol ChatStore: ContextLifecycleAware {
     
     func chats(for context: Context) -> [Chat];
     
-    func chat(for context: Context, with: JID) -> Chat?;
+    func chat(for context: Context, with: BareJID) -> Chat?;
     
-    func createChat(for context: Context, with: JID) -> ConversationCreateResult<Chat>;
+    func createChat(for context: Context, with: BareJID) -> ConversationCreateResult<Chat>;
     
     func close(chat: Chat) -> Bool;
 

@@ -44,11 +44,11 @@ open class ChatManagerBase<Store: ChatStore>: BaseChatManagerBase<Store.Chat>, C
         return store.chats(for: context);
     }
     
-    public func chat(for context: Context, with jid: JID) -> ChatProtocol? {
+    public func chat(for context: Context, with jid: BareJID) -> ChatProtocol? {
         return store.chat(for: context, with: jid)
     }
     
-    public func createChat(for context: Context, with jid: JID) -> ChatProtocol? {
+    public func createChat(for context: Context, with jid: BareJID) -> ChatProtocol? {
         switch store.createChat(for: context, with: jid) {
         case .created(let chat):
             context.eventBus.fire(MessageModule.ChatCreatedEvent(context: context, chat: chat));

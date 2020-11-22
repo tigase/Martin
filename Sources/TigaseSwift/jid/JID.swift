@@ -123,3 +123,11 @@ public func ==(lhs: JID, rhs: JID) -> Bool {
         return lhs.resource == nil && rhs.resource == nil;
     }
 }
+
+extension BareJID {
+    
+    open func with(resource: String) -> JID {
+        return JID(self, resource: resource);
+    }
+    
+}

@@ -25,7 +25,7 @@ public protocol ConversationProtocol: class {
     
     var context: Context? { get }
     var account: BareJID { get }
-    var jid: JID { get }
+    var jid: BareJID { get }
     
     var defaultMessageType: StanzaType { get }
     
