@@ -426,6 +426,11 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             if xUser?.statuses.firstIndex(of: 201) == nil {
                 self.roomCreationHandlers.removeValue(forKey: roomJid);
             }
+            context.dispatcher.async {
+                if let onJoined = self.roomJoinedHandlers.removeValue(forKey: room.jid) {
+                    onJoined(room);
+                }
+            }
             if let context = self.context {
                 fire(YouJoinedEvent(context: context, room: room, nickname: nickname));
                 fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
@@ -481,6 +486,11 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         let timestamp = message.delay?.stamp ?? Date();
         if room.state != .joined && message.type != StanzaType.error {
             room.state = .joined;
+            context.dispatcher.async {
+                if let onJoined = self.roomJoinedHandlers.removeValue(forKey: room.jid) {
+                    onJoined(room);
+                }
+            }
             logger.debug("\(context.userBareJid) - Message while not joined in room: \(room) with nickname: \(nickname)");
             
             fire(YouJoinedEvent(context: context, room: room, nickname: nickname ?? room.nickname));

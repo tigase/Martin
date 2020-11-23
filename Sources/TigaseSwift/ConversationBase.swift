@@ -62,10 +62,12 @@ open class ConversationBase: ConversationProtocol {
     }
     
     open func send(message: Message, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
-        message.to = JID(self.jid);
         guard let context = self.context else {
             completionHandler?(.failure(.remote_server_timeout));
             return;
+        }
+        if message.to == nil {
+            message.to = JID(jid);
         }
         context.writer.write(message, writeCompleted: completionHandler);
     }
