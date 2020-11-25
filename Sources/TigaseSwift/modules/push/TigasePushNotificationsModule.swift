@@ -79,13 +79,6 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             case .success(let items):
                 var found: [JID] = [];
                 let group = DispatchGroup();
-                group.notify(queue: DispatchQueue.main, execute: {
-                    if let jid = found.first {
-                        completionHandler(.success(jid));
-                    } else {
-                        completionHandler(.failure(.item_not_found));
-                    }
-                })
                 group.enter();
                 for item in items.items {
                     group.enter();
@@ -106,6 +99,13 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                     });
                 }
                 group.leave();
+                group.notify(queue: DispatchQueue.main, execute: {
+                    if let jid = found.first {
+                        completionHandler(.success(jid));
+                    } else {
+                        completionHandler(.failure(.item_not_found));
+                    }
+                })
             case .failure(let error):
                 completionHandler(.failure(error));
             }

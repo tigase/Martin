@@ -78,14 +78,6 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
                 var results: [UploadComponent] = [];
                 let group = DispatchGroup();
                 
-                group.notify(queue: DispatchQueue.main, execute: {
-                    guard !results.isEmpty else {
-                        completionHandler(.failure(.item_not_found));
-                        return;
-                    }
-                    completionHandler(.success(results));
-                })
-                
                 group.enter();
                 for item in items.items {
                     group.enter();
@@ -106,6 +98,13 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
                     });
                 }
                 group.leave();
+                group.notify(queue: DispatchQueue.main, execute: {
+                    guard !results.isEmpty else {
+                        completionHandler(.failure(.item_not_found));
+                        return;
+                    }
+                    completionHandler(.success(results));
+                })
             }
         });
     }
