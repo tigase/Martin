@@ -357,14 +357,14 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 let participants = items.items.map({ (item) -> MixParticipant? in
                     return MixParticipant(from: item);
                 }).filter({ $0 != nil }).map({ $0! });
-                let oldParticipants = channel.participants.values;
+                let oldParticipants = channel.participants;
                 let left = oldParticipants.filter({ old in !participants.contains(where: { new in new.id == old.id})});
                 if let ownParticipant = participants.first(where: { (participant) -> Bool in
                     return participant.id == channel.participantId
                 }) {
-                    _ = self.channelManager.update(channel: channel, nick: ownParticipant.nickname);
+                    channel.update(ownNickname: ownParticipant.nickname);
                 }
-                channel.participants.set(participants: participants);
+                channel.set(participants: participants);
                 if let context = self.context {
                     self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: participants, left: left));
                 }
@@ -398,7 +398,9 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                     completionHandler?(.failure(.undefined_condition));
                     return;
                 }
-                _ = self.channelManager.update(for: context, channel: channelJid, info: info)
+                if let channel = self.channelManager.channel(for: context, with: channelJid) {
+                    channel.update(info: info);
+                }
                 completionHandler?(.success(info));
             case .failure(let pubsubError):
                 completionHandler?(.failure(pubsubError.error));
@@ -606,9 +608,9 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 case "item":
                     if let item = e.item, let participant = MixParticipant(from: item) {
                         if participant.id == channel.participantId {
-                            _ = self.channelManager.update(channel: channel, nick: participant.nickname);
+                            channel.update(ownNickname: participant.nickname);
                         }
-                        channel.participants.update(participant: participant);
+                        channel.update(participant: participant);
                         if let context = context {
                             self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
                         }
@@ -616,11 +618,12 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 case "retract":
                     if let id = e.itemId {
                         if channel.participantId == id {
-                            if self.channelManager.update(for: e.context, channel: channel.jid, state: .left), let context = context {
+                            channel.update(state: .left);
+                            if let context = context {
                                 self.fire(ChannelStateChangedEvent(context: context, channel: channel));
                             }
                         }
-                        if let participant = channel.participants.removeParticipant(withId: id), let context = context {
+                        if let participant = channel.removeParticipant(withId: id), let context = context {
                             self.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
                         }
                     }
@@ -631,7 +634,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 guard let info = ChannelInfo(form: JabberDataElement(from: e.payload)) else {
                     return;
                 }
-                _ = self.channelManager.update(for: e.context, channel: channel.jid, info: info);
+                channel.update(info: info);
             default:
                 break;
             }

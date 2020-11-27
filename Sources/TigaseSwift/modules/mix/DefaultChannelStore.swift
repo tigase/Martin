@@ -57,27 +57,6 @@ open class DefaultChannelStore: ChannelStore {
             return self.items.removeValue(forKey: channel.jid) != nil;
         }
     }
-
-    public func update(channel: Channel, nick: String?) -> Bool {
-        return dispatcher.sync {
-            guard channel.nickname != nick else {
-                return false;
-            }
-            channel.nickname = nick;
-            return true;
-        }
-    }
-    
-    public func update(channel: Channel, info: ChannelInfo) -> Bool {
-        // we are not storing channel info in this case.. or maybe we should???
-        return false;
-    }
-    
-    public func update(channel: Channel, state: ChannelState) -> Bool {
-        return dispatcher.sync {
-            return channel.update(state: state);
-        }
-    }
     
     public func initialize(context: Context) {
         

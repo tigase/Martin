@@ -63,38 +63,6 @@ open class ChannelManagerBase<Store: ChannelStore>: BaseChannelManagerBase<Store
         return store.close(channel: cast(channel));
     }
     
-    public func update(channel: ChannelProtocol, nick: String?) -> Bool {
-        if store.update(channel: cast(channel), nick: nick) {
-            if let context = channel.context {
-                context.eventBus.fire(ChannelManagerEvents.ChannelUpdatedEvent(context: context, channel: channel));
-            }
-            return true;
-        }
-        return false;
-    }
-    
-    public func update(for context: Context, channel jid: BareJID, info: ChannelInfo) -> Bool {
-        guard let channel = store.channel(for: context, with: jid) else {
-            return false;
-        }
-        if store.update(channel: channel, info: info) {
-            context.eventBus.fire(ChannelManagerEvents.ChannelUpdatedEvent(context: context, channel: channel));
-            return true;
-        }
-        return false;
-    }
-    
-    public func update(for context: Context, channel jid: BareJID, state: ChannelState) -> Bool {
-        guard let channel = store.channel(for: context, with: jid) else {
-            return false;
-        }
-        if store.update(channel: channel, state: state) {
-            context.eventBus.fire(ChannelManagerEvents.ChannelUpdatedEvent(context: context, channel: channel));
-            return true;
-        }
-        return false;
-    }
-    
     public func initialize(context: Context) {
         store.initialize(context: context);
     }

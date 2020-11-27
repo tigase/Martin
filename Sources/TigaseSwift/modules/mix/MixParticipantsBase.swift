@@ -23,31 +23,31 @@ import Foundation
 
 public class MixParticipantsBase: MixParticipantsProtocol {
     
-    public private(set) var participants: [String: MixParticipant] = [:]
+    private var items: [String: MixParticipant] = [:]
     
-    init() {}
+    public var participants: [MixParticipant] {
+        return Array(items.values);
+    }
+    
+    public init() {}
     
     public var count: Int {
         return participants.count;
     }
-    
-    public var values: [MixParticipant] {
-        return Array(participants.values);
-    }
-        
+            
     public func participant(withId id: String) -> MixParticipant? {
-        return participants[id];
+        return items[id];
     }
     
     public func set(participants: [MixParticipant]) {
-        self.participants = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) });
+        self.items = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) });
     }
     
     public func update(participant: MixParticipant) {
-        self.participants[participant.id] = participant;
+        self.items[participant.id] = participant;
     }
     
     public func removeParticipant(withId id: String) -> MixParticipant? {
-        self.participants.removeValue(forKey: id);
+        self.items.removeValue(forKey: id);
     }
 }

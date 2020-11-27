@@ -299,7 +299,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             x.addChild(history);
         }
         
-        room.state = .requested;
+        room.update(state: .requested);
         self.fire(JoinRequestedEvent(context: context, presence: presence, room: room, nickname: room.nickname));
         write(presence);
     }
@@ -327,7 +327,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         roomManager.close(room: room);
         
-        room.state = .destroyed;
+        room.update(state: .destroyed);
         if let context = context {
             fire(RoomClosedEvent(context: context, presence: nil, room: room));
         }
@@ -341,7 +341,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
      */
     open func leave(room: RoomProtocol) {
         if room.state == .joined {
-            room.state = .not_joined;
+            room.update(state: .not_joined);
             
             let presence = Presence();
             presence.type = StanzaType.unavailable;
@@ -351,7 +351,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         roomManager.close(room: room);
         
-        room.state = .destroyed;
+        room.update(state: .destroyed);
         if let context = context {
             fire(RoomClosedEvent(context: context, presence: nil, room: room));
         }
@@ -391,7 +391,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
                 }
                 return;
             } else {
-                room.state = .not_joined;
+                room.update(state: .not_joined);
                 if let context = self.context {
                     fire(RoomClosedEvent(context: context, presence: presence, room: room));
                 }
@@ -403,7 +403,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         }
         
         if (type == StanzaType.unavailable && nickname == room.nickname) {
-            room.state = .not_joined;
+            room.update(state: .not_joined);
             if let context = self.context {
                 fire(RoomClosedEvent(context: context, presence: presence, room: room));
             }
@@ -421,7 +421,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
             room.remove(occupant: occupant!);
             room.addTemp(nickname: newNickName!, occupant: occupant!);
         } else if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
-            room.state = .joined;
+            room.update(state: .joined);
             room.add(occupant: occupant!);
             if xUser?.statuses.firstIndex(of: 201) == nil {
                 self.roomCreationHandlers.removeValue(forKey: roomJid);
@@ -485,7 +485,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         
         let timestamp = message.delay?.stamp ?? Date();
         if room.state != .joined && message.type != StanzaType.error {
-            room.state = .joined;
+            room.update(state: .joined);
             context.dispatcher.async {
                 if let onJoined = self.roomJoinedHandlers.removeValue(forKey: room.jid) {
                     onJoined(room);
@@ -539,7 +539,7 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
     fileprivate func markRoomsAsNotJoined() {
         if let context = self.context {
             for room in roomManager.rooms(for: context) {
-                room.state = .not_joined;
+                room.update(state: .not_joined);
             
                 fire(RoomClosedEvent(context: context, presence: nil, room: room));
             }

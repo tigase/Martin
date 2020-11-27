@@ -22,8 +22,7 @@ import Foundation
 
 public protocol MixParticipantsProtocol {
 
-    var count: Int { get }
-    var values: [MixParticipant] { get }
+    var participants: [MixParticipant] { get }
     
     func participant(withId: String) -> MixParticipant?
     func set(participants: [MixParticipant]);

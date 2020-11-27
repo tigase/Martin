@@ -35,12 +35,6 @@ public protocol ChannelStore: ContextLifecycleAware {
     
     func close(channel: Channel) -> Bool;
     
-    func update(channel: Channel, nick: String?) -> Bool;
-    
-    func update(channel: Channel, info: ChannelInfo) -> Bool;
-    
-    func update(channel: Channel, state: ChannelState) -> Bool;
-    
 }
 
 //public enum ConverstaionStoreAction<Conversation: ConverstaionProtocol> {

@@ -30,11 +30,5 @@ public protocol ChannelManager: ContextLifecycleAware {
     func channel(for context: Context, with channelJid: BareJID) -> ChannelProtocol?;
     
     func close(channel: ChannelProtocol) -> Bool;
-    
-    func update(channel: ChannelProtocol, nick: String?) -> Bool;
-    
-    func update(for context: Context, channel: BareJID, info: ChannelInfo) -> Bool;
-    
-    func update(for context: Context, channel: BareJID, state: ChannelState) -> Bool;
-    
+        
 }

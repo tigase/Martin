@@ -36,10 +36,12 @@ public enum RoomState {
 
 public protocol RoomProtocol: ConversationProtocol, RoomOccupantsStoreProtocol {
     
-    var state: RoomState { get set }
+    var state: RoomState { get }
     
     var nickname: String { get }
     var password: String? { get }
+ 
+    func update(state: RoomState);
     
 }
 

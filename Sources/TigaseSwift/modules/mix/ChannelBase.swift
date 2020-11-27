@@ -32,7 +32,16 @@ open class ChannelBase: ConversationBase, ChannelProtocol {
     open private(set) var state: ChannelState;
     
     open private(set) var permissions: Set<ChannelPermission>?;
-    public let participants: MixParticipantsProtocol = MixParticipantsBase();
+    private let participantsStore: MixParticipantsProtocol = MixParticipantsBase();
+    
+    private var info: ChannelInfo?;
+    
+    open var name: String? {
+        return info?.name;
+    }
+    open var description: String? {
+        return info?.description;
+    }
     
     public init(context: Context, channelJid: BareJID, participantId: String, nickname: String?, state: ChannelState) {
         self.participantId = participantId;
@@ -41,15 +50,42 @@ open class ChannelBase: ConversationBase, ChannelProtocol {
         super.init(context: context, jid: channelJid);
     }
     
+    public func update(info: ChannelInfo) {
+        // nothing to do
+    }
+    
+    public func update(ownNickname nickname: String?) {
+        self.nickname = nickname;
+    }
+    
     public func update(permissions: Set<ChannelPermission>) {
         self.permissions = permissions;
     }
 
-    public func update(state: ChannelState) -> Bool {
-        guard self.state != state else {
-            return false;
-        }
+    public func update(state: ChannelState) {
         self.state = state;
-        return true;
+    }
+}
+
+extension ChannelBase: MixParticipantsProtocol {
+    
+    public var participants: [MixParticipant] {
+        return participantsStore.participants;
+    }
+    
+    public func participant(withId: String) -> MixParticipant? {
+        return participantsStore.participant(withId: withId);
+    }
+    
+    public func set(participants: [MixParticipant]) {
+        participantsStore.set(participants: participants);
+    }
+    
+    public func update(participant: MixParticipant) {
+        participantsStore.update(participant: participant);
+    }
+    
+    public func removeParticipant(withId id: String) -> MixParticipant? {
+        return participantsStore.removeParticipant(withId: id);
     }
 }

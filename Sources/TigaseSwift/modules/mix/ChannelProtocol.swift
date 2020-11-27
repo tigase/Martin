@@ -21,17 +21,18 @@
 
 import Foundation
 
-public protocol ChannelProtocol: ConversationProtocol {
+public protocol ChannelProtocol: ConversationProtocol, MixParticipantsProtocol {
  
     var nickname: String? { get }
     var state: ChannelState { get }
     var participantId: String { get }
     
     var permissions: Set<ChannelPermission>? { get }
-    var participants: MixParticipantsProtocol { get }
     
-    func update(state: ChannelState) -> Bool;
-    func update(permissions: Set<ChannelPermission>)
+    func update(state: ChannelState);
+    func update(permissions: Set<ChannelPermission>);
+    func update(info: ChannelInfo);
+    func update(ownNickname nickname: String?);
 }
 
 extension ChannelProtocol {

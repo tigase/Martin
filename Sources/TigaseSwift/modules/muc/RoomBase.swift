@@ -34,11 +34,6 @@ open class RoomBase: ConversationBase, RoomProtocol {
                 return _state;
             }
         }
-        set {
-            dispatcher.async(flags: .barrier) {
-                self._state = newValue;
-            }
-        }
     }
     public let nickname: String;
     public let password: String?;
@@ -86,6 +81,12 @@ open class RoomBase: ConversationBase, RoomProtocol {
     public func removeTemp(nickname: String) -> MucOccupant? {
         return dispatcher.sync(flags: .barrier) {
             return occupantsStore.removeTemp(nickname: nickname);
+        }
+    }
+    
+    public func update(state: RoomState) {
+        dispatcher.async {
+            self._state = state;
         }
     }
 }

@@ -26,6 +26,10 @@ open class RoomOccupantsStoreBase: RoomOccupantsStoreProtocol {
     private var presences: [String: MucOccupant] = [:];
     private var tempOccupants: [String: MucOccupant] = [:]
     
+    public init() {
+        
+    }
+    
     public var occupants: [MucOccupant] {
         return Array(presences.values);
     }
