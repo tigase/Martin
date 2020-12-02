@@ -104,12 +104,13 @@ public struct BareJID :CustomStringConvertible, Hashable, Equatable, Codable, St
 }
 
 public func ==(lhs: BareJID, rhs: BareJID) -> Bool {
-    guard lhs.domain.caseInsensitiveCompare(rhs.domain) == .orderedSame else {
+    // in Swift lowercased() is faster than caseInsensitiveCompare()
+    guard lhs.domain.lowercased() == rhs.domain.lowercased() else {
         return false;
     }
     
     if let rPart = rhs.localPart, let lPart = lhs.localPart {
-        return rPart.caseInsensitiveCompare(lPart) == .orderedSame;
+        return rPart.lowercased() == lPart.lowercased();
     } else {
         return rhs.localPart == nil && lhs.localPart == nil;
     }
