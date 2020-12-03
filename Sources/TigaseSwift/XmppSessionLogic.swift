@@ -128,7 +128,11 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                 return;
             }
             that.dispatcher.async {
-                that.state = newState;
+                if that.seeOtherHost != nil && newState == .disconnected {
+                    that.start()
+                } else {
+                    that.state = newState;
+                }
             }
         }));
         socketSubscriptions.append(connector.streamEvents.sink(receiveValue: { [weak self] event in
@@ -180,7 +184,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     open func start() {
-        socketConnector.start();
+        socketConnector.start(serverToConnect: self.serverToConnectDetails());
     }
     
     open func stop(force: Bool = false, completionHandler: (()->Void)? = nil) {
@@ -193,6 +197,9 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     open func serverToConnectDetails() -> XMPPSrvRecord? {
         if let redirect: XMPPSrvRecord = self.seeOtherHost {
+            defer {
+                self.seeOtherHost = nil;
+            }
             return redirect;
         }
         return modulesManager.moduleOrNil(.streamManagement)?.resumptionLocation;
@@ -216,8 +223,9 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                 streamFeaturesWithPipelining.connectionRestarted();
             }
             
+            self.logger.log("reconnecting via see-other-host to host \(seeOtherHost.0)");
             self.seeOtherHost = XMPPSrvRecord(port: seeOtherHost.1 ?? lastConnectionDetails.port, weight: 1, priority: 1, target: seeOtherHost.0, directTls: lastConnectionDetails.directTls);
-            socketConnector.reconnect();
+            self.socketConnector.stop(completionHandler: nil);
             return;
         }
         let errorName = streamErrorEl.findChild(xmlns: "urn:ietf:params:xml:ns:xmpp-streams")?.name;

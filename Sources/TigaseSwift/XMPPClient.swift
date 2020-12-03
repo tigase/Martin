@@ -94,7 +94,7 @@ import TigaseLogging
  ```
  
  */
-open class XMPPClient: Context, EventHandler {
+open class XMPPClient: Context {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPClient");
     public var context: Context {
@@ -133,7 +133,6 @@ open class XMPPClient: Context, EventHandler {
     public init(eventBus: EventBus?) {
         responseManager = ResponseManager();
         super.init(eventBus: eventBus ?? EventBus(), modulesManager: XmppModulesManager());
-        self.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
     }
     
     deinit {
@@ -159,11 +158,21 @@ open class XMPPClient: Context, EventHandler {
             self.sessionLogic = sessionLogic;
             sessionLogic.bind();
             sessionLogic.statePublisher.sink(receiveValue: { [weak self] newState in
-                self?.state = newState;
-                if newState == .connected {
-                    self?.scheduleKeepAlive();
-                } else {
-                    self?.releaseKeepAlive();
+                guard let that = self else {
+                    return;
+                }
+                let oldState = that.state;
+                that.state = newState;
+                switch newState {
+                case .connected:
+                    that.scheduleKeepAlive();
+                    that.eventBus.fire(SocketConnector.ConnectedEvent(context: that));
+                case .disconnected:
+                    that.releaseKeepAlive();
+                    that.handleDisconnection(clean: oldState == .disconnecting);
+                    that.eventBus.fire(SocketConnector.DisconnectedEvent(context: that, connectionDetails: that.currentConnectionDetails, clean: oldState == .disconnecting));
+                default:
+                    that.releaseKeepAlive();
                 }
             });
             
@@ -196,6 +205,25 @@ open class XMPPClient: Context, EventHandler {
         keepaliveTimer = nil;
     }
     
+    private func handleDisconnection(clean: Bool) {
+        keepaliveTimer?.invalidate();
+        keepaliveTimer = nil;
+        modulesManager.reset(scope:clean ? .session : .stream);
+        if clean {
+            context.sessionObject.clear();
+        } else {
+            context.sessionObject.clear(scopes: SessionObject.Scope.stream);
+        }
+        sessionLogic?.unbind();
+        dispatcher.sync {
+            stateSubscription?.cancel();
+            stateSubscription = nil;
+            self.state = .disconnected;
+            sessionLogic = nil;
+        }
+        logger.debug("connection stopped......");
+    }
+    
     /**
      Method closes connection to server.
      
@@ -222,33 +250,6 @@ open class XMPPClient: Context, EventHandler {
             return;
         }
         sessionLogic?.keepalive();
-    }
-    
-    /**
-     Handles events fired by other classes used by this connection.
-     */
-    open func handle(event: Event) {
-        switch event {
-        case let de as SocketConnector.DisconnectedEvent:
-            keepaliveTimer?.invalidate();
-            keepaliveTimer = nil;
-            modulesManager.reset(scope: de.clean ? .session : .stream);
-            if de.clean {
-                context.sessionObject.clear();
-            } else {
-                context.sessionObject.clear(scopes: SessionObject.Scope.stream);
-            }
-            sessionLogic?.unbind();
-            dispatcher.sync {
-                stateSubscription?.cancel();
-                stateSubscription = nil;
-                self.state = .disconnected;
-                sessionLogic = nil;
-            }
-            logger.debug("connection stopped......");
-        default:
-            logger.error("received unhandled event: \(event)");
-        }
     }
     
 }

@@ -24,7 +24,7 @@ import Foundation
 /**
  Module provides support for Tigase Mobile Optimizations feature
  */
-open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler {
+open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
     
     /// Base part of namespace used by Mobile Optimizations
     public static let MM_XMLNS = "http://tigase.org/protocol/mobile";
@@ -40,10 +40,10 @@ open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler {
     open override weak var context: Context? {
         didSet {
             if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
+                oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
             }
             if let context = context {
-                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
+                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
             }
         }
     }
@@ -67,12 +67,14 @@ open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler {
     public override init() {
     }
     
+    open func reset(scope: ResetableScope) {
+        if scope == .session {
+            _activeMode = nil;
+        }
+    }
+    
     public func handle(event: Event) {
         switch event {
-        case let e as SocketConnector.DisconnectedEvent:
-            if e.clean {
-                _activeMode = nil;
-            }
         case _ as StreamManagementModule.FailedEvent:
             _activeMode = nil;
         default:

@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0352: Client State Inidication]:https://xmpp.org/extensions/xep-0352.html
  */
-open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler {
+open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
     
     /// Client State Indication XMLNS
     public static let CSI_XMLNS = "urn:xmpp:csi:0";
@@ -47,10 +47,10 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler
     open override weak var context: Context? {
         didSet {
             if let context = context {
-                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
+                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
             }
             if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE]);
+                oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
             }
         }
     }
@@ -70,12 +70,14 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler
     public override init() {
     }
     
+    open func reset(scope: ResetableScope) {
+        if scope == .session {
+            _state = false;
+        }
+    }
+    
     public func handle(event: Event) {
         switch event {
-        case let e as SocketConnector.DisconnectedEvent:
-            if e.clean {
-                _state = false;
-            }
         case _ as StreamManagementModule.FailedEvent:
             _state = false;
         default:

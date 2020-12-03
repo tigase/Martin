@@ -32,10 +32,10 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
     
     override open weak var context: Context? {
         willSet {
-            context?.eventBus.unregister(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
+            context?.eventBus.unregister(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
         }
         didSet {
-            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
+            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
         }
     }
     
@@ -45,6 +45,11 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
         self.cache = cache;
         self.enabled = enabled;
         super.init();
+    }
+    
+    public override func reset(scope: ResetableScope) {
+        super.reset(scope: scope);
+        connectionRestarted();
     }
     
     override open func process(stanza: Stanza) throws {
@@ -82,8 +87,6 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
         case let e as SocketSessionLogic.ErrorEvent:
             connectionRestarted();
             cache?.set(for: e.context, features: nil);
-        case is SocketConnector.DisconnectedEvent:
-            connectionRestarted();
         case let e as AuthModule.AuthFailedEvent:
             connectionRestarted();
             cache?.set(for: e.context, features: nil);

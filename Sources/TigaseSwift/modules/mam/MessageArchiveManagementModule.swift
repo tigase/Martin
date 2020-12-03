@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0313: Message Archive Management]: http://xmpp.org/extensions/xep-0313.html
  */
-open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, EventHandler {
+open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable {
     
     // namespace used by XEP-0313
     public static let MAM_XMLNS = "urn:xmpp:mam:1";
@@ -47,14 +47,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, EventHand
 
     private let dispatcher = QueueDispatcher(label: "MAMQueries");
     private var queries: [String: Query] = [:];
-    
-    open override weak var context: Context? {
-        didSet {
-            oldValue?.eventBus.unregister(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
-            context?.eventBus.register(handler: self, for: SocketConnector.DisconnectedEvent.TYPE);
-        }
-    }
-    
+        
     open var isAvailable: Bool {
         return availableVersion != nil;
     }
@@ -71,18 +64,12 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, EventHand
     
     public override init() {}
     
-    open func handle(event: Event) {
-        switch event {
-        case is SocketConnector.DisconnectedEvent:
-            // invalidate all existing queries..
-            self.dispatcher.async {
-                self.queries.removeAll();
-            }
-        default:
-            break;
+    open func reset(scope: ResetableScope) {
+        self.dispatcher.async {
+            self.queries.removeAll();
         }
     }
-    
+        
     open func process(stanza: Stanza) throws {
         for result in stanza.element.getChildren() {
             guard Version.isSupported(xmlns: result.xmlns) else {
