@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  Other authentication module (like ie. `SaslModule`) may require this
  module to work properly.
  */
-open class AuthModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
+open class AuthModule: XmppModuleBase, XmppModule, Resetable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
     public static let IDENTIFIER = XmppModuleIdentifier<AuthModule>();
@@ -41,26 +41,22 @@ open class AuthModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
     public static let LOGIN_USER_NAME_KEY = "LOGIN_USER_NAME";
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "AuthModule");
-        
-    open weak override var context: Context? {
-        didSet {
-            if let context = oldValue {
-                context.eventBus.unregister(handler: self, for: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
-            }
-            if let newValue = context {
-                newValue.eventBus.register(handler: self, for: SaslModule.SaslAuthSuccessEvent.TYPE, SaslModule.SaslAuthStartEvent.TYPE, SaslModule.SaslAuthFailedEvent.TYPE);
-            }
-        }
-    }
     
     public let criteria = Criteria.empty();
     
     public let features = [String]();
     
+    @Published
     open private(set) var state: AuthorizationStatus = .notAuthorized;
+    
+    private var stateObserverCancellable: Cancellable?;
     
     public override init() {
         
+    }
+    
+    deinit {
+        stateObserverCancellable?.cancel();
     }
     
     open func process(stanza: Stanza) throws {
@@ -72,109 +68,138 @@ open class AuthModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
      mechanisms for authentication
      */
     open func login() {
+        stateObserverCancellable?.cancel();
         if let saslModule = context?.modulesManager.moduleOrNil(.sasl) {
+            stateObserverCancellable = saslModule.$state.sink(receiveValue: { [weak self] state in
+                self?.update(state: state);
+            })
             saslModule.login();
-        }
-    }
-    
-    /**
-     Method handles events which needs to be processed by module
-     for proper workflow.
-     - parameter event: event to process
-     */
-    open func handle(event: Event) {
-        switch event {
-        case is SaslModule.SaslAuthSuccessEvent:
-            let saslEvent = event as! SaslModule.SaslAuthSuccessEvent;
-            self.state = .authorized;
-            fire(AuthSuccessEvent(context: saslEvent.context));
-        case is SaslModule.SaslAuthFailedEvent:
-            let saslEvent = event as! SaslModule.SaslAuthFailedEvent;
-            self.state = .notAuthorized;
-            fire(AuthFailedEvent(context: saslEvent.context, error: saslEvent.error));
-        case is SaslModule.SaslAuthStartEvent:
-            let saslEvent = event as! SaslModule.SaslAuthStartEvent;
-            self.state = .inProgress;
-            fire(AuthStartEvent(context: saslEvent.context));
-        default:
-            logger.error("handing of unsupported event: \(event)");
-        }
-    }
-    
-    public func reset(scope: ResetableScope) {
-        if scope == .session {
-            state = .notAuthorized;
         } else {
-            if state == .inProgress {
-                state = .notAuthorized;
-            }
+            state = .error(XMPPError.item_not_found);
         }
+    }
+    
+    open func update(state: AuthorizationStatus) {
+        self.state = state;
+        guard let context = self.context else {
+            return;
+        }
+        
+        switch state {
+        case .authorized:
+            fire(AuthSuccessEvent(context: context));
+        case .error(let error):
+            fire(AuthFailedEvent(context: context, error: error));
+        case .inProgress:
+            fire(AuthStartEvent(context: context))
+        default:
+            break;
+        }
+    }
+    
+    public func reset(scopes: Set<ResetableScope>) {
+        state = .notAuthorized;
     }
     
     /// Event fired on authentication failure
+    @available(* , deprecated, message: "Use $state publisher instead")
     open class AuthFailedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthFailedEvent();
-        
+
         /// Error returned by server during authentication
-        public let error:SaslError!;
-        
+        public let error:Error!;
+
         init() {
             error = nil;
             super.init(type: "AuthFailedEvent");
         }
-        
-        public init(context: Context, error: SaslError) {
+
+        public init(context: Context, error: Error) {
             self.error = error;
             super.init(type: "AuthFailedEvent", context: context);
         }
     }
-    
+
     /// Event fired on start of authentication process
+    @available(* , deprecated, message: "Use $state publisher instead")
     open class AuthStartEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthStartEvent();
-                
+
         init() {
             super.init(type: "AuthStartEvent");
         }
-        
+
         public init(context: Context) {
             super.init(type: "AuthStartEvent", context: context);
         }
     }
-    
+
+    @available(* , deprecated, message: "Use $state publisher instead")
     open class AuthFinishExpectedEvent: AbstractEvent {
-        
+
         public static let TYPE = AuthFinishExpectedEvent();
-        
+
         init() {
             super.init(type: "AuthFinishExpectedEvent");
         }
-        
+
         public init(context: Context) {
             super.init(type: "AuthFinishExpectedEvent", context: context);
         }
-        
+
     }
-    
+
     /// Event fired when after sucessful authentication
+    @available(* , deprecated, message: "Use $state publisher instead")
     open class AuthSuccessEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AuthSuccessEvent();
-        
+
         init() {
             super.init(type: "AuthSuccessEvent");
         }
-        
+
         public init(context: Context) {
             super.init(type: "AuthSuccessEvent", context: context);
         }
     }
     
-    public enum AuthorizationStatus {
+    public enum AuthorizationStatus: Equatable {
+        
+        public static func == (lhs: AuthorizationStatus, rhs: AuthorizationStatus) -> Bool {
+            return lhs.value == rhs.value;
+        }
+        
+        public var isError: Bool {
+            switch self {
+            case .error(_):
+                return true;
+            default:
+                return false;
+            }
+        }
+        
+        private var value: Int {
+            switch self {
+            case .notAuthorized:
+                return 0;
+            case .inProgress:
+                return 1;
+            case .expectedAuthorization:
+                return 2;
+            case .authorized:
+                return 3;
+            case .error(_):
+                return -1;
+            }
+        }
+        
         case notAuthorized
         case inProgress
+        case expectedAuthorization
         case authorized
+        case error(Error)
     }
 }

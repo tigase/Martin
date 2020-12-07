@@ -73,7 +73,7 @@ open class XMPPParserDelegate: XMLParserDelegate {
     
     open func endElement(name elementName: String, prefix: String?) {
         if (elementName == "stream" && prefix == "stream") {
-            self.delegate?.onStreamTerminate();
+            self.delegate?.onStreamTerminate(reason: .none);
             return
         }
         let elem = el_stack.removeLast()

@@ -1,8 +1,8 @@
 //
-// XMPPStreamDelegate.swift
+// RosterItemSubscription.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,11 +21,28 @@
 
 import Foundation
 
-public protocol XMPPStreamDelegate: class {
+public enum RosterItemSubscription: String {
+    case both
+    case from
+    case none
+    case remove
+    case to
     
-    func onStreamStart(attributes:[String:String])
-    func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason);
-    func onError(msg: String?);
-    func process(element packet:Element)
+    public var isFrom: Bool {
+        switch self {
+        case .from, .both:
+            return true;
+        case .none, .to, .remove:
+            return false;
+        }
+    }
     
+    public var isTo: Bool {
+        switch self {
+        case .to, .both:
+            return true;
+        case .none, .from, .remove:
+            return false;
+        }
+    }
 }

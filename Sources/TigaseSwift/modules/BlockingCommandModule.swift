@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class BlockingCommandModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
+open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
     
     public static let BC_XMLNS = "urn:xmpp:blocking";
     /// ID of module to lookup for in `XmppModulesManager`
@@ -38,19 +38,23 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, EventHandler, Rese
     
     public let features = [String]();
     
+    private var discoModule: DiscoveryModule!;
+    private var cancellable: Cancellable?;
+    
     open override weak var context: Context? {
         didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE]);
-            }
+            cancellable?.cancel();
             if let context = context {
-                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE]);
+                discoModule = context.module(.disco);
+                cancellable = discoModule.$serverDiscoResult.filter({ $0.features.contains(BlockingCommandModule.BC_XMLNS) }).sink(receiveValue: { [weak self] _ in self?.retrieveBlockedJids(completionHandler: nil)});
+            } else {
+                cancellable = nil;
             }
         }
     }
     
     open var isAvailable: Bool {
-        if let features: [String] = context?.module(.disco).serverDiscoResult?.features {
+        if let features: [String] = discoModule.serverDiscoResult.features {
             if features.contains(BlockingCommandModule.BC_XMLNS) {
                 return true;
             }
@@ -74,25 +78,16 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, EventHandler, Rese
     public override init() {
     }
         
-    open func reset(scope: ResetableScope) {
-        if scope == .session {
+    deinit {
+        cancellable?.cancel();
+    }
+    
+    open func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
             blockedJids = nil;
         }
     }
-    
-    public func handle(event: Event) {
-        switch event {
-        case _ as StreamManagementModule.FailedEvent:
-            blockedJids = nil;
-        case let e as DiscoveryModule.ServerFeaturesReceivedEvent:
-            if e.features.contains(BlockingCommandModule.BC_XMLNS) {
-                self.retrieveBlockedJids(completionHandler: nil);
-            }
-        default:
-            break;
-        }
-    }
-    
+        
     open func process(stanza: Stanza) throws {
         guard let actionEl = stanza.findChild(xmlns: BlockingCommandModule.BC_XMLNS) else {
             throw XMPPError.feature_not_implemented;

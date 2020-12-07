@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
  */
-open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, EventHandler {
+open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, Resetable {
     
     /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
@@ -47,18 +47,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     public let criteria = Criteria.xmlns(SM_XMLNS);
     
     public let features = [String]();
-    
-    open override weak var context: Context? {
-        didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE);
-            }
-            if let context = context {
-                context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE);
-            }
-        }
-    }
-    
+        
     /// Holds queue with stanzas sent but not acked
     fileprivate var outgoingQueue = Queue<Stanza>();
     
@@ -95,6 +84,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         return _resumptionTime;
     }
     
+    private var enablingHandler: ((Result<String?,XMPPError>)->Void)?;
+    private var resumptionHandler: ((Result<Void,XMPPError>)->Void)?;
+    
     public override init() {
     }
     
@@ -103,12 +95,14 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
      - parameter resumption: should resumption be enabled
      - parameter maxResumptionTimeout: maximal resumption timeout to use
      */
-    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) {
+    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil, completionHandler: ( (Result<String?,XMPPError>)->Void)?) {
         guard !(ackEnabled || resumptionEnabled) else {
+            completionHandler?(.failure(.unexpected_request()));
             return;
         }
         
         logger.debug("enabling StreamManagament with resume=\(resumption)");
+        self.enablingHandler = completionHandler;
         let enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS);
         if resumption {
             enable.setAttribute("resume", value: "true");
@@ -121,24 +115,12 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         write(enable);
     }
     
-    /**
-     Method hadles events received from `EventBus`
-     */
-    open func handle(event: Event) {
-        switch event {
-        case let e as SessionObject.ClearedEvent:
-            for scope in e.scopes {
-                switch scope {
-                case .stream:
-                    _ackEnabled = false;
-                case .session:
-                    reset();
-                default:
-                    break;
-                }
-            }
-        default:
-            break;
+    open func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.stream) {
+            _ackEnabled = false;
+        }
+        if scopes.contains(.session) {
+            reset();
         }
     }
     
@@ -238,6 +220,8 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     
     /// Reset all internal variables
     open func reset() {
+        enablingHandler = nil;
+        resumptionHandler = nil;
         _ackEnabled = false;
         resumptionId = nil
         _resumptionTime = nil;
@@ -247,8 +231,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     }
     
     /// Start stream resumption
-    open func resume() {
+    open func resume(completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         logger.debug("starting stream resumption");
+        self.resumptionHandler = completionHandler;
         let resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
         resume.setAttribute("h", value: String(ackH.incomingCounter));
         resume.setAttribute("previd", value: resumptionId);
@@ -304,13 +289,16 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     }
     
     func processFailed(_ stanza: Stanza) {
+        let resumptionHandler = self.resumptionHandler;
+        let enablingHandler = self.enablingHandler;
         reset();
         
-        let errorCondition = stanza.errorCondition ?? ErrorCondition.unexpected_request;
-        
         logger.debug("stream resumption failed");
+        
+        resumptionHandler?(.failure(stanza.error ?? .unexpected_request()));
+        enablingHandler?(.failure(stanza.error ?? .unexpected_request()));
         if let context = context {
-            fire(FailedEvent(context: context, errorCondition: errorCondition));
+            fire(FailedEvent(context: context, errorCondition: stanza.errorCondition ?? .unexpected_request));
         }
     }
     
@@ -329,6 +317,10 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
         
         logger.debug("stream resumed");
+        if let completionHandler = resumptionHandler {
+            resumptionHandler = nil;
+            completionHandler(.success(Void()));
+        }
         if let context = context {
             fire(ResumedEvent(context: context, newH: newH, resumeId: stanza.getAttribute("previd")));
         }
@@ -338,7 +330,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         let id = stanza.getAttribute("id");
         let r = stanza.getAttribute("resume");
         let mx = stanza.getAttribute("max");
-        let resume = r == "true" || r == "1";
+        let resume = (r == "true" || r == "1") && id != nil;
         if let location = SocketConnector.preprocessConnectionDetails(string: stanza.getAttribute("location")), let details: XMPPSrvRecord = self.context?.currentConnectionDetails {
             _resumptionLocation = XMPPSrvRecord(port: location.1 ?? details.port, weight: 1, priority: 1, target: location.0, directTls: details.directTls)
         } else {
@@ -352,6 +344,10 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
         
         logger.debug("stream management enabled");
+        if let completionHandler = enablingHandler {
+            enablingHandler = nil;
+            completionHandler(.success(resumptionId));
+        }
         if let context = context {
             context.eventBus.fire(EnabledEvent(context: context, resume: resume, resumeId: id));
         }
@@ -379,70 +375,73 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     }
     
     /// Event fired when Stream Management is enabled
+    @available(* , deprecated, message: "Should not be needed")
     open class EnabledEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = EnabledEvent();
-        
+
         /// Is resumption enabled?
         public let resume: Bool;
         /// ID of stream for resumption
         public let resumeId:String?;
-        
+
         init() {
             resume = false;
             resumeId = nil
             super.init(type: "StreamManagementEnabledEvent")
         }
-        
+
         init(context: Context, resume: Bool, resumeId: String?) {
             self.resume = resume;
             self.resumeId = resumeId;
             super.init(type: "StreamManagementEnabledEvent", context: context);
         }
-        
+
     }
-    
+
     /// Event fired when Stream Management fails
+    @available(* , deprecated, message: "Should not be needed, if required use Resetable protocol for XMPPModule")
     open class FailedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = FailedEvent();
-        
+
         /// Received error condition
         public let errorCondition:ErrorCondition!;
-        
+
         init() {
             errorCondition = nil
             super.init(type: "StreamManagementFailedEvent");
         }
-        
+
         init(context: Context, errorCondition: ErrorCondition) {
             self.errorCondition = errorCondition;
             super.init(type: "StreamManagementFailedEvent", context: context);
         }
-        
+
     }
-    
+
+    @available(* , deprecated, message: "Should not be needed")
     open class ResumedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ResumedEvent();
-        
+
         /// Value of H attribute
         public let newH: UInt32?;
         /// ID of resumed stream
         public let resumeId:String?;
-        
+
         init() {
             newH = nil;
             resumeId = nil
             super.init(type: "StreamManagementResumedEvent")
         }
-        
+
         init(context: Context, newH: UInt32, resumeId: String?) {
             self.newH = newH;
             self.resumeId = resumeId;
             super.init(type: "StreamManagementResumedEvent", context: context);
         }
-        
+
     }
 
 }

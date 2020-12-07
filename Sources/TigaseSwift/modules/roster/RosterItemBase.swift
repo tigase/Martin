@@ -1,8 +1,8 @@
 //
-// RosterItem.swift
+// RosterItemBase.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -24,11 +24,11 @@ import Foundation
 /**
  Class holds informations about single roster entry
  */
-open class RosterItem: RosterItemProtocol, CustomStringConvertible {
-    
+open class RosterItemBase: RosterItemProtocol, CustomStringConvertible {
+
     public let jid: JID;
     public let name: String?;
-    public let subscription: Subscription;
+    public let subscription: RosterItemSubscription;
     public let ask: Bool;
     public let groups: [String];
     public let annotations: [RosterItemAnnotation];
@@ -39,7 +39,7 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
         }
     }
     
-    public init(jid:JID, name: String?, subscription: Subscription, groups: [String] = [String](), ask: Bool = false, annotations: [RosterItemAnnotation]) {
+    public init(jid:JID, name: String?, subscription: RosterItemSubscription, groups: [String] = [String](), ask: Bool = false, annotations: [RosterItemAnnotation]) {
         self.jid = jid;
         if name?.trimmingCharacters(in: .whitespaces).isEmpty ?? true {
             self.name = nil;
@@ -52,49 +52,16 @@ open class RosterItem: RosterItemProtocol, CustomStringConvertible {
         self.annotations = annotations;
     }
     
-    
-    open func update(name: String?, subscription: Subscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) -> RosterItem {
-        return RosterItem(jid: self.jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
-    }
-//    public func updateName(name: String?, )
-    
-    /**
-     Possible subscription values allowed by XMPP specification:
-     - both
-     - from
-     - none
-     - remove
-     - to
-     */
-    public enum Subscription: String {
-        case both
-        case from
-        case none
-        case remove
-        case to
-        
-        public var isFrom: Bool {
-            switch self {
-            case .from, .both:
-                return true;
-            case .none, .to, .remove:
-                return false;
-            }
-        }
-        
-        public var isTo: Bool {
-            switch self {
-            case .to, .both:
-                return true;
-            case .none, .from, .remove:
-                return false;
-            }
-        }
-    }
 }
 
 public protocol RosterItemProtocol: class {
-    var jid:JID { get };
+    var jid: JID { get };
+    var name: String? { get }
+    var subscription: RosterItemSubscription { get }
+    var ask: Bool { get };
+    var groups: [String] { get }
+    var annotations: [RosterItemAnnotation] { get }
+
 }
 
 public struct RosterItemAnnotation: Codable {

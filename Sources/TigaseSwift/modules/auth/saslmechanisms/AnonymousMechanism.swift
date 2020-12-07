@@ -35,8 +35,10 @@ open class AnonymousMechanism: SaslMechanism {
         
     }
     
-    public func reset(scope: ResetableScope) {
-        status = .new;
+    public func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.stream) {
+            status = .new;
+        }
     }
     
     open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {

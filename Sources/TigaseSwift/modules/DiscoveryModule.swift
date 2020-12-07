@@ -55,8 +55,10 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
     
     public let identity: Identity;
     
-    public private(set) var serverDiscoResult: DiscoveryInfoResult?;
-    public private(set) var accountDiscoResult: DiscoveryInfoResult?;
+    @Published
+    public private(set) var serverDiscoResult: DiscoveryInfoResult = .empty();
+    @Published
+    public private(set) var accountDiscoResult: DiscoveryInfoResult = .empty();
     
     public init(identity: Identity = Identity(category: "client", type: "pc", name: SoftwareVersionModule.DEFAULT_NAME_VAL)) {
         self.identity = identity;
@@ -145,7 +147,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         getInfo(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
             completionHandler(result.map { stanza in
                 guard let query = stanza.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
-                    return DiscoveryInfoResult(identities: [], features: [], form: nil);
+                    return .empty();
                 }
                 let identities = query.mapChildren(transform: { e -> Identity in
                     return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
@@ -297,9 +299,11 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         write(result);
     }
  
-    public func reset(scope: ResetableScope) {
-        self.accountDiscoResult = nil;
-        self.serverDiscoResult = nil;
+    public func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
+            self.accountDiscoResult = .empty();
+            self.serverDiscoResult = .empty();
+        }
     }
     
     /**
@@ -355,22 +359,23 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             }
         }
     }
-    
+
     /// Event fired when server features are retrieved
+    @available(*, deprecated, message: "Use $serverDiscoResult publisher")
     open class ServerFeaturesReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ServerFeaturesReceivedEvent();
-        
+
         /// Array of available server features
         public let features: [String]!;
         public let identities: [Identity]!;
-        
+
         init() {
             self.features = nil;
             self.identities = nil;
             super.init(type: "ServerFeaturesReceivedEvent");
         }
-        
+
         public init(context: Context, features: [String], identities: [Identity]) {
             self.features = features;
             self.identities = identities;
@@ -379,18 +384,19 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
     }
 
     /// Event fired when account features are retrieved
+    @available(*, deprecated, message: "Use $accountDiscoResult publisher")
     open class AccountFeaturesReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = AccountFeaturesReceivedEvent();
-        
+
         /// Array of available server features
         public let features: [String]!;
-        
+
         init() {
             self.features = nil;
             super.init(type: "AccountFeaturesReceivedEvent")
         }
-        
+
         public init(context: Context, features: [String]) {
             self.features = features;
             super.init(type: "AccountFeaturesReceivedEvent", context: context);
@@ -406,6 +412,10 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             self.identities = identities;
             self.features = features;
             self.form = form;
+        }
+        
+        public static func empty() -> DiscoveryInfoResult {
+            return .init(identities: [], features: [], form: nil);
         }
     }
     

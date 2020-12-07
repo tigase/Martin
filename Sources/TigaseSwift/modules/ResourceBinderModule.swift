@@ -61,8 +61,8 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
         
     }
     
-    public func reset(scope: ResetableScope) {
-        if scope == .session {
+    public func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
             bindedJid = nil;
         }
     }

@@ -25,15 +25,6 @@ import TigaseLogging
 /// Protocol which is used by other class to interact with classes responsible for session logic.
 public protocol XmppSessionLogic: class {
     
-//    public enum State {
-//        case connecting
-//        case connected
-//        case disconnecting
-//        // this should be only "after" we process the last received stanza!!
-//        case disconneted
-//    }
-//    -- should we use different state? This would help use with details about authentication, etc...
-    
     /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
     var state:SocketConnector.State { get }
     var statePublisher: Published<SocketConnector.State>.Publisher { get }
@@ -70,7 +61,7 @@ extension XmppSessionLogic {
  Implementation of XmppSessionLogic protocol which is resposible for
  following XMPP session logic for socket connections.
  */
-open class SocketSessionLogic: XmppSessionLogic, EventHandler {
+open class SocketSessionLogic: XmppSessionLogic {
     
     let logger = Logger(subsystem: "TigaseSwift", category: "SocketSessionLogic")
         
@@ -95,7 +86,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
     @Published
-    open private(set) var state:SocketConnector.State = .disconnected;
+    open private(set) var state:SocketConnector.State = .disconnected();
     public var statePublisher: Published<SocketConnector.State>.Publisher {
         return $state;
     }
@@ -110,6 +101,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     
     
     private var socketSubscriptions: [Cancellable] = [];
+    private var moduleSubscriptions: [Cancellable] = [];
     
     public init(connector: SocketConnector, responseManager: ResponseManager, context: Context, seeOtherHost: XMPPSrvRecord?) {
         self.modulesManager = context.modulesManager;
@@ -128,11 +120,17 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                 return;
             }
             that.dispatcher.async {
-                if that.seeOtherHost != nil && newState == .disconnected {
-                    that.start()
-                } else {
-                    that.state = newState;
+                switch newState {
+                case .disconnected(let reason):
+                    if case .streamError(let errorElem) = reason {
+                        guard that.onStreamError(errorElem) else {
+                            return;
+                        }
+                    }
+                default:
+                    break;
                 }
+                that.state = newState;
             }
         }));
         socketSubscriptions.append(connector.streamEvents.sink(receiveValue: { [weak self] event in
@@ -149,8 +147,6 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                     that.receivedIncomingStanza(stanza);
                 case .streamTerminate:
                     that.onStreamTerminate();
-                case .streamError(let errorEl):
-                    that.onStreamError(errorEl)
                 }
             }
         }))
@@ -160,26 +156,53 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         for subscription in socketSubscriptions {
             subscription.cancel();
         }
+        for subscription in moduleSubscriptions {
+            subscription.cancel();
+        }
         self.dispatcher.sync {
-            if state != .disconnected {
-                state = .disconnected;
+            if state != .disconnected() {
+                state = .disconnected();
             }
         }
     }
-    
+        
     open func bind() {
-        eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE);
-        eventBus.register(handler: self, for: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE, AuthModule.AuthFinishExpectedEvent.TYPE);
-        eventBus.register(handler: self, for: ResourceBinderModule.ResourceBindSuccessEvent.TYPE, ResourceBinderModule.ResourceBindErrorEvent.TYPE);
-        eventBus.register(handler: self, for: StreamManagementModule.FailedEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE);
+        if let cancellable = context?.module(.auth).$state.sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }) {
+            moduleSubscriptions.append(cancellable);
+        }
+        if let cancellable = context?.module(.streamFeatures).$streamFeatures.compactMap({ $0 }).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }) {
+            moduleSubscriptions.append(cancellable);
+        }
         responseManager.start();
     }
     
+    private func authStateChanged(_ state: AuthModule.AuthorizationStatus) {
+        switch state {
+        case .authorized:
+            let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining;
+
+            if !(streamFeaturesWithPipelining?.active ?? false) {
+                socketConnector.restartStream();
+            }
+        case .expectedAuthorization:
+            guard let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining else {
+                return;
+            }
+            
+            // current version of Tigase is not capable of pipelining auth with <stream> as get features is called before authentication is done!!
+            if streamFeaturesWithPipelining.active {
+                self.startStream();
+            }
+        default:
+            logger.debug("Received auth state: \(state)")
+        }
+    }
+    
     open func unbind() {
-        eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE);
-        eventBus.unregister(handler: self, for: AuthModule.AuthSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE, AuthModule.AuthFinishExpectedEvent.TYPE);
-        eventBus.unregister(handler: self, for: ResourceBinderModule.ResourceBindSuccessEvent.TYPE, ResourceBinderModule.ResourceBindErrorEvent.TYPE);
-        eventBus.unregister(handler: self, for: StreamManagementModule.FailedEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE);
+        for subscription in moduleSubscriptions {
+            subscription.cancel();
+        }
+        moduleSubscriptions.removeAll();
         responseManager.stop();
     }
     
@@ -217,7 +240,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         }
     }
         
-    private func onStreamError(_ streamErrorEl: Element) {
+    private func onStreamError(_ streamErrorEl: Element) -> Bool {
         if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value), let lastConnectionDetails: XMPPSrvRecord = self.socketConnector.currentConnectionDetails {
             if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
                 streamFeaturesWithPipelining.connectionRestarted();
@@ -225,14 +248,16 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
             
             self.logger.log("reconnecting via see-other-host to host \(seeOtherHost.0)");
             self.seeOtherHost = XMPPSrvRecord(port: seeOtherHost.1 ?? lastConnectionDetails.port, weight: 1, priority: 1, target: seeOtherHost.0, directTls: lastConnectionDetails.directTls);
-            self.socketConnector.stop(completionHandler: nil);
-            return;
+            self.socketConnector.start(serverToConnect: self.serverToConnectDetails());
+            return false;
         }
         let errorName = streamErrorEl.findChild(xmlns: "urn:ietf:params:xml:ns:xmpp-streams")?.name;
         let streamError = errorName == nil ? nil : StreamError(rawValue: errorName!);
         if let context = self.context {
+            // how to change that into publisher?
             eventBus.fire(ErrorEvent.init(context: context, streamError: streamError));
         }
+        return true;
     }
     
     private func onStreamTerminate() {
@@ -321,65 +346,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
             socketConnector.keepAlive();
         }
     }
-    
-    open func handle(event: Event) {
-        switch event {
-        case is StreamFeaturesReceivedEvent:
-            processStreamFeatures((event as! StreamFeaturesReceivedEvent).featuresElement);
-        case is AuthModule.AuthFailedEvent:
-            processAuthFailed(event as! AuthModule.AuthFailedEvent);
-        case is AuthModule.AuthSuccessEvent:
-            processAuthSuccess(event as! AuthModule.AuthSuccessEvent);
-        case is ResourceBinderModule.ResourceBindSuccessEvent:
-            processResourceBindSuccess(event as! ResourceBinderModule.ResourceBindSuccessEvent);
-        case let re as StreamManagementModule.ResumedEvent:
-            processSessionBindedAndEstablished();
-        case is StreamManagementModule.FailedEvent:
-            if let bindModule = modulesManager.moduleOrNil(.resourceBind) {
-                bindModule.bind();
-            }
-        case is AuthModule.AuthFinishExpectedEvent:
-            processAuthFinishExpected();
-        default:
-            self.logger.debug("\(self.userJid) - received unhandled event: \(event)");
-        }
-    }
-    
-    private func processAuthFailed(_ event:AuthModule.AuthFailedEvent) {
-        self.logger.debug("\(self.userJid) - Authentication failed");
-    }
-    
-    private func processAuthSuccess(_ event:AuthModule.AuthSuccessEvent) {
-        let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining;
-
-        if !(streamFeaturesWithPipelining?.active ?? false) {
-            socketConnector.restartStream();
-        }
-    }
-    
-    private func processAuthFinishExpected() {
-        guard let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining else {
-            return;
-        }
-        
-        // current version of Tigase is not capable of pipelining auth with <stream> as get features is called before authentication is done!!
-        if streamFeaturesWithPipelining.active {
-            self.startStream();
-        }
-    }
-    
-    private func processResourceBindSuccess(_ event:ResourceBinderModule.ResourceBindSuccessEvent) {
-        modulesManager.module(.sessionEstablishment).establish(completionHandler: { result in
-            switch result {
-            case .success(_):
-                self.processSessionBindedAndEstablished();
-            case .failure(_):
-                //TODO: Should we handle failure somehow?
-                break;
-            }
-        });
-    }
-    
+                
     private func processSessionBindedAndEstablished() {
         state = .connected;
         self.logger.debug("\(self.userJid) - session binded and established");
@@ -390,16 +357,21 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
         
         if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement) {
             if streamManagementModule.isAvailable() {
-                streamManagementModule.enable();
+                streamManagementModule.enable(completionHandler: nil);
             }
         }
     }
     
     private func processStreamFeatures(_ featuresElement: Element) {
+        dispatcher.async {
+            self.processStreamFeatures();
+        }
+    }
+    
+    // FIXME: is this method aware of changes done by setting featuresElement??
+    private func processStreamFeatures() {
         self.logger.debug("\(self.userJid) - processing stream features");
         let authorized = (modulesManager.moduleOrNil(.auth)?.state ?? .notAuthorized) == .authorized;
-        let streamManagementModule = modulesManager.moduleOrNil(.streamManagement);
-        let resumption = (streamManagementModule?.resumptionEnabled ?? false) && (streamManagementModule?.isAvailable() ?? false);
         
         if (!socketConnector.isTLSActive)
             && (!connectionConfiguration.disableTLS) && self.isStartTLSAvailable() {
@@ -413,25 +385,56 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
                     authModule.login();
                 } else {
                     self.logger.debug("\(self.userJid) - skipping authentication as it is already in progress!");
-                    if resumption {
-                        streamManagementModule!.resume();
-                    } else {
-                        if let bindModule:ResourceBinderModule = modulesManager.moduleOrNil(.resourceBind) {
-                            bindModule.bind();
-                        }
-                    }
+                    self.streamAuthenticated();
                 }
             }
         } else if authorized {
-            if resumption {
-                streamManagementModule!.resume();
-            } else {
-                if let bindModule:ResourceBinderModule = modulesManager.moduleOrNil(.resourceBind) {
-                    bindModule.bind();
-                }
-            }
+            self.streamAuthenticated();
         }
         self.logger.debug("\(self.userJid) - finished processing stream features");
+    }
+    
+    private func streamAuthenticated() {
+        if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.resumptionEnabled && streamManagementModule.isAvailable() {
+            streamManagementModule.resume(completionHandler: { [weak self] result in
+                switch result {
+                case .success(_):
+                    self?.processSessionBindedAndEstablished();
+                case .failure(_):
+                    self?.context?.reset(scopes: [.session]);
+                    self?.streamAuthenticatedNoStreamResumption();
+                }
+            });
+        } else {
+            streamAuthenticatedNoStreamResumption();
+        }
+    }
+    
+    private func streamAuthenticatedNoStreamResumption() {
+        if let bindModule = self.modulesManager.moduleOrNil(.resourceBind) {
+            bindModule.bind(completionHandler: { [weak self] result in
+                switch result {
+                case .failure(_):
+                    self?.stop();
+                case .success(_):
+                    self?.resourceBound();
+                }
+            });
+        } else {
+            self.stop();
+        }
+    }
+    
+    private func resourceBound() {
+        modulesManager.module(.sessionEstablishment).establish(completionHandler: { result in
+            switch result {
+            case .success(_):
+                self.processSessionBindedAndEstablished();
+            case .failure(_):
+                //TODO: Should we handle failure somehow?
+                break;
+            }
+        });
     }
     
     private func isStartTLSAvailable() -> Bool {
@@ -456,6 +459,7 @@ open class SocketSessionLogic: XmppSessionLogic, EventHandler {
     }
     
     /// Event fired when XMPP stream error happens
+    @available(*, deprecated, message: "Observe changes of state")
     open class ErrorEvent: AbstractEvent {
         
         /// Identifier of event which should be used during registration of `EventHandler`

@@ -24,7 +24,7 @@ import Foundation
 /**
  Contains possible SASL errors.
  */
-public enum SaslError: String {
+public enum SaslError: String, Error {
     case aborted
     case incorrect_encoding = "incorrect-encoding"
     case invalid_authzid = "invalid-authzid"

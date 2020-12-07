@@ -40,7 +40,7 @@ public struct AnyPublisher<Output, Failure: Error>: Publisher {
     }
  
     @inlinable
-    public func receive<S>(subscriber: S) where S: Subscriber, Self.Failure == S.Failure, Self.Output == S.Input {
+    public func receive<S>(subscriber: S) where S: Subscriber, Failure == S.Failure, Output == S.Input {
         publisher.receive(subscriber: subscriber);
     }
     

@@ -122,7 +122,6 @@ open class XMPPClient: Context {
         }
     }
     
-    open private(set) var state:SocketConnector.State = .disconnected;
 
     private var stateSubscription: Cancellable?;
         
@@ -146,7 +145,7 @@ open class XMPPClient: Context {
      Method initiates modules if needed and starts process of connecting to XMPP server.
      */
     open func login(lastSeeOtherHost: XMPPSrvRecord? = nil) -> Void {
-        guard state == SocketConnector.State.disconnected else {
+        guard state == SocketConnector.State.disconnected() else {
             logger.debug("XMPP in state: \(self.state), - not starting connection");
             return;
         }
@@ -162,12 +161,12 @@ open class XMPPClient: Context {
                     return;
                 }
                 let oldState = that.state;
-                that.state = newState;
+                that.update(state: newState);
                 switch newState {
                 case .connected:
                     that.scheduleKeepAlive();
                     that.eventBus.fire(SocketConnector.ConnectedEvent(context: that));
-                case .disconnected:
+                case .disconnected(let reason):
                     that.releaseKeepAlive();
                     that.handleDisconnection(clean: oldState == .disconnecting);
                     that.eventBus.fire(SocketConnector.DisconnectedEvent(context: that, connectionDetails: that.currentConnectionDetails, clean: oldState == .disconnecting));
@@ -208,17 +207,13 @@ open class XMPPClient: Context {
     private func handleDisconnection(clean: Bool) {
         keepaliveTimer?.invalidate();
         keepaliveTimer = nil;
-        modulesManager.reset(scope:clean ? .session : .stream);
-        if clean {
-            context.sessionObject.clear();
-        } else {
-            context.sessionObject.clear(scopes: SessionObject.Scope.stream);
-        }
+        let scopes: Set<ResetableScope> = clean ? [.session, .stream] : [.stream];
+        self.reset(scopes: scopes);
         sessionLogic?.unbind();
         dispatcher.sync {
             stateSubscription?.cancel();
             stateSubscription = nil;
-            self.state = .disconnected;
+            self.update(state: .disconnected(.none));
             sessionLogic = nil;
         }
         logger.debug("connection stopped......");

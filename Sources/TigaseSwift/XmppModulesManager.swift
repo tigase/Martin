@@ -128,10 +128,10 @@ open class XmppModulesManager : ContextAware, Resetable {
     }
     
     /// Method resets registered modules internal state
-    open func reset(scope: ResetableScope) {
+    open func reset(scopes: Set<ResetableScope>) {
         for module in modules {
             if let resetable = module as? Resetable {
-                resetable.reset(scope: scope);
+                resetable.reset(scopes: scopes);
             }
         }
     }

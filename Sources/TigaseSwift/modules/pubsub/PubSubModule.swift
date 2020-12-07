@@ -50,8 +50,14 @@ open class PubSubModule: XmppModuleBase, XmppModule {
     
     public let features = [String]();
     
+    private let itemsEventsSender = PassthroughSubject<ItemNotification,Never>();
+    public let itemsEvents: AnyPublisher<ItemNotification,Never>;
+    private let nodesEventsSender = PassthroughSubject<NodeNotification,Never>();
+    public let nodesEvents: AnyPublisher<NodeNotification,Never>;
+
     public override init() {
-        
+        itemsEvents = itemsEventsSender.eraseToAnyPublisher();
+        nodesEvents = nodesEventsSender.eraseToAnyPublisher();
     }
     
     open func process(stanza: Stanza) throws {
@@ -74,23 +80,43 @@ open class PubSubModule: XmppModuleBase, XmppModule {
 
         let timestamp = message.delay?.stamp ?? Date();
         
-        if let itemsElem = event.findChild(name: "items") {
-            let nodeName = itemsElem.getAttribute("node");
-            itemsElem.getChildren().forEach { (item) in
-                let type = item.name;
-                let itemId = item.getAttribute("id");
-                let payload = item.firstChild();
+        if let itemsElem = event.findChild(name: "items"), let nodeName = itemsElem.getAttribute("node") {
+            for item in itemsElem.getChildren() {
+                if let itemId = item.getAttribute("id") {
+                    let payload = item.firstChild();
                 
-                if let context = context {
-                    fire(NotificationReceivedEvent(context: context, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: type));
+                    switch item.name {
+                    case "item":
+                        itemsEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .published(Item(id: itemId, payload: payload))));
+                    case "retract":
+                        itemsEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .retracted(itemId)))
+                    default:
+                        break;
+                    }
+                
+                    if let context = context {
+                        fire(NotificationReceivedEvent(context: context, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: item.name));
+                    }
                 }
             }
         }
         
-        if let collectionElem = event.findChild(name: "collection") {
-            if let nodeName = collectionElem.getAttribute("node"), let context = context {
+        if let collectionElem = event.findChild(name: "collection"), let nodeName = collectionElem.getAttribute("node") {
+            for el in collectionElem.getChildren() {
+                if let childNode = el.getAttribute("node") {
+                    switch el.name {
+                    case NotificationCollectionChildrenChangedEvent.Action.associate.rawValue:
+                        nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .childAssociated(childNode)))
+                    case NotificationCollectionChildrenChangedEvent.Action.dissociate.rawValue:
+                        nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .childDisassociated(childNode)))
+                    default:
+                        break;
+                    }
+                }
+            }
+            if let context = context {
                 collectionElem.mapChildren(transform: { (el) -> NotificationCollectionChildrenChangedEvent? in
-                    guard let childNode = el.getAttribute("node"), let action = NotificationCollectionChildrenChangedEvent.Action(rawValue: el.name) else {
+                    guard let childNode = el.getAttribute("node"), let action = NotificationCollectionChildrenChangedEvent.Action.init(rawValue: el.name) else {
                         return nil;
                     }
                     return NotificationCollectionChildrenChangedEvent(context: context, message: message, nodeName: nodeName, childNodeName: childNode, action: action, timestamp: timestamp);
@@ -102,12 +128,52 @@ open class PubSubModule: XmppModuleBase, XmppModule {
             }
         }
         
-        if let deleteElem = event.findChild(name: "delete"), let context = context {
-            if let nodeName = deleteElem.getAttribute("node") {
+        if let deleteElem = event.findChild(name: "delete"), let nodeName = deleteElem.getAttribute("node") {
+            nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .deleted));
+            if let context = context {
                 self.fire(NotificationNodeDeletedEvent(context: context, message: message, nodeName: nodeName));
             }
         }
         
+    }
+    
+    public struct ItemNotification {
+        public let message: Message;
+        public let node: String;
+        public let timestamp: Date;
+        public let action: Action;
+
+        public init(message: Message, node: String, timestamp: Date, action: Action) {
+            self.message = message;
+            self.node = node;
+            self.timestamp = timestamp;
+            self.action = action;
+        }
+
+        public enum Action {
+            case published(Item)
+            case retracted(String)
+        }
+    }
+
+    public struct NodeNotification {
+        public let message: Message;
+        public let node: String;
+        public let timestamp: Date;
+        public let action: Action;
+        
+        public init(message: Message, node: String, timestamp: Date, action: Action) {
+            self.message = message;
+            self.node = node;
+            self.timestamp = timestamp;
+            self.action = action;
+        }
+        
+        public enum Action {
+            case deleted
+            case childAssociated(String)
+            case childDisassociated(String)
+        }
     }
     
     /// Event fired when received message with PubSub notification/event with items

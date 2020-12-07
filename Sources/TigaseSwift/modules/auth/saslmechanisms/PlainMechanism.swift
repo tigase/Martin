@@ -30,8 +30,10 @@ open class PlainMechanism: SaslMechanism {
 
     public private(set) var status: SaslMechanismStatus = .new;
     
-    public func reset(scope: ResetableScope) {
-        status = .new;
+    public func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.stream) {
+            status = .new;
+        }
     }
     
     /**

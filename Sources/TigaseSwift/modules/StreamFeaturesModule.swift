@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [stream features]: http://xmpp.org/rfcs/rfc6120.html#streams-negotiation-features
  */
-open class StreamFeaturesModule: XmppModuleBase, XmppModule, Resetable {
+open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable {
 
     public static let ID = "stream:features";
     public static let STREAM_FEATURES_KEY = "stream:features";
@@ -41,6 +41,7 @@ open class StreamFeaturesModule: XmppModuleBase, XmppModule, Resetable {
     public let criteria = Criteria.name("features", xmlns: "http://etherx.jabber.org/streams");
     public let features = [String]();
     
+    @Published
     open private(set) var streamFeatures: Element?;
     
     /**
@@ -77,28 +78,29 @@ open class StreamFeaturesModule: XmppModuleBase, XmppModule, Resetable {
         fireEvent(streamFeatures: element);
     }
     
-    public func reset(scope: ResetableScope) {
+    public func reset(scopes: Set<ResetableScope>) {
         streamFeatures = nil;
     }
 }
 
 /// Event fired when stream features are received
+@available(*, deprecated, message: "Use StreamFeaturesModule.$streamFeatures publisher")
 open class StreamFeaturesReceivedEvent: AbstractEvent {
-    
+
     /// Identifier of event which should be used during registration of `EventHandler`
     public static let TYPE = StreamFeaturesReceivedEvent();
-    
+
     /// Element with stream features
     public let featuresElement:Element!;
-    
+
     init() {
         featuresElement = nil;
         super.init(type: "StreamFeaturesReceivedEvent")
     }
-    
+
     public init(context: Context, element:Element) {
         self.featuresElement = element;
         super.init(type: "StreamFeaturesReceivedEvent", context: context);
     }
-    
+
 }

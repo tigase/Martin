@@ -39,14 +39,14 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
     public let features = [String]();
     
     open var isAvailable: Bool {
-        if let features: [String] = context?.module(.disco).accountDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).accountDiscoResult.features {
             if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
                 return true;
             }
         }
         
         // TODO: fallback to handle previous behavior - remove it later on...
-        if let features: [String] = context?.module(.disco).serverDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).serverDiscoResult.features {
             if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
                 return true;
             }
@@ -56,14 +56,14 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
     }
     
     open func isSupported(extension type: PushNotificationsModuleExtension.Type) -> Bool {
-        if let features: [String] = context?.module(.disco).accountDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).accountDiscoResult.features {
             return features.contains(type.XMLNS);
         }
         return false;
     }
     
     open func isSupported(feature: String) -> Bool {
-        if let features: [String] = context?.module(.disco).accountDiscoResult?.features {
+        if let features: [String] = context?.module(.disco).accountDiscoResult.features {
             return features.contains(feature);
         }
         return false;

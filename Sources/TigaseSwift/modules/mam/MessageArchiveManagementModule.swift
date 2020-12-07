@@ -53,10 +53,10 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     }
     
     open var availableVersion: Version? {
-        if let accountFeatures: [String] = context?.module(.disco).accountDiscoResult?.features {
+        if let accountFeatures: [String] = context?.module(.disco).accountDiscoResult.features {
             return Version.values.first(where: { version in accountFeatures.contains(version.rawValue) });
         }
-        if let serverFeatures: [String] = context?.module(.disco).serverDiscoResult?.features {
+        if let serverFeatures: [String] = context?.module(.disco).serverDiscoResult.features {
             return Version.values.first(where: { version in serverFeatures.contains(version.rawValue) });
         }
         return nil;
@@ -64,7 +64,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     
     public override init() {}
     
-    open func reset(scope: ResetableScope) {
+    open func reset(scopes: Set<ResetableScope>) {
         self.dispatcher.async {
             self.queries.removeAll();
         }

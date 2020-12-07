@@ -24,7 +24,7 @@ import Foundation
 /**
  Module provides support for Tigase Mobile Optimizations feature
  */
-open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
+open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     
     /// Base part of namespace used by Mobile Optimizations
     public static let MM_XMLNS = "http://tigase.org/protocol/mobile";
@@ -36,18 +36,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler, Resetable
     public let criteria = Criteria.empty();
     
     public let features = [String]();
-    
-    open override weak var context: Context? {
-        didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
-            }
-            if let context = context {
-                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
-            }
-        }
-    }
-    
+        
     fileprivate var _activeMode: Mode? = nil;
     open var activeMode: Mode? {
         return _activeMode;
@@ -67,21 +56,12 @@ open class MobileModeModule: XmppModuleBase, XmppModule, EventHandler, Resetable
     public override init() {
     }
     
-    open func reset(scope: ResetableScope) {
-        if scope == .session {
+    open func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
             _activeMode = nil;
         }
     }
-    
-    public func handle(event: Event) {
-        switch event {
-        case _ as StreamManagementModule.FailedEvent:
-            _activeMode = nil;
-        default:
-            break;
-        }
-    }
-    
+        
     open func process(stanza: Stanza) throws {
         throw ErrorCondition.feature_not_implemented;
     }

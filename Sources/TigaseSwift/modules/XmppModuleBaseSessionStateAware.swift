@@ -1,8 +1,8 @@
 //
-// XMPPStreamDelegate.swift
+// XmppModuleBaseSessionStateAware.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -19,13 +19,28 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 
+
 import Foundation
 
-public protocol XMPPStreamDelegate: class {
+open class XmppModuleBaseSessionStateAware: XmppModuleBase {
+
+    private var stateSubscriberCancellable: Cancellable?;
+    open override weak var context: Context? {
+        didSet {
+            stateSubscriberCancellable?.cancel();
+            stateSubscriberCancellable = context?.$state.sink(receiveValue: { [weak self] state in
+                self?.stateChanged(newState: state);
+            })
+        }
+    }
+
+    public override init() {}
     
-    func onStreamStart(attributes:[String:String])
-    func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason);
-    func onError(msg: String?);
-    func process(element packet:Element)
-    
+    deinit {
+        stateSubscriberCancellable?.cancel();
+    }
+
+    open func stateChanged(newState: SocketConnector.State) {
+        
+    }
 }

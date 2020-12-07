@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotationAwareProtocol {
+open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, RosterAnnotationAwareProtocol {
     func prepareRosterGetRequest(queryElem el: Element) {
         el.addChild(Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0"));
     }
@@ -50,20 +50,31 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
     );
     
     public let features: [String] = [CORE_XMLNS];
+    
+    private var cancellables: [Cancellable] = [];
 
     public override weak var context: Context? {
         didSet {
-            oldValue?.eventBus.unregister(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
+            for cancellable in cancellables {
+                cancellable.cancel();
+            }
+            cancellables.removeAll();
             oldValue?.unregister(lifecycleAware: channelManager);
-            context?.eventBus.register(handler: self, for: [RosterModule.ItemUpdatedEvent.TYPE, PubSubModule.NotificationReceivedEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, SessionObject.ClearedEvent.TYPE, DiscoveryModule.AccountFeaturesReceivedEvent.TYPE]);
             context?.register(lifecycleAware: channelManager);
             if let context = context {
                 discoModule = context.modulesManager.module(.disco);
+                cancellables.append(discoModule.$accountDiscoResult.sink(receiveValue: { [weak self] info in self?.accountFeaturesChanged(info.features) }));
                 mamModule = context.modulesManager.module(.mam);
                 pubsubModule = context.modulesManager.module(.pubsub);
+                cancellables.append(pubsubModule.itemsEvents.sink(receiveValue: { [weak self] notification in
+                    self?.receivedPubsubItem(notification: notification);
+                }));
                 avatarModule = context.modulesManager.module(.pepUserAvatar);
                 presenceModule = context.modulesManager.module(.presence);
                 rosterModule = context.modulesManager.module(.roster);
+                cancellables.append(rosterModule.events.sink(receiveValue: { [weak self] action in
+                    self?.rosterItemChanged(action);
+                }));
             } else {
                 discoModule = nil;
                 mamModule = nil;
@@ -84,10 +95,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
 
     public let channelManager: ChannelManager;
     
-    public var isPAM2SupportAvailable: Bool {
-        let accountFeatures: [String] = discoModule?.accountDiscoResult?.features ?? [];
-        return accountFeatures.contains(MixModule.PAM2_XMLNS);
-    }
+    public private(set) var isPAM2SupportAvailable: Bool = false;
     
     public var localMAMStoresPubSubEvents: Bool {
         return isPAM2SupportAvailable && false;
@@ -104,6 +112,13 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
     
     public init(channelManager: ChannelManager) {
         self.channelManager = channelManager;
+    }
+    
+    deinit {
+        for cancellable in cancellables {
+            cancellable.cancel();
+        }
+        cancellables.removeAll();
     }
     
     open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,XMPPError>)->Void) {
@@ -156,7 +171,7 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
                 if let channel = self.channelManager.channel(for: context, with: channelJid) {
                     _  = self.channelManager.close(channel: channel);
                 }
-                self.rosterModule?.store.remove(jid: JID(channelJid), completionHandler: nil);
+                self.rosterModule?.removeItem(jid: JID(channelJid), completionHandler: nil);
                 completionHandler(.success(Void()));
             case .failure(let error):
                 completionHandler(.failure(error));
@@ -570,125 +585,131 @@ open class MixModule: XmppModuleBase, XmppModule, EventHandler, RosterAnnotation
         }
     }
     
-    open func handle(event: Event) {
-        switch event {
-        case let e as RosterModule.ItemUpdatedEvent:
-            // react on add/remove channel in the roster
-            guard isPAM2SupportAvailable, let ri = e.rosterItem else {
-                return;
+    open func reset(scopes: Set<ResetableScope>) {
+        self.isPAM2SupportAvailable = false;
+        if let context = context {
+            for channel in self.channelManager.channels(for: context) {
+                self.fire(ChannelStateChangedEvent(context: context, channel: channel));
             }
+        }
+    }
+    
+    public override func stateChanged(newState: SocketConnector.State) {
+        if newState == .connected, let context = context {
+            for channel in self.channelManager.channels(for: context) {
+                self.fire(ChannelStateChangedEvent(context: context, channel: channel));
+            }
+        }
+    }
+    
+    private func accountFeaturesChanged(_ features: [String]) {
+        self.isPAM2SupportAvailable = features.contains(MixModule.PAM2_XMLNS);
+        
+        guard let context = context, context.state == .connected else {
+            return;
             
-            switch e.action {
-            case .removed:
-                guard let channel = channelManager.channel(for: e.context, with: ri.jid.bareJid) else {
-                    return;
+        }
+        
+        if !localMAMStoresPubSubEvents {
+            if !isPAM2SupportAvailable {
+                for channel in self.channelManager.channels(for: context) {
+                    if let lastMessageDate = (channel as? LastMessageTimestampAware)?.lastMessageTimestamp {
+                        self.retrieveHistory(fromChannel: channel.jid, start: lastMessageDate, after: nil);
+                    } else {
+                        self.retrieveHistory(fromChannel: channel.jid, max: 100);
+                    }
                 }
-                self.channelLeft(channel: channel);
-            default:
-                guard let annotation = ri.annotations.first(where: { item -> Bool in
+            }
+            for channel in self.channelManager.channels(for: context) {
+                if self.automaticRetrieve.contains(.participants) {
+                    retrieveParticipants(for: channel, completionHandler: nil);
+                }
+                if self.automaticRetrieve.contains(.info) {
+                    retrieveInfo(for: channel.jid, completionHandler: nil);
+                }
+                if self.automaticRetrieve.contains(.affiliations) {
+                    retrieveAffiliations(for: channel, completionHandler: nil);
+                }
+                if self.automaticRetrieve.contains(.avatar) {
+                    retrieveAvatar(for: channel.jid, completionHandler: nil);
+                }
+            }
+        }
+        if isPAM2SupportAvailable {
+            let items = rosterModule.rosterManager.items(for: context);
+            for item in items {
+                if let annotation = item.annotations.first(where: { item -> Bool in
                     return item.type == "mix";
-                }), let participantId = annotation.values["participant-id"] else {
-                    return;
-                }
-                
-                self.channelJoined(channelJid: ri.jid.bareJid, participantId: participantId, nick: nil);
-                if !isPAM2SupportAvailable {
-                    retrieveHistory(fromChannel: ri.jid.bareJid, max: 100);
+                }), let participantId = annotation.values["participant-id"] {
+                    self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
                 }
             }
-            break;
-        case let e as PubSubModule.NotificationReceivedEvent:
-            guard let from = e.message.from?.bareJid, let node = e.nodeName, let channel = channelManager.channel(for: e.context, with: from) else {
-                return;
-            }
-
-            switch node {
-            case "urn:xmpp:mix:nodes:participants":
-                switch e.itemType {
-                case "item":
-                    if let item = e.item, let participant = MixParticipant(from: item) {
-                        if participant.id == channel.participantId {
-                            channel.update(ownNickname: participant.nickname);
-                        }
-                        channel.update(participant: participant);
-                        if let context = context {
-                            self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
-                        }
+        }
+    }
+    
+    private func receivedPubsubItem(notification: PubSubModule.ItemNotification) {
+        // FIXME: should we do that on a separate queue?? we are retrieving channel and updating participants which may be blocking..
+        guard let context = self.context, let from = notification.message.from?.bareJid, let channel = channelManager.channel(for: context, with: from) else {
+            return;
+        }
+        
+        switch notification.node {
+        case "urn:xmpp:mix:nodes:participants":
+            switch notification.action {
+            case .published(let item):
+                if let participant = MixParticipant(from: item) {
+                    if participant.id == channel.participantId {
+                        channel.update(ownNickname: participant.nickname);
                     }
-                case "retract":
-                    if let id = e.itemId {
-                        if channel.participantId == id {
-                            channel.update(state: .left);
-                            if let context = context {
-                                self.fire(ChannelStateChangedEvent(context: context, channel: channel));
-                            }
-                        }
-                        if let participant = channel.removeParticipant(withId: id), let context = context {
-                            self.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
-                        }
-                    }
-                default:
-                    break;
+                    channel.update(participant: participant);
+                    self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
                 }
-            case "urn:xmpp:mix:nodes:info":
-                guard let info = ChannelInfo(form: JabberDataElement(from: e.payload)) else {
+            case .retracted(let itemId):
+                if channel.participantId == itemId {
+                    channel.update(state: .left);
+                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
+                }
+                if let participant = channel.removeParticipant(withId: itemId) {
+                    self.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
+                }
+            }
+        case "urn:xmpp:mix:nodes:info":
+            switch notification.action {
+            case .published(let item):
+                guard let info = ChannelInfo(form: JabberDataElement(from: item.payload)) else {
                     return;
                 }
                 channel.update(info: info);
             default:
                 break;
             }
-        case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent, is StreamManagementModule.ResumedEvent:
-            // we have reconnected, so lets update all channels statuses
-            if let context = context {
-                for channel in self.channelManager.channels(for: context) {
-                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
-                }
-            }
-        case is SessionObject.ClearedEvent:
-            if let context = context {
-                for channel in self.channelManager.channels(for: context) {
-                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
-                }
-            }
-        case let e as DiscoveryModule.AccountFeaturesReceivedEvent:
-            if !localMAMStoresPubSubEvents {
-                if !isPAM2SupportAvailable {
-                    for channel in self.channelManager.channels(for: e.context) {
-                        if let lastMessageDate = (channel as? LastMessageTimestampAware)?.lastMessageTimestamp {
-                            self.retrieveHistory(fromChannel: channel.jid, start: lastMessageDate, after: nil);
-                        } else {
-                            self.retrieveHistory(fromChannel: channel.jid, max: 100);
-                        }
-                    }
-                }
-                for channel in self.channelManager.channels(for: e.context) {
-                    if self.automaticRetrieve.contains(.participants) {
-                        retrieveParticipants(for: channel, completionHandler: nil);
-                    }
-                    if self.automaticRetrieve.contains(.info) {
-                        retrieveInfo(for: channel.jid, completionHandler: nil);
-                    }
-                    if self.automaticRetrieve.contains(.affiliations) {
-                        retrieveAffiliations(for: channel, completionHandler: nil);
-                    }
-                    if self.automaticRetrieve.contains(.avatar) {
-                        retrieveAvatar(for: channel.jid, completionHandler: nil);
-                    }
-                }
-            }
-            if isPAM2SupportAvailable {
-                let store = rosterModule.store;
-                for jid in store.getJids() {
-                    if let item = store.get(for: jid), let annotation = item.annotations.first(where: { item -> Bool in
-                        return item.type == "mix";
-                    }), let participantId = annotation.values["participant-id"] {
-                        self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
-                    }
-                }
-            }
         default:
             break;
+        }
+    }
+    
+    private func rosterItemChanged(_ action: RosterModule.RosterItemAction) {
+        guard isPAM2SupportAvailable, let context = self.context else {
+            return;
+        }
+        
+        switch action {
+        case .addedOrUpdated(let item):
+            guard let annotation = item.annotations.first(where: { item -> Bool in
+                return item.type == "mix";
+            }), let participantId = annotation.values["participant-id"] else {
+                return;
+            }
+            
+            self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
+            if !isPAM2SupportAvailable {
+                retrieveHistory(fromChannel: item.jid.bareJid, max: 100);
+            }
+        case .removed(let jid):
+            guard let channel = channelManager.channel(for: context, with: jid.bareJid) else {
+                return;
+            }
+            self.channelLeft(channel: channel);
         }
     }
     

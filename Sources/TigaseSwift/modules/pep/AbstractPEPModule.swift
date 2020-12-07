@@ -28,7 +28,7 @@ public protocol AbstractPEPModule: XmppModule, ContextAware, EventHandler {
 extension AbstractPEPModule {
     
     public var isPepAvailable: Bool {
-        if let identities: [DiscoveryModule.Identity] = context?.module(.disco).accountDiscoResult?.identities {
+        if let identities: [DiscoveryModule.Identity] = context?.module(.disco).accountDiscoResult.identities {
             if identities.first(where: { (it) -> Bool in
                 return it.category == "pubsub" && it.type == "pep";
             }) != nil {
@@ -37,7 +37,7 @@ extension AbstractPEPModule {
         }
 
         // TODO: fallback to handle previous behavior - remove it later on...
-        if let identities: [DiscoveryModule.Identity] = context?.module(.disco).serverDiscoResult?.identities {
+        if let identities: [DiscoveryModule.Identity] = context?.module(.disco).serverDiscoResult.identities {
             return identities.first(where: { (it) -> Bool in
                 return it.category == "pubsub" && it.type == "pep";
             }) != nil;

@@ -1,8 +1,8 @@
 //
-// XMPPStreamDelegate.swift
+// DefaultRosterManager.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,11 +21,10 @@
 
 import Foundation
 
-public protocol XMPPStreamDelegate: class {
-    
-    func onStreamStart(attributes:[String:String])
-    func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason);
-    func onError(msg: String?);
-    func process(element packet:Element)
+open class DefaultRosterManager: RosterManagerBase<DefaultRosterStore> {
+        
+    public override init(store: DefaultRosterStore) {
+        super.init(store: store);
+    }
     
 }

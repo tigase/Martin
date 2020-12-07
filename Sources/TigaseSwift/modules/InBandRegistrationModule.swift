@@ -222,21 +222,37 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         return featuresElement?.findChild(name: "register", xmlns: "http://jabber.org/features/iq-register") != nil;
     }
     
-    open class AccountRegistrationTask: EventHandler {
+    open class AccountRegistrationTask {
+        
+        private var cancellables: [Cancellable] = [];
         
         public private(set) var client: XMPPClient! {
             willSet {
-                if newValue == nil && self.client != nil {
-                    let curr = self.client;
-                    client.eventBus.unregister(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SocketConnector.CertificateErrorEvent.TYPE);
-                    DispatchQueue.main.async {
-                        curr?.disconnect();
-                    }
+                for cancellable in cancellables {
+                    cancellable.cancel();
+                }
+                cancellables.removeAll();
+                if let client = self.client {
+                    client.disconnect();
                 }
             }
             didSet {
-                if client != nil {
-                    client.eventBus.register(handler: self, for: StreamFeaturesReceivedEvent.TYPE, SocketConnector.DisconnectedEvent.TYPE, SocketConnector.CertificateErrorEvent.TYPE);
+                if let client = client {
+                    cancellables.append(client.$state.sink(receiveValue: { [weak self] state in
+                        switch state {
+                        case .disconnected(let reason):
+                            switch reason {
+                            case .sslCertError(let trust):
+                                self?.serverSSLCertValidationFailed(trust);
+                            default:
+                                break;
+                            }
+                            self?.serverDisconnected();
+                        default:
+                            break;
+                        }
+                    }));
+                    cancellables.append(client.module(.streamFeatures).$streamFeatures.compactMap({ $0 }).sink(receiveValue: { [weak self] _ in self?.streamFeaturesReceived() }));
                 }
             }
         };
@@ -266,9 +282,15 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             self.client?.login();
         }
         
+        deinit {
+            for cancellable in cancellables {
+                cancellable.cancel();
+            }
+        }
+        
         open func submit(form: JabberDataElement) {
             formToSubmit = form;
-            guard (client?.state ?? .disconnected) != .disconnected else {
+            guard (client?.state ?? .disconnected()) != .disconnected() else {
                 client?.login();
                 return;
             }
@@ -309,37 +331,35 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             self.finish();
         }
         
-        public func handle(event: Event) {
-            switch event {
-            case let e as SocketConnector.CertificateErrorEvent:
-                if self.onCertificateValidationError != nil {
-                    let certData = SslCertificateInfo(trust: e.trust!);
-                    self.serverAvailable = true;
-                    self.onCertificateValidationError!(certData, {() -> Void in
-                        self.client.connectionConfiguration.sslCertificateValidation = .fingerprint(certData.details.fingerprintSha1);
-                        self.acceptedCertificate = certData;
-                        self.serverAvailable = false;
-                        self.client.login();
-                    });
-                }
-
-            case is StreamFeaturesReceivedEvent:
-                serverAvailable = true;
-                // check registration possibility
-                guard isStreamReady() else {
-                    return;
-                }
-                startIBR();
-            case is SocketConnector.DisconnectedEvent:
-                self.preauthDone = false;
-                if !serverAvailable {
-                    onErrorFn(.service_unavailable("Could not connect to the server"));
-                }
-            default:
-                break;
+        private func streamFeaturesReceived() {
+            serverAvailable = true;
+            // check registration possibility
+            guard isStreamReady() else {
+                return;
+            }
+            startIBR();
+        }
+        
+        private func serverDisconnected() {
+            self.preauthDone = false;
+            if !serverAvailable {
+                onErrorFn(.service_unavailable("Could not connect to the server"));
             }
         }
         
+        private func serverSSLCertValidationFailed(_ trust: SecTrust) {
+            if self.onCertificateValidationError != nil {
+                let certData = SslCertificateInfo(trust: trust);
+                self.serverAvailable = true;
+                self.onCertificateValidationError!(certData, {() -> Void in
+                    self.client.connectionConfiguration.sslCertificateValidation = .fingerprint(certData.details.fingerprintSha1);
+                    self.acceptedCertificate = certData;
+                    self.serverAvailable = false;
+                    self.client.login();
+                });
+            }
+        }
+                
         private func startIBR() {
             let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
             guard InBandRegistrationModule.isRegistrationAvailable(featuresElement) else {

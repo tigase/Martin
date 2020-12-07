@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0045: Multi-User Chat]: http://xmpp.org/extensions/xep-0045.html
  */
-open class MucModule: XmppModuleBase, XmppModule, EventHandler {
+open class MucModule: XmppModuleBase, XmppModule, Resetable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let IDENTIFIER = XmppModuleIdentifier<MucModule>();
     public static let ID = "muc";
@@ -43,19 +43,6 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
 
     private let logger = Logger(subsystem: "TigaseSwift", category: "MucModule");
     
-    open override weak var context: Context? {
-        didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
-                oldValue.unregister(lifecycleAware: roomManager);
-            }
-            if let context = context {
-                context.eventBus.register(handler: self, for: SessionObject.ClearedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE);
-                context.register(lifecycleAware: roomManager);
-            }
-        }
-    }
-    
     public let criteria = Criteria.or(
         Criteria.name("message", types: [StanzaType.groupchat, StanzaType.error], containsAttribute: "from"),
         Criteria.name("presence", containsAttribute: "from"),
@@ -63,6 +50,13 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         MEDIATED_INVITATION,
         MEDIATED_INVITATION_DECLINE
         );
+    
+    open override var context: Context? {
+        didSet {
+            oldValue?.unregister(lifecycleAware: roomManager);
+            context?.register(lifecycleAware: roomManager);
+        }
+    }
     
     public let features = [String]();
     
@@ -72,19 +66,12 @@ open class MucModule: XmppModuleBase, XmppModule, EventHandler {
         self.roomManager = roomManager;
     }
         
-    open func handle(event: Event) {
-        switch event {
-        case let sec as SessionObject.ClearedEvent:
-            if sec.scopes.contains(SessionObject.Scope.session) {
-                markRoomsAsNotJoined();
-            }
-        case is StreamManagementModule.FailedEvent:
+    open func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
             markRoomsAsNotJoined();
-        default:
-            logger.error("\(self.context?.userBareJid) - received event of unsupported type: \(event)");
         }
     }
-    
+        
     /**
      Decline invitation to MUC room
      - parameter invitation: initation to decline

@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0352: Client State Inidication]:https://xmpp.org/extensions/xep-0352.html
  */
-open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler, Resetable {
+open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
     
     /// Client State Indication XMLNS
     public static let CSI_XMLNS = "urn:xmpp:csi:0";
@@ -43,18 +43,7 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler
     public let criteria = Criteria.empty();
     
     public let features = [String]();
-    
-    open override weak var context: Context? {
-        didSet {
-            if let context = context {
-                context.eventBus.register(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
-            }
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: [StreamManagementModule.FailedEvent.TYPE]);
-            }
-        }
-    }
-    
+        
     fileprivate var _state: Bool = true;
     open var state: Bool {
         return _state;
@@ -70,18 +59,9 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, EventHandler
     public override init() {
     }
     
-    open func reset(scope: ResetableScope) {
-        if scope == .session {
+    open func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
             _state = false;
-        }
-    }
-    
-    public func handle(event: Event) {
-        switch event {
-        case _ as StreamManagementModule.FailedEvent:
-            _state = false;
-        default:
-            break;
         }
     }
     

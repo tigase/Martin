@@ -41,109 +41,22 @@ import Foundation
  removeItem(..);
  ```
  */
-open class RosterStore {
-    
-    /// Number of items in roster
-    open var count:Int {
-        get {
-            return -1;
-        }
-    }
-    
-    /**
-     Holds instace responsible for modification of roster
-     on server side
-     */
-    open var handler:RosterStoreHandler?;
-    
-    public init() {
+public protocol RosterStore: ContextLifecycleAware {
         
-    }
+    associatedtype RosterItem: RosterItemProtocol
     
-    /**
-     Add item to roster
-     - parameter jid: jid
-     - parameter name: name for item
-     - parameter groups: groups to which item should belong
-     - parameter onSuccess: called after item is added
-     - parameter onError: called on failure
-     */
-    open func add(jid:JID, name:String?, groups:[String] = [String](), completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-        handler?.add(jid: jid, name: name, groups: groups, completionHandler: completionHandler);
-    }
-    
-    open func cleared() {
-        removeAll();
-        handler?.cleared();
-    }
+    func clear(for context: Context);
 
-    /**
-     Remove item from roster
-     - parameter jid: jid
-     - parameter onSuccess: called after item is added
-     - parameter onError: called on failure
-     */
-    open func remove(jid:JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-        handler?.remove(jid: jid, completionHandler: completionHandler);
-    }
-
-    /**
-     Update item in roster
-     - parameter rosterItem: roster item to update
-     - parameter name: name to change name of roster item to
-     - parameter groups: list of groups name to which item should belong
-     - parameter onSuccess: called after item is added
-     - parameter onError: called on failure
-     */
-    open func update(item:RosterItem, name: String?, groups:[String]? = nil, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-        handler?.update(item: item, name: name, groups: groups, completionHandler: completionHandler);
-    }
-
-    /**
-     Update item in roster
-     - parameter rosterItem: roster item to update
-     - parameter groups: list of groups name to which item should belong
-     - parameter onSuccess: called after item is added
-     - parameter onError: called on failure
-     */
-    open func update(item:RosterItem, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-        handler?.update(item: item, groups: groups, completionHandler: completionHandler);
-    }
+    func items(for context: Context) -> [RosterItem];
     
-    open func addItem(_ item:RosterItem) {
-    }
-
-    open func getJids() -> [JID] {
-        return [];
-    }
+    func item(for context: Context, jid: JID) -> RosterItem?;
     
-    /**
-     Retrieve roster item for JID
-     - parameter jid: jid
-     - returns: `RosterItem` for JID if exists
-     */
-    open func get(for jid:JID) -> RosterItem? {
-        return nil;
-    }
+    func updateItem(for context: Context, jid: JID, name: String?, subscription: RosterItemSubscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]);
     
-    open func removeAll() {
-    }
+    func deleteItem(for context: Context, jid: JID);
     
-    open func removeItem(for jid:JID) {
-    }
+    func version(for context: Context) -> String?;
     
-}
-
-/**
- Protocol implemented by classes responsible for making changes 
- to roster on server side
- */
-public protocol RosterStoreHandler {
-
-    func add(jid:JID, name:String?, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?);
-    func cleared();
-    func remove(jid:JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?);
-    func update(item:RosterItem, name:String?, groups:[String]?, completionHandler: ((Result<Iq,XMPPError>)->Void)?);
-    func update(item:RosterItem, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?);
+    func set(version: String?, for context: Context);
     
 }

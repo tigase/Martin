@@ -23,7 +23,7 @@ import Foundation
 
 public protocol Resetable {
     
-    func reset(scope: ResetableScope);
+    func reset(scopes: Set<ResetableScope>);
     
 }
 

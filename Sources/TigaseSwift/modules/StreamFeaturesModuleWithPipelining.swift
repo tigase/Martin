@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandler {
+open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule {
     
     open var cache: StreamFeaturesModuleWithPipeliningCacheProtocol?;
     
@@ -30,12 +30,16 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
     open private(set) var active: Bool = false;
     open var enabled: Bool = false;
     
+    private var cancellable: Cancellable?;
+    
     override open weak var context: Context? {
         willSet {
-            context?.eventBus.unregister(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
+            cancellable?.cancel();
         }
         didSet {
-            context?.eventBus.register(handler: self, for: [SocketSessionLogic.ErrorEvent.TYPE, SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, AuthModule.AuthFailedEvent.TYPE]);
+            cancellable = context?.module(.auth).$state.filter({ $0.isError }).sink(receiveValue: { [weak self] _ in
+                self?.authFailed();
+            });
         }
     }
     
@@ -47,8 +51,12 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
         super.init();
     }
     
-    public override func reset(scope: ResetableScope) {
-        super.reset(scope: scope);
+    deinit {
+        cancellable?.cancel();
+    }
+    
+    public override func reset(scopes: Set<ResetableScope>) {
+        super.reset(scopes: scopes);
         connectionRestarted();
     }
     
@@ -58,6 +66,13 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
         }
         if !active {
             try super.process(stanza: stanza);
+        }
+    }
+    
+    private func authFailed() {
+        connectionRestarted();
+        if let context = self.context {
+            cache?.set(for: context, features: nil);
         }
     }
     
@@ -75,25 +90,29 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule, EventHandle
         }
         counter = counter + 1;
     }
- 
-    public func handle(event: Event) {
-        switch event {
-        case let e as SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
+    
+    open override func stateChanged(newState: SocketConnector.State) {
+        guard let context = self.context else {
+            return;
+        }
+        
+        switch newState {
+        case .connected:
             let pipeliningSupported = newCachedFeatures.count > 0 && newCachedFeatures.count == newCachedFeatures.filter({ features in
                 return features.findChild(name: "pipelining", xmlns: "urn:xmpp:features:pipelining") != nil;
             }).count;
-            cache?.set(for: e.context, features: pipeliningSupported ? newCachedFeatures : nil);
+            cache?.set(for: context, features: pipeliningSupported ? newCachedFeatures : nil);
             newCachedFeatures.removeAll();
-        case let e as SocketSessionLogic.ErrorEvent:
-            connectionRestarted();
-            cache?.set(for: e.context, features: nil);
-        case let e as AuthModule.AuthFailedEvent:
-            connectionRestarted();
-            cache?.set(for: e.context, features: nil);
+        case .disconnected(let reason):
+            if case .streamError(_) = reason {
+                self.connectionRestarted();
+                self.cache?.set(for: context, features: nil);
+            }
         default:
             break;
         }
     }
+ 
 
 }
 

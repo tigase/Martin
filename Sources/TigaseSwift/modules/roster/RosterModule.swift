@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
  */
-open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
+open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Resetable {
     
     public static let IDENTIFIER = XmppModuleIdentifier<RosterModule>();
     /// ID of module for looup in `XmppModulesManager`
@@ -41,52 +41,46 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
     
     public let logger = Logger(subsystem: "TigaseSwift", category: "RosterModule");
     
-    open weak override var context: Context? {
+    public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:roster"));
+    
+    open override var context: Context? {
         didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
-            }
-            if let context = context {
-                context.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, SessionObject.ClearedEvent.TYPE);
-            }
+            oldValue?.unregister(lifecycleAware: rosterManager);
+            context?.register(lifecycleAware: rosterManager);
         }
     }
     
-    public let criteria = Criteria.name("iq").add(Criteria.name("query", xmlns: "jabber:iq:roster"));
-    
     public let features = [String]();
-    /// Roster cache versio provider
-    open var versionProvider: RosterCacheProvider?;
-    /// Roster store
-    public let store: RosterStore;
-    @available(* , deprecated, renamed: "store")
-    public var rosterStore: RosterStore {
-        return store;
-    }
 
-    @available(*, deprecated, message: "Use store property of the module instance directly!")
-    public static func getRosterStore(_ sessionObject:SessionObject) -> RosterStore {
-        return sessionObject.context.module(.roster).store;
+    public let rosterManager: RosterManager;
+    
+    private let eventsSender = PassthroughSubject<RosterItemAction,Never>();
+    public let events: AnyPublisher<RosterItemAction,Never>;
+    
+    public enum RosterItemAction {
+        case addedOrUpdated(RosterItemProtocol)
+        case removed(JID)
     }
     
-    public init(store: RosterStore = DefaultRosterStore()) {
-        self.store = store;
+    private var requestRosterOnReconnect = true;
+    
+    public init(rosterManager: RosterManager) {
+        self.rosterManager = rosterManager;
+        self.events = eventsSender.eraseToAnyPublisher();
         super.init();
-        store.handler = RosterStoreHandlerImpl(module: self);
-        loadFromCache();
     }
     
-    open func handle(event: Event) {
-        switch event {
-        case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
-            requestRoster();
-        case let ce as SessionObject.ClearedEvent:
-            if ce.scopes.contains(.user) {
-                store.cleared();
-                fire(ItemUpdatedEvent(context: ce.context, rosterItem: nil, action: .removed, modifiedGroups: nil));
-            }
-        default:
-            logger.error("received unknown event: \(event)");
+    public override func stateChanged(newState: SocketConnector.State) {
+        guard newState == .connected && requestRosterOnReconnect else {
+            return;
+        }
+        requestRosterOnReconnect = false;
+        self.requestRoster();
+    }
+    
+    open func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
+            requestRosterOnReconnect = true;
         }
     }
     
@@ -100,31 +94,21 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
             throw XMPPError.not_allowed("You are not allowed to send this to me!");
         }
         
-        if let query = stanza.findChild(name: "query", xmlns: "jabber:iq:roster") {
-            processRosterQuery(query, force: false);
+        if let query = stanza.findChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
+            for item in query.getChildren(name: "item") {
+                _ = self.processRosterItem(item, context: context);
+            }
+            
+            rosterManager.set(version: query.getAttribute("ver"), for: context);
         }
     }
     
-    fileprivate func processRosterQuery(_ query:Element, force:Bool) {
-        if force {
-            store.removeAll();
+    private func processRosterItem(_ item:Element, context: Context) -> JID? {
+        guard let jid = JID(item.getAttribute("jid")) else {
+            return nil;
         }
-        
-        let ver = query.getAttribute("ver");
-        query.forEachChild(name: "item") { (item:Element) -> Void in
-            self.processRosterItem(item);
-        }
-    
-        if ver != nil, let context = context {
-            versionProvider?.updateReceivedVersion(context, ver: ver);
-        }
-        
-    }
-    
-    private func processRosterItem(_ item:Element) {
-        let jid = JID(item.getAttribute("jid")!);
         let name = item.getAttribute("name");
-        let subscription:RosterItem.Subscription = item.getAttribute("subscription") == nil ? RosterItem.Subscription.none : RosterItem.Subscription(rawValue: item.getAttribute("subscription")!)!;
+        let subscription: RosterItemSubscription = item.getAttribute("subscription") == nil ? .none : RosterItemSubscription(rawValue: item.getAttribute("subscription")!)!;
         let ask = item.getAttribute("ask") == "subscribe";
         let groups:[String] = item.mapChildren(transform: {(g:Element) -> String in
                 return g.value!;
@@ -132,44 +116,22 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
                 return e.name == "group" && e.value != nil;
             });
         
-        var currentItem = store.get(for: jid);
-        var action = Action.other;
-        var modifiedGroups:[String]? = nil;
         let annotations: [RosterItemAnnotation] = processRosterItemForAnnotations(item: item);
-        if (subscription == .remove && currentItem != nil) {
-            store.removeItem(for: jid);
-            action = .removed;
-            modifiedGroups = currentItem!.groups;
+
+        if subscription == .remove {
+            if let item = rosterManager.deleteItem(for: context, jid: jid) {
+                eventsSender.send(.removed(jid));
+                fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .removed));
+            }
+            return jid;
         } else {
-            if (currentItem == nil) {
-                action = .added;
-            } else {
-                if (currentItem!.ask == ask && (subscription == .from || subscription == .none)) {
-                    action = .askCancelled;
-                } else {
-                    if (currentItem!.subscription.isFrom == subscription.isFrom) {
-                        action = (currentItem!.subscription.isTo && subscription.isTo == false) ? .unsubscribed : .subscribed;
-                    }
-                }
-            }
-            
-            var modifiedGroups:[String]? = nil;
-            if currentItem != nil && (action == .other || action == .added) {
-                modifiedGroups = currentItem!.groups.filter({(gname:String)->Bool in
-                    return !groups.contains(gname);
-                });
-                modifiedGroups?.append(contentsOf: groups.filter({(gname:String)->Bool in
-                    return !currentItem!.groups.contains(gname);
-                }));
-            }
-            currentItem = currentItem != nil ? currentItem!.update(name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations) : RosterItem(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
-            
-            store.addItem(currentItem!);
-            
+            let item = rosterManager.updateItem(for: context, jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
+            eventsSender.send(.addedOrUpdated(item));
+            fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .added));
+            return jid;
         }
-        if let context = context {
-            fire(ItemUpdatedEvent(context: context, rosterItem: currentItem!, action: action, modifiedGroups: modifiedGroups));
-        }
+
+        return nil;
     }
     
     fileprivate func processRosterItemForAnnotations(item: Element) -> [RosterItemAnnotation] {
@@ -200,11 +162,7 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
         }
         
         if isRosterVersioningAvailable(), let context = self.context {
-            var x = versionProvider?.getCachedVersion(context) ?? "";
-            if (store.count == 0) {
-                x = "";
-                versionProvider?.updateReceivedVersion(context, ver: x);
-            }
+            let x = rosterManager.version(for: context) ?? "";
             query.setAttribute("ver", value: x);
         }
         iq.addChild(query);
@@ -212,8 +170,21 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
         write(iq, completionHandler: { result in
             switch result {
             case .success(let iq):
-                if let query = iq.findChild(name: "query", xmlns: "jabber:iq:roster") {
-                    self.processRosterQuery(query, force: true);
+                if let query = iq.findChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
+                    let oldJids = self.rosterManager.items(for: context).map({ $0.jid });
+                    let newJids: Set<JID> = Set(query.getChildren(name: "item").compactMap({ item in
+                        return self.processRosterItem(item, context: context);
+                    }));
+                    
+                    let removed = oldJids.filter({ !newJids.contains($0) });
+                    for jid in removed {
+                        if let item = self.rosterManager.deleteItem(for: context, jid: jid) {
+                            self.eventsSender.send(.removed(jid));
+                            self.fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .removed));
+                        }
+                    }
+                    
+                    self.rosterManager.set(version: query.getAttribute("ver"), for: context);
                 }
             default:
                 break;
@@ -222,7 +193,11 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
         })
     }
     
-    func updateItem(_ jid:JID, name:String?, groups:[String], subscription:RosterItem.Subscription? = nil, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+    public func addItem(jid: JID, name: String?, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+        self.updateItem(jid: jid, name: name, groups: groups, completionHandler: completionHandler);
+    }
+    
+    public func updateItem(jid: JID, name: String?, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
         let iq = Iq();
         iq.type = .set;
         
@@ -237,47 +212,40 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
         groups.forEach({(group:String)->Void in
             item.addChild(Element(name:"group", cdata:group));
         });
-        
-        if subscription == RosterItem.Subscription.remove {
-            item.setAttribute("subscription", value: "remove");
-        }
+
         query.addChild(item);
         
         write(iq, completionHandler: completionHandler);
     }
-    
-    fileprivate func isRosterVersioningAvailable() -> Bool {
-        if (versionProvider == nil) {
-            return false;
-        }
-        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "ver", xmlns: "urn:xmpp:features:rosterver") != nil;
+
+    public func removeItem(jid: JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+        let iq = Iq();
+        iq.type = .set;
+        
+        let query = Element(name:"query", xmlns:"jabber:iq:roster");
+        iq.addChild(query);
+        
+        let item = Element(name: "item");
+        item.setAttribute("jid", value: jid.stringValue);
+        item.setAttribute("subscription", value: "remove");
+
+        query.addChild(item);
+        
+        write(iq, completionHandler: completionHandler);
     }
-    
-    fileprivate func loadFromCache() {
-        if versionProvider != nil, let context = context {
-            let store = self.store;
-            versionProvider?.loadCachedRoster(context).forEach({ (item:RosterItem) in
-                store.addItem(item);
-            })
-        }
+        
+    fileprivate func isRosterVersioningAvailable() -> Bool {
+        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "ver", xmlns: "urn:xmpp:features:rosterver") != nil;
     }
     
     /**
      Actions which could happen to roster items:
      - added: item was added
-     - askCanceled: item was pending subscription request
      - removed: item was removed
-     - subscribed: item got subscribed
-     - unsubscribed: item got unsubscribed
-     - other: other actions not defined above
      */
     public enum Action {
-        case added
-        case askCancelled
+        case added // or updated
         case removed
-        case subscribed
-        case unsubscribed
-        case other
     }
 
     /// Event fired when roster item is updated
@@ -286,53 +254,20 @@ open class RosterModule: XmppModuleBase, AbstractIQModule, EventHandler {
         public static let TYPE = ItemUpdatedEvent();
         
         /// Changed roster item
-        public let rosterItem:RosterItem?;
+        public let rosterItem:RosterItemProtocol!;
         /// Action done to roster item
         public let action:Action!;
-        /// Groups which were modified
-        public let modifiedGroups:[String]?;
         
         fileprivate init() {
             self.rosterItem = nil;
             self.action = nil;
-            self.modifiedGroups = nil;
             super.init(type: "ItemUpdatedEvent");
         }
         
-        public init(context: Context, rosterItem: RosterItem?, action: Action, modifiedGroups: [String]?) {
+        public init(context: Context, rosterItem: RosterItemProtocol, action: Action) {
             self.rosterItem = rosterItem;
             self.action = action;
-            self.modifiedGroups = modifiedGroups;
             super.init(type: "ItemUpdatedEvent", context: context);
-        }
-    }
-
-    /// Implementation of `RosterStoreHandler` protocol using `RosterModule`
-    class RosterStoreHandlerImpl: RosterStoreHandler {
-        let rosterModule:RosterModule;
-        
-        init(module:RosterModule) {
-            self.rosterModule = module;
-        }
-        
-        func add(jid: JID, name: String?, groups: [String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-            self.rosterModule.updateItem(jid, name: name, groups: groups, completionHandler: completionHandler);
-        }
-        
-        func remove(jid: JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-            self.rosterModule.updateItem(jid, name: nil, groups: [String](), subscription: RosterItem.Subscription.remove, completionHandler: completionHandler);
-        }
-        
-        func update(item: RosterItem, name: String?, groups: [String]? = nil, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-            self.rosterModule.updateItem(item.jid, name: name, groups: groups ?? item.groups, completionHandler: completionHandler);
-        }
-
-        func update(item: RosterItem, groups: [String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-            self.rosterModule.updateItem(item.jid, name: item.name, groups: groups, completionHandler: completionHandler);
-        }
-        
-        func cleared() {
-            self.rosterModule.loadFromCache();
         }
     }
     

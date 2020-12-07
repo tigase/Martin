@@ -28,54 +28,62 @@ import Foundation
  */
 open class DefaultRosterStore: RosterStore {
  
-    fileprivate var roster = [JID: RosterItem]();
+    public typealias RosterItem = RosterItemBase
     
-    fileprivate var queue = DispatchQueue(label: "roster_store_queue", attributes: DispatchQueue.Attributes.concurrent);
+    private var roster = [JID: RosterItem]();
+    private var version: String?;
     
-    open override var count:Int {
-        get {
-            var result = 0;
-            queue.sync {
-                result = self.roster.count;
-            }
-            return result;
-        }
-    }
-            
-    open override func addItem(_ item:RosterItem) {
-        queue.async(flags: .barrier, execute: {
-            self.roster[item.jid] = item;
-        }) 
-    }
+    private let dispatcher = DispatchQueue(label: "DefaultRoomStore");
     
-    open override func getJids() -> [JID] {
-        var result = [JID]();
-        queue.sync {
-            self.roster.keys.forEach({ (jid) in
-                result.append(jid);
-            });
-        }
-        return result;
-    }
-    
-    open override func get(for jid:JID) -> RosterItem? {
-        var item: RosterItem?;
-        queue.sync {
-            item = self.roster[jid];
-        }
-        return item;
-    }
-    
-    open override func removeItem(for jid:JID) {
-        queue.async(flags: .barrier, execute: {
-            self.roster.removeValue(forKey: jid);
-        }) 
-    }
-    
-    open override func removeAll() {
-        queue.async(flags: .barrier) {
+    public func clear(for context: Context) {
+        return dispatcher.async {
+            self.version = nil;
             self.roster.removeAll();
         }
     }
     
+    public func items(for context: Context) -> [RosterItemBase] {
+        return dispatcher.sync {
+            return Array(roster.values);
+        }
+    }
+    
+    public func item(for context: Context, jid: JID) -> RosterItemBase? {
+        return dispatcher.sync {
+            return roster[jid];
+        }
+    }
+    
+    public func updateItem(for context: Context, jid: JID, name: String?, subscription: RosterItemSubscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) {
+        let item = RosterItemBase(jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
+        dispatcher.async {
+            self.roster[jid] = item;
+        }
+    }
+    
+    public func deleteItem(for context: Context, jid: JID) {
+        dispatcher.async {
+            self.roster.removeValue(forKey: jid);
+        }
+    }
+    
+    public func version(for context: Context) -> String? {
+        return dispatcher.sync {
+            return self.version;
+        }
+    }
+    
+    public func set(version: String?, for context: Context) {
+        dispatcher.async {
+            self.version = version;
+        }
+    }
+    
+    public func initialize(context: Context) {
+        
+    }
+    
+    public func deinitialize(context: Context) {
+        
+    }
 }

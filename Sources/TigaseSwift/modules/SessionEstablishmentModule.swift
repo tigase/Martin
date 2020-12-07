@@ -104,6 +104,7 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     }
     
     /// Event fired when session establishment process fails
+    @available(* , deprecated, message: "You should observe Context.$state instead")
     open class SessionEstablishmentErrorEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SessionEstablishmentErrorEvent();
@@ -123,6 +124,7 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     }
     
     /// Event fired when session is established
+    @available(* , deprecated, message: "You should observe Context.$state instead")
     open class SessionEstablishmentSuccessEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SessionEstablishmentSuccessEvent();

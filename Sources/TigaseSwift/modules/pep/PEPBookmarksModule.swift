@@ -37,17 +37,21 @@ open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
     public let features: [String] = [ ID + "+notify" ];
     
     public fileprivate(set) var currentBookmarks: Bookmarks = Bookmarks();
+    private var cancellable: Cancellable?;
     
     open override weak var context: Context? {
         didSet {
+            cancellable?.cancel();
             if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE);
+                oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
             }
             if let context = context {
-                context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE, DiscoveryModule.ServerFeaturesReceivedEvent.TYPE);
+                context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
                 discoModule = context.modulesManager.module(.disco);
+                cancellable = discoModule.$serverDiscoResult.sink(receiveValue: { [weak self] info in self?.serverInfoChanged(info) });
                 pubsubModule = context.modulesManager.module(.pubsub);
             } else {
+                cancellable = nil;
                 discoModule = nil;
                 pubsubModule = nil;
             }
@@ -59,6 +63,10 @@ open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
     
     public override init() {
         
+    }
+    
+    deinit {
+        cancellable?.cancel();
     }
  
     public func process(stanza: Stanza) throws {
@@ -101,33 +109,34 @@ open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
         });
     }
     
+    private func serverInfoChanged(_ info: DiscoveryModule.DiscoveryInfoResult) {
+        if let context = context, info.identities.contains(where: { (identity) -> Bool in
+            if let name = identity.name, "ejabberd" == name {
+                // ejabberd has buggy PEP support, we need to request Bookmarks on our own!!
+                return true;
+            }
+            return false;
+        }) {
+            // requesting Bookmarks!!
+            let pepJID = context.userBareJid;
+            self.pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, limit: .lastItems(1), completionHandler: { result in
+                switch result {
+                case .success(let items):
+                    if let item = items.items.first {
+                        if let bookmarks = Bookmarks(from: item.payload) {
+                            self.currentBookmarks = bookmarks;
+                            self.fire(BookmarksChangedEvent(context: context, bookmarks: bookmarks));
+                        }
+                    }
+                default:
+                    break;
+                }
+            });
+        }
+    }
+    
     public func handle(event: Event) {
         switch event {
-        case let e as DiscoveryModule.ServerFeaturesReceivedEvent:
-            if let context = context, e.identities.contains(where: { (identity) -> Bool in
-                if let name = identity.name, "ejabberd" == name {
-                    // ejabberd has buggy PEP support, we need to request Bookmarks on our own!!
-                    return true;
-                }
-                return false;
-            }) {
-                // requesting Bookmarks!!
-                let pepJID = context.userBareJid;
-                self.pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, limit: .lastItems(1), completionHandler: { result in
-                    switch result {
-                    case .success(let items):
-                        if let item = items.items.first {
-                            if let bookmarks = Bookmarks(from: item.payload) {
-                                self.currentBookmarks = bookmarks;
-                                self.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
-                            }
-                        }
-                    default:
-                        break;
-                    }
-                });
-            }
-            
         case let e as PubSubModule.NotificationReceivedEvent:
             guard let from = e.message.from?.bareJid, context?.userBareJid == from else {
                 return;

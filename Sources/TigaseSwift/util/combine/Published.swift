@@ -45,17 +45,19 @@ public struct Published<Value> {
         }
     }
     
+    
     public var wrappedValue: Value {
         get {
             return storage.queue.sync {
                 return storage.value
             };
         }
-        set {
+        nonmutating set {
             storage.queue.sync {
                 storage.value = newValue;
             }
-            storage.offer(newValue);
+            // FIXME: THIS SHOULD BE CALLED BEFORE VALUE IS SET!!
+            storage.offer(newValue);            
         }
     }
     

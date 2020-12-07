@@ -25,7 +25,7 @@ import Foundation
  Instances of this class holds information passed to classes with support for `ContextAware` 
  protocol - mostly for implementations of `XmppModule` protocol.
  */
-open class Context: CustomStringConvertible {
+open class Context: CustomStringConvertible, Resetable {
     
     let dispatcher: QueueDispatcher = QueueDispatcher(label: "context_queue");
     
@@ -67,6 +67,10 @@ open class Context: CustomStringConvertible {
     public let eventBus: EventBus;
     // Instance of `XmppModuleManager` which keeps instances of every registered module for this connection/client
     public let modulesManager: XmppModulesManager;
+    
+    @Published
+    open private(set) var state:SocketConnector.State = .disconnected(.none);
+        
     // Instance of `PacketWriter` to use for sending stanzas
     open var writer: PacketWriter;
     
@@ -86,6 +90,15 @@ open class Context: CustomStringConvertible {
             for lifecycleAware in lifecycleAwares {
                 lifecycleAware.deinitialize(context: self);
             }
+        }
+    }
+    
+    open func reset(scopes: Set<ResetableScope>) {
+        modulesManager.reset(scopes: scopes);
+        if scopes.contains(.session) {
+            sessionObject.clear();
+        } else {
+            sessionObject.clear(scopes: .stream);
         }
     }
     
@@ -117,5 +130,12 @@ open class Context: CustomStringConvertible {
             lifecycleAware.deinitialize(context: self);
             self.lifecycleAwares.append(lifecycleAware);
         }
+    }
+    
+    func update(state: SocketConnector.State) {
+        guard state != self.state else {
+            return;
+        }
+        self.state = state;
     }
 }

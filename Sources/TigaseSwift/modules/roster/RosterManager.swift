@@ -1,8 +1,8 @@
 //
-// XMPPStreamDelegate.swift
+// RosterManagerBase.swift
 //
 // TigaseSwift
-// Copyright (C) 2016 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,11 +21,19 @@
 
 import Foundation
 
-public protocol XMPPStreamDelegate: class {
+public protocol RosterManager: ContextLifecycleAware {
     
-    func onStreamStart(attributes:[String:String])
-    func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason);
-    func onError(msg: String?);
-    func process(element packet:Element)
+    func clear(for context: Context);
+
+    func items(for context: Context) -> [RosterItemProtocol];
     
+    func item(for context: Context, jid: JID) -> RosterItemProtocol?;
+    
+    func updateItem(for context: Context, jid: JID, name: String?, subscription: RosterItemSubscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) -> RosterItemProtocol;
+    
+    func deleteItem(for context: Context, jid: JID) -> RosterItemProtocol?
+    
+    func version(for context: Context) -> String?;
+    
+    func set(version: String?, for context: Context);
 }

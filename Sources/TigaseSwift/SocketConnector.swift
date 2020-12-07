@@ -26,7 +26,6 @@ public enum StreamEvent {
     case streamClose
     case streamTerminate
     case streamReceived(Stanza)
-    case streamError(Element)
 }
 
 public enum StreamData {
@@ -74,15 +73,40 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
      - disconnecting: Connection to XMPP server is being closed
      - disconnected: Connection to XMPP server is closed
      */
-    public enum State {
+    public enum State: Equatable {
+        public static func == (lhs: State, rhs: State) -> Bool {
+            return lhs.value == rhs.value;
+        }
+        
         case connecting
         case connected
         case disconnecting
-        case disconnected
+        case disconnected(DisconnectionReason = .none)
+        
+        private var value: Int {
+            switch self {
+            case .disconnected(_):
+                return 0;
+            case .connecting:
+                return 1;
+            case .connected:
+                return 2;
+            case .disconnecting:
+                return 3;
+            }
+        }
+        
+        public enum DisconnectionReason {
+            case none
+            case timeout
+            case sslCertError(SecTrust)
+            case xmlError(String?)
+            case streamError(Element)
+        }
     }
     
     @Published
-    open private(set) var state: State = .disconnected;
+    open private(set) var state: State = .disconnected(.none);
 
     public let streamEvents = PassthroughSubject<StreamEvent,Never>();
     public var streamEventsStream: AnyPublisher<StreamEvent, Never> {
@@ -141,15 +165,16 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
         
         super.init();
         
-        var oldState: State = .disconnected;
         self.stateSubscription = $state.sink(receiveValue: { [weak self] newState in
             guard let that = self else {
                 return;
             }
+            let oldState = that.state;
+            
             that.queue.sync {
             switch newState {
             case .disconnected:
-                if oldState != .disconnected {
+                if oldState != .disconnected() {
                     DispatchQueue.main.async {
                         that.connectionTimer?.invalidate();
                         that.connectionTimer = nil;
@@ -172,7 +197,6 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
             default:
                 break;
             }
-            oldState = newState;
             }
         })
     }
@@ -198,7 +222,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
      */
     open func start(serverToConnect: XMPPSrvRecord? = nil) {
         queue.sync {
-            guard state == .disconnected else {
+            guard state == .disconnected() else {
                 logger.log("start() - stopping connetion as state is not connecting \(self.state)");
                 return;
             }
@@ -323,7 +347,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     public func stop(completionHandler: (()->Void)? = nil) {
         queue.async {
         switch self.state {
-        case .disconnected, .disconnecting:
+        case .disconnected(_), .disconnecting:
             self.logger.debug("\(self.connectionConfiguration.userJid) - not connected or already disconnecting");
             completionHandler?();
             return;
@@ -335,14 +359,14 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
             // TODO: I'm not sure about that!!
             self.queue.async {
                 self.sendSync("</stream:stream>") {
-                    self.closeSocket(newState: State.disconnected);
+                    self.closeSocket(newState: State.disconnected(.none));
                     completionHandler?();
                 }
             }
         case .connecting:
             self.state = State.disconnecting;
             self.logger.debug("\(self.connectionConfiguration.userJid) - closing TCP connection");
-            self.closeSocket(newState: State.disconnected);
+            self.closeSocket(newState: State.disconnected(.timeout));
             completionHandler?();
         }
         }
@@ -350,7 +374,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     
     public func forceStop(completionHandler: (()->Void)? = nil) {
         queue.async {
-            self.closeSocket(newState: State.disconnected);
+            self.closeSocket(newState: State.disconnected(.none));
             completionHandler?();
         }
     }
@@ -419,7 +443,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
         super.process(element: packet);
         logger.debug("\(self.connectionConfiguration.userJid) - received stanza: \(packet)")
         if packet.name == "error" && packet.xmlns == "http://etherx.jabber.org/streams" {
-            streamEvents.send(.streamError(packet));
+            state = .disconnected(.streamError(packet));
         } else if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
             proceedTLS();
         } else if packet.name == "compressed" && packet.xmlns == "http://jabber.org/protocol/compress" {
@@ -432,26 +456,26 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     // TODO: who is calling this?? should be local queue
     override open func onError(msg: String?) {
         self.logger.error("\(msg as Any)");
-        closeSocket(newState: State.disconnected);
+        closeSocket(newState: State.disconnected(.xmlError(msg)));
     }
     
     // TODO: who is calling this?? should be local queue
-    override open func onStreamTerminate() {
+    override open func onStreamTerminate(reason: State.DisconnectionReason) {
         self.logger.debug("onStreamTerminate called... state: \(self.state)");
         self.streamEvents.send(.streamTerminate)
         switch state {
         case .disconnecting, .connecting:
-            closeSocket(newState: State.disconnected);
+            closeSocket(newState: State.disconnected(reason));
         // connecting is also set in case of see other host
         case .connected:
             //-- probably from other socket, ie due to restart!
             let inStreamState = inStream?.streamStatus;
             if inStreamState == nil || inStreamState == .error || inStreamState == .closed {
-                closeSocket(newState: State.disconnected)
+                closeSocket(newState: State.disconnected(reason))
             } else {
                 state = State.disconnecting;
                 sendSync("</stream:stream>");
-                closeSocket(newState: State.disconnected);
+                closeSocket(newState: State.disconnected(reason));
             }
         default:
             break;
@@ -507,7 +531,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
             if let domain = self.server, let lastConnectionDetails = self.currentConnectionDetails {
                 self.dnsResolver.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
             }
-            self.onStreamTerminate();
+            self.onStreamTerminate(reason: .timeout);
         }
     }
     
@@ -524,7 +548,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
                     if self.state == .connecting, let domain = self.server, let lastConnectionDetails = self.currentConnectionDetails {
                         self.dnsResolver.markAsInvalid(for: domain, record: lastConnectionDetails, for: 15 * 60.0);
                     }
-                    self.onStreamTerminate();
+                    self.onStreamTerminate(reason: .timeout);
                 }
             case Stream.Event.openCompleted:
                 if (aStream == self.inStream) {
@@ -583,7 +607,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
                 if self.sslCertificateValidated == nil {
                     let trustVal = self.inStream?.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLPeerTrust as String));
                     guard trustVal != nil else {
-                        self.closeSocket(newState: .disconnected);
+                        self.closeSocket(newState: .disconnected(.none));
                         return;
                     }
                 
@@ -607,7 +631,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
                         if let context = self.context {
                             self.eventBus.fire(CertificateErrorEvent(context: context, trust: trust));
                         }
-                        self.closeSocket(newState: .disconnected);
+                        self.closeSocket(newState: .disconnected(.sslCertError(trust)));
                         return;
                     }
                 }
@@ -617,7 +641,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
             case Stream.Event.endEncountered:
                 self.logger.debug("stream event: EndEncountered");
                 if aStream == self.outStream || aStream == self.inStream {
-                    self.closeSocket(newState: State.disconnected);
+                    self.closeSocket(newState: State.disconnected(.none));
                 }
             default:
                 self.logger.debug("stream event: \(aStream)");
@@ -670,6 +694,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     }
     
     /// Event fired when client establishes TCP connection to XMPP server.
+    @available(*, deprecated, message: "Watch state instead")
     open class ConnectedEvent: AbstractEvent {
         
         /// identified of event which should be used during registration of `EventHandler`
@@ -686,6 +711,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     }
     
     /// Event fired when TCP connection to XMPP server is closed or is broken.
+    @available(*, deprecated, message: "Watch state instead")
     open class DisconnectedEvent: AbstractEvent {
         
         /// Identifier of event which should be used during registration of `EventHandler`
@@ -710,6 +736,7 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
     }
     
     /// Event fired if SSL certificate validation fails
+    @available(*, deprecated, message: "Watch state of .sslCertError")
     open class CertificateErrorEvent: AbstractEvent {
         
         /// Identifier of event which should be used during registration of `EventHandler`

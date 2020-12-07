@@ -34,7 +34,7 @@ extension XmppModuleIdentifier {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html
  */
-open class PresenceModule: XmppModuleBase, XmppModule, EventHandler {
+open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable {
         
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "presence";
@@ -45,17 +45,6 @@ open class PresenceModule: XmppModuleBase, XmppModule, EventHandler {
     public let criteria = Criteria.name("presence");
     
     public let features = [String]();
-    
-    open override weak var context: Context? {
-        didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
-            }
-            if let newValue = context {
-                newValue.eventBus.register(handler: self, for: SessionEstablishmentModule.SessionEstablishmentSuccessEvent.TYPE, StreamManagementModule.ResumedEvent.TYPE, StreamManagementModule.FailedEvent.TYPE, SessionObject.ClearedEvent.TYPE);
-            }
-        }
-    }
     
     /// Should initial presence be sent automatically
     open var initialPresence: Bool = true;
@@ -82,32 +71,29 @@ open class PresenceModule: XmppModuleBase, XmppModule, EventHandler {
         store.handler = PresenceStoreHandlerImpl(presenceModule: self);
     }
         
-    open func handle(event: Event) {
-        switch event {
-        case is SessionEstablishmentModule.SessionEstablishmentSuccessEvent:
+    open func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
             self.streamResumptionPresences = nil;
-            if initialPresence {
-                sendInitialPresence();
-            } else {
-                logger.debug("skipping sending initial presence");
-            }
-        case let re as StreamManagementModule.ResumedEvent:
-            self.streamResumptionPresences?.forEach { presence in
+            store.clear();
+        } else if scopes.contains(.stream) && self.fireEventsOnStreamResumption {
+            self.streamResumptionPresences = store.getAllPresences();
+            store.clear();
+        }
+    }
+        
+    public override func stateChanged(newState: SocketConnector.State) {
+        guard newState == .connected else {
+            return;
+        }
+
+        if let resumptionPresences = self.streamResumptionPresences, let context = context {
+            self.streamResumptionPresences = nil;
+            for presence in resumptionPresences {
                 let availabilityChanged = store.update(presence: presence);
-                fire(ContactPresenceChanged(context: re.context, presence: presence, availabilityChanged: availabilityChanged));
+                fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
             }
-            self.streamResumptionPresences = nil;
-        case is StreamManagementModule.FailedEvent:
-            self.streamResumptionPresences = nil;
-        case let ce as SessionObject.ClearedEvent:
-            if ce.scopes.contains(.session) {
-                store.clear();
-            } else if ce.scopes.contains(.stream) && self.fireEventsOnStreamResumption {
-                self.streamResumptionPresences = store.getAllPresences();
-                store.clear();
-            }
-        default:
-            logger.error("received unknown event: \(event)");
+        } else if initialPresence {
+            sendInitialPresence();
         }
     }
     
