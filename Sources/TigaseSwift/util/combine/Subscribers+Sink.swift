@@ -22,7 +22,7 @@ import Foundation
 
 extension Subscribers {
     
-    public class Sink<Input, Failure: Error>: Subscriber, Cancellable {
+    public class Sink<Input, Failure: Error>: Subscriber {
     
         private let queue = DispatchQueue(label: "Subscribers.Sink.Queue");
         private let receiveCompletion: (Subscribers.Completion<Failure>)->Void;
@@ -73,7 +73,7 @@ extension Publisher where Failure == Never {
     public func sink(receiveCompletion: @escaping ((Subscribers.Completion<Failure>)->Void), receiveValue: @escaping (Output)->Void) -> Cancellable {
         let subscriber = Subscribers.Sink<Output,Never>(receiveCompletion: receiveCompletion, receiveValue: receiveValue);
         self.subscribe(subscriber);
-        return subscriber;
+        return AnyCancellable(subscriber.cancel);
     }
 
     public func sink(receiveValue: @escaping (Output)->Void) -> Cancellable {

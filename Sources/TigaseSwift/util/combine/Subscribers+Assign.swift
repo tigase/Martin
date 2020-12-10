@@ -1,5 +1,5 @@
 //
-// XmppModuleBaseSessionStateAware.swift
+// Subscribers+Assign.swift
 //
 // TigaseSwift
 // Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
@@ -18,23 +18,14 @@
 // along with this program. Look for COPYING file in the top folder.
 // If not, see http://www.gnu.org/licenses/.
 //
-
-
 import Foundation
 
-open class XmppModuleBaseSessionStateAware: XmppModuleBase {
-
-    open override weak var context: Context? {
-        didSet {
-            store(context?.$state.sink(receiveValue: { [weak self] state in
-                self?.stateChanged(newState: state);
-            }))
-        }
-    }
-
-    public override init() {}
+extension Publisher where Failure == Never {
     
-    open func stateChanged(newState: SocketConnector.State) {
-        
+    public func assign<Root>(to keyPath: ReferenceWritableKeyPath<Root, Output>, on object: Root) -> Cancellable {
+        return self.sink(receiveValue: { value in
+            object[keyPath: keyPath] = value;
+        })
     }
+    
 }

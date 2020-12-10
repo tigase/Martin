@@ -43,9 +43,25 @@ public protocol XmppModule: class {
 
 open class XmppModuleBase: ContextAware, PacketWriter {
         
-    open weak var context: Context?;
+    open weak var context: Context? {
+        didSet {
+            for cancellable in cancellables {
+                cancellable.cancel();
+            }
+            cancellables.removeAll();
+        }
+    }
+    
+    private var cancellables: [Cancellable] = [];
     
     public init() {}
+            
+    public func store(_ cancellable: Cancellable?) {
+        guard let cancellable = cancellable else {
+            return;
+        }
+        cancellables.append(cancellable);
+    }
     
     public func write<Failure>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) where Failure : Error {
         guard let writer = context?.writer else {

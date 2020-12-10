@@ -660,7 +660,8 @@ open class SocketConnector : XMPPDelegate, Connector, StreamDelegate {
                 self.onError(msg: "XML stream parsing error, code: \(errorCode)");
                 return;
             }
-            self.parseXml(data: data[position..<data.count], tryNo: nextTry);
+            let subrange = data[data.startIndex.advanced(by: position)..<data.endIndex];
+            self.parseXml(data: subrange, tryNo: nextTry);
         } catch XmlParserError.unknown(let errorCode) {
             self.onError(msg: "XML stream parsing error, code: \(errorCode)");
         } catch {

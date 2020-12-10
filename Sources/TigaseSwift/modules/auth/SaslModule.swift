@@ -48,10 +48,19 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
         Criteria.name("challenge", xmlns: SASL_XMLNS)
     );
     
+    private var cancellable: Cancellable?;
+    open override var context: Context? {
+        didSet {
+            self.store(context?.module(.streamFeatures).$streamFeatures.map({ SaslModule.supportedMechanisms(streamFeatures: $0) }).assign(to: \.supportedMechanisms, on: self));
+        }
+    }
+
     public let features = [String]();
     
     private var mechanisms = [String:SaslMechanism]();
     private var _mechanismsOrder = [String]();
+    
+    private var supportedMechanisms: [String] = [];
     
     // remember to clear it! ie. on SessionObject being cleared!
     private var mechanismInUse: SaslMechanism?;
@@ -110,7 +119,9 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     
     open func reset(scopes: Set<ResetableScope>) {
         self.mechanismInUse = nil;
-        self.state = .notAuthorized;
+        if state != .notAuthorized {
+            self.state = .notAuthorized;
+        }
         for mechanism in mechanisms.values {
             mechanism.reset(scopes: scopes);
         }
@@ -131,9 +142,6 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     open func process(stanza elem: Stanza) throws {
-        guard  let context = context else {
-            return;
-        }
         do {
         switch elem.name {
             case "success":
@@ -164,7 +172,9 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
      Begin SASL authentication process
      */
     open func login() {
-        self.state = .notAuthorized;
+        if state != .notAuthorized {
+            self.state = .notAuthorized;
+        }
         guard let mechanism = guessSaslMechanism() else {
             self.state = .error(SaslError.invalid_mechanism);
             fire(SaslAuthFailedEvent(context: context!, error: SaslError.invalid_mechanism));
@@ -178,7 +188,9 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
             auth.element.setAttribute("mechanism", value: mechanism.name);
             auth.element.value = try mechanism.evaluateChallenge(nil, context: context!);
         
-            self.state = .inProgress;
+            if state != .inProgress {
+                self.state = .inProgress;
+            }
             
             write(auth, writeCompleted: { _ in
                 if mechanism.status == .completedExpected {
@@ -197,7 +209,9 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
         
         if mechanism!.status == .completed {
             logger.debug("Authenticated");
-            self.state = .authorized;
+            if state != .authorized {
+                self.state = .authorized;
+            }
         } else {
             logger.debug("Authenticated by server but responses not accepted by client.");
             self.state = .error(SaslError.server_not_trusted);
@@ -232,12 +246,12 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
         
     }
     
-    func getSupportedMechanisms() -> [String] {
-        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "mechanisms")?.mapChildren(transform: { $0.value }, filter: { $0.name == "mechanism" }) ?? [];
+    static func supportedMechanisms(streamFeatures: StreamFeatures) -> [String] {
+        return streamFeatures.element?.findChild(name: "mechanisms")?.mapChildren(transform: { $0.value }, filter: { $0.name == "mechanism" }) ?? [];
     }
     
     func guessSaslMechanism() -> SaslMechanism? {
-        let supported = getSupportedMechanisms();
+        let supported = self.supportedMechanisms;
         for name in _mechanismsOrder {
             if let mechanism = mechanisms[name] {
                 if (!supported.contains(name)) {

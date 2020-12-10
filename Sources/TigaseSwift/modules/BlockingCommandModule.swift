@@ -39,28 +39,18 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
     public let features = [String]();
     
     private var discoModule: DiscoveryModule!;
-    private var cancellable: Cancellable?;
     
     open override weak var context: Context? {
         didSet {
-            cancellable?.cancel();
             if let context = context {
                 discoModule = context.module(.disco);
-                cancellable = discoModule.$serverDiscoResult.filter({ $0.features.contains(BlockingCommandModule.BC_XMLNS) }).sink(receiveValue: { [weak self] _ in self?.retrieveBlockedJids(completionHandler: nil)});
-            } else {
-                cancellable = nil;
+                store(discoModule.$serverDiscoResult.filter({ $0.features.contains(BlockingCommandModule.BC_XMLNS) }).sink(receiveValue: { [weak self] _ in self?.retrieveBlockedJids(completionHandler: nil)}));
             }
         }
     }
     
     open var isAvailable: Bool {
-        if let features: [String] = discoModule.serverDiscoResult.features {
-            if features.contains(BlockingCommandModule.BC_XMLNS) {
-                return true;
-            }
-        }
-        
-        return false;
+        return discoModule.serverDiscoResult.features.contains(BlockingCommandModule.BC_XMLNS);
     }
     
     open fileprivate(set) var blockedJids: [JID]? {
@@ -77,11 +67,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
     
     public override init() {
     }
-        
-    deinit {
-        cancellable?.cancel();
-    }
-    
+            
     open func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.session) {
             blockedJids = nil;

@@ -27,6 +27,10 @@ extension XmppModuleIdentifier {
     }
 }
 
+extension StreamFeatures.StreamFeature {
+    public static let csi = StreamFeatures.StreamFeature(name: "csi", xmlns: ClientStateIndicationModule.CSI_XMLNS);
+}
+
 /**
  Module provides support for [XEP-0352: Client State Inidication] feature
  
@@ -44,24 +48,23 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
     
     public let features = [String]();
         
-    fileprivate var _state: Bool = true;
-    open var state: Bool {
-        return _state;
-    }
+    open private(set) var state: Bool = false;
     
-    /// Available optimization modes on server
-    open var available: Bool {
-        get {
-            return context?.module(.streamFeatures).streamFeatures?.findChild(name: "csi", xmlns: ClientStateIndicationModule.CSI_XMLNS) != nil;
+    open override var context: Context? {
+        didSet {
+            store(context?.module(.streamFeatures).$streamFeatures.map({ $0.contains(.csi) }).assign(to: \.available, on: self));
         }
     }
     
+    /// Available optimization modes on server
+    open private(set) var available: Bool = false;
+    
     public override init() {
     }
-    
+        
     open func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.session) {
-            _state = false;
+            state = false;
         }
     }
     
@@ -88,11 +91,11 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
      - paramater active: pass true if client is in active state
      */
     open func setState(_ state: Bool) -> Bool {
-        guard _state != state else {
+        guard state != state else {
             return false;
         }
         if (self.available) {
-            _state = state;
+            self.state = state;
             let stanza = Stanza(name: state ? "active" : "inactive");
             stanza.element.xmlns = ClientStateIndicationModule.CSI_XMLNS;
             write(stanza);

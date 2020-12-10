@@ -45,26 +45,20 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     
     public let features = [String]();
     
-    /**
-     Method checks if session establishment is required
-     - parameter sessionObject: instance of `SessionObject`
-     - returns: true - if is required
-     */
-    public static func isSessionEstablishmentRequired(_ sessionObject:SessionObject) -> Bool {
-        if let featuresElement = StreamFeaturesModule.getStreamFeatures(sessionObject) {
-            if let session = featuresElement.findChild(name: "session", xmlns: SESSION_XMLNS) {
-                return session.findChild(name: "optional") == nil;
-            }
+    open override var context: Context? {
+        didSet {
+            store(context?.module(.streamFeatures).$streamFeatures.map({ SessionEstablishmentModule.isSessionEstablishmentRequired(streamFeatures: $0) }).assign(to: \.isSessionEstablishmentRequired, on: self));
+        }
+    }
+    
+    public static func isSessionEstablishmentRequired(streamFeatures: StreamFeatures) -> Bool {
+        if let session = streamFeatures.element?.findChild(name: "session", xmlns: SESSION_XMLNS) {
+            return session.findChild(name: "optional") == nil;
         }
         return false;
     }
     
-    public var isSessionEstablishmentRequired: Bool {
-        guard context?.module(.streamFeatures).streamFeatures?.findChild(name: "session", xmlns: SessionEstablishmentModule.SESSION_XMLNS)?.findChild(name: "optional") == nil else {
-            return false;
-        }
-        return true;
-    }
+    public private(set) var isSessionEstablishmentRequired: Bool = true;
     
     public override init() {
         

@@ -37,19 +37,16 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     
     public let features = [String]();
         
-    fileprivate var _activeMode: Mode? = nil;
-    open var activeMode: Mode? {
-        return _activeMode;
-    }
+    open private(set) var activeMode: Mode?;
     
     /// Available optimization modes on server
-    open var availableModes:[Mode] {
-        get {
-            return (context?.module(.streamFeatures).streamFeatures?.mapChildren(transform: {(f)-> Mode in
-                return Mode(rawValue: f.xmlns!)!
-                }, filter: { (f) -> Bool in
-                    return f.name == "mobile" && f.xmlns != nil && Mode(rawValue: f.xmlns!) != nil;
-            }) ?? []);
+    open private(set) var availableModes:[Mode] = [];
+    
+    open override var context: Context? {
+        didSet {
+            store(
+                context?.module(.streamFeatures).$streamFeatures.map({ $0.element?.mapChildren(transform: { Mode.from(element: $0)
+                }) ?? [] }).assign(to: \.availableModes, on: self));
         }
     }
     
@@ -58,7 +55,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     
     open func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.session) {
-            _activeMode = nil;
+            activeMode = nil;
         }
     }
         
@@ -97,7 +94,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
             return false;
         }
         if availableModes.contains(mode!) && (activeMode == nil || activeMode! == mode!) {
-            _activeMode = mode;
+            activeMode = mode;
             let iq = Iq();
             iq.type = StanzaType.set;
             let mobile = Element(name: "mobile", xmlns: mode!.rawValue);
@@ -118,5 +115,13 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
         case V3 = "http://tigase.org/protocol/mobile#v3";
         
         public static let allValues = [ V3, V2, V1 ];
+    
+        public static func from(element: Element) -> Mode? {
+            guard let xmlns = element.xmlns else {
+                return nil;
+            }
+            
+            return Mode(rawValue: xmlns);
+        }
     }
 }

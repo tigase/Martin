@@ -27,6 +27,11 @@ extension XmppModuleIdentifier {
     }
 }
 
+extension StreamFeatures.StreamFeature {
+    public static let ibr = StreamFeatures.StreamFeature(name: "register", xmlns: "http://jabber.org/features/iq-register");
+    public static let ibrPreAuth = StreamFeatures.StreamFeature(name: "register", xmlns: "urn:xmpp:invite");
+}
+
 /**
  Module provides support for [XEP-0077: In-Band Registration]
  
@@ -41,6 +46,12 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     
     public let features = [String]();
     public let criteria = Criteria.empty();
+    
+    open override var context: Context? {
+        didSet {
+            store(context?.module(.streamFeatures).$streamFeatures.map({ $0.contains(.ibr) }).assign(to: \.isRegistrationAvailable, on: self));
+        }
+    }
     
     public override init() {
         
@@ -209,18 +220,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
-    /**
-     Check if server supports in-band registration
-     - returns: true - if in-band registration is supported
-     */
-    open func isRegistrationAvailable() -> Bool {
-        let featuresElement = context?.module(.streamFeatures).streamFeatures;
-        return InBandRegistrationModule.isRegistrationAvailable(featuresElement);
-    }
-    
-    public static func isRegistrationAvailable(_ featuresElement: Element?) -> Bool {
-        return featuresElement?.findChild(name: "register", xmlns: "http://jabber.org/features/iq-register") != nil;
-    }
+    public private(set) var isRegistrationAvailable = false;
     
     open class AccountRegistrationTask {
         
@@ -252,7 +252,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                             break;
                         }
                     }));
-                    cancellables.append(client.module(.streamFeatures).$streamFeatures.compactMap({ $0 }).sink(receiveValue: { [weak self] _ in self?.streamFeaturesReceived() }));
+                    cancellables.append(client.module(.streamFeatures).$streamFeatures.sink(receiveValue: { [weak self] features in self?.streamFeaturesReceived(streamFeatures: features) }));
                 }
             }
         };
@@ -331,10 +331,10 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             self.finish();
         }
         
-        private func streamFeaturesReceived() {
+        private func streamFeaturesReceived(streamFeatures: StreamFeatures) {
             serverAvailable = true;
             // check registration possibility
-            guard isStreamReady() else {
+            guard isStreamReady(streamFeatures: streamFeatures) else {
                 return;
             }
             startIBR();
@@ -361,12 +361,6 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         }
                 
         private func startIBR() {
-            let featuresElement = StreamFeaturesModule.getStreamFeatures(client.sessionObject);
-            guard InBandRegistrationModule.isRegistrationAvailable(featuresElement) else {
-                onErrorFn(.feature_not_implemented);
-                return;
-            }
-            
             inBandRegistrationModule.retrieveRegistrationForm(completionHandler: { result in
                 switch result {
                 case .success(let formResult):
@@ -428,19 +422,19 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         open var preauthToken: String?;
         private var preauthDone = false;
         
-        fileprivate func isStreamReady() -> Bool {
-            guard let featuresElement = client.module(.streamFeatures).streamFeatures else {
+        fileprivate func isStreamReady(streamFeatures: StreamFeatures) -> Bool {
+            guard !streamFeatures.isNone else {
                 return false;
             }
-            guard (client.connector?.isTLSActive ?? false) || client.connectionConfiguration.disableTLS || ((featuresElement.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) == nil) else {
-                return false;
-            }
-
-            guard (client.connector?.isCompressionActive ?? false) || client.connectionConfiguration.disableCompression || ((featuresElement.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" })) == nil) else {
+            guard (client.connector?.isTLSActive ?? false) || client.connectionConfiguration.disableTLS || streamFeatures.contains(.startTLS) else {
                 return false;
             }
 
-            let preauthSupported: Bool = client.context.module(.streamFeatures).streamFeatures?.findChild(name: "register", xmlns: "urn:xmpp:invite") != nil;
+            guard (client.connector?.isCompressionActive ?? false) || client.connectionConfiguration.disableCompression || streamFeatures.contains(.compressionZLIB) else {
+                return false;
+            }
+            
+            let preauthSupported: Bool = streamFeatures.contains(.ibrPreAuth);
             if preauthSupported && !preauthDone, let preauth: String = preauthToken {
                 let iq = Iq();
                 iq.type = .set;

@@ -103,8 +103,10 @@ open class XMPPClient: Context {
     var connector: Connector? {
         return sessionLogic?.connector;
     }
+    private var sessionLogicCancellable: Cancellable?;
     private var sessionLogic:XmppSessionLogic? {
         willSet {
+            sessionLogicCancellable?.cancel();
             sessionLogic?.streamLogger = nil;
         }
         didSet {
@@ -122,9 +124,6 @@ open class XMPPClient: Context {
         }
     }
     
-
-    private var stateSubscription: Cancellable?;
-        
     public convenience init() {
         self.init(eventBus: nil);
     }
@@ -136,7 +135,6 @@ open class XMPPClient: Context {
     
     deinit {
         releaseKeepAlive();
-        stateSubscription?.cancel();
         let jid = connectionConfiguration.userJid;
         logger.error("deinitializing client for: \(jid)")
     }
@@ -156,7 +154,7 @@ open class XMPPClient: Context {
             context.writer = LogicPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager);
             self.sessionLogic = sessionLogic;
             sessionLogic.bind();
-            sessionLogic.statePublisher.sink(receiveValue: { [weak self] newState in
+            sessionLogicCancellable = sessionLogic.statePublisher.sink(receiveValue: { [weak self] newState in
                 guard let that = self else {
                     return;
                 }
@@ -211,8 +209,6 @@ open class XMPPClient: Context {
         self.reset(scopes: scopes);
         sessionLogic?.unbind();
         dispatcher.sync {
-            stateSubscription?.cancel();
-            stateSubscription = nil;
             self.update(state: .disconnected(.none));
             sessionLogic = nil;
         }

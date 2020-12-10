@@ -26,36 +26,30 @@ import Foundation
  */
 open class PresenceStore {
     
-    fileprivate let queue = DispatchQueue(label: "presence_store_queue", attributes: DispatchQueue.Attributes.concurrent);
-    fileprivate let queueTag = DispatchSpecificKey<DispatchQueue?>();
-    
-    public var handler:PresenceStoreHandler?;
+    fileprivate let queue = QueueDispatcher(label: "presence_store_queue", attributes: DispatchQueue.Attributes.concurrent);
     
     fileprivate var bestPresence = [BareJID:Presence]();
     fileprivate var presenceByJid = [JID:Presence]();
     fileprivate var presencesMapByBareJid = [BareJID:[String:Presence]]();
     
     public init() {
-        queue.setSpecific(key: queueTag, value: queue);
     }
-    
-    deinit {
-        queue.setSpecific(key: queueTag, value: nil);
-    }
-    
+        
     /// Clear presence store
     open func clear() {
         queue.async(flags: .barrier, execute: {
             self.presenceByJid.removeAll();
-            let toNotify = Array(self.bestPresence.values);
             self.bestPresence.removeAll();
-            toNotify.forEach { (p) in
-                self.handler?.onOffline(presence: p);
-            }
             self.presencesMapByBareJid.removeAll();
         }) 
     }
 
+    public var allBestPresences: [Presence] {
+        return queue.sync {
+            return Array(self.bestPresence.values);
+        }
+    }
+    
     /**
      Retrieve array of all stored presences
      - returns: array of `Presence`
@@ -72,11 +66,9 @@ open class PresenceStore {
      - returns: `Presence` if available
      */
     open func getBestPresence(for jid:BareJID) -> Presence? {
-        var result: Presence?;
-        dispatch_sync_local_queue() {
-            result = self.bestPresence[jid];
+        return queue.sync {
+            return self.bestPresence[jid];
         }
-        return result;
     }
     
     /**
@@ -85,11 +77,9 @@ open class PresenceStore {
      - returns: `Presence` if available
      */
     open func getPresence(for jid:JID) -> Presence? {
-        var result: Presence?;
-        dispatch_sync_local_queue() {
-            result = self.presenceByJid[jid];
+        return queue.sync {
+            return self.presenceByJid[jid];
         }
-        return result;
     }
     
     /**
@@ -98,11 +88,9 @@ open class PresenceStore {
      - returns: array of `Presence`s if avaiable
      */
     open func getPresences(for jid:BareJID) -> [String:Presence]? {
-        var result: [String:Presence]?;
-        dispatch_sync_local_queue() {
-            result = self.presencesMapByBareJid[jid];
+        return queue.sync {
+            return self.presencesMapByBareJid[jid];
         }
-        return result;
     }
     
     fileprivate func findBestPresence(for jid:BareJID) -> Presence? {
@@ -121,27 +109,11 @@ open class PresenceStore {
      - returns: true if any resource if available
      */
     open func isAvailable(jid:BareJID) -> Bool {
-        var result = false;
-        dispatch_sync_local_queue() {
-            result = self.presencesMapByBareJid[jid]?.values.firstIndex(where: { (p) -> Bool in
+        return queue.sync {
+            return self.presencesMapByBareJid[jid]?.values.firstIndex(where: { (p) -> Bool in
                 return p.type == nil || p.type == StanzaType.available;
             }) != nil;
         }
-        return result;
-    }
-    
-    open func setHandler(_ handler:PresenceStoreHandler) {
-        self.handler = handler;
-    }
-    
-    /**
-     Set presence with values
-     - parameter show: presence show
-     - parameter status: additional text description
-     - parameter priority: priority of presence
-     */
-    open func setPresence(show:Presence.Show, status:String?, priority:Int?) {
-        self.handler?.setPresence(show: show, status: status, priority: priority);
     }
     
     func update(presence:Presence) -> Bool {
@@ -165,13 +137,6 @@ open class PresenceStore {
         }
     }
     
-    fileprivate func dispatch_sync_local_queue(_ block: ()->()) {
-        if (DispatchQueue.getSpecific(key: queueTag) != nil) {
-            block();
-        } else {
-            queue.sync(execute: block);
-        }
-    }
 }
 
 public protocol PresenceStoreHandler {

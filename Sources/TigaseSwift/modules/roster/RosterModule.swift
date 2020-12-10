@@ -28,6 +28,10 @@ extension XmppModuleIdentifier {
     }
 }
 
+extension StreamFeatures.StreamFeature {
+    public static let rosterVersioning = StreamFeatures.StreamFeature(name: "ver", xmlns: "urn:xmpp:features:rosterver");
+}
+
 /**
  Module provides roster manipulation features as described in [RFC6121]
  
@@ -47,6 +51,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Rese
         didSet {
             oldValue?.unregister(lifecycleAware: rosterManager);
             context?.register(lifecycleAware: rosterManager);
+            store(context?.module(.streamFeatures).$streamFeatures.map({ $0.contains(.rosterVersioning) }).assign(to: \.isRosterVersioningAvailable, on: self));
         }
     }
     
@@ -63,6 +68,8 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Rese
     }
     
     private var requestRosterOnReconnect = true;
+    
+    public private(set) var isRosterVersioningAvailable: Bool = false;
     
     public init(rosterManager: RosterManager) {
         self.rosterManager = rosterManager;
@@ -161,7 +168,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Rese
             (module as? RosterAnnotationAwareProtocol)?.prepareRosterGetRequest(queryElem: query);
         }
         
-        if isRosterVersioningAvailable(), let context = self.context {
+        if isRosterVersioningAvailable, let context = self.context {
             let x = rosterManager.version(for: context) ?? "";
             query.setAttribute("ver", value: x);
         }
@@ -233,11 +240,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Rese
         
         write(iq, completionHandler: completionHandler);
     }
-        
-    fileprivate func isRosterVersioningAvailable() -> Bool {
-        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "ver", xmlns: "urn:xmpp:features:rosterver") != nil;
-    }
-    
+            
     /**
      Actions which could happen to roster items:
      - added: item was added

@@ -68,16 +68,33 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     public init(store: PresenceStore = PresenceStore()) {
         self.store = store;
         super.init();
-        store.handler = PresenceStoreHandlerImpl(presenceModule: self);
     }
         
     open func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.session) {
+            let currentPresences = store.allBestPresences;
             self.streamResumptionPresences = nil;
             store.clear();
+            if let context = self.context {
+                for oldPresence in currentPresences {
+                    let presence = Presence();
+                    presence.type = .unavailable;
+                    presence.from = oldPresence.from?.withoutResource;
+                    fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: true));
+                }
+            }
         } else if scopes.contains(.stream) && self.fireEventsOnStreamResumption {
+            let currentPresences = store.allBestPresences;
             self.streamResumptionPresences = store.getAllPresences();
             store.clear();
+            if let context = self.context {
+                for oldPresence in currentPresences {
+                    let presence = Presence();
+                    presence.type = .unavailable;
+                    presence.from = oldPresence.from?.withoutResource;
+                    fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: true));
+                }
+            }
         }
     }
         
@@ -291,27 +308,5 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
             super.init(type: "SubscribeRequestEvent", context: context)
         }
     }
-    
-    /// Implementation of `PresenceStoreHandler` using `PresenceModule`
-    open class PresenceStoreHandlerImpl: PresenceStoreHandler {
-        
-        let presenceModule:PresenceModule;
-        
-        public init(presenceModule:PresenceModule) {
-            self.presenceModule = presenceModule;
-        }
-        
-        open func onOffline(presence: Presence) {
-            let offlinePresence = Presence();
-            offlinePresence.type = StanzaType.unavailable;
-            offlinePresence.from = JID(presence.from!.bareJid);
-            if let context = presenceModule.context {
-                presenceModule.fire(ContactPresenceChanged(context: context, presence: offlinePresence, availabilityChanged: true));
-            }
-        }
-        
-        open func setPresence(show: Presence.Show, status: String?, priority: Int?) {
-            presenceModule.setPresence(show: show, status: status, priority: priority);
-        }
-    }
+
 }

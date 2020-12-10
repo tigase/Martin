@@ -37,21 +37,18 @@ open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
     public let features: [String] = [ ID + "+notify" ];
     
     public fileprivate(set) var currentBookmarks: Bookmarks = Bookmarks();
-    private var cancellable: Cancellable?;
     
     open override weak var context: Context? {
         didSet {
-            cancellable?.cancel();
             if let oldValue = oldValue {
                 oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
             }
             if let context = context {
                 context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
                 discoModule = context.modulesManager.module(.disco);
-                cancellable = discoModule.$serverDiscoResult.sink(receiveValue: { [weak self] info in self?.serverInfoChanged(info) });
+                self.store(discoModule.$serverDiscoResult.sink(receiveValue: { [weak self] info in self?.serverInfoChanged(info) }));
                 pubsubModule = context.modulesManager.module(.pubsub);
             } else {
-                cancellable = nil;
                 discoModule = nil;
                 pubsubModule = nil;
             }
@@ -65,10 +62,6 @@ open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
         
     }
     
-    deinit {
-        cancellable?.cancel();
-    }
- 
     public func process(stanza: Stanza) throws {
         throw XMPPError.feature_not_implemented;
     }

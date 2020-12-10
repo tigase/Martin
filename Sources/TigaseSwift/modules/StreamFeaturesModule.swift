@@ -42,7 +42,7 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Re
     public let features = [String]();
     
     @Published
-    open private(set) var streamFeatures: Element?;
+    open private(set) var streamFeatures: StreamFeatures = .none;
     
     /**
      Retrieves stream features which were recevied from server
@@ -51,7 +51,7 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Re
      */
     @available(*, deprecated, message: "Use stream features property on StreamFeaturesModule")
     public static func getStreamFeatures(_ sessionObject:SessionObject) -> Element? {
-        return sessionObject.context.module(.streamFeatures).streamFeatures;
+        return sessionObject.context.module(.streamFeatures).streamFeatures.element;
     }
     
     
@@ -74,12 +74,12 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Re
     }
     
     func setStreamFeatures(_ element: Element) {
-        self.streamFeatures = element;
+        self.streamFeatures = StreamFeatures(element: element);
         fireEvent(streamFeatures: element);
     }
     
     public func reset(scopes: Set<ResetableScope>) {
-        streamFeatures = nil;
+        streamFeatures = .none;
     }
 }
 
@@ -103,4 +103,66 @@ open class StreamFeaturesReceivedEvent: AbstractEvent {
         super.init(type: "StreamFeaturesReceivedEvent", context: context);
     }
 
+}
+
+public struct StreamFeatures {
+    
+    public static let none = StreamFeatures(element: nil);
+    
+    public let element: Element?;
+ 
+    public var isNone: Bool {
+        return element == nil;
+    }
+    
+    private init(element: Element?) {
+        self.element = element;
+    }
+    
+    public init(element: Element) {
+        self.element = element;
+    }
+    
+    public func contains(_ feature: StreamFeature) -> Bool {
+        guard let elem = self.element else {
+            return false;
+        }
+        return feature.check(in: elem);
+    }
+    
+    public struct StreamFeature {
+        public struct Node {
+            public let name: String;
+            public let xmlns: String?;
+            public let value: String?;
+        }
+        
+        public let path: [Node];
+        
+        public init(_ path: Node...) {
+            self.path = path;
+        }
+                
+        public init(name: String, xmlns: String) {
+            self.init(.init(name: name, xmlns: xmlns, value: nil));
+        }
+
+        public func check(in element: Element) -> Bool {
+            var elem = element;
+            for node in path {
+                guard let subelem = elem.findChild(name: node.name, xmlns: node.xmlns) else {
+                    return false;
+                }
+                if node.value != nil {
+                    guard subelem.value == node.value else {
+                        return false;
+                    }
+                }
+                elem = subelem;
+            }
+            return true;
+        }
+        
+    }
+    
 }

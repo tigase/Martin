@@ -53,11 +53,10 @@ public struct Published<Value> {
             };
         }
         nonmutating set {
+            storage.offer(newValue);
             storage.queue.sync {
                 storage.value = newValue;
             }
-            // FIXME: THIS SHOULD BE CALLED BEFORE VALUE IS SET!!
-            storage.offer(newValue);            
         }
     }
     

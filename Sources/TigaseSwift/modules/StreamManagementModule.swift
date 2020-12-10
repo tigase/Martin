@@ -28,6 +28,10 @@ extension XmppModuleIdentifier {
     }
 }
 
+extension StreamFeatures.StreamFeature {
+    public static let sm = StreamFeatures.StreamFeature(name: "sm", xmlns: StreamManagementModule.SM_XMLNS);
+}
+
 /**
  Module implements support for [XEP-0198: Stream Management]
  
@@ -87,6 +91,14 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     private var enablingHandler: ((Result<String?,XMPPError>)->Void)?;
     private var resumptionHandler: ((Result<Void,XMPPError>)->Void)?;
     
+    open private(set) var isAvailable: Bool = false;
+    
+    open override var context: Context? {
+        didSet {
+            store(context?.module(.streamFeatures).$streamFeatures.map({ $0.contains(.sm) }).assign(to: \.isAvailable, on: self));
+        }
+    }
+    
     public override init() {
     }
     
@@ -123,15 +135,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             reset();
         }
     }
-    
-    /**
-     Check if Stream Management is supported on server
-     - returns: true - if is supported
-     */
-    open func isAvailable() -> Bool {
-        return context?.module(.streamFeatures).streamFeatures?.findChild(name: "sm", xmlns: StreamManagementModule.SM_XMLNS) != nil;
-    }
-    
+        
     open func process(stanza: Stanza) throws {
         // all requests should be processed already
         throw ErrorCondition.undefined_condition;

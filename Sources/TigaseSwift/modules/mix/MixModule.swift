@@ -51,28 +51,22 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, Ro
     
     public let features: [String] = [CORE_XMLNS];
     
-    private var cancellables: [Cancellable] = [];
-
     public override weak var context: Context? {
         didSet {
-            for cancellable in cancellables {
-                cancellable.cancel();
-            }
-            cancellables.removeAll();
             oldValue?.unregister(lifecycleAware: channelManager);
             context?.register(lifecycleAware: channelManager);
             if let context = context {
                 discoModule = context.modulesManager.module(.disco);
-                cancellables.append(discoModule.$accountDiscoResult.sink(receiveValue: { [weak self] info in self?.accountFeaturesChanged(info.features) }));
+                store(discoModule.$accountDiscoResult.sink(receiveValue: { [weak self] info in self?.accountFeaturesChanged(info.features) }));
                 mamModule = context.modulesManager.module(.mam);
                 pubsubModule = context.modulesManager.module(.pubsub);
-                cancellables.append(pubsubModule.itemsEvents.sink(receiveValue: { [weak self] notification in
+                store(pubsubModule.itemsEvents.sink(receiveValue: { [weak self] notification in
                     self?.receivedPubsubItem(notification: notification);
                 }));
                 avatarModule = context.modulesManager.module(.pepUserAvatar);
                 presenceModule = context.modulesManager.module(.presence);
                 rosterModule = context.modulesManager.module(.roster);
-                cancellables.append(rosterModule.events.sink(receiveValue: { [weak self] action in
+                store(rosterModule.events.sink(receiveValue: { [weak self] action in
                     self?.rosterItemChanged(action);
                 }));
             } else {
@@ -112,13 +106,6 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, Ro
     
     public init(channelManager: ChannelManager) {
         self.channelManager = channelManager;
-    }
-    
-    deinit {
-        for cancellable in cancellables {
-            cancellable.cancel();
-        }
-        cancellables.removeAll();
     }
     
     open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,XMPPError>)->Void) {

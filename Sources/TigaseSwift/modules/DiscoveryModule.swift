@@ -64,8 +64,8 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         self.identity = identity;
         super.init();
         setNodeCallback(nil, entry: NodeDetailsEntry(
-            identity: { (context: Context, stanza: Stanza, node: String?) -> Identity? in
-                return self.identity;
+            identity: { [weak self] (context: Context, stanza: Stanza, node: String?) -> Identity? in
+                return self?.identity;
             },
             features: { (context: Context, stanza: Stanza, node: String?) -> [String]? in
                 return Array(context.modulesManager.availableFeatures);

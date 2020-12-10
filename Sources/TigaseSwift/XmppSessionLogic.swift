@@ -22,6 +22,11 @@
 import Foundation
 import TigaseLogging
 
+extension StreamFeatures.StreamFeature {
+    public static let startTLS = StreamFeatures.StreamFeature(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls");
+    public static let compressionZLIB = StreamFeatures.StreamFeature(.init(name: "compression", xmlns: "http://jabber.org/features/compress", value: nil), .init(name: "method", xmlns: nil, value: "zlib"));
+}
+
 /// Protocol which is used by other class to interact with classes responsible for session logic.
 public protocol XmppSessionLogic: class {
     
@@ -102,7 +107,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     
     private var socketSubscriptions: [Cancellable] = [];
     private var moduleSubscriptions: [Cancellable] = [];
-    
+        
     public init(connector: SocketConnector, responseManager: ResponseManager, context: Context, seeOtherHost: XMPPSrvRecord?) {
         self.modulesManager = context.modulesManager;
         self.socketConnector = connector;
@@ -170,7 +175,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         if let cancellable = context?.module(.auth).$state.sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }) {
             moduleSubscriptions.append(cancellable);
         }
-        if let cancellable = context?.module(.streamFeatures).$streamFeatures.compactMap({ $0 }).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }) {
+        if let cancellable = context?.module(.streamFeatures).$streamFeatures.receive(on: self.dispatcher).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }) {
             moduleSubscriptions.append(cancellable);
         }
         responseManager.start();
@@ -356,27 +361,24 @@ open class SocketSessionLogic: XmppSessionLogic {
         }
         
         if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement) {
-            if streamManagementModule.isAvailable() {
+            if streamManagementModule.isAvailable {
                 streamManagementModule.enable(completionHandler: nil);
             }
         }
     }
     
-    private func processStreamFeatures(_ featuresElement: Element) {
-        dispatcher.async {
-            self.processStreamFeatures();
+    private func processStreamFeatures(_ streamFeatures: StreamFeatures) {
+        guard !streamFeatures.isNone else {
+            return;
         }
-    }
-    
-    // FIXME: is this method aware of changes done by setting featuresElement??
-    private func processStreamFeatures() {
+        
         self.logger.debug("\(self.userJid) - processing stream features");
         let authorized = (modulesManager.moduleOrNil(.auth)?.state ?? .notAuthorized) == .authorized;
         
         if (!socketConnector.isTLSActive)
-            && (!connectionConfiguration.disableTLS) && self.isStartTLSAvailable() {
+            && (!connectionConfiguration.disableTLS) && streamFeatures.contains(.startTLS) {
             socketConnector.startTLS();
-        } else if ((!socketConnector.isCompressionActive) && (!connectionConfiguration.disableCompression) && self.isZlibAvailable()) {
+        } else if ((!socketConnector.isCompressionActive) && (!connectionConfiguration.disableCompression) && streamFeatures.contains(.compressionZLIB)) {
             socketConnector.startZlib();
         } else if !authorized {
             if let authModule:AuthModule = modulesManager.moduleOrNil(.auth) {
@@ -395,7 +397,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
     
     private func streamAuthenticated() {
-        if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.resumptionEnabled && streamManagementModule.isAvailable() {
+        if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.resumptionEnabled && streamManagementModule.isAvailable {
             streamManagementModule.resume(completionHandler: { [weak self] result in
                 switch result {
                 case .success(_):
@@ -435,15 +437,6 @@ open class SocketSessionLogic: XmppSessionLogic {
                 break;
             }
         });
-    }
-    
-    private func isStartTLSAvailable() -> Bool {
-        self.logger.debug("\(self.userJid) - checking TLS");
-        return (modulesManager.module(.streamFeatures).streamFeatures?.findChild(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls")) != nil;
-    }
-    
-    private func isZlibAvailable() -> Bool {
-        return modulesManager.module(.streamFeatures).streamFeatures?.getChildren(name: "compression", xmlns: "http://jabber.org/features/compress").firstIndex(where: {(e) in e.findChild(name: "method")?.value == "zlib" }) != nil;
     }
     
     private func startStream() {

@@ -1,5 +1,5 @@
 //
-// XmppModuleBaseSessionStateAware.swift
+// AnyCancellable.swift
 //
 // TigaseSwift
 // Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
@@ -19,22 +19,30 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 
-
 import Foundation
 
-open class XmppModuleBaseSessionStateAware: XmppModuleBase {
-
-    open override weak var context: Context? {
-        didSet {
-            store(context?.$state.sink(receiveValue: { [weak self] state in
-                self?.stateChanged(newState: state);
-            }))
-        }
-    }
-
-    public override init() {}
+public final class AnyCancellable: Cancellable {
     
-    open func stateChanged(newState: SocketConnector.State) {
-        
+    private var cancelFn: (()->Void)?;
+    
+    public init(_ cancelFn: @escaping ()->Void) {
+        self.cancelFn = cancelFn;
     }
+    
+    public init(_ cancellable: Cancellable) {
+        self.cancelFn = cancellable.cancel;
+    }
+    
+    public func cancel() {
+        guard let cancelFn = self.cancelFn else {
+            return;
+        }
+        self.cancelFn = nil;
+        cancelFn();
+    }
+    
+    deinit {
+        cancelFn?();
+    }
+    
 }
