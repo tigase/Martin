@@ -154,7 +154,7 @@ open class XMPPClient: Context {
             context.writer = LogicPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager);
             self.sessionLogic = sessionLogic;
             sessionLogic.bind();
-            sessionLogicCancellable = sessionLogic.statePublisher.sink(receiveValue: { [weak self] newState in
+            sessionLogicCancellable = sessionLogic.statePublisher.dropFirst(1).sink(receiveValue: { [weak self] newState in
                 guard let that = self else {
                     return;
                 }

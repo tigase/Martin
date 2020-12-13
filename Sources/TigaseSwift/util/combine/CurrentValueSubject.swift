@@ -1,5 +1,5 @@
 //
-// Published.swift
+// CurrentValueSubject.swift
 //
 // TigaseSwift
 // Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
@@ -18,42 +18,38 @@
 // along with this program. Look for COPYING file in the top folder.
 // If not, see http://www.gnu.org/licenses/.
 //
+
 import Foundation
 
-@propertyWrapper
-public struct Published<Value> {
+public class CurrentValueSubject<Output, Failure: Error>: AbstractPublisher<Output,Failure>, Subject {
     
-    public class Publisher: CurrentValueSubject<Value,Never> {
-        
+    public typealias Output = Output
+    public typealias Failure = Failure
 
-    }
+    private let lock = UnfairLock();
 
-    public var projectedValue: Publisher {
-        mutating get {
-            return storage;
+    private var _value: Output;
+    public var value: Output {
+        get {
+            lock.lock();
+            defer {
+                lock.unlock();
+            }
+            return _value;
         }
         set {
-            storage = newValue;
+            send(newValue);
         }
     }
     
-    
-    public var wrappedValue: Value {
-        get {
-            return storage.value
-        }
-        nonmutating set {
-            storage.value = newValue;
-        }
+    public init(_ value: Output) {
+        self._value = value;
     }
-    
-    private var storage: Publisher;
-    
-    public init(wrappedValue: Value) {
-        storage = Publisher(wrappedValue);
+
+    public func send(_ value: Output) {
+        self.offer(value)
+        lock.lock();
+        self._value = value;
+        lock.unlock();
     }
-    
 }
-
-typealias TigaseCustomPublisher = Publisher
-

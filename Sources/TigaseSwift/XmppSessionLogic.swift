@@ -117,7 +117,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         self.responseManager = responseManager;
         self.seeOtherHost = seeOtherHost;
         
-        socketSubscriptions.append(connector.$state.sink(receiveValue: { [weak self] newState in
+        socketSubscriptions.append(connector.$state.dropFirst(1).sink(receiveValue: { [weak self] newState in
             guard newState != .connected else {
                 return;
             }

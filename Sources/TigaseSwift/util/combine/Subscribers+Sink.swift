@@ -24,7 +24,7 @@ extension Subscribers {
     
     public class Sink<Input, Failure: Error>: Subscriber {
     
-        private let queue = DispatchQueue(label: "Subscribers.Sink.Queue");
+        private let lock = UnfairLock();
         private let receiveCompletion: (Subscribers.Completion<Failure>)->Void;
         private let receiveValue: (Input)->Void;
         private var status: SubscriptionStatus = .unsubscribed;
@@ -35,13 +35,15 @@ extension Subscribers {
         }
     
         public func receive(subscription: Subscription) {
-            queue.sync {
-                guard case .unsubscribed = status else {
-                    subscription.cancel();
-                    return;
-                }
-                status = .subscribed(subscription);
+            lock.lock();
+            guard case .unsubscribed = status else {
+                subscription.cancel();
+                lock.unlock();
+                return;
             }
+            status = .subscribed(subscription);
+            lock.unlock()
+            subscription.request(.unlimited);
         }
         
         public func receive(completion: Subscribers.Completion<Failure>) {
@@ -54,14 +56,14 @@ extension Subscribers {
         }
         
         public func cancel() {
-            let subscription = queue.sync(execute: { () -> Subscription? in
-                guard case let .subscribed(subscription) = status else {
-                    return nil;
-                }
-                status = .unsubscribed;
-                return subscription;
-            });
-            subscription?.cancel();
+            lock.lock();
+            guard case let .subscribed(subscription) = status else {
+                lock.unlock();
+                return;
+            }
+            status = .unsubscribed;
+            lock.unlock();
+            subscription.cancel();
         }
 
     }

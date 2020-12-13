@@ -23,59 +23,87 @@ import Foundation
 
 public class AbstractPublisher<Output,Failure: Error>: Publisher {
     
-    let queue = QueueDispatcher(label: "Published.Publisher.Queue");
+    private let lock = UnfairLock();
     private var subscribers = SubscribersList<Output,Failure>.empty;
 
     init() {}
     
     deinit {
-        let subscribers = queue.sync { self.subscribers };
+        lock.lock();
+        let subscribers = self.subscribers;
+        lock.unlock();
         subscribers.forEach {
             $0.cancel();
         }
     }
     
     func offer(_ output: Output) {
-        let subscribers = queue.sync { self.subscribers };
+        lock.lock();
+        let subscribers = self.subscribers;
+        lock.unlock();
         subscribers.forEach  { $0.offer(output) };
     }
     
     public func receive<S>(subscriber: S) where S : Subscriber, Failure == S.Failure, Output == S.Input {
         let item = SubscriberRegistration(parent: self, subscriber: subscriber);
-        queue.sync {
-            subscribers.insert(item);
-        }
+        lock.lock();
+        subscribers.insert(item);
+        lock.unlock();
         subscriber.receive(subscription: item);
     }
     
     fileprivate func release(_ subscription: SubscribersListItem<Output, Failure>) {
-        queue.sync {
-            subscribers.remove(subscription)
-        }
+        lock.lock();
+        subscribers.remove(subscription)
+        lock.unlock();
         subscription.cancel();
     }
         
     private class SubscriberRegistration<S: Subscriber>: SubscribersListItem<Output, Failure>, Subscription where S.Input == Output, S.Failure == Failure {
         
+        private let lock = UnfairLock();
         private var subscriber: S?;
         private weak var parent: AbstractPublisher?;
+        private var currentDelivered: Bool = false;
 
         init(parent: AbstractPublisher, subscriber: S) {
             self.parent = parent;
             self.subscriber = subscriber;
         }
 
+        public func request(_: Subscribers.Demand) {
+            lock.lock();
+            guard !currentDelivered else {
+                lock.unlock();
+                return;
+            }
+            
+            currentDelivered = true;
+            if let value = (parent as? CurrentValueSubject)?.value {
+                lock.unlock();
+                subscriber?.receive(value);
+            } else {
+                lock.unlock();
+            }
+        }
+        
         public override func offer(_ output: Output) {
+            lock.lock();
+            currentDelivered = true;
+            lock.unlock();
             subscriber?.receive(output);
         }
 
         public override func cancel() {
+            lock.lock();
             let oldSubscriber = subscriber;
             subscriber = nil;
             guard let parent = self.parent else {
+                lock.unlock();
                 return;
             }
             self.parent = nil;
+            lock.unlock();
             parent.release(self);
         }
     }

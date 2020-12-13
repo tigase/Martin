@@ -1,5 +1,5 @@
 //
-// Subscriber.swift
+// UnfairLock.swift
 //
 // TigaseSwift
 // Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
@@ -21,46 +21,18 @@
 
 import Foundation
 
-public protocol Subscription: Cancellable {
- 
-    func request(_ demand: Subscribers.Demand);
+public class UnfairLock {
     
-}
-
-public protocol Subscriber {
+    private var lock_s = os_unfair_lock();
     
-    associatedtype Input
-    associatedtype Failure: Error
+    public init() {}
     
-    func receive(subscription: Subscription) -> Void;
-    
-    func receive(_ input: Self.Input) -> Subscribers.Demand;
-    
-    func receive(completion: Subscribers.Completion<Self.Failure>);
-    
-}
-
-public struct Subscribers {
-    
-    public enum Completion<Failure> where Failure : Error {
-        case finished
-        case failure(Failure)
+    public func lock() {
+        os_unfair_lock_lock(&lock_s);
     }
     
-    public struct Demand {
-        
-        public static let none = Subscribers.Demand();
-        public static let unlimited = Subscribers.Demand();
-        
+    public func unlock() {
+        os_unfair_lock_unlock(&lock_s);
     }
     
-}
-
-public protocol Cancellable {
-    func cancel();
-}
-
-enum SubscriptionStatus {
-    case unsubscribed
-    case subscribed(Subscription)
 }
