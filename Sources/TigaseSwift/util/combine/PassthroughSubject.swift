@@ -23,6 +23,10 @@ import Foundation
 
 public class PassthroughSubject<Output, Failure: Error>: AbstractPublisher<Output, Failure>, Subject {
 
+    public override init() {
+        super.init();
+    }
+    
     public func send(_ value: Output) {
         super.offer(value);
     }
