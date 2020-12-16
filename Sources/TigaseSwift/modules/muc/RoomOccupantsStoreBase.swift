@@ -23,11 +23,16 @@ import Foundation
 
 open class RoomOccupantsStoreBase: RoomOccupantsStoreProtocol {
     
+    @Published
     private var presences: [String: MucOccupant] = [:];
     private var tempOccupants: [String: MucOccupant] = [:]
     
     public init() {
         
+    }
+    
+    public var occupantsPublisher: AnyPublisher<[MucOccupant],Never> {
+        return $presences.map({ Array($0.values) }).eraseToAnyPublisher();
     }
     
     public var occupants: [MucOccupant] {
@@ -44,6 +49,11 @@ open class RoomOccupantsStoreBase: RoomOccupantsStoreProtocol {
     
     public func remove(occupant: MucOccupant) {
         self.presences.removeValue(forKey: occupant.nickname);
+    }
+    
+    public func removeAll() {
+        self.presences.removeAll();
+        self.tempOccupants.removeAll();
     }
     
     public func addTemp(nickname: String, occupant: MucOccupant) {

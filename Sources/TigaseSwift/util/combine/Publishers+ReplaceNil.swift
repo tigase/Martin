@@ -1,5 +1,5 @@
 //
-// RoomOccupantsStoreProtocol.swift
+// Publishers+ReplaceNil.swift
 //
 // TigaseSwift
 // Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
@@ -21,14 +21,18 @@
 
 import Foundation
 
-public protocol RoomOccupantsStoreProtocol {
-    var occupants: [MucOccupant] { get }
-    func occupant(nickname: String) -> MucOccupant?;
-    func add(occupant: MucOccupant);
-    func remove(occupant: MucOccupant);
-    func removeAll();
+extension Publisher {
     
-    func addTemp(nickname: String, occupant: MucOccupant);
-    func removeTemp(nickname: String) -> MucOccupant?;
-    
+    public func replaceNil<T>(with: T) -> Publishers.Map<Self, T> where Self.Output == T? {
+        return Publishers.Map(upstream: self, transform: { value in
+            return value ?? with;
+        })
+    }
+
+    public func replaceNil<T>(with: T) -> Publishers.Map<Self, T?> where Self.Output == T? {
+        return Publishers.Map(upstream: self, transform: { value in
+            return value ?? with;
+        })
+    }
+
 }

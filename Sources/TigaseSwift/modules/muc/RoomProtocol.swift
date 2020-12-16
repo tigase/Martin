@@ -34,14 +34,24 @@ public enum RoomState {
     case destroyed
 }
 
-public protocol RoomProtocol: ConversationProtocol, RoomOccupantsStoreProtocol {
+public protocol RoomProtocol: ConversationProtocol {
     
     var state: RoomState { get }
     
     var nickname: String { get }
     var password: String? { get }
+    
+    var role: MucRole { get set }
+    var affiliation: MucAffiliation { get set }
  
     func update(state: RoomState);
+    
+    func occupant(nickname: String) -> MucOccupant?;
+    func addOccupant(nickname: String, presence: Presence) -> MucOccupant;
+    func remove(occupant: MucOccupant);
+
+    func addTemp(nickname: String, occupant: MucOccupant);
+    func removeTemp(nickname: String) -> MucOccupant?;
     
 }
 

@@ -38,7 +38,7 @@ extension Publishers {
         public let upstream: Upstream;
         public let transform: (Upstream.Output) -> Output
 
-        init(upstream: Upstream, transform: @escaping (Upstream.Output)->Output) {
+        public init(upstream: Upstream, transform: @escaping (Upstream.Output)->Output) {
             self.upstream = upstream;
             self.transform = transform;
         }

@@ -24,26 +24,41 @@ import Foundation
 /**
  Class is representation of MUC room occupant
  */
-open class MucOccupant {
+open class MucOccupant: Hashable {
     
-    public let affiliation: MucAffiliation;
-    public let role: MucRole;
-    public let jid: JID?;
-    public let presence: Presence;
-    public let nickname: String;
-    
-    public init(occupant: MucOccupant? = nil, presence: Presence) {
-        nickname = presence.from!.resource!;
-        self.presence = presence;
-        if let xUser = XMucUserElement.extract(from: presence) {
-            affiliation = xUser.affiliation;
-            role = xUser.role;
-            jid = xUser.jid;
-        } else {
-            affiliation = .none;
-            role = .none;
-            jid = nil;
-        }
+    public static func ==(lhs: MucOccupant, rhs: MucOccupant) -> Bool {
+        return lhs.nickname == rhs.nickname;
     }
     
+    @TigaseSwift.Published
+    public private(set) var presence: Presence;
+    public let nickname: String;
+
+    public var xUser: XMucUserElement? {
+        return XMucUserElement.extract(from: presence);
+    }
+    public var affiliation: MucAffiliation {
+        return xUser?.affiliation ?? .none;
+    }
+    public var role: MucRole {
+        return xUser?.role ?? .none;
+    }
+    public var jid: JID? {
+        return xUser?.jid;
+    }
+
+    public init(nickname: String, presence: Presence) {
+        self.nickname = nickname;
+        self.presence = presence;
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(nickname);
+    }
+    
+    public func set(presence: Presence) {
+        print("setting presence for \(nickname) to \(presence.show?.rawValue ?? "offline")");
+        self.presence = presence;
+    }
 }
+

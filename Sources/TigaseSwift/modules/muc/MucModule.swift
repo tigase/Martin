@@ -399,50 +399,49 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         
         let xUser = XMucUserElement.extract(from: presence);
         
-        var occupant = room.occupant(nickname: nickname);
-        let presenceOld = occupant?.presence;
-        occupant = MucOccupant(occupant: occupant, presence: presence);
-        
-        if (presenceOld != nil && presenceOld!.type == nil) && type == StanzaType.unavailable && xUser?.statuses.firstIndex(of: 303) != nil {
-            let newNickName = xUser?.nick;
-            room.remove(occupant: occupant!);
-            room.addTemp(nickname: newNickName!, occupant: occupant!);
-        } else if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
-            room.update(state: .joined);
-            room.add(occupant: occupant!);
-            if xUser?.statuses.firstIndex(of: 201) == nil {
-                self.roomCreationHandlers.removeValue(forKey: roomJid);
-            }
-            context.dispatcher.async {
-                if let onJoined = self.roomJoinedHandlers.removeValue(forKey: room.jid) {
-                    onJoined(room);
-                }
-            }
-            if let context = self.context {
-                fire(YouJoinedEvent(context: context, room: room, nickname: nickname));
-                fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
-            }
-        } else if (presenceOld == nil || presenceOld?.type == StanzaType.unavailable) && type == nil {
-            if let tmp = room.removeTemp(nickname: nickname) {
-                let oldNickname = tmp.nickname;
-                room.add(occupant: occupant!);
-                if let context = self.context {
-                    fire(OccupantChangedNickEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: oldNickname));
+        if let oldOccupant: MucOccupant = room.occupant(nickname: nickname) {
+            if type == .unavailable {
+                room.remove(occupant: oldOccupant);
+                if let newNickName = xUser?.nick, xUser?.statuses.firstIndex(of: 303) != nil {
+                    room.addTemp(nickname: newNickName, occupant: oldOccupant);
+                } else {
+                    if let context = self.context {
+                        fire(OccupantLeavedEvent(context: context, presence: presence, room: room, occupant: oldOccupant, nickname: nickname, xUser: xUser));
+                    }
                 }
             } else {
-                room.add(occupant: occupant!);
+                oldOccupant.set(presence: presence);
                 if let context = self.context {
-                    fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
+                    fire(OccupantChangedPresenceEvent(context: context, presence: presence, room: room, occupant: oldOccupant, nickname: nickname, xUser: xUser));
                 }
             }
-        } else if (presenceOld != nil && presenceOld!.type == nil && type == StanzaType.unavailable) {
-            room.remove(occupant: occupant!);
-            if let context = self.context {
-                fire(OccupantLeavedEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
-            }
         } else {
-            if let context = self.context {
-                fire(OccupantChangedPresenceEvent(context: context, presence: presence, room: room, occupant: occupant!, nickname: nickname, xUser: xUser));
+            let temp = room.removeTemp(nickname: nickname);
+            let occupant = room.addOccupant(nickname: nickname, presence: presence);
+            
+            if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
+                room.update(state: .joined);
+                let occupant = room.addOccupant(nickname: nickname, presence: presence);
+                if xUser?.statuses.firstIndex(of: 201) == nil {
+                    self.roomCreationHandlers.removeValue(forKey: roomJid);
+                }
+                context.dispatcher.async {
+                    if let onJoined = self.roomJoinedHandlers.removeValue(forKey: room.jid) {
+                        onJoined(room);
+                    }
+                }
+                if let context = self.context {
+                    fire(YouJoinedEvent(context: context, room: room, nickname: nickname));
+                    fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser));
+                }
+            } else if let prevOccupant = temp {
+                if let context = self.context {
+                    fire(OccupantChangedNickEvent(context: context, presence: presence, room: room, occupant: occupant, nickname: prevOccupant.nickname));
+                }
+            } else {
+                if let context = self.context {
+                    fire(OccupantComesEvent(context: context, presence: presence, room: room, occupant: occupant, nickname: nickname, xUser: xUser));
+                }
             }
         }
         
@@ -454,6 +453,11 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             if let context = self.context {
                 fire(NewRoomCreatedEvent(context: context, presence: presence, room: room));
             }
+        }
+
+        if room.nickname == nickname {
+            room.role = xUser?.role ?? .none;
+            room.affiliation = xUser?.affiliation ?? .none;
         }
     }
     

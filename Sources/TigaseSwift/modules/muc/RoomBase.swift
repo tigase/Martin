@@ -41,6 +41,9 @@ open class RoomBase: ConversationBase, RoomProtocol {
     private let occupantsStore = RoomOccupantsStoreBase();
     private let dispatcher: QueueDispatcher;
     
+    public var affiliation: MucAffiliation = .none;
+    public var role: MucRole = .none;
+    
     public init(context: Context, jid: BareJID, nickname: String, password: String?, dispatcher: QueueDispatcher) {
         self.nickname = nickname;
         self.password = password;
@@ -60,10 +63,12 @@ open class RoomBase: ConversationBase, RoomProtocol {
         }
     }
     
-    public func add(occupant: MucOccupant) {
+    public func addOccupant(nickname: String, presence: Presence) -> MucOccupant {
+        let occupant = MucOccupant(nickname: nickname, presence: presence);
         dispatcher.async(flags: .barrier) {
             self.occupantsStore.add(occupant: occupant);
         }
+        return occupant;
     }
     
     public func remove(occupant: MucOccupant) {
