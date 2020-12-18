@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 /**
  Class is representation of MUC room occupant
@@ -30,7 +31,7 @@ open class MucOccupant: Hashable {
         return lhs.nickname == rhs.nickname;
     }
     
-    @TigaseSwift.Published
+    @Published
     public private(set) var presence: Presence;
     public let nickname: String;
 

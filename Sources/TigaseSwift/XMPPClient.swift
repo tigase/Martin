@@ -21,6 +21,7 @@
 
 import Foundation
 import TigaseLogging
+import Combine
 
 /**
  This is main class for use as XMPP client.

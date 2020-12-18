@@ -20,6 +20,7 @@
 //
 import Foundation
 import TigaseLogging
+import Combine
 
 public enum StreamEvent {
     case streamOpen

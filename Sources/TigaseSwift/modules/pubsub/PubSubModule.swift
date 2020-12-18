@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var pubsub: XmppModuleIdentifier<PubSubModule> {

@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var inBandRegistration: XmppModuleIdentifier<InBandRegistrationModule> {
@@ -224,7 +225,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     
     open class AccountRegistrationTask {
         
-        private var cancellables: [Cancellable] = [];
+        private var cancellables: Set<AnyCancellable> = [];
         
         public private(set) var client: XMPPClient! {
             willSet {
@@ -238,7 +239,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             }
             didSet {
                 if let client = client {
-                    cancellables.append(client.$state.sink(receiveValue: { [weak self] state in
+                    client.$state.sink(receiveValue: { [weak self] state in
                         switch state {
                         case .disconnected(let reason):
                             switch reason {
@@ -251,8 +252,8 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                         default:
                             break;
                         }
-                    }));
-                    cancellables.append(client.module(.streamFeatures).$streamFeatures.sink(receiveValue: { [weak self] features in self?.streamFeaturesReceived(streamFeatures: features) }));
+                    }).store(in: &cancellables);
+                    client.module(.streamFeatures).$streamFeatures.sink(receiveValue: { [weak self] features in self?.streamFeaturesReceived(streamFeatures: features) }).store(in: &cancellables);
                 }
             }
         };

@@ -21,6 +21,7 @@
 
 import Foundation
 import TigaseLogging
+import Combine
 
 extension XmppModuleIdentifier {
     public static var roster: XmppModuleIdentifier<RosterModule> {

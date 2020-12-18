@@ -20,15 +20,10 @@
 //
 
 import Foundation
+import Combine
 
 extension Publisher {
     
-    public func replaceNil<T>(with: T) -> Publishers.Map<Self, T> where Self.Output == T? {
-        return Publishers.Map(upstream: self, transform: { value in
-            return value ?? with;
-        })
-    }
-
     public func replaceNil<T>(with: T) -> Publishers.Map<Self, T?> where Self.Output == T? {
         return Publishers.Map(upstream: self, transform: { value in
             return value ?? with;

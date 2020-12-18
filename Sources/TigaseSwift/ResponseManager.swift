@@ -20,6 +20,7 @@
 //
 import Foundation
 import TigaseLogging
+import Combine
 
 /**
  Class implements manager for registering requests sent to stream

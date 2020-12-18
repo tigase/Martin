@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule {
     

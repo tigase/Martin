@@ -21,6 +21,7 @@
 
 import Foundation
 import TigaseLogging
+import Combine
 
 extension StreamFeatures.StreamFeature {
     public static let startTLS = StreamFeatures.StreamFeature(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls");
@@ -105,8 +106,8 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
     
     
-    private var socketSubscriptions: [Cancellable] = [];
-    private var moduleSubscriptions: [Cancellable] = [];
+    private var socketSubscriptions: Set<AnyCancellable> = [];
+    private var moduleSubscriptions: Set<AnyCancellable> = [];
         
     public init(connector: SocketConnector, responseManager: ResponseManager, context: Context, seeOtherHost: XMPPSrvRecord?) {
         self.modulesManager = context.modulesManager;
@@ -117,44 +118,40 @@ open class SocketSessionLogic: XmppSessionLogic {
         self.responseManager = responseManager;
         self.seeOtherHost = seeOtherHost;
         
-        socketSubscriptions.append(connector.$state.dropFirst(1).sink(receiveValue: { [weak self] newState in
+        connector.$state.dropFirst(1).receive(on: self.dispatcher.queue).sink(receiveValue: { [weak self] newState in
             guard newState != .connected else {
                 return;
             }
             guard let that = self else {
                 return;
             }
-            that.dispatcher.async {
-                switch newState {
-                case .disconnected(let reason):
-                    if case .streamError(let errorElem) = reason {
-                        guard that.onStreamError(errorElem) else {
-                            return;
-                        }
+            switch newState {
+            case .disconnected(let reason):
+                if case .streamError(let errorElem) = reason {
+                    guard that.onStreamError(errorElem) else {
+                        return;
                     }
-                default:
-                    break;
                 }
-                that.state = newState;
+            default:
+                break;
             }
-        }));
-        socketSubscriptions.append(connector.streamEvents.sink(receiveValue: { [weak self] event in
+            that.state = newState;
+        }).store(in: &socketSubscriptions);
+        connector.streamEvents.receive(on: dispatcher.queue).sink(receiveValue: { [weak self] event in
             guard let that = self else {
                 return;
             }
-            that.dispatcher.async {
-                switch event {
-                case .streamOpen:
-                    that.startStream();
-                case .streamClose:
-                    that.onStreamClose(completionHandler: nil);
-                case .streamReceived(let stanza):
-                    that.receivedIncomingStanza(stanza);
-                case .streamTerminate:
-                    that.onStreamTerminate();
-                }
+            switch event {
+            case .streamOpen:
+                that.startStream();
+            case .streamClose:
+                that.onStreamClose(completionHandler: nil);
+            case .streamReceived(let stanza):
+                that.receivedIncomingStanza(stanza);
+            case .streamTerminate:
+                that.onStreamTerminate();
             }
-        }))
+        }).store(in: &socketSubscriptions);
     }
     
     deinit {
@@ -172,12 +169,9 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
         
     open func bind() {
-        if let cancellable = context?.module(.auth).$state.sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }) {
-            moduleSubscriptions.append(cancellable);
-        }
-        if let cancellable = context?.module(.streamFeatures).$streamFeatures.receive(on: self.dispatcher).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }) {
-            moduleSubscriptions.append(cancellable);
-        }
+        context?.module(.auth).$state.receive(on: dispatcher.queue).sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }).store(in: &moduleSubscriptions);
+        context?.module(.streamFeatures).$streamFeatures.receive(on: self.dispatcher.queue).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }).store(in: &moduleSubscriptions);
+
         responseManager.start();
     }
     

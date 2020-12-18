@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 /** This is protocol which needs to be supported by every class which needs
  to be registered in `XmppModulesManager` and process incoming `Stanza`s
@@ -41,6 +42,14 @@ public protocol XmppModule: class {
     
 }
 
+extension AnyCancellable {
+    
+    public func store(in module: XmppModuleBase) {
+        module.store(self);
+    }
+    
+}
+
 open class XmppModuleBase: ContextAware, PacketWriter {
         
     open weak var context: Context? {
@@ -52,15 +61,12 @@ open class XmppModuleBase: ContextAware, PacketWriter {
         }
     }
     
-    private var cancellables: [Cancellable] = [];
+    private var cancellables: Set<AnyCancellable> = [];
     
     public init() {}
             
-    public func store(_ cancellable: Cancellable?) {
-        guard let cancellable = cancellable else {
-            return;
-        }
-        cancellables.append(cancellable);
+    public func store(_ cancellable: AnyCancellable?) {
+        cancellable?.store(in: &cancellables);
     }
     
     public func write<Failure>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) where Failure : Error {
