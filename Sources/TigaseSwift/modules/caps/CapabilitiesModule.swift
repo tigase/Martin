@@ -53,6 +53,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
             if let context = context {
                 context.eventBus.unregister(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
                 discoModule = nil;
+                presenceModule = nil;
             }
         }
         
@@ -60,6 +61,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
             if let context = context {
                 context.eventBus.register(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
                 discoModule = context.modulesManager.module(.disco);
+                presenceModule = context.modulesManager.module(.presence);
             }
         }
     }
@@ -71,6 +73,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
     /// Node used in CAPS advertisement
     open var nodeName = "http://tigase.org/TigaseSwift" + "X";
     
+    private var presenceModule: PresenceModule!;
     private var discoModule: DiscoveryModule!;
     private let dispatcher = QueueDispatcher(label: "capsInProgressSynchronizer");
     private var inProgress: [String] = [];
@@ -223,6 +226,45 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
         }
         
         return Digest.sha1.digest(toBase64: string.data(using: String.Encoding.utf8));
+    }
+        
+    public enum FeatureSupported {
+        case all
+        case some([JID])
+        case none
+    }
+    
+    public func isFeatureSupported(_ feature: String, by jid: BareJID) -> FeatureSupported {
+        guard let context = self.context else {
+            return .none;
+        }
+        
+        let presences = presenceModule.store.presences(for: jid, context: context);
+        guard !presences.isEmpty else {
+            return .none;
+        }
+        
+        let withSupport = presences.filter({ presence in
+            if let capsNode = presence.capsNode, cache.isSupported(for: capsNode, feature: feature) {
+                return true;
+            }
+            return false;
+        }).compactMap({ $0.from });
+        
+        guard presences.count == withSupport.count else {
+            return withSupport.isEmpty ? .none : .some(withSupport);
+        }
+        return .all;
+    }
+    
+    public func isFeatureSupported(_ feature: String, by jid: JID) -> Bool {
+        guard let context = self.context else {
+            return false;
+        }
+        guard let capsNode = presenceModule.store.presence(for: jid, context: context)?.capsNode else {
+            return false;
+        }
+        return cache.isSupported(for: capsNode, feature: feature);
     }
     
     public struct AdditionalFeatures: RawRepresentable {

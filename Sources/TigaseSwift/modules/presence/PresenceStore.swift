@@ -20,128 +20,34 @@
 //
 
 import Foundation
+import Combine
 
-/**
- Default implementation of in-memory presence store
- */
-open class PresenceStore {
+public protocol PresenceStore {
     
-    fileprivate let queue = QueueDispatcher(label: "presence_store_queue", attributes: DispatchQueue.Attributes.concurrent);
+    var bestPresenceEvents: PassthroughSubject<BestPresenceEvent,Never> { get };
     
-    fileprivate var bestPresence = [BareJID:Presence]();
-    fileprivate var presenceByJid = [JID:Presence]();
-    fileprivate var presencesMapByBareJid = [BareJID:[String:Presence]]();
+    func reset(scopes: Set<ResetableScope>, for context: Context);
     
-    public init() {
-    }
-        
-    /// Clear presence store
-    open func clear() {
-        queue.async(flags: .barrier, execute: {
-            self.presenceByJid.removeAll();
-            self.bestPresence.removeAll();
-            self.presencesMapByBareJid.removeAll();
-        }) 
-    }
-
-    public var allBestPresences: [Presence] {
-        return queue.sync {
-            return Array(self.bestPresence.values);
-        }
-    }
+    func update(presence: Presence, for context: Context) -> Presence?;
     
-    /**
-     Retrieve array of all stored presences
-     - returns: array of `Presence`
-     */
-    open func getAllPresences() -> [Presence] {
-        return queue.sync {
-            Array(presenceByJid.values);
-        };
-    }
+    func removePresence(for jid: JID, context: Context) -> Bool;
     
-    /**
-     Retrieve best presence for jid
-     - parameter for: jid for which to retrieve presence
-     - returns: `Presence` if available
-     */
-    open func getBestPresence(for jid:BareJID) -> Presence? {
-        return queue.sync {
-            return self.bestPresence[jid];
-        }
-    }
+    func presence(for jid: JID, context: Context) -> Presence?;
     
-    /**
-     Retrieve presence for exact full jid
-     - parameter for: jid for which to retrieve presence
-     - returns: `Presence` if available
-     */
-    open func getPresence(for jid:JID) -> Presence? {
-        return queue.sync {
-            return self.presenceByJid[jid];
-        }
-    }
+    func presences(for jid: BareJID, context: Context) -> [Presence];
     
-    /**
-     Retrieve all presences for bare jid
-     - parameter for: jid for which to retrieve presences
-     - returns: array of `Presence`s if avaiable
-     */
-    open func getPresences(for jid:BareJID) -> [String:Presence]? {
-        return queue.sync {
-            return self.presencesMapByBareJid[jid];
-        }
-    }
-    
-    fileprivate func findBestPresence(for jid:BareJID) -> Presence? {
-        var result:Presence? = nil;
-        self.presencesMapByBareJid[jid]?.values.forEach({ (p) in
-            if (result == nil || (result!.type ?? .available != .available && p.type ?? .available == .available) || (p.priority >= result!.priority && p.type ?? .available == .available)) {
-                result = p;
-            }
-        });
-        return result;
-    }
-    
-    /**
-     Check if any resource for jid is available
-     - parameter jid: jid to check
-     - returns: true if any resource if available
-     */
-    open func isAvailable(jid:BareJID) -> Bool {
-        return queue.sync {
-            return self.presencesMapByBareJid[jid]?.values.firstIndex(where: { (p) -> Bool in
-                return p.type == nil || p.type == StanzaType.available;
-            }) != nil;
-        }
-    }
-    
-    func update(presence:Presence) -> Bool {
-        var result = false;
-        if let from = presence.from {
-            queue.sync(flags: .barrier, execute: {
-                self.presenceByJid.updateValue(presence, forKey: from);
-                var byResource = self.presencesMapByBareJid[from.bareJid] ?? [String:Presence]();
-                byResource[from.resource ?? ""] = presence;
-                self.presencesMapByBareJid[from.bareJid] = byResource;
-                self.updateBestPresence(for: from.bareJid);
-                result = true;
-            }) 
-        }
-        return result;
-    }
-    
-    fileprivate func updateBestPresence(for from:BareJID) {
-        if let best = findBestPresence(for: from) {
-            bestPresence[from] = best;
-        }
-    }
+    func bestPresence(for jid: BareJID, context: Context) -> Presence?;
     
 }
 
-public protocol PresenceStoreHandler {
+public struct BestPresenceEvent {
+    public let account: BareJID;
+    public let jid: BareJID;
+    public let presence: Presence?;
     
-    func onOffline(presence:Presence);
-    
-    func setPresence(show:Presence.Show, status:String?, priority:Int?);
+    public init(account: BareJID, jid: BareJID, presence: Presence?) {
+        self.account = account;
+        self.jid = jid;
+        self.presence = presence;
+    }
 }

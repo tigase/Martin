@@ -45,16 +45,13 @@ open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
     public override weak var context: Context? {
         didSet {
             if let context = self.context {
-                presenceModule = context.modulesManager.module(.presence);
                 capsModule = context.modulesManager.module(.caps);
             } else {
-                presenceModule = nil;
                 capsModule = nil;
             }
         }
     }
     
-    private var presenceModule: PresenceModule!;
     private var capsModule: CapabilitiesModule!;
     
     open func hasSupport(jid: JID) -> Bool {
@@ -62,26 +59,16 @@ open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
             return hasSupport(jid: jid.bareJid);
         }
         
-        guard let capsNode = presenceModule.store.getPresence(for: jid)?.capsNode else {
-            return false;
-        }
-        
-        return capsModule.cache.isSupported(for: capsNode, feature: ChatStateNotificationsModule.XMLNS) ?? false;
+        return capsModule.isFeatureSupported(ChatStateNotificationsModule.XMLNS, by: jid);
     }
     
     open func hasSupport(jid: BareJID) -> Bool {
-        guard let presences = presenceModule?.store.getPresences(for: jid) else {
+        switch capsModule.isFeatureSupported(ChatStateNotificationsModule.XMLNS, by: jid) {
+        case .none:
             return false;
+        default:
+            return true;
         }
-        
-        let withSupport = presences.filter { (key: String, value: Presence) -> Bool in
-            guard let capsNode = value.capsNode else {
-                return false;
-            }
-            return capsModule.cache.isSupported(for: capsNode, feature: ChatStateNotificationsModule.XMLNS) ?? false;
-        }
-
-        return !withSupport.isEmpty;
     }
     
 }

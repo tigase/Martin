@@ -48,6 +48,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     
     /// Should initial presence be sent automatically
     open var initialPresence: Bool = true;
+    private var initialPresenceSent: Bool = false;
     
     /// Presence store with current presence informations
     public let store: PresenceStore;
@@ -65,36 +66,17 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         return sessionObject.context!.module(.presence).store;
     }
     
-    public init(store: PresenceStore = PresenceStore()) {
+    public init(store: PresenceStore = DefaultPresenceStore()) {
         self.store = store;
         super.init();
     }
         
     open func reset(scopes: Set<ResetableScope>) {
+        if let context = context {
+            store.reset(scopes: scopes, for: context);
+        }
         if scopes.contains(.session) {
-            let currentPresences = store.allBestPresences;
-            self.streamResumptionPresences = nil;
-            store.clear();
-            if let context = self.context {
-                for oldPresence in currentPresences {
-                    let presence = Presence();
-                    presence.type = .unavailable;
-                    presence.from = oldPresence.from?.withoutResource;
-                    fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: true));
-                }
-            }
-        } else if scopes.contains(.stream) && self.fireEventsOnStreamResumption {
-            let currentPresences = store.allBestPresences;
-            self.streamResumptionPresences = store.getAllPresences();
-            store.clear();
-            if let context = self.context {
-                for oldPresence in currentPresences {
-                    let presence = Presence();
-                    presence.type = .unavailable;
-                    presence.from = oldPresence.from?.withoutResource;
-                    fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: true));
-                }
-            }
+            initialPresenceSent = false;
         }
     }
         
@@ -103,34 +85,27 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
             return;
         }
 
-        if let resumptionPresences = self.streamResumptionPresences, let context = context {
-            self.streamResumptionPresences = nil;
-            for presence in resumptionPresences {
-                let availabilityChanged = store.update(presence: presence);
-                fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
-            }
-        } else if initialPresence {
+        if initialPresence && !initialPresenceSent {
             sendInitialPresence();
         }
     }
     
     open func process(stanza: Stanza) throws {
-        if let presence = stanza as? Presence {
+        if let presence = stanza as? Presence, let context = self.context {
             let type = presence.type ?? StanzaType.available;
             switch type {
-            case .available, .unavailable, .error:
-                let availabilityChanged = store.update(presence: presence);
-                if let context = context {
+            case .unavailable:
+                if let jid = presence.from {
+                    let availabilityChanged = store.removePresence(for: jid, context: context);
                     fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
                 }
+            case .available, .unavailable, .error:
+                let availabilityChanged = store.update(presence: presence, for: context)?.type != presence.type;
+                fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
             case .unsubscribed:
-                if let context = context {
-                    fire(ContactUnsubscribedEvent(context: context, presence: presence));
-                }
+                fire(ContactUnsubscribedEvent(context: context, presence: presence));
             case .subscribe:
-                if let context = context {
-                    fire(SubscribeRequestEvent(context: context, presence: presence));
-                }
+                fire(SubscribeRequestEvent(context: context, presence: presence));
             default:
                 logger.error("received presence with weird type: \(type, privacy: .public), \(presence)");
             }
@@ -139,6 +114,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     
     /// Send initial presence
     open func sendInitialPresence() {
+        initialPresenceSent = true;
         setPresence(show: .online, status: nil, priority: nil);
     }
     
