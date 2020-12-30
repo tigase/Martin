@@ -404,7 +404,8 @@ extension Jingle.RTP.Description.SSRC {
         let ssrcLines = sdpLines.filter { (line) -> Bool in
             return line.starts(with: "a=ssrc:");
         }
-        return Set(ssrcLines.map({ (line) -> String in
+        
+        return distinct(ssrcLines.map({ (line) -> String in
             String(line.dropFirst("a=ssrc:".count).split(separator: " ").first!)
         })).map { (ssrc) in
             let prefix = "a=ssrc:\(ssrc) ";
@@ -426,6 +427,15 @@ extension Jingle.RTP.Description.SSRC {
         }
     }
 
+    public static func distinct(_ items: [String]) -> [String] {
+        var result: [String] = [];
+        for item in items {
+            if !result.contains(item) {
+                result.append(item);
+            }
+        }
+        return result;
+    }
 }
 
 extension Jingle.RTP.Description.SSRC.Parameter {
