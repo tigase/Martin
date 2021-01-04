@@ -38,7 +38,7 @@ open class Context: CustomStringConvertible, Resetable {
     }
     
     public var boundJid: JID? {
-        return module(.resourceBind).bindedJid;
+        return moduleOrNil(.resourceBind)?.bindedJid;
     }
     public var currentConnectionDetails: XMPPSrvRecord?;
     public var connectionConfiguration: ConnectionConfiguration = ConnectionConfiguration() {

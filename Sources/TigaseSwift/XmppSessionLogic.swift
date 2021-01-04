@@ -169,7 +169,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
         
     open func bind() {
-        context?.module(.auth).$state.receive(on: dispatcher.queue).sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }).store(in: &moduleSubscriptions);
+        context?.moduleOrNil(.auth)?.$state.receive(on: dispatcher.queue).sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }).store(in: &moduleSubscriptions);
         context?.module(.streamFeatures).$streamFeatures.receive(on: self.dispatcher.queue).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }).store(in: &moduleSubscriptions);
 
         responseManager.start();

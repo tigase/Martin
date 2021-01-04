@@ -269,11 +269,12 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         var acceptedCertificate: SslCertificateInfo? = nil;
         
         public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (JabberDataElement, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
-            self.setClient(client: client ?? XMPPClient());
+            let localClient = client ?? XMPPClient();
+            _ = localClient.modulesManager.register(StreamFeaturesModule());
+            self.setClient(client: localClient);
             self.onForm = onForm;
             self.completionHandler = completionHandler;
             
-            _ = self.client?.modulesManager.register(StreamFeaturesModule());
             self.inBandRegistrationModule = self.client!.modulesManager.register(InBandRegistrationModule());
             self.preauthToken = preauth;
             
