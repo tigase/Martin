@@ -79,7 +79,9 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Re
     }
     
     public func reset(scopes: Set<ResetableScope>) {
-        streamFeatures = .none;
+        if scopes.contains(.stream) {
+            streamFeatures = .none;
+        }
     }
 }
 

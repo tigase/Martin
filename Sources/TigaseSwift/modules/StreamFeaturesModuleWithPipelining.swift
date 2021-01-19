@@ -58,7 +58,9 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule {
     
     public override func reset(scopes: Set<ResetableScope>) {
         super.reset(scopes: scopes);
-        connectionRestarted();
+        if scopes.contains(.stream) {
+            connectionRestarted();
+        }
     }
     
     override open func process(stanza: Stanza) throws {
