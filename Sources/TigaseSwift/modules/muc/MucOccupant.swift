@@ -47,10 +47,13 @@ open class MucOccupant: Hashable {
     public var jid: JID? {
         return xUser?.jid;
     }
+    
+    public private(set) weak var room: RoomProtocol?;
 
-    public init(nickname: String, presence: Presence) {
+    public init(nickname: String, presence: Presence, for room: RoomProtocol) {
         self.nickname = nickname;
         self.presence = presence;
+        self.room = room;
     }
     
     public func hash(into hasher: inout Hasher) {

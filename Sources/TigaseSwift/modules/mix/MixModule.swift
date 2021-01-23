@@ -357,7 +357,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, Ro
             switch result {
             case .success(let items):
                 let participants = items.items.map({ (item) -> MixParticipant? in
-                    return MixParticipant(from: item);
+                    return MixParticipant(from: item, for: channel);
                 }).filter({ $0 != nil }).map({ $0! });
                 let oldParticipants = channel.participants;
                 let left = oldParticipants.filter({ old in !participants.contains(where: { new in new.id == old.id})});
@@ -644,7 +644,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, Ro
         case "urn:xmpp:mix:nodes:participants":
             switch notification.action {
             case .published(let item):
-                if let participant = MixParticipant(from: item) {
+                if let participant = MixParticipant(from: item, for: channel) {
                     if participant.id == channel.participantId {
                         channel.update(ownNickname: participant.nickname);
                     }

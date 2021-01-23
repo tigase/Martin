@@ -27,17 +27,20 @@ open class MixParticipant {
     public let nickname: String?;
     public let jid: BareJID?;
     
-    public convenience init?(from item: PubSubModule.Item) {
+    public private(set) weak var channel: ChannelProtocol?;
+    
+    public convenience init?(from item: PubSubModule.Item, for channel: ChannelProtocol) {
         guard let payload = item.payload, payload.name == "participant" && payload.xmlns == MixModule.CORE_XMLNS else {
             return nil;
         }
-        self.init(id: item.id, nickname: payload.findChild(name: "nick")?.value, jid: BareJID(payload.findChild(name: "jid")?.value));
+        self.init(id: item.id, nickname: payload.findChild(name: "nick")?.value, jid: BareJID(payload.findChild(name: "jid")?.value), channel: channel);
     }
     
-    public init(id: String, nickname: String?, jid: BareJID?) {
+    public init(id: String, nickname: String?, jid: BareJID?, channel: ChannelProtocol) {
         self.id = id;
         self.nickname = nickname;
         self.jid = jid;
+        self.channel = channel;
     }
     
 }
