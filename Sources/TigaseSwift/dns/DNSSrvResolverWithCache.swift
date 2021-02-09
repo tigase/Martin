@@ -77,6 +77,13 @@ open class DNSSrvResolverWithCache: DNSSrvResolver {
         }
     }
     
+    public func markAsInvalid(for domain: String, host: String, port: Int, for period: TimeInterval) {
+        self.dispatcher.async {
+            self.resolver.markAsInvalid(for: domain, host: host, port: port, for: period);
+            self.cache.markAsInvalid(for: domain, host: host, port: port, for: period)
+        }
+    }
+    
     fileprivate func save(for domain: String, result: XMPPSrvResult?) {
         guard let current = cache.getRecords(for: domain) else {
             cache.store(for: domain, result: result);
@@ -115,6 +122,14 @@ open class DNSSrvResolverWithCache: DNSSrvResolver {
                 return;
             }
             current.markAsInvalid(record: record, for: period);
+            self.save(for: domain, result: current);
+        }
+
+        public func markAsInvalid(for domain: String, host: String, port: Int, for period: TimeInterval) {
+            guard let current = getRecords(for: domain) else {
+                return;
+            }
+            current.markAsInvalid(host: host, port: port, for: period);
             self.save(for: domain, result: current);
         }
         
@@ -168,6 +183,14 @@ open class DNSSrvResolverWithCache: DNSSrvResolver {
             self.save(for: domain, result: current);
         }
         
+        open func markAsInvalid(for domain: String, host: String, port: Int, for period: TimeInterval) {
+            guard let current = getRecords(for: domain) else {
+                return;
+            }
+            current.markAsInvalid(host: host, port: port, for: period);
+            self.save(for: domain, result: current);
+        }
+
         open func store(for domain: String, result: XMPPSrvResult?) {
             self.save(for: domain, result: result);
         }
@@ -198,6 +221,8 @@ public protocol DNSSrvResolverCache: class {
     func getRecords(for domain: String) -> XMPPSrvResult?;
     
     func markAsInvalid(for domain: String, record: XMPPSrvRecord, for period: TimeInterval);
+    
+    func markAsInvalid(for domain: String, host: String, port: Int, for period: TimeInterval);
     
     func store(for domain: String, result: XMPPSrvResult?);
     

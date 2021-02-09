@@ -189,4 +189,13 @@ open class XMPPSrvResult: Codable, CustomStringConvertible {
         }
         found.markAsInvalid(for: period);
     }
+    
+    func markAsInvalid(host: String, port: Int, for period: TimeInterval) {
+        guard let found = self.records.first(where: { (rec) -> Bool in
+            return rec.target == host && rec.port == port;
+        }) else {
+            return;
+        }
+        found.markAsInvalid(for: period);
+    }
 }

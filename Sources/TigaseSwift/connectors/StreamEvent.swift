@@ -1,8 +1,8 @@
 //
-// DNSSrvResolver.swift
+// StreamEvent.swift
 //
 // TigaseSwift
-// Copyright (C) 2018 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,18 +21,16 @@
 
 import Foundation
 
-public protocol DNSSrvResolver {
-    
-    func resolve(domain: String, for: BareJID, completionHandler: @escaping (_ result: Result<XMPPSrvResult,DNSError>) -> Void);
- 
-    func markAsInvalid(for domain: String, record: XMPPSrvRecord, for: TimeInterval);
-    
-    func markAsInvalid(for domain: String, host: String, port: Int, for: TimeInterval);
-    
+public enum StreamEvent {
+    case streamStart
+    //case streamOpen(attributes: [String:String])
+    case streamOpen(attributes: [String:String])
+    case streamClose(reason: StreamEventCloseReason = .none)
+    case streamTerminate
+    case stanza(Stanza)
 }
 
-public enum DNSError: Error {
-    case timeout
-    case internalError
-    case unknownError
+public enum StreamEventCloseReason {
+    case none
+    case xmlError
 }

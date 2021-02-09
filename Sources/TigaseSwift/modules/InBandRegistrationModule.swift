@@ -428,11 +428,11 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             guard !streamFeatures.isNone else {
                 return false;
             }
-            guard (client.connector?.isTLSActive ?? false) || client.connectionConfiguration.disableTLS || streamFeatures.contains(.startTLS) else {
+            guard (client.connector?.activeFeatures.contains(.TLS) ?? false) || client.connectionConfiguration.disableTLS || streamFeatures.contains(.startTLS) else {
                 return false;
             }
 
-            guard (client.connector?.isCompressionActive ?? false) || client.connectionConfiguration.disableCompression || streamFeatures.contains(.compressionZLIB) else {
+            guard (client.connector?.activeFeatures.contains(.ZLIB) ?? false) || client.connectionConfiguration.disableCompression || streamFeatures.contains(.compressionZLIB) else {
                 return false;
             }
             

@@ -453,13 +453,11 @@ open class Element : Node, ElementProtocol {
             }
         }
         
-        let holder = Holder();
         let xmlDelegate = XMPPParserDelegate();
-        xmlDelegate.delegate = holder;
         let parser = XMLParser(delegate: xmlDelegate);
         let data = toParse.data(using: String.Encoding.utf8);
         try? parser.parse(data: data!);
-        return holder.parsed;
+        return xmlDelegate.parsed.first;
     }
 }
 

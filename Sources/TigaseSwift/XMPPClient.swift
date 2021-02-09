@@ -143,7 +143,7 @@ open class XMPPClient: Context {
     /**
      Method initiates modules if needed and starts process of connecting to XMPP server.
      */
-    open func login(lastSeeOtherHost: XMPPSrvRecord? = nil) -> Void {
+    open func login(lastSeeOtherHost: ConnectorEndpoint? = nil) -> Void {
         guard state == SocketConnector.State.disconnected() else {
             logger.debug("XMPP in state: \(self.state), - not starting connection");
             return;

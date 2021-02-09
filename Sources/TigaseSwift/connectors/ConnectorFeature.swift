@@ -1,8 +1,8 @@
 //
-// DNSSrvResolver.swift
+// ConnectorFeature.swift
 //
 // TigaseSwift
-// Copyright (C) 2018 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,18 +21,19 @@
 
 import Foundation
 
-public protocol DNSSrvResolver {
+public struct ConnectorFeature: RawRepresentable, Hashable {
+    public let rawValue: String;
     
-    func resolve(domain: String, for: BareJID, completionHandler: @escaping (_ result: Result<XMPPSrvResult,DNSError>) -> Void);
- 
-    func markAsInvalid(for domain: String, record: XMPPSrvRecord, for: TimeInterval);
+    public init(_ rawValue: String) {
+        self.rawValue = rawValue;
+    }
     
-    func markAsInvalid(for domain: String, host: String, port: Int, for: TimeInterval);
-    
+    public init?(rawValue: String) {
+        self.rawValue = rawValue;
+    }
 }
 
-public enum DNSError: Error {
-    case timeout
-    case internalError
-    case unknownError
+extension ConnectorFeature {
+    static let TLS = ConnectorFeature("TLS");
+    static let ZLIB = ConnectorFeature("ZLIB");
 }

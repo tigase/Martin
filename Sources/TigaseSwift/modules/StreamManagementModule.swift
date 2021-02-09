@@ -74,9 +74,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     
     fileprivate var resumptionId: String? = nil;
     
-    fileprivate var _resumptionLocation: XMPPSrvRecord? = nil;
+    fileprivate var _resumptionLocation: ConnectorEndpoint? = nil;
     /// Address to use when resuming stream
-    open var resumptionLocation: XMPPSrvRecord? {
+    open var resumptionLocation: ConnectorEndpoint? {
         return _resumptionLocation;
     }
     /// Maximal resumption timeout to use
@@ -335,11 +335,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         let r = stanza.getAttribute("resume");
         let mx = stanza.getAttribute("max");
         let resume = (r == "true" || r == "1") && id != nil;
-        if let location = SocketConnector.preprocessConnectionDetails(string: stanza.getAttribute("location")), let details: XMPPSrvRecord = self.context?.currentConnectionDetails {
-            _resumptionLocation = XMPPSrvRecord(port: location.1 ?? details.port, weight: 1, priority: 1, target: location.0, directTls: details.directTls)
-        } else {
-            _resumptionLocation = nil;
-        }
+        _resumptionLocation = (self.context as? XMPPClient)?.connector?.prepareEndpoint(withResumptionLocation: stanza.getAttribute("location"))
         
         resumptionId = id;
         _ackEnabled = true;

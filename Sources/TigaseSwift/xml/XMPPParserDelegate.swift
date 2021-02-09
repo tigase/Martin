@@ -21,6 +21,19 @@
 
 import Foundation
 
+public protocol XMPPParserDelegateDelegate: class {
+    
+    func parsed(parserEvent: XMPPParserEvent)
+    
+}
+
+public enum XMPPParserEvent {
+    case streamOpened([String:String])
+    case streamClosed
+    case error
+    case element(Element)
+}
+ 
 /**
  Implementation of XMLParserDelegate to properly parse XMPP stream
  and notify about stream start and end.
@@ -28,9 +41,13 @@ import Foundation
 open class XMPPParserDelegate: XMLParserDelegate {
     
     var xmlnss = [String:String]();
-    open weak var delegate:XMPPStreamDelegate?;
+    open weak var delegate:XMPPParserDelegateDelegate?;
     var el_stack = [Element]()
     var all_roots = [Element]()
+    
+    public var parsed: [Element] {
+        return all_roots;
+    }
     
     public init() {
     }
@@ -52,7 +69,7 @@ open class XMPPParserDelegate: XMLParserDelegate {
                     attrs[k] = v;
                 }
             }
-            self.delegate?.onStreamStart(attributes: attrs);
+            self.delegate?.parsed(parserEvent: .streamOpened(attrs));
             return
         }
         
@@ -73,13 +90,16 @@ open class XMPPParserDelegate: XMLParserDelegate {
     
     open func endElement(name elementName: String, prefix: String?) {
         if (elementName == "stream" && prefix == "stream") {
-            self.delegate?.onStreamTerminate(reason: .none);
+            self.delegate?.parsed(parserEvent: .streamClosed);
             return
         }
         let elem = el_stack.removeLast()
         if (el_stack.isEmpty) {
-            //all_roots.append(elem)
-            self.delegate?.process(element: elem)
+            if let delegate = self.delegate {
+                self.delegate?.parsed(parserEvent: .element(elem));
+            } else {
+                all_roots.append(elem)
+            }
         } else {
             el_stack.last?.addChild(elem);
         }

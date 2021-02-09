@@ -243,10 +243,7 @@ public enum XmlParserError: Error {
  data during parsing of XML by `XMLParser`
  */
 public protocol XMLParserDelegate: class {
-    
-    /// Delegate for parsing XMPP stream
-    var delegate:XMPPStreamDelegate? { get set };
-    
+        
     /**
      Called when start of element is found
      - parameter name: name of element

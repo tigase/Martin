@@ -23,8 +23,8 @@ import Foundation
 
 public protocol StreamLogger: class {
     
-    func incoming(_ value: StreamData);
+    func incoming(_ value: StreamEvent);
 
-    func outgoing(_ value: StreamData);
+    func outgoing(_ value: StreamEvent);
     
 }

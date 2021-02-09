@@ -33,7 +33,7 @@ public struct ConnectionConfiguration {
     public var disableTLS: Bool = false;
     public var useSeeOtherHost: Bool = true;
     public var sslCertificateValidation: SSLCertificateValidation = .default;
-    public var serverConnectionDetails: ServerConnectionDetails?;
+    public var connectionDetails: ConnectorEndpoint?;
     public var lastConnectionDetails: XMPPSrvRecord?;
     public var conntectionTimeout: Double?;
     public var dnsResolver: DNSSrvResolver?;

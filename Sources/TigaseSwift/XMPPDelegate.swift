@@ -30,16 +30,13 @@ open class XMPPDelegate : NSObject, XMPPStreamDelegate {
     
     open func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason) {
         if let logger = streamLogger {
-            logger.incoming(.string("</stream:stream>"));
+            logger.incoming(.streamClose(reason: .none));
         }
     }
     
     open func onStreamStart(attributes: [String : String]) {
         if let logger = streamLogger {
-            let content = attributes.map { (k,v) -> String in
-                return "\(k)='\(EscapeUtils.escape(v))'";
-            }
-            logger.incoming(.string("<stream:stream\(content.isEmpty ? "" : ("" + content.joined(separator: " ")))>"));
+            logger.incoming(.streamOpen(attributes: attributes));
         }
     }
     

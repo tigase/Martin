@@ -161,6 +161,10 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         // nothing to do..
     }
     
+    public func markAsInvalid(for domain: String, host: String, port: Int, for: TimeInterval) {
+        // nothing to do..
+    }
+    
     static func bridge<T : AnyObject>(_ obj : T) -> UnsafeMutableRawPointer {
         return Unmanaged.passUnretained(obj).toOpaque();
     }
