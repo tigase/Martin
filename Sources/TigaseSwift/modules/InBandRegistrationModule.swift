@@ -279,7 +279,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             self.preauthToken = preauth;
             
             self.client?.connectionConfiguration.userJid = BareJID(domainName);
-            self.client.connectionConfiguration.sslCertificateValidation = sslCertificateValidator == nil ? .default : .customValidator(sslCertificateValidator!);
+            self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
+                options.sslCertificateValidation = sslCertificateValidator == nil ? .default : .customValidator(sslCertificateValidator!);
+            });
             self.onCertificateValidationError = onCertificateValidationError;
             self.client?.login();
         }
@@ -354,7 +356,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                 let certData = SslCertificateInfo(trust: trust);
                 self.serverAvailable = true;
                 self.onCertificateValidationError!(certData, {() -> Void in
-                    self.client.connectionConfiguration.sslCertificateValidation = .fingerprint(certData.details.fingerprintSha1);
+                    self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
+                        options.sslCertificateValidation = .fingerprint(certData.details.fingerprintSha1);
+                    })
                     self.acceptedCertificate = certData;
                     self.serverAvailable = false;
                     self.client.login();

@@ -51,6 +51,7 @@ public protocol Connector: class {
     func prepareEndpoint(withResumptionLocation location: String?) -> ConnectorEndpoint?;
     
     func prepareEndpoint(withSeeOtherHost seeOtherHost: String?) -> ConnectorEndpoint?;
+    
 }
 
 public protocol ConnectorEndpoint {

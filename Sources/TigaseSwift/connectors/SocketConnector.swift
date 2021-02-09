@@ -42,7 +42,6 @@ open class SocketConnector : XMPPConnectorBase, Connector {
         }
     }
     private var outStreamBuffer: WriteBuffer?;
-    private let dnsResolver: DNSSrvResolver;
     private var zlib: Zlib?;
     /**
      Stores information about SSL certificate validation and can
@@ -56,7 +55,10 @@ open class SocketConnector : XMPPConnectorBase, Connector {
     /// Internal processing queue
     private let queue: QueueDispatcher = QueueDispatcher(label: "xmpp_socket_queue");
     
-    private var server: String?;
+    private let userJid: BareJID;
+    private var server: String {
+        return userJid.domain;
+    }
     public private(set) var currentEndpoint: ConnectorEndpoint?;
 //    private(set) var currentConnectionDetails: XMPPSrvRecord? {
 //        didSet {
@@ -67,14 +69,14 @@ open class SocketConnector : XMPPConnectorBase, Connector {
     private var connectionTimer: Foundation.Timer?;
         
     private var stateSubscription: Cancellable?;
-    private let connectionConfiguration: ConnectionConfiguration;
+    private let options: Options;
     private let eventBus: EventBus;
     private let networkStack = NetworkStack();
     private var connectorStreamDelegate: ConnectionStreamDelegate!;
     
     required public init(context: Context) {
-        self.connectionConfiguration = context.connectionConfiguration;
-        self.dnsResolver = connectionConfiguration.dnsResolver ?? XMPPDNSSrvResolver();
+        self.userJid = context.connectionConfiguration.userJid;
+        self.options = context.connectionConfiguration.connectorOptions as! Options;
         self.eventBus = context.eventBus;
         
         super.init(context: context);
@@ -108,8 +110,8 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                     }
                 }
             case .connecting:
-                if let timeout: Double = that.context?.connectionConfiguration.conntectionTimeout {
-                    that.logger.debug("\(that.connectionConfiguration.userJid) - scheduling timer for: \(timeout)");
+                if let timeout: Double = that.options.conntectionTimeout {
+                    that.logger.debug("\(that.userJid) - scheduling timer for: \(timeout)");
                     DispatchQueue.main.async {
                         that.connectionTimer = Foundation.Timer.scheduledTimer(timeInterval: timeout, target: that, selector: #selector(that.connectionTimedOut), userInfo: nil, repeats: false)
                     }
@@ -148,21 +150,19 @@ open class SocketConnector : XMPPConnectorBase, Connector {
             }
             
             let start = Date();
-            let timeout: Double? = self.connectionConfiguration.conntectionTimeout;
+            let timeout: Double? = self.options.conntectionTimeout;
             state = .connecting;
-            self.server = connectionConfiguration.userJid.domain;
             //            if let srvRecord = self.sessionLogic?.serverToConnectDetails() {
             //                self.connect(dnsName: srvRecord.target, srvRecord: srvRecord);
             //                return;
             //            } else {
             if let endpoint = endpoint as? SocketConnectorEndpoint {
                 self.connect(endpoint: endpoint);
-            } else if let details = self.connectionConfiguration.connectionDetails as? SocketConnectorEndpoint {
+            } else if let details = self.options.connectionDetails as? SocketConnectorEndpoint {
                 self.connect(endpoint: details);
             } else {
-                let server = self.connectionConfiguration.userJid.domain;
-                self.logger.debug("\(self.connectionConfiguration.userJid) - connecting to server: \(server)");
-                self.dnsResolver.resolve(domain: server, for: self.connectionConfiguration.userJid) { result in
+                self.logger.debug("\(self.userJid) - connecting to server: \(self.server)");
+                self.options.dnsResolver.resolve(domain: server, for: self.userJid) { result in
                     if timeout != nil {
                         // if timeout was set, do not try to connect after timeout was fired!
                         // another event will take care of that
@@ -175,10 +175,10 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                         if let record = dnsResult.record() {
                             self.connect(endpoint: SocketConnectorEndpoint(proto: record.directTls ? .XMPPS : .XMPP, host: record.target, port: record.port));
                         } else {
-                            self.connect(endpoint: SocketConnectorEndpoint(proto: .XMPP, host: server, port: 5222));
+                            self.connect(endpoint: SocketConnectorEndpoint(proto: .XMPP, host: self.server, port: 5222));
                         }
                     case .failure(_):
-                        self.connect(endpoint: SocketConnectorEndpoint(proto: .XMPP, host: server, port: 5222));
+                        self.connect(endpoint: SocketConnectorEndpoint(proto: .XMPP, host: self.server, port: 5222));
                     }
                 }
             }
@@ -286,12 +286,12 @@ open class SocketConnector : XMPPConnectorBase, Connector {
         queue.async {
         switch self.state {
         case .disconnected(_), .disconnecting:
-            self.logger.debug("\(self.connectionConfiguration.userJid) - not connected or already disconnecting");
+            self.logger.debug("\(self.userJid) - not connected or already disconnecting");
             completionHandler?();
             return;
         case .connected:
             self.state = State.disconnecting;
-            self.logger.debug("\(self.connectionConfiguration.userJid) - closing XMPP stream");
+            self.logger.debug("\(self.userJid) - closing XMPP stream");
             
 //            self.streamEvents.send(.streamClose())
             // TODO: I'm not sure about that!!
@@ -303,7 +303,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
             }
         case .connecting:
             self.state = State.disconnecting;
-            self.logger.debug("\(self.connectionConfiguration.userJid) - closing TCP connection");
+            self.logger.debug("\(self.userJid) - closing TCP connection");
             self.closeSocket(newState: State.disconnected(.timeout));
             completionHandler?();
         }
@@ -314,7 +314,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
      Should always be called from local dispatch queue!
      */
     private func configureTLS(directTls: Bool = false) {
-        self.logger.debug("\(self.connectionConfiguration.userJid) - configuring TLS");
+        self.logger.debug("\(self.userJid) - configuring TLS");
 
         guard let inStream = self.inStream, let outStream = self.outStream else {
             return;
@@ -322,7 +322,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
         inStream.delegate = self.connectorStreamDelegate
         outStream.delegate = self.connectorStreamDelegate
 
-        let domain = self.connectionConfiguration.userJid.domain;
+        let domain = self.userJid.domain;
         
         sslCertificateValidated = nil;
         let settings:NSDictionary = NSDictionary(objects: [StreamSocketSecurityLevel.negotiatedSSL, 
@@ -331,7 +331,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                 kCFStreamSSLValidatesCertificateChain as NSString])
         let started = CFReadStreamSetProperty(inStream as CFReadStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef)
         if (!started) {
-            self.logger.debug("\(self.connectionConfiguration.userJid) - could not start STARTTLS");
+            self.logger.debug("\(self.userJid) - could not start STARTTLS");
         }
         CFWriteStreamSetProperty(outStream as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef);
         
@@ -475,7 +475,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
      Method responsible for actual process of sending data.
      */
     private func sendSync(_ data:String, completionHandler: (()->Void)? = nil) {
-        self.logger.debug("\(self.connectionConfiguration.userJid) - sending stanza: \(data)");
+        self.logger.debug("\(self.userJid) - sending stanza: \(data)");
         let buf = data.data(using: String.Encoding.utf8)!;
         self.networkStack.send(data: buf);
         completionHandler?();
@@ -500,13 +500,13 @@ open class SocketConnector : XMPPConnectorBase, Connector {
     
     @objc private func connectionTimedOut() {
         queue.async {
-            self.logger.debug("\(self.connectionConfiguration.userJid) - connection timed out at: \(self.state)");
+            self.logger.debug("\(self.userJid) - connection timed out at: \(self.state)");
             guard self.state == .connecting else {
                 return;
             }
-            self.logger.debug("\(self.connectionConfiguration.userJid) - establishing connection to:\(self.server ?? "unknown", privacy: .auto(mask: .hash)) timed out!");
-            if let domain = self.server, let lastConnectionDetails = self.currentEndpoint as? SocketConnectorEndpoint {
-                self.dnsResolver.markAsInvalid(for: domain, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
+            self.logger.debug("\(self.userJid) - establishing connection to:\(self.server ?? "unknown", privacy: .auto(mask: .hash)) timed out!");
+            if let lastConnectionDetails = self.currentEndpoint as? SocketConnectorEndpoint {
+                self.options.dnsResolver.markAsInvalid(for: self.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
             }
             self.closeSocket(newState: State.disconnected(.timeout));
         }
@@ -522,8 +522,8 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                 if (aStream == self.inStream) {
                     // this is intentional - we need to execute onStreamTerminate()
                     // on main queue, but after all task are executed by our serial queue
-                    if self.state == .connecting, let domain = self.server, let lastConnectionDetails = self.currentEndpoint as? SocketConnectorEndpoint {
-                        self.dnsResolver.markAsInvalid(for: domain, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
+                    if self.state == .connecting, let lastConnectionDetails = self.currentEndpoint as? SocketConnectorEndpoint {
+                        self.options.dnsResolver.markAsInvalid(for: self.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
                     }
                     self.closeSocket(newState: State.disconnected(.timeout));
                 }
@@ -590,16 +590,16 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                     }
                 
                     let trust: SecTrust = trustVal as! SecTrust;
-                    switch self.connectionConfiguration.sslCertificateValidation {
+                    switch self.options.sslCertificateValidation {
                     case .default:
-                        let policy = SecPolicyCreateSSL(false, self.connectionConfiguration.userJid.domain as CFString?);
+                        let policy = SecPolicyCreateSSL(false, self.userJid.domain as CFString?);
                         var secTrustResultType = SecTrustResultType.invalid;
                         SecTrustSetPolicies(trust, policy);
                         SecTrustEvaluate(trust, &secTrustResultType);
                                         
                         self.sslCertificateValidated = (secTrustResultType == SecTrustResultType.proceed || secTrustResultType == SecTrustResultType.unspecified);
                     case .fingerprint(let fingerprint):
-                        self.sslCertificateValidated = SslCertificateValidator.validateSslCertificate(domain: self.connectionConfiguration.userJid.domain, fingerprint: fingerprint, trust: trust);
+                        self.sslCertificateValidated = SslCertificateValidator.validateSslCertificate(domain: self.server, fingerprint: fingerprint, trust: trust);
                     case .customValidator(let validator):
                         self.sslCertificateValidated = validator(trust);
                     }
@@ -907,4 +907,23 @@ public protocol NetworkDelegate: class {
     
     func send(data: Data);
     
+}
+
+extension SocketConnector {
+    
+    public struct Options: ConnectorOptions {
+        
+        public var connector: Connector.Type {
+            return SocketConnector.self;
+        }
+        
+        public var sslCertificateValidation: SSLCertificateValidation = .default;
+        public var connectionDetails: ConnectorEndpoint?;
+        public var lastConnectionDetails: XMPPSrvRecord?;
+        public var conntectionTimeout: Double?;
+        public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver();
+
+        public init() {}
+        
+    }
 }

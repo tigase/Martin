@@ -150,7 +150,7 @@ open class XMPPClient: Context {
         }
         logger.debug("starting connection......");
         dispatcher.sync {
-            let socketConnector = SocketConnector(context: context);
+            let socketConnector = self.connectionConfiguration.connectorOptions.connector.init(context: context); 
             let sessionLogic: XmppSessionLogic = SocketSessionLogic(connector: socketConnector, responseManager: responseManager, context: context, seeOtherHost: lastSeeOtherHost);
             context.writer = LogicPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager);
             self.sessionLogic = sessionLogic;

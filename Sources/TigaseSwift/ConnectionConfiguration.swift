@@ -32,17 +32,28 @@ public struct ConnectionConfiguration {
     public var disableCompression: Bool = true;
     public var disableTLS: Bool = false;
     public var useSeeOtherHost: Bool = true;
-    public var sslCertificateValidation: SSLCertificateValidation = .default;
-    public var connectionDetails: ConnectorEndpoint?;
-    public var lastConnectionDetails: XMPPSrvRecord?;
-    public var conntectionTimeout: Double?;
-    public var dnsResolver: DNSSrvResolver?;
+    
+    public var connectorOptions: ConnectorOptions = SocketConnector.Options();
+    
+    public mutating func modifyConnectorOptions<T: ConnectorOptions>(_ exec: (inout T) -> Void) {
+        var options = connectorOptions as? T ?? T()
+        exec(&options);
+        self.connectorOptions = options;
+    }
+            
+    public mutating func modifyConnectorOptions<T: ConnectorOptions>(type: T.Type, _ exec: (inout T) -> Void) {
+        var options = connectorOptions as? T ?? T()
+        exec(&options);
+        self.connectorOptions = options;
+    }
+
 }
 
-public struct ServerConnectionDetails {
-    public var host: String;
-    public var port: Int = 5222;
-    public var useSSL: Bool = false;
+public protocol ConnectorOptions {
+    
+    var connector: Connector.Type { get }
+    
+    init()
 }
 
 public enum Credentials {
