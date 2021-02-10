@@ -59,7 +59,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 self.availableFeatures.insert(feature)
             }
         }
-        
+
         availableFeatures.insert(.ZLIB);
         
         networkStack.delegate = self;
@@ -146,13 +146,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         connection = NWConnection(host: .name(endpoint.host, nil), port: .init(integerLiteral: UInt16(endpoint.port)), using: NWParameters(tls: nil));
         
         if endpoint.proto == .XMPPS {
-            guard let tlsProcessor = options.networkProcessorProviders.first(where: { $0.providedFeatures.contains(.TLS) })?.supply() else {
-                self.state = .disconnected(.none);
-                return;
-            }
-            
-            networkStack.addProcessor(tlsProcessor);
-            activeFeatures.insert(.TLS);
+            self.initTLSStack();
         }
         
         connection?.stateUpdateHandler = { [weak self] state in
@@ -228,15 +222,34 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         }
     }
     
-    private func proceedTLS() {
+    private func initTLSStack() {
         guard let tlsProcessor = options.networkProcessorProviders.first(where: { $0.providedFeatures.contains(.TLS) })?.supply() else {
             self.state = .disconnected(.none);
+            _ = self.stop(force: true);
             return;
         }
-        
+        if let sslProcessor = tlsProcessor as? SSLNetworkProcessor {
+            sslProcessor.setALPNProtocols(["xmpp-client"]);
+            sslProcessor.serverName = self.server;
+            sslProcessor.certificateValidation = options.sslCertificateValidation;
+            sslProcessor.certificateValidationFailed = { [weak self] trust in
+                self?.networkStack.reset();
+                if let trust = trust {
+                    self?.state = .disconnected(.sslCertError(trust));
+                } else {
+                    self?.state = .disconnected(.none);
+                }
+                self?.connection?.cancel();
+
+                return;
+            }
+        }
         networkStack.addProcessor(tlsProcessor);
         activeFeatures.insert(.TLS);
-
+    }
+    
+    private func proceedTLS() {
+        self.initTLSStack();
         self.restartStream();
     }
     
@@ -267,9 +280,9 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         case .streamClose(let reason):
             state = .disconnecting;
             sendSync("</stream:stream>",  completion: .written({ _ in
-                self.connection?.cancel();
                 self.networkStack.reset();
                 self.state = .disconnected(reason == .xmlError ? .xmlError(nil) : .none);
+                self.connection?.cancel();
             }));
         default:
             streamEvents.send(event);
@@ -339,7 +352,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             return SocketConnectorNetwork.self;
         }
         
-//        public var sslCertificateValidation: SSLCertificateValidation = .default;
+        public var sslCertificateValidation: SSLCertificateValidation = .default;
         public var connectionDetails: SocketConnectorNetwork.Endpoint?;
         public var lastConnectionDetails: XMPPSrvRecord?;
         public var conntectionTimeout: Double?;

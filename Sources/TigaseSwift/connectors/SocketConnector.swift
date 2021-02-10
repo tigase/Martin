@@ -302,7 +302,22 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
      */
     private func configureTLS(directTls: Bool = false) {
         if let provider = self.options.networkProcessorProviders.first(where: { $0.providedFeatures.contains(.TLS) }) {
-            self.networkStack.addProcessor(provider.supply());
+            let tlsProcessor = provider.supply();
+            if let sslProcessor = tlsProcessor as? SSLNetworkProcessor {
+                self.sslCertificateValidated = true;
+                sslProcessor.setALPNProtocols(["xmpp-client"]);
+                sslProcessor.serverName = self.server;
+                sslProcessor.certificateValidation = options.sslCertificateValidation;
+                sslProcessor.certificateValidationFailed = { [weak self] trust in
+                    if let trust = trust {
+                        self?.closeSocket(newState: .disconnected(.sslCertError(trust)));
+                    } else {
+                        _ = self?.stop(force: true);
+                    }
+                    return;
+                }
+            }
+            self.networkStack.addProcessor(tlsProcessor);
             self.activeFeatures.insert(.TLS);
             self.inStream!.open();
             self.outStream!.open();
@@ -331,7 +346,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         CFWriteStreamSetProperty(outStream as CFWriteStream, CFStreamPropertyKey(rawValue: kCFStreamPropertySSLSettings), settings as CFTypeRef);
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, OSXApplicationExtension 10.13, OSX 10.13, *) {
-            let sslContext: SSLContext = outStream.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLContext as String)) as! SSLContext;
+            let sslContext: Foundation.SSLContext = outStream.property(forKey: Stream.PropertyKey(rawValue: kCFStreamPropertySSLContext as String)) as! Foundation.SSLContext;
             SSLSetALPNProtocols(sslContext, ["xmpp-client"] as CFArray)
         } else {
             // Fallback on earlier versions
