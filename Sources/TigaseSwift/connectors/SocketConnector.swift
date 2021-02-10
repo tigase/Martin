@@ -23,9 +23,9 @@ import TigaseLogging
 import Combine
 
 /**
- Class responsible for connecting to XMPP server, sending and receiving data.
+ Implementation of a C2S XMPP connector based on Streams and Secure Transport API (working but deprecated)
  */
-open class SocketConnector : XMPPConnectorBase, Connector {
+open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         
     public typealias State = ConnectorState
         
@@ -42,7 +42,6 @@ open class SocketConnector : XMPPConnectorBase, Connector {
         }
     }
     private var outStreamBuffer: WriteBuffer?;
-    private var zlib: Zlib?;
     /**
      Stores information about SSL certificate validation and can
      have following values:
@@ -83,7 +82,8 @@ open class SocketConnector : XMPPConnectorBase, Connector {
         
         availableFeatures.insert(.TLS);
         availableFeatures.insert(.ZLIB);
-        networkStack.delegate = RootNetworkDelegate(connector: self);
+        
+        networkStack.delegate = self;
         
         connectorStreamDelegate = ConnectionStreamDelegate(connector: self);
         
@@ -156,9 +156,9 @@ open class SocketConnector : XMPPConnectorBase, Connector {
             //                self.connect(dnsName: srvRecord.target, srvRecord: srvRecord);
             //                return;
             //            } else {
-            if let endpoint = endpoint as? SocketConnectorEndpoint {
+            if let endpoint = endpoint as? SocketConnector.Endpoint {
                 self.connect(endpoint: endpoint);
-            } else if let details = self.options.connectionDetails as? SocketConnectorEndpoint {
+            } else if let details = self.options.connectionDetails as? SocketConnector.Endpoint {
                 self.connect(endpoint: details);
             } else {
                 self.logger.debug("\(self.userJid) - connecting to server: \(self.server)");
@@ -173,12 +173,12 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                     switch result {
                     case .success(let dnsResult):
                         if let record = dnsResult.record() {
-                            self.connect(endpoint: SocketConnectorEndpoint(proto: record.directTls ? .XMPPS : .XMPP, host: record.target, port: record.port));
+                            self.connect(endpoint: SocketConnector.Endpoint(proto: record.directTls ? .XMPPS : .XMPP, host: record.target, port: record.port));
                         } else {
-                            self.connect(endpoint: SocketConnectorEndpoint(proto: .XMPP, host: self.server, port: 5222));
+                            self.connect(endpoint: SocketConnector.Endpoint(proto: .XMPP, host: self.server, port: 5222));
                         }
                     case .failure(_):
-                        self.connect(endpoint: SocketConnectorEndpoint(proto: .XMPP, host: self.server, port: 5222));
+                        self.connect(endpoint: SocketConnector.Endpoint(proto: .XMPP, host: self.server, port: 5222));
                     }
                 }
             }
@@ -199,38 +199,23 @@ open class SocketConnector : XMPPConnectorBase, Connector {
     }
     
     public func prepareEndpoint(withResumptionLocation location: String?) -> ConnectorEndpoint? {
-        guard let endpoint = self.currentEndpoint as? SocketConnectorEndpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: location) else {
+        guard let endpoint = self.currentEndpoint as? SocketConnector.Endpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: location) else {
             return nil;
         }
-        return SocketConnectorEndpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
+        return SocketConnector.Endpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
     }
     
     public func prepareEndpoint(withSeeOtherHost seeOtherHost: String?) -> ConnectorEndpoint? {
-        guard let endpoint = self.currentEndpoint as? SocketConnectorEndpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: seeOtherHost) else {
+        guard let endpoint = self.currentEndpoint as? SocketConnector.Endpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: seeOtherHost) else {
             return nil;
         }
-        return SocketConnectorEndpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
+        return SocketConnector.Endpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
     }
-    
-//    private func connect(endpoint: SocketConnectorEndpoint) {
-//        queue.sync {
-//            guard state == .connecting else {
-//                logger.log("connect(dns) - stopping connetion as state is not connecting \(self.state)");
-//                return;
-//            }
-//
-//            logger.debug("\(self.connectionConfiguration.userJid) - got dns record to connect to: \(srvRecord)");
-//
-//            self.server = dnsName;
-//            self.currentConnectionDetails = srvRecord;
-//            self.connect(addr: srvRecord.target, port: srvRecord.port, ssl: srvRecord.directTls);
-//        }
-//    }
     
     /**
      Should always be called from local dispatch queue!
      */
-    private func connect(endpoint: SocketConnectorEndpoint) -> Void {
+    private func connect(endpoint: SocketConnector.Endpoint) -> Void {
         logger.debug("connecting to: \(endpoint)");
         guard state == .connecting else {
             logger.log("connect(addr) - stopping connetion as state is not connecting \(self.state)");
@@ -269,51 +254,61 @@ open class SocketConnector : XMPPConnectorBase, Connector {
     public func activate(feature: ConnectorFeature) {
         switch feature {
         case .TLS:
-            self.serialize(.stanza(Stanza(elem: Element(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls"))));
+            self.serialize(.stanza(Stanza(elem: Element(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls"))), completion: .none);
+        case .ZLIB:
+            self.serialize(.stanza(Stanza(elem: Element(name: "compress", xmlns: "http://jabber.org/protocol/compress", children: [Element(name: "method", cdata: "zlib")]))), completion: .none);
         default:
-            self.serialize(.stanza(Stanza(elem: Element(name: "compressed", xmlns: "http://jabber.org/protocol/compress", children: [Element(name: "method", cdata: "zlib")]))));
+            break;
         }
     }
         
-    public func stop(force: Bool, completionHandler: (()->Void)? = nil) {
-        guard !force else {
-            queue.async {
-                self.closeSocket(newState: State.disconnected(.none));
-                completionHandler?();
-            }
-            return;
-        }
-        queue.async {
-        switch self.state {
-        case .disconnected(_), .disconnecting:
-            self.logger.debug("\(self.userJid) - not connected or already disconnecting");
-            completionHandler?();
-            return;
-        case .connected:
-            self.state = State.disconnecting;
-            self.logger.debug("\(self.userJid) - closing XMPP stream");
-            
-//            self.streamEvents.send(.streamClose())
-            // TODO: I'm not sure about that!!
+    public func stop(force: Bool) -> Future<Void,Never> {
+        return Future({ promise in
             self.queue.async {
-                self.sendSync("</stream:stream>") {
+                guard !force else {
                     self.closeSocket(newState: State.disconnected(.none));
-                    completionHandler?();
+                    promise(.success(Void()));
+                    return;
+                }
+                switch self.state {
+                case .disconnected(_), .disconnecting:
+                    self.logger.debug("\(self.userJid) - not connected or already disconnecting");
+                    promise(.success(Void()));
+                    return;
+                case .connected:
+                    self.state = State.disconnecting;
+                    self.logger.debug("\(self.userJid) - closing XMPP stream");
+                    
+        //            self.streamEvents.send(.streamClose())
+                    // TODO: I'm not sure about that!!
+                    self.queue.async {
+                        self.sendSync("</stream:stream>", completion: .written({ result in
+                            self.closeSocket(newState: State.disconnected(.none));
+                            promise(.success(Void()));
+                        }));
+                    }
+                case .connecting:
+                    self.state = State.disconnecting;
+                    self.logger.debug("\(self.userJid) - closing TCP connection");
+                    self.closeSocket(newState: State.disconnected(.timeout));
+                    promise(.success(Void()));
                 }
             }
-        case .connecting:
-            self.state = State.disconnecting;
-            self.logger.debug("\(self.userJid) - closing TCP connection");
-            self.closeSocket(newState: State.disconnected(.timeout));
-            completionHandler?();
-        }
-        }
+        })
     }
     
     /**
      Should always be called from local dispatch queue!
      */
     private func configureTLS(directTls: Bool = false) {
+        if let provider = self.options.networkProcessorProviders.first(where: { $0.providedFeatures.contains(.TLS) }) {
+            self.networkStack.addProcessor(provider.supply());
+            self.activeFeatures.insert(.TLS);
+            self.inStream!.open();
+            self.outStream!.open();
+            return;
+        }
+        
         self.logger.debug("\(self.userJid) - configuring TLS");
 
         guard let inStream = self.inStream, let outStream = self.outStream else {
@@ -364,7 +359,11 @@ open class SocketConnector : XMPPConnectorBase, Connector {
     }
     
     private func proceedZlib() {
-        self.zlib = Zlib(compressionLevel: .default, flush: .sync);
+        if let provider = self.options.networkProcessorProviders.first(where: { $0.providedFeatures.contains(.ZLIB) }) {
+            self.networkStack.addProcessor(provider.supply());
+        } else {
+            self.networkStack.addProcessor(ZLIBProcessor());
+        }
         self.activeFeatures.insert(.ZLIB);
         self.restartStream();
     }
@@ -384,117 +383,53 @@ open class SocketConnector : XMPPConnectorBase, Connector {
             }
         case .streamClose(let reason):
             state = State.disconnecting;
-            sendSync("</stream:stream>");
+            sendSync("</stream:stream>",  completion: .none);
             closeSocket(newState: State.disconnected(reason == .xmlError ? .xmlError(nil) : .none));
         default:
             streamEvents.send(event);
         }
     }
     
-    public override func serialize(_ event: StreamEvent) {
-        super.serialize(event);
+    public override func serialize(_ event: StreamEvent, completion: WriteCompletion) {
+        super.serialize(event, completion: .none);
         switch event {
         case .stanza(let stanza):
-            if let data = stanza.element.stringValue.data(using: .utf8) {
-                networkStack.send(data: data);
-            }
+            sendSync(stanza.element.stringValue, completion: completion);
         case .streamClose:
-            if let data = "<stream:stream/>".data(using: .utf8) {
-                networkStack.send(data: data);
-            }
+            sendSync("<stream:stream/>", completion: completion);
         case .streamOpen(let attributes):
             let attributesString = attributes.map({ "\($0.key)='\($0.value)' "}).joined();
             let openString = "<stream:stream \(attributesString) version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>";
-            print("send: \(openString)")
-            if let data = openString.data(using: .utf8) {
-                networkStack.send(data: data);
-            }
+            sendSync(openString, completion: completion);
         default:
             break;
         }
     }
     
-    public func send(_ data: StreamEvent, completionHandler: (() -> Void)?) {
+    public func send(_ data: StreamEvent, completion: WriteCompletion) {
         queue.async {
             guard self.state == .connected else {
                 return;
             }
-            self.serialize(data);
+            self.serialize(data, completion: completion);
         }
     }
     
-//    // TODO: who is calling this?? should be local queue
-//    override open func onError(msg: String?) {
-//        self.logger.error("\(msg as Any)");
-//        closeSocket(newState: State.disconnected(.xmlError(msg)));
-//    }
-//
-//    // TODO: who is calling this?? should be local queue
-//    override open func onStreamTerminate(reason: State.DisconnectionReason) {
-//        self.logger.debug("onStreamTerminate called... state: \(self.state)");
-//        self.streamEvents.send(.streamTerminate)
-//        switch state {
-//        case .disconnecting, .connecting:
-//            closeSocket(newState: State.disconnected(reason));
-//        // connecting is also set in case of see other host
-//        case .connected:
-//            //-- probably from other socket, ie due to restart!
-//            let inStreamState = inStream?.streamStatus;
-//            if inStreamState == nil || inStreamState == .error || inStreamState == .closed {
-//                closeSocket(newState: State.disconnected(reason))
-//            } else {
-//                state = State.disconnecting;
-//                sendSync("</stream:stream>");
-//                closeSocket(newState: State.disconnected(reason));
-//            }
-//        default:
-//            break;
-//        }
-//    }
-       
-//    open func send(_ data: StreamData, completionHandler: (()->Void)?) {
-//        queue.async {
-//            guard self.state == .connected else {
-//                return;
-//            }
-//
-//            switch data {
-//            case .stanza(let stanza):
-//                self.sendSync(stanza.element.stringValue, completionHandler: completionHandler);
-//            case .string(let data):
-//                self.sendSync(data, completionHandler: completionHandler);
-//            }
-//        }
-//    }
-//
-//    open func keepAlive() {
-//        self.send(.string(" "));
-//    }
-        
     /**
      Method responsible for actual process of sending data.
      */
-    private func sendSync(_ data:String, completionHandler: (()->Void)? = nil) {
+    private func sendSync(_ data:String, completion: WriteCompletion) {
         self.logger.debug("\(self.userJid) - sending stanza: \(data)");
         let buf = data.data(using: String.Encoding.utf8)!;
-        self.networkStack.send(data: buf);
-        completionHandler?();
-//        if zlib != nil {
-//            let outBuf = zlib!.compress(data: buf);
-//            outStreamBuffer?.append(data: outBuf, completionHandler: completionHandler);
-//            outStreamBuffer?.writeData(to: self.outStream);
-//        } else {
-//            outStreamBuffer?.append(data: buf, completionHandler: completionHandler);
-//            outStreamBuffer?.writeData(to: self.outStream);
-//        }
+        self.networkStack.write(data: buf, completion: completion);
     }
     
-    private func read(data: Data) {
+    public func read(data: Data) {
         super.read(data: data);
     }
-    
-    private func write(data: Data) {
-        outStreamBuffer?.append(data: data, completionHandler: nil);
+        
+    public func write(data: Data, completion: WriteCompletion) {
+        outStreamBuffer?.append(data: data, completion: completion);
         outStreamBuffer?.writeData(to: self.outStream);
     }
     
@@ -505,7 +440,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                 return;
             }
             self.logger.debug("\(self.userJid) - establishing connection to:\(self.server ?? "unknown", privacy: .auto(mask: .hash)) timed out!");
-            if let lastConnectionDetails = self.currentEndpoint as? SocketConnectorEndpoint {
+            if let lastConnectionDetails = self.currentEndpoint as? SocketConnector.Endpoint {
                 self.options.dnsResolver.markAsInvalid(for: self.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
             }
             self.closeSocket(newState: State.disconnected(.timeout));
@@ -522,7 +457,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                 if (aStream == self.inStream) {
                     // this is intentional - we need to execute onStreamTerminate()
                     // on main queue, but after all task are executed by our serial queue
-                    if self.state == .connecting, let lastConnectionDetails = self.currentEndpoint as? SocketConnectorEndpoint {
+                    if self.state == .connecting, let lastConnectionDetails = self.currentEndpoint as? SocketConnector.Endpoint {
                         self.options.dnsResolver.markAsInvalid(for: self.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
                     }
                     self.closeSocket(newState: State.disconnected(.timeout));
@@ -571,7 +506,7 @@ open class SocketConnector : XMPPConnectorBase, Connector {
                         }
                         
                         let data = Data(bytes: &buffer, count: read);
-                        self.networkStack.receive(data: data);
+                        self.networkStack.read(data: data);
 //                        if let zlib = self.zlib {
 //                            let decompressedData = zlib.decompress(data: data);
 //                            self.parseXml(data: decompressedData);
@@ -719,8 +654,8 @@ open class SocketConnector : XMPPConnectorBase, Connector {
         var queue = Queue<Entry>();
         var position = 0;
         
-        func append(data: Data, completionHandler: (()->Void)? = nil) {
-            queue.offer(Entry(data: data, completionHandler: completionHandler));
+        func append(data: Data, completion: WriteCompletion) {
+            queue.offer(Entry(data: data, completion: completion));
         }
         
         func clear() {
@@ -747,13 +682,13 @@ open class SocketConnector : XMPPConnectorBase, Connector {
             if position == entry.data.count {
                 position = 0;
                 _ = queue.poll();
-                entry.completionHandler?();
+                entry.completion.completed(result: .success(Void()));
             }
         }
         
         struct Entry {
             let data: Data;
-            let completionHandler: (()->Void)?;
+            let completion: WriteCompletion;
         }
     }
     
@@ -769,120 +704,10 @@ open class SocketConnector : XMPPConnectorBase, Connector {
         }
     }
     
-    class NetworkStack: NetworkDelegate {
-        private var processors: [NetworkProcessor] = [];
-        private var delegates: [InternalNetworkDelegate] = [];
-        
-        fileprivate var delegate: NetworkDelegate?;
-        
-        init() {
-        }
-        
-        func reset() {
-            self.delegates.removeAll();
-            self.processors.removeAll();
-        }
-        
-        func addProcessor(_ processor: NetworkProcessor) {
-            guard let delegate = self.delegate else {
-                return;
-            }
-            let upstream = NetworkEventHandler(handler: delegate.receive(data:));
-            if let previous = self.processors.last {
-                previous.delegate?.upstream = NetworkEventHandler(handler: processor.receive(data:));
-                let downstream = NetworkEventHandler(handler: previous.send(data:));
-                let delegate = InternalNetworkDelegate(upstream: upstream, downstream: downstream);
-                self.delegates.append(delegate);
-                processor.delegate = delegate;
-            } else {
-                let downstream = NetworkEventHandler(handler: delegate.send(data:));
-                let delegate = InternalNetworkDelegate(upstream: upstream, downstream: downstream);
-                self.delegates.append(delegate);
-                processor.delegate = delegate;
-            }
-            processors.append(processor);
-        }
-        
-        func send(data: Data) {
-            if let processor = processors.last {
-                processor.send(data: data);
-            } else {
-                delegate?.send(data: data);
-            }
-        }
-        
-        func receive(data: Data) {
-            if let processor = processors.first {
-                processor.receive(data: data);
-            } else {
-                delegate?.receive(data: data);
-            }
-        }
-    }
-        
-    public class NetworkProcessor: NetworkDelegate {
-        
-        fileprivate weak var delegate: InternalNetworkDelegate?;
+}
 
-        public func receive(data: Data) {
-            delegate?.receive(data: data);
-        }
-        
-        public func send(data: Data) {
-            delegate?.send(data: data);
-        }
-        
-    }
-    
-    final class NetworkEventHandler {
-        
-        let handler: (Data)->Void;
-        
-        init(handler: @escaping (Data)->Void) {
-            self.handler = handler;
-        }
-        
-        func handle(data: Data) {
-            handler(data);
-        }
-    }
-    
-    final class InternalNetworkDelegate: NetworkDelegate {
-        var upstream: NetworkEventHandler;
-        var downstream: NetworkEventHandler;
-        
-        init(upstream: NetworkEventHandler, downstream: NetworkEventHandler) {
-            self.upstream = upstream;
-            self.downstream = downstream;
-        }
-        
-        func receive(data: Data) {
-            upstream.handle(data: data);
-        }
-        
-        func send(data: Data) {
-            downstream.handle(data: data);
-        }
-    }
-    
-    final class RootNetworkDelegate: NetworkDelegate {
-        
-        private weak var connector: SocketConnector?;
-        
-        init(connector: SocketConnector) {
-            self.connector = connector;
-        }
-        
-        func receive(data: Data) {
-            connector?.read(data: data);
-        }
-        
-        func send(data: Data) {
-            connector?.write(data: data);
-        }
-    }
-    
-    public struct SocketConnectorEndpoint: ConnectorEndpoint, CustomStringConvertible {
+extension SocketConnector {
+    public struct Endpoint: ConnectorEndpoint, CustomStringConvertible {
         
         public let proto: ConnectorProtocol;
         public let host: String;
@@ -901,14 +726,6 @@ open class SocketConnector : XMPPConnectorBase, Connector {
     }
 }
 
-public protocol NetworkDelegate: class {
-    
-    func receive(data: Data);
-    
-    func send(data: Data);
-    
-}
-
 extension SocketConnector {
     
     public struct Options: ConnectorOptions {
@@ -918,12 +735,36 @@ extension SocketConnector {
         }
         
         public var sslCertificateValidation: SSLCertificateValidation = .default;
-        public var connectionDetails: ConnectorEndpoint?;
+        public var connectionDetails: SocketConnector.Endpoint?;
         public var lastConnectionDetails: XMPPSrvRecord?;
         public var conntectionTimeout: Double?;
         public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver();
 
+        public var networkProcessorProviders: [NetworkProcessorProvider] = []
+        
         public init() {}
         
+    }
+}
+
+public protocol NetworkProcessorProvider {
+
+    var providedFeatures: [ConnectorFeature] { get }
+    
+    func supply() -> SocketConnector.NetworkProcessor;
+    
+}
+
+public enum WriteCompletion {
+    case none
+    case written((Result<Void,Error>)->Void)
+    
+    public func completed(result: Result<Void,Error>) {
+        switch self {
+        case .none:
+            break;
+        case .written(let callback):
+            callback(result);
+        }
     }
 }

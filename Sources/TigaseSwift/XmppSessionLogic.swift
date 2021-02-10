@@ -40,7 +40,7 @@ public protocol XmppSessionLogic: class {
     var streamLogger: StreamLogger? { get set }
     
     func start();
-    func stop(force: Bool, completionHandler: (()->Void)?);
+    func stop(force: Bool) -> Future<Void,Never>;
     
     /// Register to listen for events
     func bind();
@@ -207,8 +207,8 @@ open class SocketSessionLogic: XmppSessionLogic {
         connector.start(endpoint: self.serverToConnectDetails());
     }
     
-    open func stop(force: Bool = false, completionHandler: (()->Void)? = nil) {
-        connector.stop(force: force, completionHandler: completionHandler)
+    open func stop(force: Bool = false) -> Future<Void,Never> {
+        return connector.stop(force: force);
     }
     
     open func serverToConnectDetails() -> ConnectorEndpoint? {

@@ -223,15 +223,15 @@ open class XMPPClient: Context {
      
      [XEP-0198: Stream Management - Resumption]: http://xmpp.org/extensions/xep-0198.html#resumption
      */
-    open func disconnect(_ force: Bool = false, completionHandler: (()->Void)? = nil) -> Void {
-        guard state == SocketConnector.State.connected || state == SocketConnector.State.connecting else {
-            logger.debug("XMPP in state: \(self.state), - not stopping connection");
-            return;
+    open func disconnect(_ force: Bool = false) -> AnyPublisher<Void,XMPPError> {
+        guard self.state == SocketConnector.State.connected || self.state == SocketConnector.State.connecting, let sessionLogic = self.sessionLogic else {
+            self.logger.debug("XMPP in state: \(self.state), - not stopping connection");
+            return Fail(error: XMPPError.undefined_condition).eraseToAnyPublisher();
         }
-        
-        keepaliveTimer?.invalidate();
-        keepaliveTimer = nil;
-        sessionLogic?.stop(force: force, completionHandler: completionHandler);
+            
+        self.keepaliveTimer?.invalidate();
+        self.keepaliveTimer = nil;
+        return sessionLogic.stop(force: force).mapError({ _ in XMPPError.undefined_condition }).eraseToAnyPublisher();
     }
     
     /**

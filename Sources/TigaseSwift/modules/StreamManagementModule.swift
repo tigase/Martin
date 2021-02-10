@@ -446,25 +446,29 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
 
 }
 
-/// Internal implementation of class for holding items in queue
-class QueueNode<T> {
-    
-    let value: T;
-    var prev: QueueNode<T>? = nil;
-    var next: QueueNode<T>? = nil;
-    
-    init(value: T) {
-        self.value = value;
-    }
-    
-}
 
 /// Internal implementation of queue for holding items
-class Queue<T> {
+public class Queue<T> {
 
-    fileprivate var _count: Int = 0;
-    fileprivate var head: QueueNode<T>? = nil;
-    fileprivate var tail: QueueNode<T>? = nil;
+    private class Node<T> {
+        
+        let value: T;
+        weak var prev: Node<T>? = nil;
+        var next: Node<T>? = nil;
+        
+        init(value: T) {
+            self.value = value;
+        }
+        
+    }
+    
+    private var _count: Int = 0;
+    private var head: Node<T>? = nil;
+    private var tail: Node<T>? = nil;
+    
+    public var isEmpty: Bool {
+        return head == nil;
+    }
     
     open var count: Int {
         return _count;
@@ -480,52 +484,36 @@ class Queue<T> {
     }
     
     open func offer(_ value: T) {
-        let node = QueueNode<T>(value: value);
-        if head == nil {
-            self.head = node;
-            self.tail = node;
+        let newNode = Node<T>(value: value);
+        if let tailNode = tail {
+            newNode.prev = tailNode;
+            tailNode.next = newNode;
         } else {
-            node.next = self.head;
-            self.head!.prev = node;
-            self.head = node;
+            head = newNode;
         }
+        
+        tail = newNode;
         self._count += 1;
     }
     
     open func peek() -> T? {
-        if tail == nil {
-            return nil
-        }
-        return tail?.value;
+        return head?.value;
     }
     
     open func poll() -> T? {
-        guard let temp = tail else {
+        guard let temp = head else {
             return nil;
         }
         
-        tail = temp.prev;
-        tail?.next = nil;
-        temp.prev = nil;
-        
-        if tail == nil {
-            head = nil;
+        defer {
+            head = head?.next;
+            if head == nil {
+                tail = nil;
+            }
+            _count -= 1;
         }
         
-        self._count -= 1;
-        return temp.value;
-
-//        if tail == nil {
-//            return nil;
-//        } else {
-//            let temp = tail!;
-//            tail = temp.prev;
-//            if tail == nil {
-//                head = nil;
-//            }
-//            self._count -= 1;
-//            return temp.value;
-//        }
+        return head?.value;
     }
 }
 

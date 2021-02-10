@@ -33,7 +33,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
     
     private let resolverDispatcher: QueueDispatcher = QueueDispatcher(label: "XmmpDnsSrvResolverQueue");
     
-    var directTlsEnabled: Bool = true;
+    var directTlsEnabled: Bool = false;
     
     private var inProgress: [String: DNSOperation] = [:];
     

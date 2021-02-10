@@ -67,7 +67,7 @@ open class XMPPConnectorBase: ConnectorBase, XMPPParserDelegateDelegate {
         streamLogger?.incoming(event);
     }
     
-    public func serialize(_ event: StreamEvent) {
+    public func serialize(_ event: StreamEvent, completion: WriteCompletion) {
         streamLogger?.outgoing(event);
     }
     

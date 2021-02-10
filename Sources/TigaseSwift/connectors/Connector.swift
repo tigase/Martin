@@ -42,11 +42,11 @@ public protocol Connector: class {
     
     func start(endpoint: ConnectorEndpoint?);
     
-    func stop(force: Bool, completionHandler: (()->Void)?);
+    func stop(force: Bool) -> Future<Void,Never>;
     
     func restartStream();
     
-    func send(_ data: StreamEvent, completionHandler: (()->Void)?);
+    func send(_ data: StreamEvent, completion: WriteCompletion);
      
     func prepareEndpoint(withResumptionLocation location: String?) -> ConnectorEndpoint?;
     
@@ -62,11 +62,11 @@ public protocol ConnectorEndpoint {
 
 extension Connector {
     
-    public func stop() {
-        stop(force: false, completionHandler: nil);
+    public func stop() -> Future<Void,Never> {
+        return stop(force: false);
     }
     
     public func send(_ data: StreamEvent) {
-        self.send(data, completionHandler: nil);
+        self.send(data, completion: .none);
     }
 }

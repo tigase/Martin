@@ -34,6 +34,6 @@ public struct ConnectorFeature: RawRepresentable, Hashable {
 }
 
 extension ConnectorFeature {
-    static let TLS = ConnectorFeature("TLS");
-    static let ZLIB = ConnectorFeature("ZLIB");
+    public static let TLS = ConnectorFeature("TLS");
+    public static let ZLIB = ConnectorFeature("ZLIB");
 }
