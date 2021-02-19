@@ -199,7 +199,8 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
                 }
             });
             
-        } catch _ {
+        } catch let error {
+            logger.error("Authentication aborted: \(error)")
             self.state = .error(SaslError.aborted);
         }
     }

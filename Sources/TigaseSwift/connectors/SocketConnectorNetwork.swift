@@ -150,18 +150,22 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         }
         
         connection?.stateUpdateHandler = { [weak self] state in
+            guard let that = self else {
+                return;
+            }
+            that.logger.debug("\(that.userJid) - changed state to: \(state) for endpoint: \(that.connection?.currentPath?.localEndpoint)")
             switch state {
             case .ready:
-                self?.state = .connected;
-                self?.initiateParser();
-                self?.scheduleRead();
-                self?.restartStream();
+                that.state = .connected;
+                that.initiateParser();
+                that.scheduleRead();
+                that.restartStream();
             case .preparing:
-                self?.state = .connecting;
+                that.state = .connecting;
             case .cancelled, .setup:
-                self?.state = .disconnected();
+                that.state = .disconnected();
             case .failed(_):
-                self?.state = .disconnected(.timeout);
+                that.state = .disconnected(.timeout);
             case .waiting(_):
                 break;
             default:
