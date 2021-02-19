@@ -99,7 +99,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
                     let availabilityChanged = store.removePresence(for: jid, context: context);
                     fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
                 }
-            case .available, .unavailable, .error:
+            case .available, .error:
                 let availabilityChanged = store.update(presence: presence, for: context)?.type != presence.type;
                 fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
             case .unsubscribed:

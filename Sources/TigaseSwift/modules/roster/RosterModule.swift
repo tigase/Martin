@@ -138,8 +138,6 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Rese
             fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .added));
             return jid;
         }
-
-        return nil;
     }
     
     fileprivate func processRosterItemForAnnotations(item: Element) -> [RosterItemAnnotation] {

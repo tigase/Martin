@@ -29,6 +29,7 @@ public protocol RoomManager: ContextLifecycleAware {
     
     func createRoom(for context: Context, with jid: BareJID, nickname: String, password: String?) -> RoomProtocol?;
     
+    @discardableResult
     func close(room: RoomProtocol) -> Bool;
 
 }

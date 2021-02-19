@@ -165,7 +165,7 @@ open class XMPPClient: Context {
                 case .connected:
                     that.scheduleKeepAlive();
                     that.eventBus.fire(SocketConnector.ConnectedEvent(context: that));
-                case .disconnected(let reason):
+                case .disconnected(_):
                     that.releaseKeepAlive();
                     that.handleDisconnection(clean: oldState == .disconnecting);
                     that.eventBus.fire(SocketConnector.DisconnectedEvent(context: that, connectionDetails: that.currentConnectionDetails, clean: oldState == .disconnecting));

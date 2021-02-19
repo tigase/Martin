@@ -234,7 +234,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                 }
                 cancellables.removeAll();
                 if let client = self.client {
-                    client.disconnect();
+                    _ = client.disconnect();
                 }
             }
             didSet {
@@ -331,7 +331,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         }
         
         open func cancel() {
-            self.client?.disconnect();
+            _ = self.client?.disconnect();
             self.finish();
         }
         

@@ -106,7 +106,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             //            } else {
             if let endpoint = endpoint as? SocketConnectorNetwork.Endpoint {
                 self.connect(endpoint: endpoint);
-            } else if let details = self.options.connectionDetails as? SocketConnectorNetwork.Endpoint {
+            } else if let details = self.options.connectionDetails {
                 self.connect(endpoint: details);
             } else {
                 self.logger.debug("\(self.userJid) - connecting to server: \(self.server)");

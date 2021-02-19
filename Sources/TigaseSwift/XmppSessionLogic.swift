@@ -207,6 +207,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         connector.start(endpoint: self.serverToConnectDetails());
     }
     
+    @discardableResult
     open func stop(force: Bool = false) -> Future<Void,Never> {
         return connector.stop(force: force);
     }
@@ -234,7 +235,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
         
     private func onStreamError(_ streamErrorEl: Element) -> Bool {
-        if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value), let lastConnectionDetails = self.connector.currentEndpoint {
+        if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value) {
             if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
                 streamFeaturesWithPipelining.connectionRestarted();
             }

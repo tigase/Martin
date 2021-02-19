@@ -96,7 +96,7 @@ open class XMPPParserDelegate: XMLParserDelegate {
         let elem = el_stack.removeLast()
         if (el_stack.isEmpty) {
             if let delegate = self.delegate {
-                self.delegate?.parsed(parserEvent: .element(elem));
+                delegate.parsed(parserEvent: .element(elem));
             } else {
                 all_roots.append(elem)
             }

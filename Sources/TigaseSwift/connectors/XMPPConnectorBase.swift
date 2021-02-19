@@ -31,7 +31,6 @@ open class XMPPConnectorBase: ConnectorBase, XMPPParserDelegateDelegate {
     
     public func read(data: Data, tryNo: Int = 0) {
         do {
-            print("received: \(String(data: data, encoding: .utf8))")
             try self.parser?.parse(data: data);
         } catch XmlParserError.xmlDeclarationInside(let errorCode, let position) {
             self.initiateParser();

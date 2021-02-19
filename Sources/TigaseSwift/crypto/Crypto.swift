@@ -29,20 +29,16 @@ protocol DigestProtocol {
 /**
  This enum is in fact a wrapper/helper for hashing functions from `CommonCrypto` library.
  For now it supports following hashing functions:
- - md5
  - sha1
  - sha256
  */
 public enum Digest: DigestProtocol {
     
-    case md5
     case sha1
     case sha256
     
     public var name: String {
         switch self {
-        case .md5:
-            return "MD5";
         case .sha1:
             return "SHA1";
         case .sha256:
@@ -59,10 +55,6 @@ public enum Digest: DigestProtocol {
     public func digest(bytes: UnsafeRawPointer, length inLength: Int) -> [UInt8] {
         let length = UInt32(inLength);
         switch self {
-        case .md5:
-            var hash = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH));
-            CC_MD5(bytes, length, &hash);
-            return hash;
         case .sha1:
             var hash = [UInt8](repeating: 0, count: Int(CC_SHA1_DIGEST_LENGTH));
             CC_SHA1(bytes, length, &hash);
@@ -101,14 +93,6 @@ public enum Digest: DigestProtocol {
         
         let length = UInt32(data!.count);
         switch self {
-        case .md5:
-            var hash = Data.init(count: Int(CC_MD5_DIGEST_LENGTH));
-            data!.withUnsafeBytes { (bytes) -> Void in
-                return hash.withUnsafeMutableBytes { (hashPtr) -> Void in
-                    CC_MD5(bytes.baseAddress!, length, hashPtr.baseAddress!.assumingMemoryBound(to: UInt8.self));
-                }
-            }
-            return hash;
         case .sha1:
             var hash = Data.init(count: Int(CC_SHA1_DIGEST_LENGTH));
             data!.withUnsafeBytes { (bytes) -> Void in
@@ -153,13 +137,9 @@ public enum Digest: DigestProtocol {
     }
     
     public func hmac(keyBytes: UnsafeRawPointer, keyLength: Int, bytes: UnsafeRawPointer, length: Int) -> [UInt8] {
-//        let ctx = UnsafeMutablePointer<CCHmacContext>.allocate(capacity: 1);
         var algorithm: Int;
         var hmacLength: Int;
         switch (self) {
-        case .md5:
-            algorithm = kCCHmacAlgMD5;
-            hmacLength = Int(CC_MD5_DIGEST_LENGTH);
         case .sha1:
             algorithm = kCCHmacAlgSHA1;
             hmacLength = Int(CC_SHA1_DIGEST_LENGTH);
@@ -170,14 +150,7 @@ public enum Digest: DigestProtocol {
         
         var digest = Array<UInt8>(repeating: 0, count: hmacLength);
         CCHmac(CCHmacAlgorithm(algorithm), keyBytes, keyLength, bytes, length, &digest)
-        
-//        CCHmacInit(ctx, CCHmacAlgorithm(algorithm), keyBytes, keyLength);
-//        CCHmacUpdate(ctx, bytes, length);
-//
-//        var digest = Array<UInt8>(repeating: 0, count: hmacLength);
-//        CCHmacFinal(ctx, &digest);
-//        ctx.deallocate();
-        
+                
         return digest;
     }
     

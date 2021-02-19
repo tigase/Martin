@@ -501,10 +501,6 @@ public class Queue<T> {
     }
     
     open func poll() -> T? {
-        guard let temp = head else {
-            return nil;
-        }
-        
         defer {
             head = head?.next;
             if head == nil {

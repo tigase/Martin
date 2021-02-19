@@ -158,7 +158,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
             //            } else {
             if let endpoint = endpoint as? SocketConnector.Endpoint {
                 self.connect(endpoint: endpoint);
-            } else if let details = self.options.connectionDetails as? SocketConnector.Endpoint {
+            } else if let details = self.options.connectionDetails {
                 self.connect(endpoint: details);
             } else {
                 self.logger.debug("\(self.userJid) - connecting to server: \(self.server)");
@@ -454,7 +454,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
             guard self.state == .connecting else {
                 return;
             }
-            self.logger.debug("\(self.userJid) - establishing connection to:\(self.server ?? "unknown", privacy: .auto(mask: .hash)) timed out!");
+            self.logger.debug("\(self.userJid) - establishing connection to:\(self.server, privacy: .auto(mask: .hash)) timed out!");
             if let lastConnectionDetails = self.currentEndpoint as? SocketConnector.Endpoint {
                 self.options.dnsResolver.markAsInvalid(for: self.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
             }
@@ -522,12 +522,6 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
                         
                         let data = Data(bytes: &buffer, count: read);
                         self.networkStack.read(data: data);
-//                        if let zlib = self.zlib {
-//                            let decompressedData = zlib.decompress(data: data);
-//                            self.parseXml(data: decompressedData);
-//                        } else {
-//                            self.parseXml(data: data);
-//                        }
                     }
                 }
             case Stream.Event.hasSpaceAvailable:
