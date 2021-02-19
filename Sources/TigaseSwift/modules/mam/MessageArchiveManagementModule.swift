@@ -49,19 +49,20 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     private var queries: [String: Query] = [:];
         
     open var isAvailable: Bool {
-        return availableVersion != nil;
+        return !availableVersions.isEmpty;
     }
     
-    open var availableVersion: Version? {
-        if let accountFeatures: [String] = context?.module(.disco).accountDiscoResult.features {
-            return Version.values.first(where: { version in accountFeatures.contains(version.rawValue) });
+    open override var context: Context? {
+        didSet {
+            context?.module(.disco).$accountDiscoResult.sink(receiveValue: { [weak self] result in
+                self?.availableVersions = Version.values.filter({ result.features.contains($0.rawValue) });
+            }).store(in: self);
         }
-        if let serverFeatures: [String] = context?.module(.disco).serverDiscoResult.features {
-            return Version.values.first(where: { version in serverFeatures.contains(version.rawValue) });
-        }
-        return nil;
     }
     
+    @Published
+    open var availableVersions: [Version] = [];
+        
     public override init() {}
     
     open func reset(scopes: Set<ResetableScope>) {
@@ -127,7 +128,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      - parameter completionHandler: callback called when query results
      */
     open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
-        guard let version = version ?? self.availableVersion else {
+        guard let version = version ?? self.availableVersions.first else {
             completionHandler(.failure(.feature_not_implemented));
             return;
         }
@@ -166,7 +167,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      */
     open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
     {
-        guard let version = version ?? self.availableVersion else {
+        guard let version = version ?? self.availableVersions.first else {
             completionHandler(.failure(.feature_not_implemented))
             return;
         }
@@ -230,7 +231,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      - parameter completionHandler: called with result
      */
     open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (Result<JabberDataElement,XMPPError>)->Void) {
-        guard let version = version ?? availableVersion else {
+        guard let version = version ?? availableVersions.first else {
             completionHandler(.failure(.feature_not_implemented));
             return;
         }
@@ -277,7 +278,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      - parameter completionHandler: called with result
      */
     open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
-        guard let version = version ?? availableVersion else {
+        guard let version = version ?? availableVersions.first else {
             completionHandler(.failure(.feature_not_implemented));
             return;
         }
@@ -303,7 +304,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      - parameter completionHandler: called with result
      */
     open func updateSettings(version: Version? = nil, settings: Settings, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
-        guard let version = version ?? availableVersion else {
+        guard let version = version ?? availableVersions.first else {
             completionHandler(.failure(.feature_not_implemented));
             return;
         }

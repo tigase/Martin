@@ -48,15 +48,14 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     open override weak var context: Context? {
         didSet {
             messageModule = context?.modulesManager.module(.message);
+            context?.module(.disco).$serverDiscoResult.sink(receiveValue: { [weak self] result in
+                self?.isAvailable = result.features.contains(MessageCarbonsModule.MC_XMLNS);
+            }).store(in: self);
         }
     }
     
-    open var isAvailable: Bool {
-        guard let serverFeatures: [String] = context?.module(.disco).serverDiscoResult.features else {
-            return false;
-        }
-        return serverFeatures.contains(MessageCarbonsModule.MC_XMLNS);
-    }
+    @Published
+    open private(set) var isAvailable: Bool = false;
     
     private var messageModule: MessageModule!;
     
