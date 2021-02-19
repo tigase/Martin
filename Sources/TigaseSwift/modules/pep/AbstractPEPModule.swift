@@ -21,28 +21,29 @@
 
 import Foundation
 
-public protocol AbstractPEPModule: XmppModule, ContextAware, EventHandler {
+open class AbstractPEPModule: XmppModuleBase {
     
-}
+    open private(set) var pubsubModule: PubSubModule! {
+        didSet {
+            pubsubModule?.itemsEvents.sink(receiveValue: { [weak self] notification in
+                self?.onItemNotification(notification: notification);
+            }).store(in: self);
+        }
+    }
 
-extension AbstractPEPModule {
+    @Published
+    open var isPepAvailable: Bool = false;
     
-    public var isPepAvailable: Bool {
-        if let identities: [DiscoveryModule.Identity] = context?.module(.disco).accountDiscoResult.identities {
-            if identities.first(where: { (it) -> Bool in
-                return it.category == "pubsub" && it.type == "pep";
-            }) != nil {
-                return true;
-            }
+    open override weak var context: Context? {
+        didSet {
+            pubsubModule = context?.module(.pubsub);
+            context?.module(.disco).$accountDiscoResult.sink(receiveValue: { [weak self] result in
+                self?.isPepAvailable = result.identities.contains(where: { $0.category == "pubsub" && $0.type == "pep" });
+            }).store(in: self);
         }
-
-        // TODO: fallback to handle previous behavior - remove it later on...
-        if let identities: [DiscoveryModule.Identity] = context?.module(.disco).serverDiscoResult.identities {
-            return identities.first(where: { (it) -> Bool in
-                return it.category == "pubsub" && it.type == "pep";
-            }) != nil;
-        }
-        return false;
     }
     
+    open func onItemNotification(notification: PubSubModule.ItemNotification) {
+        
+    }
 }

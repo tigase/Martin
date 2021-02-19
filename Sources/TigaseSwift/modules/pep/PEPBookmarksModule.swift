@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
+open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
     
     public static let ID = "storage:bookmarks";
     public static let IDENTIFIER = XmppModuleIdentifier<PEPBookmarksModule>();
@@ -40,23 +40,15 @@ open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
     
     open override weak var context: Context? {
         didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
-            }
-            if let context = context {
-                context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
-                discoModule = context.modulesManager.module(.disco);
-                self.store(discoModule.$serverDiscoResult.sink(receiveValue: { [weak self] info in self?.serverInfoChanged(info) }));
-                pubsubModule = context.modulesManager.module(.pubsub);
-            } else {
-                discoModule = nil;
-                pubsubModule = nil;
-            }
+            discoModule = context?.module(.disco);
         }
     }
     
-    private var discoModule: DiscoveryModule!;
-    private var pubsubModule: PubSubModule!;
+    private var discoModule: DiscoveryModule! {
+        didSet {
+            discoModule?.$serverDiscoResult.sink(receiveValue: { [weak self] info in self?.serverInfoChanged(info) }).store(in: self);
+        }
+    }
     
     public override init() {
         
@@ -128,17 +120,18 @@ open class PEPBookmarksModule: XmppModuleBase, AbstractPEPModule {
         }
     }
     
-    public func handle(event: Event) {
-        switch event {
-        case let e as PubSubModule.NotificationReceivedEvent:
-            guard let from = e.message.from?.bareJid, context?.userBareJid == from else {
-                return;
-            }
-            if let bookmarks = Bookmarks(from: e.payload) {
+    open override func onItemNotification(notification: PubSubModule.ItemNotification) {
+        guard let from = notification.message.from?.bareJid, let context = self.context, context.userBareJid == from else {
+            return;
+        }
+        
+        switch notification.action {
+        case .published(let item):
+            if let bookmarks = Bookmarks(from: item.payload) {
                 self.currentBookmarks = bookmarks;
-                self.fire(BookmarksChangedEvent(context: e.context, bookmarks: bookmarks));
+                self.fire(BookmarksChangedEvent(context: context, bookmarks: bookmarks));
             }
-        default:
+        case .retracted(_):
             break;
         }
     }

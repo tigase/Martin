@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PEPUserAvatarModule: XmppModuleBase, AbstractPEPModule {
+open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
 
     public static let METADATA_XMLNS = ID + ":metadata";
     public static let DATA_XMLNS = ID + ":data";
@@ -37,20 +37,6 @@ open class PEPUserAvatarModule: XmppModuleBase, AbstractPEPModule {
     
     public static let FEATURES_NOTIFY = [ METADATA_XMLNS + "+notify" ];
     public static let FEATURES_NONE = [String]();
-    
-    open override weak var context: Context? {
-        didSet {
-            if let oldValue = oldValue {
-                oldValue.eventBus.unregister(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
-            }
-            if let context = context {
-                context.eventBus.register(handler: self, for: PubSubModule.NotificationReceivedEvent.TYPE);
-                pubsubModule = context.modulesManager.module(.pubsub);
-            } else {
-                pubsubModule = nil;
-            }
-        }
-    }
     
     public let criteria = Criteria.empty();
     
@@ -65,8 +51,6 @@ open class PEPUserAvatarModule: XmppModuleBase, AbstractPEPModule {
             }
         }
     }
-    
-    private var pubsubModule: PubSubModule!;
     
     public override init() {
         
@@ -130,8 +114,6 @@ open class PEPUserAvatarModule: XmppModuleBase, AbstractPEPModule {
             }
         })
     }
-
-    
     
     open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,XMPPError>)->Void) {
         let limit: PubSubModule.QueryLimit = itemId == nil ? .lastItems(1) : .items(withIds: [itemId!]);
@@ -152,23 +134,25 @@ open class PEPUserAvatarModule: XmppModuleBase, AbstractPEPModule {
         });
     }
 
-    public func handle(event: Event) {
-        switch event {
-        case let nre as PubSubModule.NotificationReceivedEvent:
-            guard nre.nodeName == PEPUserAvatarModule.METADATA_XMLNS else {
-                return;
-            }
-            
-            onAvatarChangeNotification(context: nre.context, from: nre.message.from!, itemId: nre.itemId!, payload: nre.payload!);
-        default:
+    open override func onItemNotification(notification: PubSubModule.ItemNotification) {
+        guard notification.node == PEPUserAvatarModule.METADATA_XMLNS, let context = self.context else {
+            return;
+        }
+        
+        switch notification.action {
+        case .published(let item):
+            onAvatarChangeNotification(context: context, from: notification.message.from!, itemId: item.id, payload: item.payload);
+        case .retracted(_):
             break;
         }
     }
     
-    open func onAvatarChangeNotification(context: Context, from: JID, itemId: String, payload: Element) {
-        let info: [Info] = payload.mapChildren(transform: Info.init(payload: ), filter: { (elem) -> Bool in
+    open func onAvatarChangeNotification(context: Context, from: JID, itemId: String, payload: Element?) {
+        guard let info: [Info] = payload?.mapChildren(transform: Info.init(payload: ), filter: { (elem) -> Bool in
             return elem.name == "info";
-        });
+        }) else {
+            return;
+        }
         
         context.eventBus.fire(AvatarChangedEvent(context: context, jid: from, itemId: itemId, info: info));
     }
