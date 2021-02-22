@@ -20,46 +20,7 @@
 //
 
 import Foundation
-
-public protocol JingleSession {
-    
-    var account: BareJID { get }
-    var jid: JID { get }
-    var sid: String { get }
-    var state: JingleSessionState { get }
-    
-    init(sessionObject: SessionObject, jid: JID, sid: String, role: Jingle.Content.Creator, initiationType: JingleSessionInitiationType);
-    
-    func terminate(reason: JingleSessionTerminateReason);
-}
-
-extension JingleSession {
-    public func terminate() {
-        self.terminate(reason: .success);
-    }
-}
-
-public enum JingleSessionState {
-    // new session
-    case created
-    // session-initiate sent or received
-    case initiating
-    // session-accept sent or received
-    case accepted
-    // session-terminate sent or received
-    case terminated
-}
-
-public enum JingleSessionInitiationType {
-    case iq
-    case message
-}
-
-public protocol JingleSessionManager {
-
-    func activeSessionSid(for account: BareJID, with jid: JID) -> String?;
-    
-}
+import Combine
 
 extension XmppModuleIdentifier {
     public static var jingle: XmppModuleIdentifier<JingleModule> {
@@ -93,12 +54,11 @@ open class JingleModule: XmppModuleBase, XmppModule {
             return Array(Set(result));
         }
     }
-//    var features: [String] = [XMLuNS, "urn:xmpp:jingle:apps:rtp:1", "urn:xmpp:jingle:apps:rtp:audio", "urn:xmpp:jingle:apps:rtp:video"];
     
-    fileprivate var supportedDescriptions: [(JingleDescription.Type, [String])] = [];
-    fileprivate var supportedTransports: [(JingleTransport.Type, [String])] = [];
+    private var supportedDescriptions: [(JingleDescription.Type, [String])] = [];
+    private var supportedTransports: [(JingleTransport.Type, [String])] = [];
 
-    fileprivate let sessionManager: JingleSessionManager;
+    private let sessionManager: JingleSessionManager;
 
     public var supportsMessageInitiation = false;
     
@@ -169,30 +129,47 @@ open class JingleModule: XmppModuleBase, XmppModule {
             throw XMPPError.bad_request("Missing initiator attribute");
         }
         
-        let contents = jingle.getChildren(name: "content").map({ contentEl in
+        guard let context = self.context else {
+            throw XMPPError.resource_constraint(nil);
+        }
+        
+        let contents = self.contents(from: jingle);
+        let bundle = self.bundle(from: jingle);
+        
+        fire(JingleEvent(context: context, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));
+
+        switch action {
+        case .sessionInitiate:
+            try self.sessionManager.sessionInitiated(for: context, with: from, sid: sid, contents: contents, bundle: bundle);
+        case .sessionAccept:
+            try self.sessionManager.sessionAccepted(for: context, with: from, sid: sid,contents: contents, bundle: bundle);
+        case .sessionTerminate:
+            try self.sessionManager.sessionTerminated(for: context, with: from, sid: sid);
+        case .transportInfo:
+            try self.sessionManager.transportInfo(for: context, with: from, sid: sid, contents: contents);
+        default:
+            throw XMPPError.feature_not_implemented;
+        }
+        
+        write(stanza.makeResult(type: .result));
+    }
+        
+    open func bundle(from jingle: Element) -> [String]? {
+        return jingle.findChild(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0")?.mapChildren(transform: { (el) -> String? in
+            return el.getAttribute("name");
+        }, filter: { (el) -> Bool in
+            return el.name == "content" && el.getAttribute("name") != nil;
+        });
+    }
+    
+    open func contents(from jingle: Element) -> [Jingle.Content] {
+        return jingle.getChildren(name: "content").compactMap({ contentEl in
             return Jingle.Content(from: contentEl, knownDescriptions: self.supportedDescriptions.map({ (desc, features) in
                 return desc;
             }), knownTransports: self.supportedTransports.map({ (trans, features) in
                 return trans;
             }));
-        }).filter({ content -> Bool in
-            return content != nil
-        }).map({ content -> Jingle.Content in
-            return content!;
         });
-        
-        let bundle = jingle.findChild(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0")?.mapChildren(transform: { (el) -> String? in
-            return el.getAttribute("name");
-        }, filter: { (el) -> Bool in
-            return el.name == "content" && el.getAttribute("name") != nil;
-        });
-        
-        
-        if let context = context {
-            fire(JingleEvent(context: context, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));//, session: session));
-        }
-        
-        write(stanza.makeResult(type: .result));
     }
     
     public func process(message: Message) throws {
@@ -218,7 +195,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         }
     }
     
-    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID) {
+    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
         guard let userJid = context?.userBareJid else {
             return;
         }
@@ -236,9 +213,9 @@ open class JingleModule: XmppModuleBase, XmppModule {
         response.type = .chat;
         response.to = jid;
         response.jingleMessageInitiationAction = action;
-        write(response);
+        write(response, writeCompleted: writeCompleted);
     }
-    
+
     public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard let initiatior = context?.boundJid else {
             completionHandler(.failure(.undefined_condition));
