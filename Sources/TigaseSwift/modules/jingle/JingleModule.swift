@@ -117,12 +117,11 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         let jingle = stanza.findChild(name: "jingle", xmlns: JingleModule.XMLNS)!;
         
-        // sid is required but Movim is not sending it so we are adding another workaround!
         guard let action = Jingle.Action(rawValue: jingle.getAttribute("action") ?? ""), let from = stanza.from else {
             throw XMPPError.bad_request("Missing or invalid action attribute");
         }
         
-        guard let sid = jingle.getAttribute("sid") ?? sessionManager.activeSessionSid(for: stanza.to!.bareJid, with: from) else {
+        guard let sid = jingle.getAttribute("sid") else {
             throw XMPPError.bad_request("Missing sid attributed")
         }
         guard let initiator = JID(jingle.getAttribute("initiator")) ?? stanza.from else {
@@ -192,6 +191,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         }
         if let context = context {
             fire(JingleMessageInitiationEvent(context: context, jid: from, action: action));
+            try sessionManager.messageInitiation(for: context, from: from, action: action);
         }
     }
     
