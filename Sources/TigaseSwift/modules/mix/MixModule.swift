@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, RosterAnnotationAwareProtocol {
+open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotationAwareProtocol {
     func prepareRosterGetRequest(queryElem el: Element) {
         el.addChild(Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0"));
     }
@@ -571,20 +571,16 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, Ro
             }
         }
     }
-    
-    open func reset(scopes: Set<ResetableScope>) {
-        self.isPAM2SupportAvailable = false;
+        
+    public override func stateChanged(newState: XMPPClient.State) {
         if let context = context {
-            for channel in self.channelManager.channels(for: context) {
-                self.fire(ChannelStateChangedEvent(context: context, channel: channel));
-            }
-        }
-    }
-    
-    public override func stateChanged(newState: SocketConnector.State) {
-        if newState == .connected, let context = context {
-            for channel in self.channelManager.channels(for: context) {
-                self.fire(ChannelStateChangedEvent(context: context, channel: channel));
+            switch newState {
+            case .connected(_), .disconnected(_):
+                for channel in self.channelManager.channels(for: context) {
+                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
+                }
+            default:
+                break;
             }
         }
     }
@@ -592,7 +588,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable, Ro
     private func accountFeaturesChanged(_ features: [String]) {
         self.isPAM2SupportAvailable = features.contains(MixModule.PAM2_XMLNS);
         
-        guard let context = context, context.state == .connected else {
+        guard let context = context, context.isConnected else {
             return;
             
         }

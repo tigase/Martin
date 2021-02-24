@@ -38,7 +38,7 @@ extension StreamFeatures.StreamFeature {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
  */
-open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Resetable {
+open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
     
     public static let IDENTIFIER = XmppModuleIdentifier<RosterModule>();
     /// ID of module for looup in `XmppModulesManager`
@@ -68,8 +68,6 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Rese
         case removed(JID)
     }
     
-    private var requestRosterOnReconnect = true;
-    
     public private(set) var isRosterVersioningAvailable: Bool = false;
     
     public init(rosterManager: RosterManager) {
@@ -78,20 +76,13 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, Rese
         super.init();
     }
     
-    public override func stateChanged(newState: SocketConnector.State) {
-        guard newState == .connected && requestRosterOnReconnect else {
+    public override func stateChanged(newState: XMPPClient.State) {
+        guard case .connected(let resumed) = newState, !resumed else {
             return;
         }
-        requestRosterOnReconnect = false;
         self.requestRoster();
     }
-    
-    open func reset(scopes: Set<ResetableScope>) {
-        if scopes.contains(.session) {
-            requestRosterOnReconnect = true;
-        }
-    }
-    
+        
     open func processGet(stanza: Stanza) throws {
         throw XMPPError.feature_not_implemented;
     }

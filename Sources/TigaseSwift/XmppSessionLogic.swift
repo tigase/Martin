@@ -31,9 +31,8 @@ extension StreamFeatures.StreamFeature {
 /// Protocol which is used by other class to interact with classes responsible for session logic.
 public protocol XmppSessionLogic: class {
     
-    /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
-    var state:SocketConnector.State { get }
-    var statePublisher: Published<SocketConnector.State>.Publisher { get }
+    var state:XMPPClient.State { get }
+    var statePublisher: Published<XMPPClient.State>.Publisher { get }
     
     var connector: Connector { get }
     
@@ -88,8 +87,8 @@ open class SocketSessionLogic: XmppSessionLogic {
     
     /// Keeps state of XMPP stream - this is not the same as state of `SocketConnection`
     @Published
-    open private(set) var state:ConnectorState = .disconnected();
-    public var statePublisher: Published<SocketConnector.State>.Publisher {
+    open private(set) var state: XMPPClient.State = .disconnected();
+    public var statePublisher: Published<XMPPClient.State>.Publisher {
         return $state;
     }
 
@@ -122,16 +121,26 @@ open class SocketSessionLogic: XmppSessionLogic {
                 return;
             }
             switch newState {
+            case .connecting:
+                that.state = .connecting;
+            case .connected:
+                break;
+            case .disconnecting:
+                that.state = .disconnecting;
             case .disconnected(let reason):
                 if case .streamError(let errorElem) = reason {
                     guard that.onStreamError(errorElem) else {
                         return;
                     }
                 }
-            default:
-                break;
+                if let authModule = that.modulesManager.moduleOrNil(.auth) {
+                    if case .error(let error) = authModule.state {
+                        that.state = .disconnected(.authenticationFailure(error));
+                        return;
+                    }
+                }
+                that.state = .disconnected(reason.clientDisconnectionReason);
             }
-            that.state = newState;
         }).store(in: &socketSubscriptions);
         connector.streamEventsPublisher.receive(on: dispatcher.queue).sink(receiveValue: { [weak self] event in
             guard let that = self else {
@@ -190,6 +199,8 @@ open class SocketSessionLogic: XmppSessionLogic {
             if streamFeaturesWithPipelining.active {
                 self.startStream();
             }
+        case .error(let error):
+            _ = self.stop(force: true);
         default:
             logger.debug("Received auth state: \(state)")
         }
@@ -306,7 +317,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     open func send(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
         dispatcher.async {
             let state = self.state;
-            guard state == .connected || state == .connecting else {
+            guard state == .connected() || state == .connecting else {
                 completionHandler?(.failure(.not_authorized("You are not connected to the XMPP server")));
                 return;
             }
@@ -339,8 +350,8 @@ open class SocketSessionLogic: XmppSessionLogic {
         }
     }
                 
-    private func processSessionBindedAndEstablished() {
-        state = .connected;
+    private func processSessionBindedAndEstablished(resumed: Bool) {
+        state = .connected(resumed: resumed);
         self.logger.debug("\(self.userJid) - session binded and established");
         if let discoveryModule = modulesManager.moduleOrNil(.disco) {
             discoveryModule.discoverServerFeatures(completionHandler: nil);
@@ -388,7 +399,7 @@ open class SocketSessionLogic: XmppSessionLogic {
             streamManagementModule.resume(completionHandler: { [weak self] result in
                 switch result {
                 case .success(_):
-                    self?.processSessionBindedAndEstablished();
+                    self?.processSessionBindedAndEstablished(resumed: true);
                 case .failure(_):
                     self?.context?.reset(scopes: [.session]);
                     self?.streamAuthenticatedNoStreamResumption();
@@ -418,7 +429,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         modulesManager.module(.sessionEstablishment).establish(completionHandler: { result in
             switch result {
             case .success(_):
-                self.processSessionBindedAndEstablished();
+                self.processSessionBindedAndEstablished(resumed: false);
             case .failure(_):
                 //TODO: Should we handle failure somehow?
                 break;

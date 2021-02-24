@@ -69,7 +69,10 @@ open class Context: CustomStringConvertible, Resetable {
     public let modulesManager: XmppModulesManager;
     
     @Published
-    open private(set) var state:SocketConnector.State = .disconnected(.none);
+    open private(set) var state: XMPPClient.State = .disconnected(.none);
+    open var isConnected: Bool {
+        return self.state == .connected();
+    }
         
     // Instance of `PacketWriter` to use for sending stanzas
     open var writer: PacketWriter;
@@ -132,7 +135,7 @@ open class Context: CustomStringConvertible, Resetable {
         }
     }
     
-    func update(state: SocketConnector.State) {
+    func update(state: XMPPClient.State) {
         guard state != self.state else {
             return;
         }

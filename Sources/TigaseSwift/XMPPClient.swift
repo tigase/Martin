@@ -144,7 +144,7 @@ open class XMPPClient: Context {
      Method initiates modules if needed and starts process of connecting to XMPP server.
      */
     open func login(lastSeeOtherHost: ConnectorEndpoint? = nil) -> Void {
-        guard state == SocketConnector.State.disconnected() else {
+        guard state == .disconnected() else {
             logger.debug("XMPP in state: \(self.state), - not starting connection");
             return;
         }
@@ -224,7 +224,7 @@ open class XMPPClient: Context {
      [XEP-0198: Stream Management - Resumption]: http://xmpp.org/extensions/xep-0198.html#resumption
      */
     open func disconnect(_ force: Bool = false) -> AnyPublisher<Void,XMPPError> {
-        guard self.state == SocketConnector.State.connected || self.state == SocketConnector.State.connecting, let sessionLogic = self.sessionLogic else {
+        guard self.state == .connected() || self.state == .connecting, let sessionLogic = self.sessionLogic else {
             self.logger.debug("XMPP in state: \(self.state), - not stopping connection");
             return Fail(error: XMPPError.undefined_condition).eraseToAnyPublisher();
         }
@@ -238,7 +238,7 @@ open class XMPPClient: Context {
      Sends whitespace to XMPP server to keep connection alive
      */
     open func keepalive() {
-        guard state == .connected else {
+        guard state == .connected() else {
             return;
         }
         sessionLogic?.keepalive();

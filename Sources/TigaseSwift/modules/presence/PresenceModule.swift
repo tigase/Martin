@@ -48,7 +48,6 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     
     /// Should initial presence be sent automatically
     open var initialPresence: Bool = true;
-    private var initialPresenceSent: Bool = false;
     
     /// Presence store with current presence informations
     public let store: PresenceStore;
@@ -75,17 +74,14 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         if let context = context {
             store.reset(scopes: scopes, for: context);
         }
-        if scopes.contains(.session) {
-            initialPresenceSent = false;
-        }
     }
         
-    public override func stateChanged(newState: SocketConnector.State) {
-        guard newState == .connected else {
+    public override func stateChanged(newState: XMPPClient.State) {
+        guard case .connected(let resumed) = newState, !resumed else {
             return;
         }
 
-        if initialPresence && !initialPresenceSent {
+        if initialPresence {
             sendInitialPresence();
         }
     }
@@ -114,7 +110,6 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     
     /// Send initial presence
     open func sendInitialPresence() {
-        initialPresenceSent = true;
         setPresence(show: .online, status: nil, priority: nil);
     }
     

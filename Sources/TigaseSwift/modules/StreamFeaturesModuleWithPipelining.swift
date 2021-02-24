@@ -94,7 +94,7 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule {
         counter = counter + 1;
     }
     
-    open override func stateChanged(newState: SocketConnector.State) {
+    open override func stateChanged(newState: XMPPClient.State) {
         guard let context = self.context else {
             return;
         }

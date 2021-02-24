@@ -60,3 +60,60 @@ public enum ConnectorState: Equatable {
         case streamError(Element)
     }
 }
+
+extension XMPPClient {
+    
+    public enum State: Equatable {
+        
+        public static func == (lhs: State, rhs: State) -> Bool {
+            return lhs.value == rhs.value;
+        }
+        
+        case connecting
+        case connected(resumed: Bool = false)
+        case disconnecting
+        case disconnected(DisconnectionReason = .none)
+        
+        private var value: Int {
+            switch self {
+            case .disconnected(_):
+                return 0;
+            case .connecting:
+                return 1;
+            case .connected:
+                return 2;
+            case .disconnecting:
+                return 3;
+            }
+        }
+        
+        public enum DisconnectionReason {
+            case none
+            case timeout
+            case sslCertError(SecTrust)
+            case xmlError(String?)
+            case streamError(Element)
+            case authenticationFailure(Error)
+        }
+    }
+    
+}
+
+extension ConnectorState.DisconnectionReason {
+    
+    var clientDisconnectionReason: XMPPClient.State.DisconnectionReason {
+        switch self {
+        case .none:
+            return .none;
+        case .timeout:
+            return .timeout;
+        case .sslCertError(let trust):
+            return .sslCertError(trust);
+        case .xmlError(let message):
+            return .xmlError(message);
+        case .streamError(let elem):
+            return .streamError(elem);
+        }
+    }
+    
+}

@@ -34,7 +34,7 @@ open class XmppModuleBaseSessionStateAware: XmppModuleBase {
 
     public override init() {}
     
-    open func stateChanged(newState: SocketConnector.State) {
+    open func stateChanged(newState: XMPPClient.State) {
         
     }
 }
