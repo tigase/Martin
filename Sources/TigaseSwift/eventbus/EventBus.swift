@@ -25,6 +25,7 @@ import Foundation
  Class implements mechanism of events bus which is used by TigaseSwift
  to notify about events.
  */
+@available(*, deprecated)
 open class EventBus {
     
     private var handlersByEvent:[String:[Wrapper]];

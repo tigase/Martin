@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var mam: XmppModuleIdentifier<MessageArchiveManagementModule> {
@@ -63,6 +64,8 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     @Published
     open var availableVersions: [Version] = [];
         
+    public let archivedMessagesPublisher = PassthroughSubject<ArchivedMessageReceived, Never>();
+    
     public override init() {}
     
     open func reset(scopes: Set<ResetableScope>) {
@@ -95,6 +98,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
                 message.to = stanza.to;
             }
             
+            
             // there is no point in retrieval of chat as it will only open new chat which may not be desired behavior
 //            if let messageModule: MessageModule = context.modulesManager.getModule(MessageModule.ID) {
 //                var from = message.from;
@@ -105,6 +109,8 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
 //            context.eventBus.fire(ArchivedMessageReceivedEvent(sessionObject: context.sessionObject, queryid: queryId, messageId: messageId, message: message, timestamp: timestamp, chat: chat));
 //            }
             if let context = context {
+                archivedMessagesPublisher.send(.init(messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, query: query, timestamp: timestamp, message: message));
+
                 fire(ArchivedMessageReceivedEvent(context: context, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
             }
         }
@@ -367,6 +373,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     }
     
     /// Event fired when message from archive is retrieved
+    @available(*, deprecated, message: "Use MessageArchiveModule.archivedMessagesPublisher")
     open class ArchivedMessageReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ArchivedMessageReceivedEvent();
@@ -415,9 +422,17 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         }
     }
     
-    private class Query {
-        let id: String;
-        let version: Version;
+    public struct ArchivedMessageReceived {
+        public let messageId: String;
+        public let source: BareJID;
+        public let query: Query;
+        public let timestamp: Date;
+        public let message: Message;
+    }
+    
+    public class Query {
+        public let id: String;
+        public let version: Version;
         private(set) var endedAt: Date?;
             
         init(id: String, version: Version) {

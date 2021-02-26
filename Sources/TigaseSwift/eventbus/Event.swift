@@ -24,6 +24,7 @@ import Foundation
 /**
  Event protocol needs to be implemented by every event fired using `EventBus`
  */
+@available(*, deprecated)
 public protocol Event: class {
     
     /// Unique identifier of event class
@@ -31,6 +32,7 @@ public protocol Event: class {
     
 }
 
+@available(*, deprecated)
 open class AbstractEvent: Event {
     
     /// Identifier of event while looking for`EventHandler`
@@ -58,6 +60,7 @@ open class AbstractEvent: Event {
 /**
  Protocol to mark events for which handlers must be called only one at the time
  */
+@available(*, deprecated)
 public protocol SerialEvent {
     
 }

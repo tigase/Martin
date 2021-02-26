@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var pepBookmarks: XmppModuleIdentifier<PEPBookmarksModule> {
@@ -36,6 +37,7 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
     
     public let features: [String] = [ ID + "+notify" ];
     
+    @Published
     public fileprivate(set) var currentBookmarks: Bookmarks = Bookmarks();
     
     open override weak var context: Context? {

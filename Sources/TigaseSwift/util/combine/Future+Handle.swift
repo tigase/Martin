@@ -1,8 +1,8 @@
 //
-// MixParticipantsProtocol.swift
+// Future+Handle.swift
 //
 // TigaseSwift
-// Copyright (C) 2020 "Tigase, Inc." <office@tigase.com>
+// Copyright (C) 2021 "Tigase, Inc." <office@tigase.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,14 +21,22 @@
 import Foundation
 import Combine
 
-public protocol MixParticipantsProtocol {
-
-    var participants: [MixParticipant] { get }
-    var participantsPublisher: AnyPublisher<[MixParticipant],Never> { get }
+extension Future {
     
-    func participant(withId: String) -> MixParticipant?
-    func set(participants: [MixParticipant]);
-    func update(participant: MixParticipant);
-    func removeParticipant(withId id: String) -> MixParticipant?;
+    public func handle(_ fn: @escaping (Result<Output,Failure>)->Void) {
+        var cancellable: AnyCancellable?;
+        cancellable = self.sink(receiveCompletion: { completion in
+            switch completion {
+            case .finished:
+                break;
+            case .failure(let err):
+                fn(.failure(err));
+            }
+            cancellable?.cancel();
+        }, receiveValue: { result in
+            fn(.success(result));
+            cancellable?.cancel();
+        });
+    }
     
 }

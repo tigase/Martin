@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var blockingCommand: XmppModuleIdentifier<BlockingCommandModule> {
@@ -53,6 +54,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         return discoModule.serverDiscoResult.features.contains(BlockingCommandModule.BC_XMLNS);
     }
     
+    @Published
     open fileprivate(set) var blockedJids: [JID]? {
         didSet {
             let added = (blockedJids ?? []).filter({ !(oldValue?.contains($0) ?? false) });

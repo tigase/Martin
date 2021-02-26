@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var mix: XmppModuleIdentifier<MixModule> {
@@ -57,18 +58,18 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             context?.register(lifecycleAware: channelManager);
             if let context = context {
                 discoModule = context.modulesManager.module(.disco);
-                store(discoModule.$accountDiscoResult.sink(receiveValue: { [weak self] info in self?.accountFeaturesChanged(info.features) }));
+                discoModule.$accountDiscoResult.sink(receiveValue: { [weak self] info in self?.accountFeaturesChanged(info.features) }).store(in: self);
                 mamModule = context.modulesManager.module(.mam);
                 pubsubModule = context.modulesManager.module(.pubsub);
-                store(pubsubModule.itemsEvents.sink(receiveValue: { [weak self] notification in
+                pubsubModule.itemsEvents.sink(receiveValue: { [weak self] notification in
                     self?.receivedPubsubItem(notification: notification);
-                }));
+                }).store(in: self);
                 avatarModule = context.modulesManager.module(.pepUserAvatar);
                 presenceModule = context.modulesManager.module(.presence);
                 rosterModule = context.modulesManager.module(.roster);
-                store(rosterModule.events.sink(receiveValue: { [weak self] action in
+                rosterModule.events.sink(receiveValue: { [weak self] action in
                     self?.rosterItemChanged(action);
-                }));
+                }).store(in: self);
             } else {
                 discoModule = nil;
                 mamModule = nil;
@@ -88,6 +89,10 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
     private var rosterModule: RosterModule!;
 
     public let channelManager: ChannelManager;
+    
+    public let participantsEvents = PassthroughSubject<ParticipantEvent, Never>();
+    
+    public let messagesPublisher = PassthroughSubject<MessageReceived, Never>();
     
     public private(set) var isPAM2SupportAvailable: Bool = false;
     
@@ -312,6 +317,9 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             guard let context = context, let channel = channelManager.channel(for: context, with: message.from!.bareJid) else {
                 return;
             }
+            if message.mix != nil {
+                self.messagesPublisher.send(.init(channel: channel, message: message));
+            }
             self.fire(MessageReceivedEvent(context: context, message: message, channel: channel, nickname: message.mix?.nickname, senderJid: message.mix?.jid, timestamp: message.delay?.stamp ?? Date()));
         default:
             break;
@@ -368,6 +376,12 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                 }
                 channel.set(participants: participants);
                 if let context = self.context {
+                    for participant in left {
+                        self.participantsEvents.send(.left(participant));
+                    }
+                    for participant in participants {
+                        self.participantsEvents.send(.joined(participant));
+                    }
                     self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: participants, left: left));
                 }
                 completionHandler?(.success(participants));
@@ -645,6 +659,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                         channel.update(ownNickname: participant.nickname);
                     }
                     channel.update(participant: participant);
+                    participantsEvents.send(.joined(participant));
                     self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
                 }
             case .retracted(let itemId):
@@ -653,6 +668,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                     self.fire(ChannelStateChangedEvent(context: context, channel: channel));
                 }
                 if let participant = channel.removeParticipant(withId: itemId) {
+                    participantsEvents.send(.left(participant));
                     self.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
                 }
             }
@@ -763,6 +779,8 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         
     }
 
+    
+    @available(*, deprecated)
     open class ChannelStateChangedEvent: AbstractEvent {
         
         public static let TYPE = ChannelStateChangedEvent();
@@ -780,6 +798,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
+    @available(*, deprecated, message: "Use ChannelProtocol.participantsPublisher")
     open class ParticipantsChangedEvent: AbstractEvent {
         
         public static let TYPE = ParticipantsChangedEvent();
@@ -808,6 +827,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
+    @available(*, deprecated, message: "Use ChannelProtocol.permissionsPublisher")
     open class ChannelPermissionsChangedEvent: AbstractEvent {
         
         public static let TYPE = ChannelPermissionsChangedEvent();
@@ -828,6 +848,15 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
     public typealias ParticipantsResult = Result<[MixParticipant],XMPPError>
     public typealias PermissionsResult = Result<[ChannelPermission],XMPPError>
     
+    public enum ParticipantEvent {
+        case joined(MixParticipant);
+        case left(MixParticipant);
+    }
+    
+    public struct MessageReceived {
+        public let channel: ChannelProtocol;
+        public let message: Message;
+    }
 }
 
 open class MixInvitation {

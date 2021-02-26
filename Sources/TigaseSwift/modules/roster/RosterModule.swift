@@ -242,6 +242,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
     }
 
     /// Event fired when roster item is updated
+    @available(*, deprecated, message: "Use RosterModule.events")
     open class ItemUpdatedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ItemUpdatedEvent();

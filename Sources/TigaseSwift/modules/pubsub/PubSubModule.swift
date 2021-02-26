@@ -178,6 +178,7 @@ open class PubSubModule: XmppModuleBase, XmppModule {
     }
     
     /// Event fired when received message with PubSub notification/event with items
+    @available(*, deprecated, message: "Use PubSubModule.itemsEvents")
     open class NotificationReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NotificationReceivedEvent();
@@ -225,6 +226,7 @@ open class PubSubModule: XmppModuleBase, XmppModule {
         
     }
     
+    @available(*, deprecated, message: "Use PubSubModule.nodeEvents")
     open class NotificationCollectionChildrenChangedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NotificationCollectionChildrenChangedEvent();
@@ -264,6 +266,7 @@ open class PubSubModule: XmppModuleBase, XmppModule {
         }
     }
     
+    @available(*, deprecated, message: "Use PubSubModule.nodeEvents")
     open class NotificationNodeDeletedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = NotificationNodeDeletedEvent();

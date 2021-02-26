@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 open class RoomBase: ConversationBase, RoomProtocol {
     
@@ -27,18 +28,20 @@ open class RoomBase: ConversationBase, RoomProtocol {
         return .groupchat;
     }
 
-    private var _state: RoomState = .not_joined;
-    public var state: RoomState {
-        get {
-            return dispatcher.sync {
-                return _state;
-            }
-        }
+    @Published
+    public var state: RoomState = .not_joined();
+    public var statePublisher: AnyPublisher<RoomState, Never> {
+        return $state.eraseToAnyPublisher();
     }
+    
     public let nickname: String;
     public let password: String?;
     
     private let occupantsStore = RoomOccupantsStoreBase();
+    public var occupantsPublisher: AnyPublisher<[MucOccupant], Never> {
+        return occupantsStore.occupantsPublisher;
+    }
+    
     private let dispatcher: QueueDispatcher;
     
     public var affiliation: MucAffiliation = .none;
@@ -91,7 +94,7 @@ open class RoomBase: ConversationBase, RoomProtocol {
     
     public func update(state: RoomState) {
         dispatcher.async {
-            self._state = state;
+            self.state = state;
         }
     }
 }

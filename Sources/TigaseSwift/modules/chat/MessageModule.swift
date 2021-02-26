@@ -19,6 +19,7 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var message: XmppModuleIdentifier<MessageModule> {
@@ -47,9 +48,8 @@ open class MessageModule: XmppModuleBase, XmppModule {
             context?.register(lifecycleAware: chatManager);
         }
     }
-//    public convenience init(client: XMPPClient) {
-//        self.init(chatsManager: DefaultchatsManager(context: client.context));
-//    }
+    
+    public let messagesPublisher = PassthroughSubject<MessageReceived, Never>();
     
     public init(chatManager: ChatManager) {
         self.chatManager = chatManager;
@@ -69,6 +69,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
         }
                 
         if fireEvents {
+            messagesPublisher.send(.init(chat: chat, message: message));
             fire(MessageReceivedEvent(context: context, chat: chat, message: message));
         }
         
@@ -92,6 +93,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
     }
         
     /// Event fired when Chat is created/opened
+    @available(*, deprecated)
     open class ChatCreatedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChatCreatedEvent();
@@ -111,6 +113,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
     }
 
     /// Event fired when Chat is closed
+    @available(*, deprecated)
     open class ChatClosedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ChatClosedEvent();
@@ -130,6 +133,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
     }
     
     /// Event fired when message is received
+    @available(*, deprecated, message: "Use MessageModule.messagesPublisher")
     open class MessageReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = MessageReceivedEvent();
@@ -151,4 +155,8 @@ open class MessageModule: XmppModuleBase, XmppModule {
         }
     }
     
+    public struct MessageReceived {
+        public let chat: ChatProtocol;
+        public let message: Message;
+    }
 }

@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var messageDeliveryReceipts: XmppModuleIdentifier<MessageDeliveryReceiptsModule> {
@@ -41,6 +42,8 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
     
     open var sendReceived: Bool = true;
     
+    public let receiptsPublisher = PassthroughSubject<Receipt, Never>();
+    
     public override init() {
         
     }
@@ -50,25 +53,26 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
             return;
         }
         
-        guard let delivery = message.messageDelivery else {
+        guard let delivery = message.messageDelivery, let jid = message.from else {
             return;
         }
         
         switch delivery {
         case .request:
-            guard let id = message.id, message.from != nil, message.type != .groupchat else {
+            guard let id = message.id, message.type != .groupchat else {
                 return;
             }
             // need to send response/ack
             let response = Message();
             response.type = message.type;
-            response.to = message.from;
+            response.to = jid;
             response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
             response.hints = [.store];
             write(response);
             break;
         case .received(let id):
             // need to notify client - fire event
+            receiptsPublisher.send(.init(jid: jid, messageId: id));
             if let context = context {
                 fire(ReceiptEvent(context: context, message: message, messageId: id));
             }
@@ -77,6 +81,7 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
     }
     
     /// Event fired when message delivery confirmation is received
+    @available(*, deprecated, message: "Use MessageDeliveryReceiptsModule.receiptsPublisher")
     open class ReceiptEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ReceiptEvent();
@@ -98,6 +103,11 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
             self.messageId = messageId;
             super.init(type: "MessageDeliveryReceiptReceivedEvent", context: context)
         }
+    }
+    
+    public struct Receipt {
+        public let jid: JID;
+        public let messageId: String;
     }
 }
 

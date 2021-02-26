@@ -21,6 +21,7 @@
 
 import Foundation
 import TigaseLogging
+import Combine
 
 extension XmppModuleIdentifier {
     public static var presence: XmppModuleIdentifier<PresenceModule> {
@@ -65,8 +66,14 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         return sessionObject.context!.module(.presence).store;
     }
     
+    private var presence: Presence = Presence();
+    
+    public let presencePublisher = PassthroughSubject<ContactPresenceChange,Never>();
+    public let subscriptionPublisher = PassthroughSubject<SubscriptionChange,Never>();
+    
     public init(store: PresenceStore = DefaultPresenceStore()) {
         self.store = store;
+        self.presence.show = .online;
         super.init();
     }
         
@@ -94,13 +101,23 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
                 if let jid = presence.from {
                     let availabilityChanged = store.removePresence(for: jid, context: context);
                     fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
+                    self.presencePublisher.send(.init(presence: presence, jid: jid, availabilityChanged: availabilityChanged));
                 }
             case .available, .error:
                 let availabilityChanged = store.update(presence: presence, for: context)?.type != presence.type;
                 fire(ContactPresenceChanged(context: context, presence: presence, availabilityChanged: availabilityChanged));
+                if let jid = presence.from {
+                    self.presencePublisher.send(.init(presence: presence, jid: jid, availabilityChanged: availabilityChanged));
+                }
             case .unsubscribed:
+                if let jid = presence.from {
+                    self.subscriptionPublisher.send(.init(action: .unsubscribed, jid: jid, presence: presence));
+                }
                 fire(ContactUnsubscribedEvent(context: context, presence: presence));
             case .subscribe:
+                if let jid = presence.from {
+                    self.subscriptionPublisher.send(.init(action: .subscribe, jid: jid, presence: presence));
+                }
                 fire(SubscribeRequestEvent(context: context, presence: presence));
             default:
                 logger.error("received presence with weird type: \(type, privacy: .public), \(presence)");
@@ -110,7 +127,11 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     
     /// Send initial presence
     open func sendInitialPresence() {
-        setPresence(show: .online, status: nil, priority: nil);
+        write(presence);
+    }
+    
+    open func sendPresence() {
+        write(presence);
     }
     
     /**
@@ -120,7 +141,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
      - parameter priority: priority of presence
      - parameter additionalElements: array of additional elements which should be added to presence
      */
-    open func setPresence(show:Presence.Show, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
+    open func setPresence(show:Presence.Show?, status:String?, priority:Int?, additionalElements: [Element]? = nil) {
         let presence = Presence();
         presence.show = show;
         presence.status = status;
@@ -136,6 +157,8 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         if let context = context {
             fire(BeforePresenceSendEvent(context: context, presence: presence));
         }
+        
+        self.presence = presence;
         
         write(presence);
     }
@@ -198,6 +221,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
      value of presence which will allow to change presence
      which is going to be sent.
      */
+    @available(*, deprecated, message: "Use PresenceModule.setPresence() function to set presence to be set")
     open class BeforePresenceSendEvent: AbstractEvent, SerialEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = BeforePresenceSendEvent();
@@ -218,6 +242,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     }
 
     /// Event fired when contact changes presence
+    @available(*, deprecated, message: "Use PresenceModule.presencePublisher publisher")
     open class ContactPresenceChanged: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ContactPresenceChanged();
@@ -242,6 +267,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     }
 
     /// Event fired if we are unsubscribed from someone presence
+    @available(*, deprecated, message: "Use PresenceModule.subscriptonsPublisher publisher")
     open class ContactUnsubscribedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = ContactUnsubscribedEvent();
@@ -262,6 +288,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     }
     
     /// Event fired if someone wants to subscribe our presence
+    @available(*, deprecated, message: "Use PresenceModule.subscriptonPublisher publisher")
     open class SubscribeRequestEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = SubscribeRequestEvent();
@@ -280,4 +307,23 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         }
     }
 
+    public struct SubscriptionChange {
+    
+        public let action: Action;
+        public let jid: JID;
+        public let presence: Presence;
+        
+        public enum Action {
+            case subscribe
+            case unsubscribed
+        }
+    }
+ 
+    public struct ContactPresenceChange {
+        
+        public let presence: Presence;
+        public let jid: JID;
+        public let availabilityChanged: Bool;
+        
+    }
 }

@@ -20,13 +20,19 @@
 //
 
 import Foundation
+import Combine
 
 public class MixParticipantsBase: MixParticipantsProtocol {
     
+    @Published
     private var items: [String: MixParticipant] = [:]
     
     public var participants: [MixParticipant] {
         return Array(items.values);
+    }
+    
+    public var participantsPublisher: AnyPublisher<[MixParticipant],Never> {
+        return $items.map({ Array($0.values) }).eraseToAnyPublisher();
     }
     
     public init() {}

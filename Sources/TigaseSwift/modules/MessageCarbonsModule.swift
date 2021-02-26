@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var messageCarbons: XmppModuleIdentifier<MessageCarbonsModule> {
@@ -56,6 +57,8 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     
     @Published
     open private(set) var isAvailable: Bool = false;
+    
+    public let carbonsPublisher = PassthroughSubject<CarbonReceived, Never>();
     
     private var messageModule: MessageModule!;
     
@@ -127,7 +130,12 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     }
     
     func processForwaredMessage(_ forwarded: Message, action: Action) {
-        let chat = messageModule.processMessage(forwarded, interlocutorJid: action == .received ? forwarded.from : forwarded.to, fireEvents: false);
+        guard let jid = action == .received ? forwarded.from : forwarded.to else {
+            return;
+        }
+        let chat = messageModule.processMessage(forwarded, interlocutorJid: jid, fireEvents: false);
+        
+        carbonsPublisher.send(.init(action: action, jid: jid, message: forwarded));
         if let context = context {
             fire(CarbonReceivedEvent(context: context, action: action, message: forwarded, chat: chat));
         }
@@ -144,6 +152,7 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     }
     
     /// Event fired when Message Carbon is received
+    @available(*, deprecated, message: "Use MessageCarbonsModule.carbonsPublisher")
     open class CarbonReceivedEvent: AbstractEvent {
         /// Identifier of event which should be used during registration of `EventHandler`
         public static let TYPE = CarbonReceivedEvent();
@@ -168,6 +177,14 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
             self.chat = chat;
             super.init(type: "MessageCarbonReceivedEvent", context: context);
         }
+    }
+    
+    public struct CarbonReceived {
+        
+        public let action: Action;
+        public let jid: JID;
+        public let message: Message;
+        
     }
     
 }

@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 public protocol ChannelProtocol: ConversationProtocol, MixParticipantsProtocol {
  
@@ -28,6 +29,7 @@ public protocol ChannelProtocol: ConversationProtocol, MixParticipantsProtocol {
     var participantId: String { get }
     
     var permissions: Set<ChannelPermission>? { get }
+    var permissionsPublisher: AnyPublisher<Set<ChannelPermission>,Never> { get }
     
     func update(state: ChannelState);
     func update(permissions: Set<ChannelPermission>);

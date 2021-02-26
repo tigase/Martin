@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 /**
  Possible states of room:
@@ -27,16 +28,39 @@ import Foundation
  - not_joined: you are not joined and join is not it progress
  - requested: you are not joined but already requested join
  */
-public enum RoomState {
+public enum RoomState: Equatable {
+    public static func == (lhs: RoomState, rhs: RoomState) -> Bool {
+        return lhs.value == rhs.value;
+    }
+
     case joined
-    case not_joined
+    case not_joined(reason: NotJoinedReason = .none)
     case requested
     case destroyed
+    
+    private var value: Int {
+        switch self {
+        case .joined:
+            return 1;
+        case .destroyed:
+            return 2;
+        case .requested:
+            return 3;
+        case .not_joined(_):
+            return 4;
+        }
+    }
+    
+    public enum NotJoinedReason {
+        case none
+        case error(XMPPError)
+    }
 }
 
 public protocol RoomProtocol: ConversationProtocol {
     
     var state: RoomState { get }
+    var statePublisher: AnyPublisher<RoomState, Never> { get }
     
     var nickname: String { get }
     var password: String? { get }
@@ -45,6 +69,8 @@ public protocol RoomProtocol: ConversationProtocol {
     var affiliation: MucAffiliation { get set }
  
     func update(state: RoomState);
+    
+    var occupantsPublisher: AnyPublisher<[MucOccupant], Never> { get }
     
     func occupant(nickname: String) -> MucOccupant?;
     func addOccupant(nickname: String, presence: Presence) -> MucOccupant;
@@ -61,13 +87,21 @@ public enum RoomHistoryFetch {
     case from(Date)
 }
 
+public enum RoomJoinResult {
+    case created(RoomProtocol)
+    case joined(RoomProtocol)
+}
+
 extension RoomProtocol {
     
-    public func rejoin(fetchHistory: RoomHistoryFetch, onJoined: ((RoomProtocol)->Void)? = nil) {
-        guard let context = self.context else {
-            return;
-        }
-        context.module(.muc).join(room: self, fetchHistory: fetchHistory, onJoined: onJoined);
+    public func rejoin(fetchHistory: RoomHistoryFetch) -> Future<RoomJoinResult, XMPPError> {
+        return Future({ promise in
+            guard let context = self.context else {
+                promise(.failure(.undefined_condition));
+                return;
+            }
+            context.module(.muc).join(room: self, fetchHistory: fetchHistory).handle(promise);
+        })
     }
     
     public func createPrivateMessage(_ body: String, recipientNickname: String) -> Message {

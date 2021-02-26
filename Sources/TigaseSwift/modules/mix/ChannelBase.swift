@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 open class ChannelBase: ConversationBase, ChannelProtocol {
         
@@ -31,7 +32,16 @@ open class ChannelBase: ConversationBase, ChannelProtocol {
     open var nickname: String?;
     open private(set) var state: ChannelState;
     
+    @Published
     open private(set) var permissions: Set<ChannelPermission>?;
+    
+    public var permissionsPublisher: AnyPublisher<Set<ChannelPermission>,Never> {
+        if permissions == nil {
+            context?.module(.mix).retrieveAffiliations(for: self, completionHandler: nil);
+        }
+        return $permissions.compactMap({ $0 }).eraseToAnyPublisher();
+    }
+    
     private let participantsStore: MixParticipantsProtocol = MixParticipantsBase();
     
     private var info: ChannelInfo?;
@@ -71,6 +81,10 @@ extension ChannelBase: MixParticipantsProtocol {
     
     public var participants: [MixParticipant] {
         return participantsStore.participants;
+    }
+    
+    public var participantsPublisher: AnyPublisher<[MixParticipant],Never> {
+        return self.participantsStore.participantsPublisher;
     }
     
     public func participant(withId: String) -> MixParticipant? {

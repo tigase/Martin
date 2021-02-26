@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var pepUserAvatar: XmppModuleIdentifier<PEPUserAvatarModule> {
@@ -41,6 +42,8 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     public let criteria = Criteria.empty();
     
     open var listenForAvatarChanges: Bool = true;
+    
+    public let avatarChangePublisher = PassthroughSubject<AvatarChange,Never>();
     
     open var features: [String] {
         get {
@@ -154,6 +157,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
             return;
         }
         
+        avatarChangePublisher.send(.init(jid: from, itemId: itemId, info: info));
         context.eventBus.fire(AvatarChangedEvent(context: context, jid: from, itemId: itemId, info: info));
     }
     
@@ -187,6 +191,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         }
     }
     
+    @available(*, deprecated, message: "Use PEPUserAvatarModule.avatarChangePublisher publisher")
     open class AvatarChangedEvent: AbstractEvent {
         public static let TYPE = AvatarChangedEvent();
         
@@ -207,5 +212,13 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
             self.info = info;
             super.init(type: "PEPAvatarChanged", context: context);
         }
+    }
+    
+    public struct AvatarChange {
+
+        public let jid: JID;
+        public let itemId: String;
+        public let info: [PEPUserAvatarModule.Info];
+
     }
 }
