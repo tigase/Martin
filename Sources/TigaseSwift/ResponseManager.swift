@@ -99,10 +99,10 @@ open class ResponseManager {
         
         let key = Key(id: id, jid: stanza.to ?? accountJID);
         let entry = Entry(key: key, callback: { response in
-            if let stanza = response, stanza.type == .result {
-                completionHandler(.success(stanza))
+            if let response = response, response.type == .result {
+                completionHandler(.success(response))
             } else {
-                completionHandler(.failure(errorDecoder(stanza) as! Failure));
+                completionHandler(.failure(errorDecoder(response) as! Failure));
             }
         }, timeout: timeout);
         queue.async {
