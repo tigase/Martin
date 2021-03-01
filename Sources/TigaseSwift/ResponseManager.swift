@@ -31,15 +31,18 @@ open class ResponseManager {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "ResponseManager")
     /// Internal class holding information about request and callbacks
-    fileprivate class Entry {
+    private struct Key: Hashable {
         let id: String;
-        let jid: JID?;
+        let jid: JID;
+    }
+    
+    private struct Entry {
+        let key: Key;
         let timestamp: Date;
         let callback: (Iq?)->Void;
         
-        init(id: String, jid:JID?, callback:@escaping (Iq?)->Void, timeout:TimeInterval) {
-            self.id = id;
-            self.jid = jid;
+        init(key: Key, callback:@escaping (Iq?)->Void, timeout:TimeInterval) {
+            self.key = key;
             self.callback = callback;
             self.timestamp = Date(timeIntervalSinceNow: timeout);
         }
@@ -53,7 +56,9 @@ open class ResponseManager {
     
     private var timer:Timer?;
     
-    private var handlers = [String:Entry]();
+    private var handlers = [Key: Entry]();
+    
+    public var accountJID: JID = JID("");
     
     open weak var context: Context?;
     
@@ -75,19 +80,8 @@ open class ResponseManager {
         }
 
         return queue.sync {
-            if let entry = self.handlers[id] {
-                let userJid = context?.moduleOrNil(.resourceBind)?.bindedJid;
-                if let from = stanza.from {
-                    if entry.jid == from || (entry.jid == nil && from.bareJid == userJid?.bareJid && from.resource == nil) {
-                        self.handlers.removeValue(forKey: id)
-                        return entry.callback;
-                    }
-                } else {
-                    if entry.jid == nil || (entry.jid?.bareJid == userJid?.bareJid && entry.jid?.resource == nil) {
-                        self.handlers.removeValue(forKey: id)
-                        return entry.callback;
-                    }
-                }
+            if let entry = self.handlers.removeValue(forKey: .init(id: id, jid: stanza.from ?? accountJID)) {
+                return entry.callback;
             }
             return nil;
         }
@@ -100,14 +94,11 @@ open class ResponseManager {
      - parameter callback: callback to execute on response or timeout
      */
     open func registerResponseHandler<Failure: Error>(for stanza:Stanza, timeout:TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) -> Cancellable {
+
+        let id = idForStanza(stanza: stanza);
         
-        var id = stanza.id;
-        if id == nil {
-            id = nextUid();
-            stanza.id = id;
-        }
-        
-        let entry = Entry(id: id!, jid: stanza.to, callback: { response in
+        let key = Key(id: id, jid: stanza.to ?? accountJID);
+        let entry = Entry(key: key, callback: { response in
             if let stanza = response, stanza.type == .result {
                 completionHandler(.success(stanza))
             } else {
@@ -115,10 +106,19 @@ open class ResponseManager {
             }
         }, timeout: timeout);
         queue.async {
-            self.handlers[id!] = entry;
+            self.handlers[key] = entry;
         }
         
         return CancellableEntry(responseManager: self, entry: entry);
+    }
+    
+    private func idForStanza(stanza: Stanza) -> String {
+        guard let id = stanza.id else {
+            let id = nextUid();
+            stanza.id = id;
+            return id;
+        }
+        return id;
     }
     
     /// Activate response manager
@@ -156,18 +156,18 @@ open class ResponseManager {
     /// Check if any callback should be called due to timeout
     func checkTimeouts() {
         queue.sync {
-            for (id,handler) in self.handlers {
+            for (key,handler) in self.handlers {
                 if handler.checkTimeout() {
-                    self.handlers.removeValue(forKey: id);
+                    self.handlers.removeValue(forKey: key);
                     handler.callback(nil);
                 }
             }
         }
     }
     
-    fileprivate func cancel(entry: Entry) {
+    private func cancel(entry: Entry) {
         queue.async {
-            self.handlers.removeValue(forKey: entry.id);
+            self.handlers.removeValue(forKey: entry.key);
         }
     }
     
