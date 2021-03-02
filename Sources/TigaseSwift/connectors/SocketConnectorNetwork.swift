@@ -143,6 +143,8 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             return;
         }
         
+        self.currentEndpoint = endpoint;
+        
         connection = NWConnection(host: .name(endpoint.host, nil), port: .init(integerLiteral: UInt16(endpoint.port)), using: NWParameters(tls: nil));
         
         if endpoint.proto == .XMPPS {
@@ -282,7 +284,9 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 streamEvents.send(event);
             }
         case .streamClose(let reason):
-            state = .disconnecting;
+            if (state != .disconnected()) {
+                state = .disconnecting;
+            }
             sendSync("</stream:stream>",  completion: .written({ _ in
                 self.networkStack.reset();
                 self.state = .disconnected(reason == .xmlError ? .xmlError(nil) : .none);

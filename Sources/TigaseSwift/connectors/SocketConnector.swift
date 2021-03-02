@@ -222,6 +222,8 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
             return;
         }
         
+        self.currentEndpoint = endpoint;
+        
         if (inStream != nil) {
             logger.error("inStream not null during reconnection! \(self.inStream as Any)");
             inStream = nil;
