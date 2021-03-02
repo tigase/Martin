@@ -195,7 +195,7 @@ public enum XMPPError: Error, Equatable, CustomStringConvertible {
     }
     
     public static func parse(stanza: Stanza) -> XMPPError? {
-        guard stanza.type == .error, let errorEl = stanza.findChild(name: "error", xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas") else {
+        guard stanza.type == .error, let errorEl = stanza.findChild(where: { $0.name ==  "error" && $0.xmlns == nil }) else {
             return nil;
         }
         
