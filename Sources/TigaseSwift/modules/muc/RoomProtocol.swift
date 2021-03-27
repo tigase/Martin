@@ -103,11 +103,17 @@ extension RoomProtocol {
             context.module(.muc).join(room: self, fetchHistory: fetchHistory).handle(promise);
         })
     }
-    
-    public func createPrivateMessage(_ body: String, recipientNickname: String) -> Message {
-        let msg = createMessage(text: body, id: UUID().uuidString, type: .chat);
+
+    public func createPrivateMessage(recipientNickname: String) -> Message {
+        let msg = createMessage(id: UUID().uuidString, type: .chat);
         msg.to = jid.with(resource: recipientNickname);
         msg.addChild(Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user"));
+        return msg;
+    }
+
+    public func createPrivateMessage(_ body: String, recipientNickname: String) -> Message {
+        let msg = createPrivateMessage(recipientNickname: recipientNickname);
+        msg.body = body;
         return msg;
     }
     

@@ -93,3 +93,11 @@ public protocol ElementProtocol: CustomStringConvertible {
     func setAttribute(_ key: String, value: String?);
     
 }
+
+extension ElementProtocol {
+    
+    func hasChild(name: String? = nil, xmlns: String? = nil) -> Bool {
+        return findChild(name: name, xmlns: xmlns) != nil;
+    }
+    
+}

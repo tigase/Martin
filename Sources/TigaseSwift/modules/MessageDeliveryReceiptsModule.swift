@@ -42,6 +42,17 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
     
     open var sendReceived: Bool = true;
     
+    open override var context: Context? {
+        didSet {
+            context?.moduleOrNil(.messageCarbons)?.carbonsPublisher.sink(receiveValue: { [weak self] carbon in
+                self?.handleCarbon(carbon: carbon);
+            }).store(in: self);
+            context?.moduleOrNil(.mam)?.archivedMessagesPublisher.sink(receiveValue: { [weak self] archived in
+                self?.handleArchived(archived: archived);
+            }).store(in: self);
+        }
+    }
+    
     public let receiptsPublisher = PassthroughSubject<Receipt, Never>();
     
     public override init() {
@@ -49,35 +60,59 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
     }
     
     open func process(stanza: Stanza) throws {
-        guard let message = stanza as? Message, stanza.type != StanzaType.error else {
+        guard let message = stanza as? Message else {
             return;
         }
         
-        guard let delivery = message.messageDelivery, let jid = message.from else {
+        process(message: message, sendReceived: sendReceived);
+    }
+    
+    private func handleArchived(archived: MessageArchiveManagementModule.ArchivedMessageReceived) {
+        process(message: archived.message, sendReceived: false);
+    }
+    
+    private func handleCarbon(carbon: MessageCarbonsModule.CarbonReceived) {
+        process(message: carbon.message, sendReceived: false);
+    }
+    
+    private func process(message: Message, sendReceived: Bool) {
+        guard message.type != StanzaType.error, let delivery = message.messageDelivery, let jid = message.from else {
             return;
         }
         
         switch delivery {
         case .request:
-            guard let id = message.id, message.type != .groupchat else {
+            guard sendReceived else {
                 return;
             }
-            // need to send response/ack
-            let response = Message();
-            response.type = message.type;
-            response.to = jid;
-            response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
-            response.hints = [.store];
-            write(response);
+            
+            self.sendReceived(for: message);
             break;
         case .received(let id):
             // need to notify client - fire event
-            receiptsPublisher.send(.init(jid: jid, messageId: id));
+            receiptsPublisher.send(.init(message: message, messageId: id));
             if let context = context {
                 fire(ReceiptEvent(context: context, message: message, messageId: id));
             }
             break;
         }
+    }
+    
+    open func sendReceived(for message: Message) {
+        guard let id = message.id, message.type != .groupchat, let jid = message.from else {
+            return;
+        }
+        // need to send response/ack
+        sendReceived(to: jid, forStanzaId: id, type: message.type)
+    }
+    
+    open func sendReceived(to jid: JID, forStanzaId id: String, type: StanzaType?) {
+        let response = Message();
+        response.type = type;
+        response.to = jid;
+        response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
+        response.hints = [.store];
+        write(response);
     }
     
     /// Event fired when message delivery confirmation is received
@@ -106,7 +141,7 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
     }
     
     public struct Receipt {
-        public let jid: JID;
+        public let message: Message;
         public let messageId: String;
     }
 }
