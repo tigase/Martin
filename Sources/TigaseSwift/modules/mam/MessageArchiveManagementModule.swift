@@ -185,10 +185,28 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
                 }
                 
                 let rsmResult = RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
-                let complete = ("true" == fin.getAttribute("complete")) || ((rsmResult?.count ?? 0) == 0);
+    
+                let complete = ("true" == fin.getAttribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
                 return .success(QueryResult(queryId: queryId, complete: complete, rsm: rsmResult));
             })
         });
+    }
+    
+    static func isComplete(rsm result: RSM.Result?) -> Bool {
+        guard let rsm = result else {
+            // no RSM, so we have ended
+            return true;
+        }
+        
+        if let count = rsm.count {
+            return count == 0;
+        }
+        
+        if let first = rsm.first, let last = rsm.last {
+            return first == last;
+        }
+        
+        return rsm.first == nil && rsm.last == nil;
     }
 
     /**
