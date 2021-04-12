@@ -100,7 +100,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         }
         metadata.addChild(info);
         
-        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
+        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, itemId: id, payload: metadata, completionHandler: completionHandler);
     }
 
     open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<(String,Data),XMPPError>)->Void) {
