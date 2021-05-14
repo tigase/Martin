@@ -67,7 +67,11 @@ public struct BareJID :CustomStringConvertible, Hashable, Equatable, Codable, St
         if let domainIdx = jid.firstIndex(of: "@") {
             localPart = String(jid.prefix(upTo: domainIdx));
             let suffixIdx = jid.index(after: domainIdx);
-            domain = String((resourceIdx == jid.endIndex) ? jid.suffix(from: suffixIdx) : jid[suffixIdx..<resourceIdx]);
+            if suffixIdx < resourceIdx {
+                domain = String((resourceIdx == jid.endIndex) ? jid.suffix(from: suffixIdx) : jid[suffixIdx..<resourceIdx]);
+            } else {
+                domain = String(jid.suffix(from: suffixIdx));
+            }
         } else {
             localPart = nil;
             domain = (jid.endIndex == resourceIdx) ? jid : String(jid.prefix(upTo: resourceIdx))
