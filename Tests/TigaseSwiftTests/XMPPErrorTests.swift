@@ -40,6 +40,22 @@ class XMPPErrorTests: XCTestCase {
         }
     }
 
+    func testItemNotFound() {
+        let el = Element(name: "iq", attributes: ["type": "error"]);
+        el.addChildren([Element(name: "error", children: [Element(name: "item-not-found", xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas"), Element(name:"text", cdata: "Unique test error")])]);
+        let stanza = Stanza.from(element: el);
+        let error = stanza.error;
+        XCTAssertNotNil(error);
+        XCTAssertEqual(XMPPError.item_not_found, error);
+        switch error! {
+        case .item_not_found:
+            //XCTAssertEqual("Unique test error", message);
+            break;
+        default:
+            XCTAssertTrue(false);
+        }
+    }
+    
     func testWrongErrorXMLNS() {
         let el = Element(name: "iq", attributes: ["type": "error"]);
         el.addChildren([Element(name: "error", xmlns: "wrong-xmlns", children: [Element(name: "forbidden", xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas"), Element(name:"text", cdata: "Unique test error")])]);
