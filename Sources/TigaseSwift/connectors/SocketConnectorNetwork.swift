@@ -169,7 +169,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             case .failed(_):
                 that.state = .disconnected(.timeout);
             case .waiting(_):
-                break;
+                that.state = .disconnected(.noRouteToServer);
             default:
                 break;
             }
@@ -346,7 +346,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             return "\(proto.rawValue):\(host):\(port)";
         }
         
-        init(proto: ConnectorProtocol, host: String, port: Int) {
+        public init(proto: ConnectorProtocol, host: String, port: Int) {
             self.proto = proto;
             self.host = host;
             self.port = port;

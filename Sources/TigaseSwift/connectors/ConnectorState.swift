@@ -58,6 +58,7 @@ public enum ConnectorState: Equatable {
         case sslCertError(SecTrust)
         case xmlError(String?)
         case streamError(Element)
+        case noRouteToServer
     }
 }
 
@@ -94,6 +95,7 @@ extension XMPPClient {
             case xmlError(String?)
             case streamError(Element)
             case authenticationFailure(Error)
+            case noRouteToServer
         }
     }
     
@@ -113,6 +115,8 @@ extension ConnectorState.DisconnectionReason {
             return .xmlError(message);
         case .streamError(let elem):
             return .streamError(elem);
+        case .noRouteToServer:
+            return .noRouteToServer;
         }
     }
     
