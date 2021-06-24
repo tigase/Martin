@@ -145,7 +145,17 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         
         self.currentEndpoint = endpoint;
         
-        connection = NWConnection(host: .name(endpoint.host, nil), port: .init(integerLiteral: UInt16(endpoint.port)), using: NWParameters(tls: nil));
+        let tcpOptions = NWProtocolTCP.Options();
+        if options.enableTcpFastOpen {
+            tcpOptions.enableFastOpen = true;
+        }
+        let parameters = NWParameters(tls: nil, tcp: tcpOptions);
+        parameters.serviceClass = .responsiveData;
+        if options.enableTcpFastOpen {
+            parameters.allowFastOpen = true;
+        }
+        connection = NWConnection(host: .name(endpoint.host, nil), port: .init(integerLiteral: UInt16(endpoint.port)), using: parameters);
+        connection?.metadata(definition: NWProtocolTCP.definition).map({ $0 })
         
         if endpoint.proto == .XMPPS {
             self.initTLSStack();
@@ -161,7 +171,9 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 that.state = .connected;
                 that.initiateParser();
                 that.scheduleRead();
-                that.restartStream();
+                if !that.options.enableTcpFastOpen {
+                    that.restartStream();
+                }
             case .preparing:
                 that.state = .connecting;
             case .cancelled, .setup:
@@ -175,7 +187,11 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             }
         }
         
-        connection?.start(queue: self.queue.queue);
+        if options.enableTcpFastOpen {
+            self.streamEvents.send(.streamStart);
+        } else {
+            connection?.start(queue: self.queue.queue);
+        }
     }
     
     private func scheduleRead() {
@@ -322,6 +338,11 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     public func send(_ data: StreamEvent, completion: WriteCompletion) {
         queue.async {
             guard self.state == .connected else {
+                if self.options.enableTcpFastOpen, let connection = self.connection, connection.state == .setup {
+                    self.serialize(data, completion: completion);
+                    self.logger.debug("starting NWConnection...");
+                    connection.start(queue: self.queue.queue);
+                }
                 return;
             }
             self.serialize(data, completion: completion);
@@ -365,6 +386,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         public var lastConnectionDetails: XMPPSrvRecord?;
         public var conntectionTimeout: Double?;
         public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver();
+        public var enableTcpFastOpen: Bool = true;
 
         public var networkProcessorProviders: [NetworkProcessorProvider] = []
         
