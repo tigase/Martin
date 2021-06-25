@@ -98,7 +98,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             }
             
             let start = Date();
-            let timeout: Double? = self.options.conntectionTimeout;
+            let timeout: Double? = self.options.connectionTimeout;
             state = .connecting;
             //            if let srvRecord = self.sessionLogic?.serverToConnectDetails() {
             //                self.connect(dnsName: srvRecord.target, srvRecord: srvRecord);
@@ -149,13 +149,15 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         if options.enableTcpFastOpen {
             tcpOptions.enableFastOpen = true;
         }
+        if let timeout = options.connectionTimeout {
+            tcpOptions.connectionTimeout = Int(timeout);
+        }
         let parameters = NWParameters(tls: nil, tcp: tcpOptions);
         parameters.serviceClass = .responsiveData;
         if options.enableTcpFastOpen {
             parameters.allowFastOpen = true;
         }
         connection = NWConnection(host: .name(endpoint.host, nil), port: .init(integerLiteral: UInt16(endpoint.port)), using: parameters);
-        connection?.metadata(definition: NWProtocolTCP.definition).map({ $0 })
         
         if endpoint.proto == .XMPPS {
             self.initTLSStack();
@@ -384,7 +386,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         public var sslCertificateValidation: SSLCertificateValidation = .default;
         public var connectionDetails: SocketConnectorNetwork.Endpoint?;
         public var lastConnectionDetails: XMPPSrvRecord?;
-        public var conntectionTimeout: Double?;
+        public var connectionTimeout: Double?;
         public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver();
         public var enableTcpFastOpen: Bool = true;
 

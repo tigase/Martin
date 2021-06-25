@@ -65,6 +65,6 @@ public protocol RosterItemProtocol: class {
 }
 
 public struct RosterItemAnnotation: Codable {
-    var type: String;
-    var values: [String:String];
+    public var type: String;
+    public var values: [String:String];
 }
