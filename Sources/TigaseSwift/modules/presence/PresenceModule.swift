@@ -159,8 +159,9 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         }
         
         self.presence = presence;
-        
-        write(presence);
+        if context?.state == .connected() {
+            write(presence);
+        }
     }
     
     /**
