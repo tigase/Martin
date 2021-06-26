@@ -54,12 +54,19 @@ open class ScramMechanism: SaslMechanism {
         
     /// Name of mechanism
     public let name: String;
-    public private(set) var status: SaslMechanismStatus = .new;
+    public private(set) var status: SaslMechanismStatus = .new {
+        didSet {
+            if status == .new {
+                saslData = nil;
+            }
+        }
+    }
     
     fileprivate let algorithm: Digest;
     
     fileprivate let clientKeyData: [UInt8];
     fileprivate let serverKeyData: [UInt8];
+    private var saslData: Data?;
     
     public init(mechanismName: String, algorithm: Digest, clientKey: [UInt8], serverKey: [UInt8]) {
         self.name = mechanismName;
@@ -253,8 +260,6 @@ open class ScramMechanism: SaslMechanism {
     func normalize(_ str: String) -> Foundation.Data {
         return str.data(using: String.Encoding.utf8)!;
     }
-    
-    private var saslData: Data?;
     
     func getData() -> Data {
         guard let data = saslData else {
