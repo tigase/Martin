@@ -273,9 +273,9 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
-    open func channelJoined(channelJid: BareJID, participantId: String, nick: String?) {
+    open func channelJoined(channelJid: BareJID, participantId: String, nick: String?) -> ChannelProtocol? {
         guard let context = self.context else {
-            return;
+            return nil;
         }
         switch self.channelManager.createChannel(for: context, with: channelJid, participantId: participantId, nick: nick, state: .joined) {
         case .created(let channel):
@@ -287,8 +287,11 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             if self.automaticRetrieve.contains(.avatar) {
                 retrieveAvatar(for: channel.jid, completionHandler: nil);
             }
-        default:
-            break;
+            return channel;
+        case .found(let channel):
+            return channel;
+        case .none:
+            return nil;
         }
     }
 
@@ -638,7 +641,10 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                 if let annotation = item.annotations.first(where: { item -> Bool in
                     return item.type == "mix";
                 }), let participantId = annotation.values["participant-id"] {
-                    self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
+                    let result = self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
+                    if let channel = result, (channel as? LastMessageTimestampAware)?.lastMessageTimestamp == nil {
+                        retrieveHistory(fromChannel: item.jid.bareJid, max: 100);
+                    }
                 }
             }
         }
@@ -700,8 +706,10 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                 return;
             }
             
-            self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
+            let result = self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
             if !isPAM2SupportAvailable {
+                retrieveHistory(fromChannel: item.jid.bareJid, max: 100);
+            } else if let channel = result, (channel as? LastMessageTimestampAware)?.lastMessageTimestamp == nil {
                 retrieveHistory(fromChannel: item.jid.bareJid, max: 100);
             }
         case .removed(let jid):
