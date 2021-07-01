@@ -101,7 +101,7 @@ open class XMPPClient: Context {
     public var context: Context {
         return self;
     }
-    var connector: Connector? {
+    public var connector: Connector? {
         return sessionLogic?.connector;
     }
     private var sessionLogicCancellable: Cancellable?;
@@ -166,9 +166,9 @@ open class XMPPClient: Context {
                 case .connected:
                     that.scheduleKeepAlive();
                     that.eventBus.fire(SocketConnector.ConnectedEvent(context: that));
-                case .disconnected(_):
+                case .disconnected(let reason):
                     that.releaseKeepAlive();
-                    that.handleDisconnection(clean: oldState == .disconnecting);
+                    that.handleDisconnection(clean: oldState == .disconnecting, reason: reason);
                     that.eventBus.fire(SocketConnector.DisconnectedEvent(context: that, connectionDetails: that.currentConnectionDetails, clean: oldState == .disconnecting));
                 default:
                     that.releaseKeepAlive();
@@ -204,14 +204,14 @@ open class XMPPClient: Context {
         keepaliveTimer = nil;
     }
     
-    private func handleDisconnection(clean: Bool) {
+    private func handleDisconnection(clean: Bool, reason: XMPPClient.State.DisconnectionReason) {
         keepaliveTimer?.invalidate();
         keepaliveTimer = nil;
         let scopes: Set<ResetableScope> = clean ? [.session, .stream] : [.stream];
         self.reset(scopes: scopes);
         sessionLogic?.unbind();
         dispatcher.sync {
-            self.update(state: .disconnected(.none));
+            self.update(state: .disconnected(reason));
             sessionLogic = nil;
         }
         logger.debug("connection stopped......");

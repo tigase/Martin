@@ -749,7 +749,7 @@ extension SocketConnector {
         public var connectionDetails: SocketConnector.Endpoint?;
         public var lastConnectionDetails: XMPPSrvRecord?;
         public var conntectionTimeout: Double?;
-        public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver();
+        public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver(directTlsEnabled: true);
 
         public var networkProcessorProviders: [NetworkProcessorProvider] = []
         

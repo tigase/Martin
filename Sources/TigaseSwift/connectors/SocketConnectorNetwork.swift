@@ -387,7 +387,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         public var connectionDetails: SocketConnectorNetwork.Endpoint?;
         public var lastConnectionDetails: XMPPSrvRecord?;
         public var connectionTimeout: Double?;
-        public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver();
+        public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver(directTlsEnabled: true);
         public var enableTcpFastOpen: Bool = true;
 
         public var networkProcessorProviders: [NetworkProcessorProvider] = []

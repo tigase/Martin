@@ -33,12 +33,12 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
     
     private let resolverDispatcher: QueueDispatcher = QueueDispatcher(label: "XmmpDnsSrvResolverQueue");
     
-    var directTlsEnabled: Bool = false;
+    public var directTlsEnabled: Bool = false;
     
     private var inProgress: [String: DNSOperation] = [:];
     
-    public init() {
-        
+    public init(directTlsEnabled: Bool = false) {
+        self.directTlsEnabled = directTlsEnabled;
     }
     
     class DNSOperation {
@@ -114,7 +114,10 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
             }
             
             let result = XMPPSrvResult(domain: domain, records: items.sorted(by: { (a,b) -> Bool in
-                if (a.priority < b.priority) {
+                if (a.directTls != b.directTls) {
+                    return a.directTls;
+                }
+                else if (a.priority < b.priority) {
                     return true;
                 } else if (a.priority > b.priority) {
                     return false;
