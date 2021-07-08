@@ -140,8 +140,22 @@ open class JingleSession: CustomDebugStringConvertible {
             return false;
         }
         
-        jingleModule.transportInfo(with: jid, sid: sid, contents: [Jingle.Content(name: contentName, creator: creator, description: nil, transports: [transport])]);
+        jingleModule.transportInfo(with: jid, sid: sid, contents: [Jingle.Content(name: contentName, creator: creator, senders: nil, description: nil, transports: [transport])]);
         return true;
+    }
+    
+    open func contentModify(action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) -> Future<Void, XMPPError> {
+        guard let jingleModule = self.jingleModule else {
+            return Future({ promise in
+                promise(.failure(.undefined_condition));
+            });
+        }
+        
+        return jingleModule.contentModify(with: jid, sid: sid, action: action, contents: contents, bundle: bundle);
+    }
+    
+    open func contentModified(action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) {
+        
     }
     
     open func terminate(reason: JingleSessionTerminateReason) {

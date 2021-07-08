@@ -26,13 +26,18 @@ public class Jingle {
         
         public let creator: Creator;
         public let name: String;
-        
+        public let senders: Senders?;
         public let description: JingleDescription?;
         public let transports: [JingleTransport];
         
         public required convenience init?(from el: Element, knownDescriptions: [JingleDescription.Type], knownTransports: [JingleTransport.Type]) {
             guard el.name == "content", let name = el.getAttribute("name"), let creator = Creator(rawValue: el.getAttribute("creator") ?? "") else {
                 return nil;
+            }
+            
+            var senders: Senders? = nil;
+            if let sendersStr = el.getAttribute("senders") {
+                senders = Senders(rawValue: sendersStr);
             }
             
             let descEl = el.findChild(name: "description");
@@ -48,20 +53,28 @@ public class Jingle {
                 return transports.filter({ transport -> Bool in return transport != nil }).map({ transport -> JingleTransport in return transport!}).first;
             });
             
-            self.init(name: name, creator: creator, description: description, transports: foundTransports);
+            self.init(name: name, creator: creator, senders: senders, description: description, transports: foundTransports);
         }
         
-        public init(name: String, creator: Creator, description: JingleDescription?, transports: [JingleTransport]) {
+        public init(name: String, creator: Creator, senders: Senders?, description: JingleDescription?, transports: [JingleTransport]) {
             self.name = name;
             self.creator = creator;
+            self.senders = senders;
             self.description = description;
             self.transports = transports;
+        }
+        
+        public func with(senders: Senders?) -> Content {
+            return Content(name: name, creator: creator, senders: senders, description: description, transports: transports);
         }
         
         public func toElement() -> Element {
             let el = Element(name: "content");
             el.setAttribute("creator", value: creator.rawValue);
             el.setAttribute("name", value: name);
+            if let senders = self.senders {
+                el.setAttribute("senders", value: senders.rawValue);
+            }
             
             if description != nil {
                 el.addChild(description!.toElement());
@@ -76,6 +89,13 @@ public class Jingle {
         public enum Creator: String {
             case initiator
             case responder
+        }
+        
+        public enum Senders: String {
+            case none
+            case initiator
+            case responder
+            case both
         }
         
     }
@@ -107,6 +127,7 @@ extension Jingle {
         case contentAccept = "content-accept"
         case contentAdd = "content-add"
         case contentModify = "content-modify"
+        case contentRemove = "content-remove"
         case contentReject = "content-reject"
         case descriptionInfo = "description-info"
         case securityInfo = "security-info"
@@ -118,6 +139,45 @@ extension Jingle {
         case transportInfo = "transport-info"
         case transportReject = "transport-reject"
         case transportReplace = "transport-replace"
+    }
+    
+}
+
+extension Jingle {
+    
+    public enum ContentAction {
+        case add
+        case accept
+        case remove
+        case modify
+        
+        public static func from(_ action: Action) -> ContentAction? {
+            switch action {
+            case .contentAdd:
+                return .add;
+            case .contentAccept:
+                return .accept;
+            case .contentModify:
+                return .modify;
+            case .contentRemove:
+                return .remove;
+            default:
+                return nil;
+            }
+        }
+        
+        var jingleAction: Jingle.Action {
+            switch self {
+            case .add:
+                return .contentAdd;
+            case .accept:
+                return .contentAccept;
+            case .modify:
+                return .contentModify;
+            case .remove:
+                return .contentRemove;
+            }
+        }
     }
     
 }

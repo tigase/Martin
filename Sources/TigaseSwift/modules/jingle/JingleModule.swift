@@ -146,6 +146,11 @@ open class JingleModule: XmppModuleBase, XmppModule {
             try self.sessionManager.sessionTerminated(for: context, with: from, sid: sid);
         case .transportInfo:
             try self.sessionManager.transportInfo(for: context, with: from, sid: sid, contents: contents);
+        case .contentAdd, .contentModify, .contentRemove:
+            guard let contentAction = Jingle.ContentAction.from(action) else {
+                throw XMPPError.bad_request("Invalid action");
+            }
+            try self.sessionManager.contentModified(for: context, with: from, sid: sid, action: contentAction, contents: contents, bundle: bundle);
         default:
             throw XMPPError.feature_not_implemented;
         }
@@ -319,6 +324,37 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         write(iq, completionHandler: { response in
             print("session transport-info response received:", response as Any);
+        });
+    }
+    
+    public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) -> Future<Void, XMPPError> {
+        return Future({ promise in
+            let iq = Iq();
+            iq.to = jid;
+            iq.type = StanzaType.set;
+            
+            let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
+            jingle.setAttribute("action", value: action.jingleAction.rawValue);
+            jingle.setAttribute("sid", value: sid);
+        
+            iq.addChild(jingle);
+            
+            contents.forEach { (content) in
+                jingle.addChild(content.toElement());
+            }
+            
+            if bundle != nil {
+                let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
+                group.setAttribute("semantics", value: "BUNDLE");
+                bundle?.forEach({ (name) in
+                    group.addChild(Element(name: "content", attributes: ["name": name]));
+                })
+                jingle.addChild(group);
+            }
+            
+            self.write(iq, completionHandler: { result in
+                promise(result.map({ _ in Void() }));
+            });
         });
     }
     

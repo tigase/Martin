@@ -69,6 +69,59 @@ open class SDP {
         self.bundle = bundle;
     }
     
+    public func applyDiff(action: Jingle.ContentAction, diff: SDP) -> SDP {
+        switch action {
+        case .add, .accept:
+            return SDP(id: id, contents: contents + diff.contents, bundle: diff.bundle);
+        case .modify:
+            var contents = self.contents;
+            for diffed in diff.contents {
+                if let idx = contents.firstIndex(where: { $0.name == diffed.name }) {
+                    print("setting content \(diffed.name) from \(contents[idx].senders) to \(diffed.senders)")
+                    contents[idx] = contents[idx].with(senders: diffed.senders, description: diffed.description);
+                }
+            }
+            return SDP(id: id, contents: contents, bundle: bundle);
+        case .remove:
+            let removed = Set(diff.contents.map({ $0.name }));
+            return SDP(id: id, contents: contents.filter({ !removed.contains($0.name) }), bundle: diff.bundle);
+        }
+    }
+    
+    public func diff(from oldSdp: SDP) -> [Jingle.ContentAction: SDP] {
+        var results: [Jingle.ContentAction: SDP] = [:];
+        
+        let oldContentNames = oldSdp.contents.map({ $0.name });
+        let newContentNames = self.contents.map({ $0.name });
+        
+        let contentsToRemove = oldSdp.contents.filter({ !newContentNames.contains($0.name) });
+        if !contentsToRemove.isEmpty {
+            results[.remove] = SDP(id: id, contents: contentsToRemove, bundle: self.bundle);
+        }
+        
+        let contentsToAdd = self.contents.filter({ !oldContentNames.contains($0.name) });
+        if !contentsToAdd.isEmpty {
+            results[.add] = SDP(id: id, contents: contentsToAdd, bundle: self.bundle);
+        }
+        
+        let oldContentsByName = Dictionary(grouping: oldSdp.contents, by: { $0.name });
+        let contentsToModify = contents.compactMap({ newContent -> Jingle.Content? in
+            guard let oldContent = oldContentsByName[newContent.name]?.first else {
+                return nil;
+            }
+            guard (oldContent.senders ?? .both) != (newContent.senders ?? .both) else {
+                return nil;
+            }
+            return Jingle.Content(name: newContent.name, creator: newContent.creator, senders: newContent.senders, description: (newContent.description as? Jingle.RTP.Description)?.cloneForModify(), transports: []);
+        })
+        
+        if !contentsToModify.isEmpty {
+            results[.modify] = SDP(id: id, contents: contentsToModify, bundle: self.bundle);
+        }
+        
+        return results;
+    }
+    
     public func toString(withSid sid: String) -> String {
         var sdp = [
             "v=0", "o=- \(sid) \(id) IN IP4 0.0.0.0", "s=-", "t=0 0"
@@ -86,6 +139,41 @@ open class SDP {
         sdp.append(contentsOf: contents);
         
         return sdp.joined(separator: "\r\n") + "\r\n";
+    }
+    
+    public enum StreamType: String {
+        case inactive
+        case sendonly
+        case recvonly
+        case sendrecv
+        
+        func senders(creator: Jingle.Content.Creator) -> Jingle.Content.Senders {
+            switch self {
+            case .inactive:
+                return .none;
+            case .sendrecv:
+                return .both;
+            case .sendonly:
+                return creator == .initiator ? .responder : .initiator;
+            case .recvonly:
+                return creator == .responder ? .initiator : .responder;
+            }
+        }
+        
+        public static let values: [StreamType] = [.inactive,.sendonly,.recvonly,.sendrecv];
+        
+        public static let SDP_LINES: [String:StreamType] = {
+            var dict: [String:StreamType] = [:];
+            for value in values {
+                dict["a=\(value.rawValue)"] = value;
+            }
+            return dict;
+        }();
+        
+        public static func from(lines: [String]) -> StreamType? {
+            return lines.compactMap({ SDP_LINES[$0] }).first;
+        }
+
     }
 }
 
@@ -153,6 +241,10 @@ extension Jingle.Content {
             return nil;
         }
         
+        let senders: Senders? = SDP.StreamType.from(lines: sdp.map({ line -> String in
+                                                                    return String(line);
+        }))?.senders(creator: creator);
+        
         let candidates = sdp.filter { (l) -> Bool in
             return l.starts(with: "a=candidate:");
             }.map { (l) -> Jingle.Transport.ICEUDPTransport.Candidate? in
@@ -179,7 +271,7 @@ extension Jingle.Content {
             }.first;
         let transport = Jingle.Transport.ICEUDPTransport(pwd: String(pwd), ufrag: String(ufrag), candidates: candidates, fingerprint: fingerprint);
         
-        self.init(name: name, creator: creator, description: description, transports: [transport]);
+        self.init(name: name, creator: creator, senders: senders,  description: description, transports: [transport]);
     }
 
     public func toSDP() -> String {
@@ -226,7 +318,7 @@ extension Jingle.Content {
         }
         
         // RTP senders always both...
-        sdp.append("a=sendrecv");
+        sdp.append("a=\((senders ?? .both).streamType(creator: creator).rawValue)");
         sdp.append("a=mid:\(name)")
         sdp.append("a=ice-options:trickle");
         
@@ -289,6 +381,45 @@ extension Jingle.Content {
         
         return sdp.joined(separator: "\r\n");
     }
+    
+    public func with(senders: Jingle.Content.Senders?, description: JingleDescription?) -> Jingle.Content {
+        if let oldDesc = self.description as? Jingle.RTP.Description {
+            return Jingle.Content(name: name, creator: creator, senders: senders, description: oldDesc.with(description: description), transports: transports);
+        }
+        return with(senders: senders);
+    }
+}
+
+extension Jingle.Content.Senders {
+    
+    public func streamType(creator: Jingle.Content.Creator) -> SDP.StreamType {
+        switch self {
+        case .none:
+            return .inactive;
+        case .both:
+            return .sendrecv;
+        case .initiator:
+            return creator == .initiator ? .sendonly : .recvonly;
+        case .responder:
+            return creator == .responder ? .sendonly : .recvonly;
+        }
+    }
+    
+}
+
+extension Jingle.RTP.Description {
+    
+    public func with(description: JingleDescription?) -> Jingle.RTP.Description {
+        guard let newDesc = description as? Jingle.RTP.Description else {
+            return self;
+        }
+        return Jingle.RTP.Description(media: media, ssrc: ssrc, payloads: payloads, bandwidth: bandwidth, encryption: encryption, rtcpMux: rtcpMux, ssrcs: newDesc.ssrcs, ssrcGroups: newDesc.ssrcGroups, hdrExts: hdrExts);
+    }
+    
+    public func cloneForModify() -> JingleDescription {
+        return Jingle.RTP.Description(media: media, ssrc: ssrc, payloads: [], bandwidth: nil, encryption: [], rtcpMux: false, ssrcs: ssrcs, ssrcGroups: ssrcGroups, hdrExts: []);
+    }
+    
 }
 
 extension Jingle.Transport.ICEUDPTransport.Candidate {
@@ -404,12 +535,13 @@ extension Jingle.RTP.Description.SSRC {
         let ssrcLines = sdpLines.filter { (line) -> Bool in
             return line.starts(with: "a=ssrc:");
         }
+        let msid = sdpLines.first(where: { $0.starts(with: "a=msid:") })?.dropFirst("a=msid:".count);
         
         return distinct(ssrcLines.map({ (line) -> String in
             String(line.dropFirst("a=ssrc:".count).split(separator: " ").first!)
         })).map { (ssrc) in
             let prefix = "a=ssrc:\(ssrc) ";
-            let params = ssrcLines.filter({ (line) -> Bool in
+            var params = ssrcLines.filter({ (line) -> Bool in
                 return line.starts(with: prefix);
             }).map({ line -> Parameter? in
                 let parts = line.dropFirst(prefix.count).split(separator: ":");
@@ -423,6 +555,9 @@ extension Jingle.RTP.Description.SSRC {
             }).map({ param -> Parameter in
                 return param!;
             })
+            if !params.contains(where: { $0.key == "msid" }), let id = msid {
+                params.append(Jingle.RTP.Description.SSRC.Parameter(key: "msid", value: String(id)));
+            }
             return Jingle.RTP.Description.SSRC(ssrc: ssrc, parameters: params);
         }
     }
