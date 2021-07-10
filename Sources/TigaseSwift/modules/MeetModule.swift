@@ -21,6 +21,7 @@
 
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var meet: XmppModuleIdentifier<MeetModule> {
@@ -41,14 +42,56 @@ open class MeetModule: XmppModuleBase, XmppModule {
     
     private var discoModule: DiscoveryModule?;
 
-    public let criteria: Criteria = Criteria.empty();
+    public let criteria: Criteria = Criteria.name("iq").add(Criteria.xmlns(ID));
     
     public let features: [String] = [];
     
-    public func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+    public let eventsPublisher = PassthroughSubject<MeetEvent,Never>();
+    
+    public enum MeetEvent {
+        case publisherJoined(BareJID, Publisher)
+        case publisherLeft(BareJID, Publisher)
+        
+        public var meetJid: BareJID {
+            switch self {
+            case .publisherJoined(let meetJid, _), .publisherLeft(let meetJid, _):
+                return meetJid;
+            }
+        }
     }
     
+    public func process(stanza: Stanza) throws {
+        guard let from = stanza.from?.bareJid else {
+            throw ErrorCondition.bad_request;
+        }
+        for action in stanza.getChildren(xmlns: MeetModule.ID) {
+            switch action.name {
+            case "joined":
+                for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
+                    eventsPublisher.send(.publisherJoined(from, publisher));
+                }
+            case "left":
+                for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
+                    eventsPublisher.send(.publisherLeft(from, publisher));
+                }
+            default:
+                throw ErrorCondition.bad_request;
+            }
+        }
+        write(stanza.makeResult(type: .result));
+    }
+    
+    public struct Publisher {
+        public let jid: BareJID;
+        public let streams: [String];
+        
+        public static func from(element: Element) -> Publisher? {
+            guard element.name == "publisher", let jid = BareJID(element.getAttribute("jid")) else {
+                return nil;
+            }
+            return .init(jid: jid, streams: element.getChildren(name: "stream").compactMap({ $0.getAttribute("mid") }));
+        }
+    }
 
     open func findMeetComponent(completionHandler: @escaping (Result<[MeetComponent],XMPPError>) -> Void) {
         guard let context = self.context, let discoModule = self.discoModule else {
