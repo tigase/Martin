@@ -42,7 +42,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
     
     private var discoModule: DiscoveryModule?;
 
-    public let criteria: Criteria = Criteria.name("iq").add(Criteria.xmlns(ID));
+    public let criteria: Criteria = Criteria.or(.name("iq").add(.xmlns(ID)), .name("message").add(.xmlns(ID)));
     
     public let features: [String] = [];
     
@@ -51,34 +51,47 @@ open class MeetModule: XmppModuleBase, XmppModule {
     public enum MeetEvent {
         case publisherJoined(BareJID, Publisher)
         case publisherLeft(BareJID, Publisher)
+        case inivitation(MessageInitiationAction, JID)
         
-        public var meetJid: BareJID {
+        public var meetJid: BareJID? {
             switch self {
             case .publisherJoined(let meetJid, _), .publisherLeft(let meetJid, _):
                 return meetJid;
+            default:
+                return nil;
             }
         }
     }
     
     public func process(stanza: Stanza) throws {
-        guard let from = stanza.from?.bareJid else {
+        guard let from = stanza.from else {
             throw ErrorCondition.bad_request;
         }
-        for action in stanza.getChildren(xmlns: MeetModule.ID) {
-            switch action.name {
-            case "joined":
-                for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
-                    eventsPublisher.send(.publisherJoined(from, publisher));
+        switch stanza {
+        case let iq as Iq:
+            for action in iq.getChildren(xmlns: MeetModule.ID) {
+                switch action.name {
+                case "joined":
+                    for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
+                        eventsPublisher.send(.publisherJoined(from.bareJid, publisher));
+                    }
+                case "left":
+                    for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
+                        eventsPublisher.send(.publisherLeft(from.bareJid, publisher));
+                    }
+                default:
+                    throw ErrorCondition.bad_request;
                 }
-            case "left":
-                for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
-                    eventsPublisher.send(.publisherLeft(from, publisher));
-                }
-            default:
+            }
+            write(iq.makeResult(type: .result));
+        case let message as Message:
+            guard let action = message.meetMessageInitiationAction else {
                 throw ErrorCondition.bad_request;
             }
+            eventsPublisher.send(.inivitation(action, from));
+        default:
+            throw ErrorCondition.bad_request;
         }
-        write(stanza.makeResult(type: .result));
     }
     
     public struct Publisher {
@@ -175,6 +188,27 @@ open class MeetModule: XmppModuleBase, XmppModule {
         });
     }
     
+    open func sendMessageInitiation(action: MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
+        guard let userJid = context?.userBareJid else {
+            return;
+        }
+        switch action {
+        case .proceed(let id):
+            sendMessageInitiation(action: .accept(id: id), to: JID(userJid));
+        case .reject(let id):
+            if jid.bareJid != userJid {
+                sendMessageInitiation(action: .reject(id: id), to: JID(userJid));
+            }
+        default:
+            break;
+        }
+        let response = Message();
+        response.type = .chat;
+        response.to = jid;
+        response.meetMessageInitiationAction = action;
+        write(response, writeCompleted: writeCompleted);
+    }
+    
     public enum Media: String {
         case audio
         case video
@@ -184,4 +218,88 @@ open class MeetModule: XmppModuleBase, XmppModule {
         public let jid: JID;
         public let features: [String];
     }
+    
+    public enum MessageInitiationAction {
+        case propose(id: String, meetJid: JID, media: [Media])
+        case proceed(id: String)
+        case accept(id: String)
+        case retract(id: String)
+        case reject(id: String)
+        
+        public static func from(element actionEl: Element) -> MessageInitiationAction? {
+            guard let id = actionEl.getAttribute("id") else {
+                return nil;
+            }
+            switch actionEl.name {
+            case "accept":
+                return .accept(id: id);
+            case "propose":
+                let media = actionEl.getChildren(name: "media").compactMap({ $0.getAttribute("type") }).compactMap({ Media(rawValue: $0) });
+                guard !media.isEmpty, let meetJidStr = actionEl.getAttribute("jid") else {
+                    return nil;
+                }
+                return .propose(id: id, meetJid: JID(meetJidStr), media: media);
+            case "proceed":
+                return .proceed(id: id);
+            case "retract":
+                return .retract(id: id);
+            case "reject":
+                return .reject(id: id);
+            default:
+                return nil;
+            }
+        }
+        
+        public var actionName: String {
+            switch self {
+            case .propose(_, _, _):
+                return "propose";
+            case .proceed(_):
+                return "proceed";
+            case .accept(_):
+                return "accept";
+            case .reject(_):
+                return "reject";
+            case .retract(_):
+                return "retract";
+            }
+        }
+    
+        public var id: String {
+            switch self {
+            case .propose(let id, _, _), .proceed(let id), .accept(let id), .reject(let id), .retract(let id):
+                return id;
+            }
+        }
+    }
+}
+
+extension Message {
+    
+    var meetMessageInitiationAction: MeetModule.MessageInitiationAction? {
+        get {
+            guard let actionEl = element.findChild(xmlns: MeetModule.ID) else {
+                return nil;
+            }
+            return MeetModule.MessageInitiationAction.from(element: actionEl);
+        }
+        set {
+            element.removeChildren(where: { $0.xmlns == MeetModule.ID });
+            if let value = newValue {
+                let actionEl = Element(name: value.actionName, xmlns: MeetModule.ID);
+                actionEl.setAttribute("id", value: value.id);
+                switch value {
+                case .propose(_, let meetJid, let media):
+                    actionEl.setAttribute("jid", value: meetJid.stringValue);
+                    for m in media {
+                        actionEl.addChild(Element(name: "media", attributes: ["type": m.rawValue]));
+                    }
+                default:
+                    break;
+                }
+                element.addChild(actionEl);
+            }
+        }
+    }
+    
 }
