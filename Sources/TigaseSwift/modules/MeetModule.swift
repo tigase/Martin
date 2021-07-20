@@ -174,6 +174,52 @@ open class MeetModule: XmppModuleBase, XmppModule {
         });
     }
     
+    open func allow(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        guard !jids.isEmpty else {
+            completionHandler(.failure(.unexpected_request("List of allowed JIDs is empty!")));
+            return;
+        }
+        
+        let iq = Iq();
+        iq.type = .set;
+        iq.to = meetJid;
+        
+        let allowEl = Element(name: "allow", xmlns: MeetModule.ID);
+        
+        for participant in jids {
+            allowEl.addChild(Element(name: "participant", cdata: participant.stringValue));
+        }
+        
+        iq.addChild(allowEl);
+        
+        write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
+        });
+    }
+        
+    open func deny(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        guard !jids.isEmpty else {
+            completionHandler(.failure(.unexpected_request("List of denied JIDs is empty!")));
+            return;
+        }
+        
+        let iq = Iq();
+        iq.type = .set;
+        iq.to = meetJid;
+        
+        let allowEl = Element(name: "deny", xmlns: MeetModule.ID);
+        
+        for participant in jids {
+            allowEl.addChild(Element(name: "participant", cdata: participant.stringValue));
+        }
+        
+        iq.addChild(allowEl);
+        
+        write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
+        });
+    }
+    
     open func destroy(meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = .set;
