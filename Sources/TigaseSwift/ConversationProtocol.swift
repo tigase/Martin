@@ -21,7 +21,7 @@
 
 import Foundation
 
-public protocol ConversationProtocol: class {
+public protocol ConversationProtocol: AnyObject {
     
     var context: Context? { get }
     var account: BareJID { get }

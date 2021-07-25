@@ -29,7 +29,7 @@ public protocol RosterManager: ContextLifecycleAware {
     
     func item(for context: Context, jid: JID) -> RosterItemProtocol?;
     
-    func updateItem(for context: Context, jid: JID, name: String?, subscription: RosterItemSubscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) -> RosterItemProtocol;
+    func updateItem(for context: Context, jid: JID, name: String?, subscription: RosterItemSubscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) -> RosterItemProtocol?;
     
     func deleteItem(for context: Context, jid: JID) -> RosterItemProtocol?
     

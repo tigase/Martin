@@ -192,7 +192,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                         if let resultJid = joinEl.getAttribute("jid"), let idx = resultJid.firstIndex(of: "#") {
                             let participantId = String(resultJid[resultJid.startIndex..<idx]);
                             let jid = BareJID(String(resultJid[resultJid.index(after: idx)..<resultJid.endIndex]));
-                            self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
+                            _ = self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                             
                             self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
                             if presenceSubscription {
@@ -200,7 +200,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                                 self.presenceModule?.subscribe(to: JID(channelJid));
                             }
                         } else if let participantId = joinEl.getAttribute("id") {
-                            self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
+                            _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                             self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
                             if presenceSubscription {
                                 self.presenceModule?.subscribed(by: JID(channelJid));

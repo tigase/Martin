@@ -41,10 +41,10 @@ open class RosterManagerBase<Store: RosterStore>: RosterManager {
         return store.item(for: context, jid: jid);
     }
     
-    public func updateItem(for context: Context, jid: JID, name: String?, subscription: RosterItemSubscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) -> RosterItemProtocol {
+    public func updateItem(for context: Context, jid: JID, name: String?, subscription: RosterItemSubscription, groups: [String], ask: Bool, annotations: [RosterItemAnnotation]) -> RosterItemProtocol? {
         store.updateItem(for: context, jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
         
-        return store.item(for: context, jid: jid)!;
+        return store.item(for: context, jid: jid);
     }
     
     public func deleteItem(for context: Context, jid: JID) -> RosterItemProtocol? {

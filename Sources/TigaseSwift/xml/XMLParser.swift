@@ -242,7 +242,7 @@ public enum XmlParserError: Error {
  Protocol needs to be implemented by classes responsible for handling 
  data during parsing of XML by `XMLParser`
  */
-public protocol XMLParserDelegate: class {
+public protocol XMLParserDelegate: AnyObject {
         
     /**
      Called when start of element is found

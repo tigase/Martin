@@ -181,12 +181,21 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             case .cancelled, .setup:
                 that.state = .disconnected();
             case .failed(_):
+                that.connection?.cancel();
                 that.state = .disconnected(.timeout);
             case .waiting(_):
                 that.state = .disconnected(.noRouteToServer);
             default:
                 break;
             }
+        }
+        
+        connection?.viabilityUpdateHandler = { viable in
+            print("connectivity is \(viable ? "UP" : "DOWN")")
+        }
+        
+        connection?.pathUpdateHandler = { path in
+            print("better path found " + path.debugDescription)
         }
         
         if options.enableTcpFastOpen {

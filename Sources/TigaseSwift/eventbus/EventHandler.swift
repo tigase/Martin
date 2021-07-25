@@ -26,7 +26,7 @@ import Foundation
  To receive particular events instance of class supporting this protocol
  needs to be registered in instance of `EventBus`
  */
-public protocol EventHandler: class {
+public protocol EventHandler: AnyObject {
     
     /**
      Method will be called when `Event` will be fired on `EventBus` instance

@@ -124,9 +124,10 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
             }
             return jid;
         } else {
-            let item = rosterManager.updateItem(for: context, jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations);
-            eventsSender.send(.addedOrUpdated(item));
-            fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .added));
+            if let item = rosterManager.updateItem(for: context, jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations) {
+                eventsSender.send(.addedOrUpdated(item));
+                fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .added));
+            }
             return jid;
         }
     }

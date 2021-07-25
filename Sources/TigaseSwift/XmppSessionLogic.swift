@@ -29,7 +29,7 @@ extension StreamFeatures.StreamFeature {
 }
 
 /// Protocol which is used by other class to interact with classes responsible for session logic.
-public protocol XmppSessionLogic: class {
+public protocol XmppSessionLogic: AnyObject {
     
     var state:XMPPClient.State { get }
     var statePublisher: Published<XMPPClient.State>.Publisher { get }

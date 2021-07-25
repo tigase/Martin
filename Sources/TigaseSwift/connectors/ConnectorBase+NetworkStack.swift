@@ -93,13 +93,13 @@ public protocol NetworkDelegate: NetworkReadDelegate, NetworkWriteDelegate {
     
 }
 
-public protocol NetworkReadDelegate: class {
+public protocol NetworkReadDelegate: AnyObject {
 
     func read(data: Data);
     
 }
 
-public protocol NetworkWriteDelegate: class {
+public protocol NetworkWriteDelegate: AnyObject {
     
     func write(data: Data, completion: WriteCompletion);
     

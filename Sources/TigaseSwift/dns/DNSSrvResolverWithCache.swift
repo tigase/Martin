@@ -216,7 +216,7 @@ open class DNSSrvResolverWithCache: DNSSrvResolver {
     }
 }
 
-public protocol DNSSrvResolverCache: class {
+public protocol DNSSrvResolverCache: AnyObject {
     
     func getRecords(for domain: String) -> XMPPSrvResult?;
     

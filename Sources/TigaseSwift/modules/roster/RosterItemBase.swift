@@ -54,7 +54,7 @@ open class RosterItemBase: RosterItemProtocol, CustomStringConvertible {
     
 }
 
-public protocol RosterItemProtocol: class {
+public protocol RosterItemProtocol: AnyObject {
     var jid: JID { get };
     var name: String? { get }
     var subscription: RosterItemSubscription { get }
