@@ -165,6 +165,9 @@ open class XMPPClient: Logger, EventHandler {
         }
         log("starting connection......");
         dispatcher.sync {
+            if let accountJid = context.sessionObject.userBareJid {
+                self.responseManager.accountJID = JID(accountJid);
+            }
             socketConnector = SocketConnector(context: context);
             context.writer = SocketPacketWriter(connector: socketConnector!, responseManager: responseManager, queueDispatcher: dispatcher);
             sessionLogic = SocketSessionLogic(connector: socketConnector!, modulesManager: modulesManager, responseManager: responseManager, context: context, queueDispatcher: dispatcher);

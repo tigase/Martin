@@ -28,13 +28,18 @@ import Foundation
 open class ResponseManager: Logger {
     
     /// Internal class holding information about request and callbacks
-    fileprivate class Entry {
-        let jid: JID?;
+    private struct Key: Hashable {
+        let id: String;
+        let jid: JID;
+    }
+    
+    private struct Entry {
+        let key: Key;
         let timestamp: Date;
         let callback: (Stanza?)->Void;
         
-        init(jid:JID?, callback:@escaping (Stanza?)->Void, timeout:TimeInterval) {
-            self.jid = jid;
+        init(key: Key, callback:@escaping (Stanza?)->Void, timeout:TimeInterval) {
+            self.key = key;
             self.callback = callback;
             self.timestamp = Date(timeIntervalSinceNow: timeout);
         }
@@ -48,7 +53,9 @@ open class ResponseManager: Logger {
     
     fileprivate var timer:Timer?;
     
-    fileprivate var handlers = [String:Entry]();
+    private var handlers = [Key: Entry]();
+    
+    public var accountJID: JID = JID("");
     
     fileprivate let context:Context;
     
@@ -65,24 +72,13 @@ open class ResponseManager: Logger {
         guard let type = stanza.type, let id = stanza.id, (type == StanzaType.error || type == StanzaType.result) else {
             return nil;
         }
-        var callback: ((Stanza?)->Void)? = nil;
-        queue.sync {
-            if let entry = self.handlers[id] {
-                let userJid = ResourceBinderModule.getBindedJid(self.context.sessionObject);
-                if let from = stanza.from {
-                    if entry.jid == from || (entry.jid == nil && from.bareJid == userJid?.bareJid && from.resource == nil) {
-                        self.handlers.removeValue(forKey: id)
-                        callback = entry.callback;
-                    }
-                } else {
-                    if entry.jid == nil || (entry.jid?.bareJid == userJid?.bareJid && entry.jid?.resource == nil) {
-                        self.handlers.removeValue(forKey: id)
-                        callback = entry.callback;
-                    }
-                }
+
+        return queue.sync {
+            if let entry = self.handlers.removeValue(forKey: .init(id: id, jid: stanza.from ?? accountJID)) {
+                return entry.callback;
             }
+            return nil;
         }
-        return callback;
     }
         
     /**
@@ -96,14 +92,11 @@ open class ResponseManager: Logger {
             return;
         }
         
-        var id = stanza.id;
-        if id == nil {
-            id = nextUid();
-            stanza.id = id;
-        }
+        let id = idForStanza(stanza: stanza);
+        let key = Key(id: id, jid: stanza.to ?? accountJID);
         
         queue.async {
-            self.handlers[id!] = Entry(jid: stanza.to, callback: callback!, timeout: timeout);
+            self.handlers[key] = Entry(key: key, callback: callback!, timeout: timeout);
         }
     }
     
@@ -118,14 +111,11 @@ open class ResponseManager: Logger {
             return;
         }
         
-        var id = stanza.id;
-        if id == nil {
-            id = nextUid();
-            stanza.id = id;
-        }
+        let id = idForStanza(stanza: stanza);
+        let key = Key(id: id, jid: stanza.to ?? accountJID);
         
         queue.async {
-            self.handlers[id!] = Entry(jid: stanza.to, callback: { response in
+            self.handlers[key] = Entry(key: key, callback: { response in
                 if response == nil {
                     callback(.failure(errorCondition: .remote_server_timeout, response: response));
                 } else {
@@ -184,6 +174,15 @@ open class ResponseManager: Logger {
         }
     }
     
+    private func idForStanza(stanza: Stanza) -> String {
+        guard let id = stanza.id else {
+            let id = nextUid();
+            stanza.id = id;
+            return id;
+        }
+        return id;
+    }
+    
     /// Activate response manager
     open func start() {
         timer = Timer(delayInSeconds: 30, repeats: true) {
@@ -211,9 +210,9 @@ open class ResponseManager: Logger {
     /// Check if any callback should be called due to timeout
     func checkTimeouts() {
         queue.sync {
-            for (id,handler) in self.handlers {
+            for (key,handler) in self.handlers {
                 if handler.checkTimeout() {
-                    self.handlers.removeValue(forKey: id);
+                    self.handlers.removeValue(forKey: key);
                     handler.callback(nil);
                 }
             }
