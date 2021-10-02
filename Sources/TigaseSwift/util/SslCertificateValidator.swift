@@ -26,8 +26,10 @@ open class SslCertificateValidator {
     public static func validateSslCertificate(domain: String, fingerprint acceptedFingerprint: String, trust: SecTrust) -> Bool {
         let policy = SecPolicyCreateSSL(false, domain as CFString?);
         var secTrustResultType = SecTrustResultType.invalid;
+        var error: CFError?;
         SecTrustSetPolicies(trust, policy);
-        SecTrustEvaluate(trust, &secTrustResultType);
+        _ = SecTrustEvaluateWithError(trust, &error);
+        SecTrustGetTrustResult(trust, &secTrustResultType);
         
         var valid = (secTrustResultType == SecTrustResultType.proceed || secTrustResultType == SecTrustResultType.unspecified);
         if !valid {
