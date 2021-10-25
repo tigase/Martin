@@ -184,7 +184,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         }
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = from ?? context.boundJid;
+        iq.to = from;
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(Element(name: "remove"));
