@@ -171,7 +171,7 @@ open class InBandRegistrationModule: AbstractIQModule, ContextAware {
     open func unregister(from: JID? = nil, _ callback: @escaping (Stanza?)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = from ?? ResourceBinderModule.getBindedJid(context.sessionObject);
+        iq.to = from;
         
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(Element(name: "remove"));
