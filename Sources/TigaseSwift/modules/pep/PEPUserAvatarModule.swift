@@ -144,7 +144,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         
         switch notification.action {
         case .published(let item):
-            onAvatarChangeNotification(context: context, from: notification.message.from!, itemId: item.id, payload: item.payload);
+            onAvatarChangeNotification(context: context, from: notification.message.from ?? JID(context.userBareJid), itemId: item.id, payload: item.payload);
         case .retracted(_):
             break;
         }

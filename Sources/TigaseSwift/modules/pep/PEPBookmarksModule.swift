@@ -123,7 +123,11 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
     }
     
     open override func onItemNotification(notification: PubSubModule.ItemNotification) {
-        guard let from = notification.message.from?.bareJid, let context = self.context, context.userBareJid == from else {
+        guard let context = self.context else {
+            return;
+        }
+        
+        guard notification.message.from == nil || context.userBareJid == notification.message.from?.bareJid else {
             return;
         }
         
