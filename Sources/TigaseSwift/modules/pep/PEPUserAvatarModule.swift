@@ -87,33 +87,58 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
                 return;
             }
             
-            let group = DispatchGroup();
-            group.enter();
-            var itemsError: PubSubError? = nil;
-            for avatar in avatars {
-                if let data = avatar.data {
-                    group.enter();
-                    pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: avatar.info.id, payload: Element(name: "data", cdata: data.base64EncodedString(), xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
-                        self.queue.async {
+            let publish: (()->Void) = {
+                let group = DispatchGroup();
+                group.enter();
+                var itemsError: PubSubError? = nil;
+                for avatar in avatars {
+                    if let data = avatar.data {
+                        group.enter();
+                        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: avatar.info.id, payload: Element(name: "data", cdata: data.base64EncodedString(), xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
+                            self.queue.async {
+                                switch result {
+                                case .success(_):
+                                    break;
+                                case .failure(let error):
+                                    itemsError = error;
+                                }
+                            }
+                            group.leave();
+                        });
+                    }
+                }
+                group.notify(queue: self.queue, execute: {
+                    if let error = itemsError {
+                        completionHandler(.failure(error));
+                    } else {
+                        self.publishAvatarMetaData(at: at, id: id, metadata: avatars.map({ $0.info }), completionHandler: completionHandler);
+                    }
+                });
+                group.leave();
+            }
+            
+            // lets ensure we are allowed to have as many items published
+            pubsubModule.retrieveNodeConfiguration(from: at, node: PEPUserAvatarModule.DATA_XMLNS, completionHandler: { result in
+                switch result {
+                case .success(let form):
+                    if let limit: TextSingleField = form.getField(named: "pubsub#max_items"), "max" != limit.value && avatars.count > (Int(limit.value ?? "") ?? Int.max) {
+                        // limit is too small, reconfiguring..
+                        limit.value = String(avatars.count);
+                        pubsubModule.configureNode(at: at, node: PEPUserAvatarModule.DATA_XMLNS, with: form, completionHandler: { result in
                             switch result {
                             case .success(_):
-                                break;
+                                publish();
                             case .failure(let error):
-                                itemsError = error;
+                                completionHandler(.failure(error));
                             }
-                        }
-                        group.leave();
-                    });
+                        })
+                    } else {
+                        publish();
+                    }
+                case .failure(let error):
+                     publish();
                 }
-            }
-            group.notify(queue: self.queue, execute: {
-                if let error = itemsError {
-                    completionHandler(.failure(error));
-                } else {
-                    self.publishAvatarMetaData(at: at, id: id, metadata: avatars.map({ $0.info }), completionHandler: completionHandler);
-                }
-            });
-            group.leave();
+            })
         }
     }
 

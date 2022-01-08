@@ -81,7 +81,7 @@ extension PubSubModule {
      - parameter with: configuration to apply for node
      - parameter completionHandler: called when result is available
      */
-    public func configureNode(at pubSubJid: BareJID, node nodeName: String, with configuration: JabberDataElement, completionHandler: @escaping (PubSubNodeConfigurationResult)->Void) {
+    public func configureNode(at pubSubJid: BareJID?, node nodeName: String, with configuration: JabberDataElement, completionHandler: @escaping (PubSubNodeConfigurationResult)->Void) {
         configureNode(at: pubSubJid, node: nodeName, with: configuration, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
@@ -95,10 +95,12 @@ extension PubSubModule {
      - parameter errorDecoder: functon called to preprocess received stanza when error occurred
      - parameter completionHandler: called when result is available
      */
-    public func configureNode<Failure: Error>(at pubSubJid: BareJID, node nodeName: String, with configuration: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    public func configureNode<Failure: Error>(at pubSubJid: BareJID?, node nodeName: String, with configuration: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
-        iq.to = JID(pubSubJid);
+        if let jid = pubSubJid {
+            iq.to = JID(jid);
+        }
         
         let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS);
         iq.addChild(pubsub);
@@ -152,7 +154,7 @@ extension PubSubModule {
      - parameter node: node to retrieve configuration
      - parameter completionHandler: called when result of the request is available
      */
-    public func retrieveNodeConfiguration(from pubSubJid: BareJID, node: String, completionHandler: @escaping (PubSubRetrieveNodeConfigurationResult)->Void) {
+    public func retrieveNodeConfiguration(from pubSubJid: BareJID?, node: String, completionHandler: @escaping (PubSubRetrieveNodeConfigurationResult)->Void) {
         retrieveNodeConfiguration(from: pubSubJid, node: node, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ response in
                 if let config = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "configure")?.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: config) {
@@ -171,10 +173,12 @@ extension PubSubModule {
      - parameter errorDecoder: functon called to preprocess received stanza when error occurred
      - parameter completionHandler: called when result is available
      */
-    public func retrieveNodeConfiguration<Failure: Error>(from pubSubJid: BareJID, node: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    public func retrieveNodeConfiguration<Failure: Error>(from pubSubJid: BareJID?, node: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
-        iq.to = JID(pubSubJid);
+        if let jid = pubSubJid {
+            iq.to = JID(jid);
+        }
         
         let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS);
         let configure = Element(name: "configure");
