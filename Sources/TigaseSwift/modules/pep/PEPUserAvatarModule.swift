@@ -45,6 +45,8 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     
     public let avatarChangePublisher = PassthroughSubject<AvatarChange,Never>();
     
+    private let queue = DispatchQueue(label: "PEPUserAvatarModuleQueue");
+    
     open var features: [String] {
         get {
             if listenForAvatarChanges {
@@ -62,20 +64,62 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     open func process(stanza: Stanza) throws {
         throw XMPPError.feature_not_implemented;
     }
-
-    open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
-        let id = Digest.sha1.digest(toHex: data)!;
-        let size = data.count;
-        let value = data.base64EncodedString();
+    
+    public struct Avatar {
+        public let data: Data?;
+        public let info: Info;
         
-        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: id, payload: Element(name: "data", cdata: value, xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
-            switch result {
-            case .success(let itemId):
-                self.publishAvatarMetaData(at: at, id: itemId, mimeType: mimeType, size: size, width: width, height: height, completionHandler: completionHandler);
-            case .failure(_):
-                completionHandler(result);
+        public init(data: Data, mimeType: String, width: Int? = nil, height: Int? = nil) {
+            self.data = data;
+            self.info = Info(id: Digest.sha1.digest(toHex: data)!, size: data.count, mimeType: mimeType, height: height, width: width);
+        }
+        
+        public init(id: String, url: String, size: Int, mimeType: String, width: Int? = nil, height: Int? = nil) {
+            self.data = nil;
+            self.info = Info(id: id, size: size, mimeType: mimeType, url: url, height: height, width: width);
+        }
+    }
+    
+    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar], completionHandler: @escaping(PubSubPublishItemResult)->Void) {
+        queue.async {
+            guard let pubsubModule = self.pubsubModule, let id = avatars.first(where: { $0.info.mimeType == "image/png" })?.info.id else {
+                completionHandler(.failure(.init(error: .not_acceptable("Missing payload in image/png format!"), pubsubErrorCondition: .invalid_payload)));
+                return;
             }
-        });
+            
+            let group = DispatchGroup();
+            group.enter();
+            var itemsError: PubSubError? = nil;
+            for avatar in avatars {
+                if let data = avatar.data {
+                    group.enter();
+                    pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: avatar.info.id, payload: Element(name: "data", cdata: data.base64EncodedString(), xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
+                        self.queue.async {
+                            switch result {
+                            case .success(_):
+                                break;
+                            case .failure(let error):
+                                itemsError = error;
+                            }
+                        }
+                        group.leave();
+                    });
+                }
+            }
+            group.notify(queue: self.queue, execute: {
+                if let error = itemsError {
+                    completionHandler(.failure(error));
+                } else {
+                    self.publishAvatarMetaData(at: at, id: id, metadata: avatars.map({ $0.info }), completionHandler: completionHandler);
+                }
+            });
+            group.leave();
+        }
+    }
+
+    @available(*, deprecated, message: "Use publishAvatar(at:, avatar, completionHandler:) instead")
+    open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+        self.publishAvatar(at: at, avatar: [Avatar(data: data, mimeType: mimeType, width: width, height: height)], completionHandler: completionHandler);
     }
 
     open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
@@ -83,26 +127,19 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         pubsubModule.publishItem(at: from, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
     }
 
+    @available(*, deprecated, message: "Use publishAvatarMetaData(at:, id:, metadata, completionHandler:) instead")
     open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+        self.publishAvatarMetaData(at: at, id: id, metadata: [Info(id: id, size: size, mimeType: mimeType, url: url, height: height, width: width)], completionHandler: completionHandler);
+    }
+    
+    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info], completionHandler: @escaping (PubSubPublishItemResult)->Void) {
         let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
-        let info = Element(name: "info");
-        info.setAttribute("id", value: id);
-        info.setAttribute("bytes", value: String(size));
-        info.setAttribute("type", value: mimeType);
-        if width != nil {
-            info.setAttribute("width", value: String(width!));
-        }
-        if height != nil {
-            info.setAttribute("height", value: String(height!));
-        }
-        if url != nil {
-            info.setAttribute("url", value: url);
-        }
-        metadata.addChild(info);
+        
+        metadata.addChildren(infos.map({ $0.toElement() }));
         
         pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, itemId: id, payload: metadata, completionHandler: completionHandler);
     }
-
+    
     open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<(String,Data),XMPPError>)->Void) {
         pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, limit: .items(withIds: [itemId]), completionHandler: { result in
             switch result {
@@ -181,13 +218,31 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
             self.init(id: id, size: size, mimeType: type, url: elem.getAttribute("url"), height: Int(elem.getAttribute("height") ?? ""), width: Int(elem.getAttribute("width") ?? ""));
         }
         
-        public init(id: String, size: Int, mimeType: String, url: String?, height: Int?, width: Int?) {
+        public init(id: String, size: Int, mimeType: String, url: String? = nil, height: Int? = nil, width: Int? = nil) {
             self.id = id;
             self.size = size;
             self.mimeType = mimeType;
             self.url = url;
             self.height = height;
             self.width = width;
+        }
+        
+        public func toElement() -> Element {
+            let info = Element(name: "info");
+            info.setAttribute("id", value: id);
+            info.setAttribute("bytes", value: String(size));
+            info.setAttribute("type", value: mimeType);
+            if width != nil {
+                info.setAttribute("width", value: String(width!));
+            }
+            if height != nil {
+                info.setAttribute("height", value: String(height!));
+            }
+            if url != nil {
+                info.setAttribute("url", value: url);
+            }
+
+            return info;
         }
     }
     
