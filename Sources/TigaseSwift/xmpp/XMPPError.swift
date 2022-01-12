@@ -21,7 +21,7 @@
 
 import Foundation
 
-public enum XMPPError: Error, Equatable, CustomStringConvertible {
+public enum XMPPError: LocalizedError, Equatable, CustomStringConvertible {
     
     public static func == (lhs: XMPPError, rhs: XMPPError) -> Bool {
         return lhs.errorCondition == rhs.errorCondition;
@@ -51,9 +51,17 @@ public enum XMPPError: Error, Equatable, CustomStringConvertible {
     case undefined_condition
     case unexpected_request(_ message: String? = nil)
 
+    public var errorDescription: String? {
+        if let message = self.message?.trimmingCharacters(in: .whitespacesAndNewlines), !message.isEmpty {
+            return "\(message) (\(errorCondition.rawValue))";
+        } else {
+            return "\(errorCondition.localizedDescription) (\(errorCondition.rawValue))";
+        }
+    }
+    
     public var description: String {
         if let message = self.message {
-            return "\(errorCondition.rawValue): \(message)";
+            return "\(errorCondition.rawValue)(\(message))";
         } else {
             return errorCondition.rawValue;
         }

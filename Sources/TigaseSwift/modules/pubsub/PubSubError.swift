@@ -20,7 +20,7 @@
 //
 import Foundation
 
-public struct PubSubError: Error, CustomStringConvertible {
+public struct PubSubError: LocalizedError, CustomStringConvertible {
     
     public static let remote_server_timeout = PubSubError(error: .remote_server_timeout, pubsubErrorCondition: nil);
     public static let undefined_condition = PubSubError(error: .undefined_condition, pubsubErrorCondition: nil);
@@ -28,9 +28,17 @@ public struct PubSubError: Error, CustomStringConvertible {
     public let error: XMPPError;
     public let pubsubErrorCondition: PubSubErrorCondition?;
     
+    public var errorDescription: String? {
+        if let pubsubError = pubsubErrorCondition {
+            return "\(error.message ?? pubsubError.rawValue.replacingOccurrences(of: "-", with: " ")) (\(pubsubError.rawValue), \(error.errorCondition.rawValue))";
+        } else {
+            return error.localizedDescription;
+        }
+    }
+    
     public var description: String {
         if let condition = pubsubErrorCondition {
-            return "\(error) - \(condition.rawValue)"
+            return "\(condition.rawValue)(\(condition.rawValue))"
         } else {
             return error.description;
         }
