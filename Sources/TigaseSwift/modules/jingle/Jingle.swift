@@ -22,6 +22,9 @@
 import Foundation
 
 public class Jingle {
+    
+    public static var supportCryptoAttribute = false;
+    
     public class Content {
         
         public let creator: Creator;
@@ -186,6 +189,7 @@ extension Jingle {
     public class Transport {
         
         public class ICEUDPTransport: JingleTransport {
+            
             public static let XMLNS = "urn:xmpp:jingle:transports:ice-udp:1";
             
             public let xmlns = XMLNS;
@@ -451,7 +455,7 @@ extension Jingle {
                 }
                 
                 let payloads = el.mapChildren(transform: { e1 in return Payload(from: e1) });
-                let encryption: [Encryption] = el.findChild(name: "encryption")?.mapChildren(transform: { e1 in return Encryption(from: e1) }) ?? [];
+                let encryption: [Encryption] = Jingle.supportCryptoAttribute ? (el.findChild(name: "encryption")?.mapChildren(transform: { e1 in return Encryption(from: e1) }) ?? []) : [];
                 
                 let ssrcs = el.mapChildren(transform: { (source) -> SSRC? in
                     return SSRC(from: source);
@@ -485,7 +489,7 @@ extension Jingle {
                     el.addChild(payload.toElement());
                 }
                 
-                if !encryption.isEmpty {
+                if Jingle.supportCryptoAttribute && !encryption.isEmpty {
                     let encEl = Element(name: "encryption")
                     encryption.forEach { enc in
                         encEl.addChild(enc.toElement());
