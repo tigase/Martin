@@ -23,7 +23,12 @@ import Foundation
 
 open class SDP {
     
+    @available(*, deprecated, message: "May set invalid content 'creator' and 'senders' values. Use method parse(sdpString:,creatorProvider:,localRole:)")
     static public func parse(sdpString sdp: String, creator: Jingle.Content.Creator) -> (SDP, String)? {
+        return parse(sdpString: sdp, creatorProvider: { _ in creator }, localRole: creator);
+    }
+    
+    static public func parse(sdpString sdp: String, creatorProvider: (String)->Jingle.Content.Creator, localRole: Jingle.Content.Creator) -> (SDP, String)? {
         var media = sdp.components(separatedBy: "\r\nm=");
         for i in 1..<media.count {
             media[i] = "m=" + media[i];
@@ -46,7 +51,7 @@ open class SDP {
         let bundle = groupParts[0] == "a=group:BUNDLE" ? groupParts.dropFirst().map({ s -> String in return String(s); }) : nil;
         
         let contents = media.map({ m -> Jingle.Content? in
-            return Jingle.Content(fromSDP: m, creator: creator);
+            return Jingle.Content(fromSDP: m, creatorProvider: creatorProvider, localRole: localRole);
         }).filter({ (c) -> Bool in
             return c != nil;
         }).map({ (c) -> Jingle.Content in
@@ -122,7 +127,12 @@ open class SDP {
         return results;
     }
     
+    @available(*, deprecated, message: "May generate invalid content stream directions. Use toString(withSid:,localRole:,direction:)")
     public func toString(withSid sid: String) -> String {
+        return toString(withSid: sid, localRole: contents.first?.creator ?? .initiator, direction: .outgoing);
+    }
+    
+    public func toString(withSid sid: String, localRole: Jingle.Content.Creator, direction: Direction) -> String {
         var sdp = [
             "v=0", "o=- \(sid) \(id) IN IP4 0.0.0.0", "s=-", "t=0 0"
         ];
@@ -134,11 +144,16 @@ open class SDP {
         }
         
         let contents: [String] = self.contents.map({ c -> String in
-            return c.toSDP();
+            return c.toSDP(localRole: localRole, direction: direction);
         });
         sdp.append(contentsOf: contents);
         
         return sdp.joined(separator: "\r\n") + "\r\n";
+    }
+    
+    public enum Direction {
+        case incoming
+        case outgoing
     }
     
     public enum StreamType: String {
@@ -147,16 +162,16 @@ open class SDP {
         case recvonly
         case sendrecv
         
-        func senders(creator: Jingle.Content.Creator) -> Jingle.Content.Senders {
+        public func senders(localRole: Jingle.Content.Creator) -> Jingle.Content.Senders {
             switch self {
             case .inactive:
                 return .none;
             case .sendrecv:
                 return .both;
             case .sendonly:
-                return creator == .initiator ? .responder : .initiator;
+                return localRole == .initiator ? .initiator : .responder;
             case .recvonly:
-                return creator == .responder ? .initiator : .responder;
+                return localRole == .responder ? .initiator : .responder;
             }
         }
         
@@ -180,7 +195,13 @@ open class SDP {
 
 extension Jingle.Content {
     
-    public convenience init?(fromSDP media: String, creator: Creator) {
+    @available(*, deprecated, message: "May set invalid content 'senders' values. Use method init?(fromSDP:,creatorProvider:localRole:)")
+    public convenience init?(fromSDP media: String, creator: Jingle.Content.Creator) {
+        self.init(fromSDP: media, creatorProvider: { _ in creator }, localRole: creator);
+    }
+    
+    public convenience init?(fromSDP media: String, creatorProvider: (String)->Jingle.Content.Creator, localRole: Jingle.Content.Creator) {
+        
         let sdp = media.split(separator: "\r\n");
         
         let line = sdp[0].components(separatedBy: " ");
@@ -193,6 +214,8 @@ extension Jingle.Content {
         })?.dropFirst(6) {
             name = String(tmp);
         }
+
+        let creator = creatorProvider(name);
         
         let payloadIds = line[3..<line.count];
         let payloads = payloadIds.map { (id) -> Jingle.RTP.Description.Payload in
@@ -243,7 +266,7 @@ extension Jingle.Content {
         
         let senders: Senders? = SDP.StreamType.from(lines: sdp.map({ line -> String in
                                                                     return String(line);
-        }))?.senders(creator: creator);
+        }))?.senders(localRole: localRole);
         
         let candidates = sdp.filter { (l) -> Bool in
             return l.starts(with: "a=candidate:");
@@ -273,8 +296,13 @@ extension Jingle.Content {
         
         self.init(name: name, creator: creator, senders: senders,  description: description, transports: [transport]);
     }
-
+    
+    @available(*, deprecated, message: "May generate invalid content stream directions. Use toSDP(localRole:,direction:)")
     public func toSDP() -> String {
+        return toSDP(localRole: creator, direction: .outgoing);
+    }
+
+    public func toSDP(localRole: Jingle.Content.Creator, direction: SDP.Direction) -> String {
         var sdp: [String] = [];
         let transport = transports.first { (t) -> Bool in
             return (t as? Jingle.Transport.ICEUDPTransport) != nil;
@@ -318,7 +346,7 @@ extension Jingle.Content {
         }
         
         // RTP senders always both...
-        sdp.append("a=\((senders ?? .both).streamType(creator: creator).rawValue)");
+        sdp.append("a=\((senders ?? .both).streamType(localRole: localRole, direction: direction).rawValue)");
         sdp.append("a=mid:\(name)")
         sdp.append("a=ice-options:trickle");
         
@@ -392,6 +420,7 @@ extension Jingle.Content {
 
 extension Jingle.Content.Senders {
     
+    @available(*, deprecated, message: "May generate invalid value. Use streamType(localRole:,direction:)")
     public func streamType(creator: Jingle.Content.Creator) -> SDP.StreamType {
         switch self {
         case .none:
@@ -399,12 +428,36 @@ extension Jingle.Content.Senders {
         case .both:
             return .sendrecv;
         case .initiator:
+            // this is inverted as we are on the oposite side
             return creator == .initiator ? .sendonly : .recvonly;
         case .responder:
+            // this is inverted as we are on the oposite side
             return creator == .responder ? .sendonly : .recvonly;
         }
     }
-    
+ 
+    public func streamType(localRole: Jingle.Content.Creator, direction: SDP.Direction) -> SDP.StreamType {
+        switch self {
+        case .none:
+            return .inactive;
+        case .both:
+            return .sendrecv;
+        case .initiator:
+            switch direction {
+            case .outgoing:
+                return localRole == .initiator ? .sendonly : .recvonly;
+            case .incoming:
+                return localRole == .responder ? .sendonly : .recvonly;
+            }
+        case .responder:
+            switch direction {
+            case .outgoing:
+                return localRole == .responder ? .sendonly : .recvonly;
+            case .incoming:
+                return localRole == .initiator ? .sendonly : .recvonly;
+            }
+        }
+    }
 }
 
 extension Jingle.RTP.Description {

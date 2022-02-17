@@ -37,6 +37,8 @@ open class JingleSession: CustomDebugStringConvertible {
     public let role: Jingle.Content.Creator;
     public private(set) var initiationType: JingleSessionInitiationType;
     
+    private var contentCreators: [String:Jingle.Content.Creator] = [:];
+    
     open var debugDescription: String {
         return "JingleSessin(sid: \(sid), jid: \(jid), account: \(account), state: \(state)";
     }
@@ -52,6 +54,7 @@ open class JingleSession: CustomDebugStringConvertible {
     }
     
     open func initiate(contents: [Jingle.Content], bundle: [String]?) -> Future<Void,XMPPError> {
+        updateCreators(of: contents);
         return Future({ promise in
             guard let jingleModule = self.jingleModule else {
                 self.terminate(reason: .failedApplication);
@@ -91,7 +94,20 @@ open class JingleSession: CustomDebugStringConvertible {
         });
     }
     
+    public func contentCreator(of name: String) -> Jingle.Content.Creator {
+        return contentCreators[name] ?? role;
+    }
+    
+    private func updateCreators(of contents: [Jingle.Content]) {
+        for content in contents {
+            if contentCreators[content.name] == nil {
+                contentCreators[content.name] = content.creator;
+            }
+        }
+    }
+    
     open func initiated(contents: [Jingle.Content], bundle: [String]?) {
+        updateCreators(of: contents);
         if self.state == .created {
             self.state = .initiating;
         }
@@ -105,6 +121,7 @@ open class JingleSession: CustomDebugStringConvertible {
     }
 
     open func accept(contents: [Jingle.Content], bundle: [String]?) -> Future<Void,XMPPError> {
+        updateCreators(of: contents);
         return Future({ promise in
             guard let jingleModule = self.jingleModule else {
                 self.terminate(reason: .failedApplication);
@@ -132,13 +149,21 @@ open class JingleSession: CustomDebugStringConvertible {
     }
     
     open func accepted(contents: [Jingle.Content], bundle: [String]?) {
+        updateCreators(of: contents);
         self.state = .accepted;
     }
     
+    @available(*, deprecated, message: "May set invalid 'creator' attribute. Use method transportInfo(contentName:,transport:)")
     open func transportInfo(contentName: String, creator: Jingle.Content.Creator, transport: JingleTransport) -> Bool {
+        return transportInfo(contentName: contentName, transport: transport)
+    }
+    
+    open func transportInfo(contentName: String, transport: JingleTransport) -> Bool {
         guard let jingleModule = self.jingleModule else {
             return false;
         }
+        
+        let creator = contentCreator(of: contentName);
         
         jingleModule.transportInfo(with: jid, sid: sid, contents: [Jingle.Content(name: contentName, creator: creator, senders: nil, description: nil, transports: [transport])]);
         return true;
