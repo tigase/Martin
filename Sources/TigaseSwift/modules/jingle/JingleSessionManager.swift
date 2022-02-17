@@ -35,4 +35,14 @@ public protocol JingleSessionManager {
     func messageInitiation(for context: Context, from jid: JID, action: Jingle.MessageInitiationAction) throws
     
     func contentModified(for context: Context, with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) throws
+    
+    func sessionInfo(for context: Context, with jid: JID, sid: String, info: [Jingle.SessionInfo]) throws
+}
+
+extension JingleSessionManager {
+    
+    func sessionInfo(for context: Context, with jid: JID, sid: String, info: [Jingle.SessionInfo]) throws {
+        // nothing to do..
+    }
+    
 }

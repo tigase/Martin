@@ -186,6 +186,78 @@ extension Jingle {
 }
 
 extension Jingle {
+    public enum SessionInfo {
+        case active
+        case hold
+        case unhold
+        case mute(contentName: String?)
+        case unmute(contentName: String?)
+        case ringing
+        
+        public static let XMLNS = "urn:xmpp:jingle:apps:rtp:info:1";
+        
+        public static func from(element el: Element) -> SessionInfo? {
+            guard XMLNS == el.xmlns else {
+                return nil;
+            }
+            
+            switch el.name {
+            case "active":
+                return .active;
+            case "hold":
+                return .hold;
+            case "unhold":
+                return .unhold;
+            case "mute":
+                return .mute(contentName: el.getAttribute("name"));
+            case "unmute":
+                return .unmute(contentName: el.getAttribute("name"));
+            case "ringing":
+                return ringing;
+            default:
+                return nil;
+            }
+        }
+        
+        public var name: String {
+            switch self {
+            case .active:
+                return "active";
+            case .hold:
+                return "hold";
+            case .unhold:
+                return "unhold";
+            case .mute(_):
+                return "mute";
+            case .unmute(_):
+                return "unmute";
+            case .ringing:
+                return "ringing";
+            }
+        }
+        
+        public func element(creatorProvider: (String)->Jingle.Content.Creator) -> Element {
+            let el = Element(name: self.name, xmlns: SessionInfo.XMLNS);
+            switch self {
+            case .mute(let cname):
+                if let contentName = cname {
+                    el.setAttribute("creator", value: creatorProvider(contentName).rawValue);
+                    el.setAttribute("name", value: contentName);
+                }
+            case .unmute(let cname):
+                if let contentName = cname {
+                    el.setAttribute("creator", value: creatorProvider(contentName).rawValue);
+                    el.setAttribute("name", value: contentName);
+                }
+            default:
+                break
+            }
+            return el;
+        }
+    }
+}
+
+extension Jingle {
     public class Transport {
         
         public class ICEUDPTransport: JingleTransport {

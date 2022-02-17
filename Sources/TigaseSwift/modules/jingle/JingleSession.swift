@@ -153,6 +153,10 @@ open class JingleSession: CustomDebugStringConvertible {
         self.state = .accepted;
     }
     
+    open func sessionInfo(_ actions: [Jingle.SessionInfo]) {
+        jingleModule?.sessionInfo(with: jid, sid: sid, actions: actions, creatorProvider: { self.contentCreator(of: $0) });
+    }
+    
     @available(*, deprecated, message: "May set invalid 'creator' attribute. Use method transportInfo(contentName:,transport:)")
     open func transportInfo(contentName: String, creator: Jingle.Content.Creator, transport: JingleTransport) -> Bool {
         return transportInfo(contentName: contentName, transport: transport)
@@ -180,6 +184,10 @@ open class JingleSession: CustomDebugStringConvertible {
     }
     
     open func contentModified(action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) {
+        
+    }
+    
+    open func sessionInfoReceived(info: [Jingle.SessionInfo]) {
         
     }
     

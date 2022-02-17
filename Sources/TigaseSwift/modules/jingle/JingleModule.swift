@@ -151,6 +151,9 @@ open class JingleModule: XmppModuleBase, XmppModule {
                 throw XMPPError.bad_request("Invalid action");
             }
             try self.sessionManager.contentModified(for: context, with: from, sid: sid, action: contentAction, contents: contents, bundle: bundle);
+        case .sessionInfo:
+            let infos = jingle.getChildren(name: nil, xmlns: Jingle.SessionInfo.XMLNS).compactMap(Jingle.SessionInfo.from(element:));
+            try self.sessionManager.sessionInfo(for: context, with: from, sid: sid, info: infos);
         default:
             throw XMPPError.feature_not_implemented;
         }
@@ -286,6 +289,28 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
+        });
+    }
+    
+    public func sessionInfo(with jid: JID, sid: String, actions: [Jingle.SessionInfo], creatorProvider: (String)->Jingle.Content.Creator) {
+        guard !actions.isEmpty else {
+            return;
+        }
+        
+        let iq = Iq();
+        iq.to = jid;
+        iq.type = StanzaType.set;
+        
+        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
+        jingle.setAttribute("action", value: "session-info");
+        jingle.setAttribute("sid", value: sid);
+
+        actions.map({ it in it.element(creatorProvider: creatorProvider)}).forEach(jingle.addChild(_:));
+        
+        iq.addChild(jingle);
+        
+        write(iq, completionHandler: { result in
+            print("session info sent and answer received", result);
         });
     }
     
