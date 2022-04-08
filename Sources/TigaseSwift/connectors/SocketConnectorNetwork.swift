@@ -111,13 +111,6 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             } else {
                 self.logger.debug("\(self.userJid) - connecting to server: \(self.server)");
                 self.options.dnsResolver.resolve(domain: server, for: self.userJid) { result in
-                    if timeout != nil {
-                        // if timeout was set, do not try to connect after timeout was fired!
-                        // another event will take care of that
-                        guard Date().timeIntervalSince(start) < timeout! else {
-                            return;
-                        }
-                    }
                     switch result {
                     case .success(let dnsResult):
                         if let record = dnsResult.record() {
