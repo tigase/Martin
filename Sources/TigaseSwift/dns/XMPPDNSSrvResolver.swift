@@ -235,7 +235,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                     self.fail(withError: .timeout);
                 })
                 let deadline = DispatchTime(uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds + UInt64(timeout * Double(NSEC_PER_SEC)));
-                self.timeoutTimer?.schedule(deadline: deadline, repeating: .infinity, leeway: DispatchTimeInterval.never);
+                self.timeoutTimer?.schedule(deadline: deadline, repeating: .never, leeway: .never);
                 self.timeoutTimer?.resume();
             default:
                 // an error happened

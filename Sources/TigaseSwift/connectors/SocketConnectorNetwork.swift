@@ -162,7 +162,8 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         if endpoint.proto == .XMPPS {
             self.initTLSStack();
         }
-        
+                        
+        let conn = connection;
         connection?.stateUpdateHandler = { [weak self] state in
             guard let that = self else {
                 return;
@@ -179,7 +180,9 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             case .preparing:
                 that.state = .connecting;
             case .cancelled, .setup:
-                that.state = .disconnected();
+                if let currConn = that.connection, conn === currConn {
+                    that.state = .disconnected();
+                }
             case .failed(_):
                 that.connection?.cancel();
                 that.state = .disconnected(.timeout);
