@@ -48,8 +48,8 @@ Creation of project using TigaseSwift library
 
 7. Your project contains embedded ``TigaseSwift`` framework
 
-.. |AddFilesTo| image:: ..asciidoc/images/AddFilesTo.png
-.. |SelectTigaseSwiftLibrary| image:: ..asciidoc/images/SelectTigaseSwiftLibrary.png
-.. |SelectNewProject| image:: ..asciidoc/images/SelectNewProject.png
-.. |AddTigaseSwiftAsEmbeddedFramework| image:: ..asciidoc/images/AddTigaseSwiftAsEmbeddedFramework.png
+.. |AddFilesTo| image:: ../asciidoc/images/AddFilesTo.png
+.. |SelectTigaseSwiftLibrary| image:: ../asciidoc/images/SelectTigaseSwiftLibrary.png
+.. |SelectNewProject| image:: ../asciidoc/images/SelectNewProject.png
+.. |AddTigaseSwiftAsEmbeddedFramework| image:: ../asciidoc/images/AddTigaseSwiftAsEmbeddedFramework.png
 

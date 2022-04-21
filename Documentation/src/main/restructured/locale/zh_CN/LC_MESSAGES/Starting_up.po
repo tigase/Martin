@@ -1,0 +1,133 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2004-2022, Tigase, Inc
+# This file is distributed under the same license as the TigaseDoc package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: TigaseDoc \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-04-21 14:03-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.1\n"
+
+#: ../../Starting_up.rst:2
+msgid "Starting up"
+msgstr ""
+
+#: ../../Starting_up.rst:5
+msgid "Preparation of environment for development"
+msgstr ""
+
+#: ../../Starting_up.rst:7
+msgid "Download and install newest version of XCode"
+msgstr ""
+
+#: ../../Starting_up.rst:9
+msgid "Download source code of library"
+msgstr ""
+
+#: ../../Starting_up.rst:11
+msgid "It is best to download library source code from our Git repository"
+msgstr ""
+
+#: ../../Starting_up.rst:13
+msgid "Create workspace in XCode"
+msgstr ""
+
+#: ../../Starting_up.rst:15
+msgid ""
+"Add library project to newly created workspace using ``Add Files to "
+"\"workspace_name\"…​`` from ``File`` menu of XCode when workspace is "
+"opened in XCode."
+msgstr ""
+
+#: ../../Starting_up.rst:17 ../../Starting_up.rst:33
+msgid "|AddFilesTo|"
+msgstr ""
+
+#: ../../Starting_up.rst:51
+msgid "AddFilesTo"
+msgstr ""
+
+#: ../../Starting_up.rst:19
+msgid ""
+"Select ``TigaseSwift.xcodeproj`` which wil be inside root directory of "
+"source code of library and click ``Add``"
+msgstr ""
+
+#: ../../Starting_up.rst:21
+msgid "|SelectTigaseSwiftLibrary|"
+msgstr ""
+
+#: ../../Starting_up.rst:52
+msgid "SelectTigaseSwiftLibrary"
+msgstr ""
+
+#: ../../Starting_up.rst:23
+msgid "Workspace for development using TigaseSwift library is ready"
+msgstr ""
+
+#: ../../Starting_up.rst:27
+msgid "Creation of project using TigaseSwift library"
+msgstr ""
+
+#: ../../Starting_up.rst:29
+msgid "Create project in XCode"
+msgstr ""
+
+#: ../../Starting_up.rst:31
+msgid ""
+"Add project to TigaseSwift library workspace created during preparation "
+"of environment for development using @Add Files to \"workspace_name\"…​@ "
+"from @File@ menu of XCode when workspace is opened in XCode."
+msgstr ""
+
+#: ../../Starting_up.rst:35
+msgid "Select XCode project file of your newly created project and click ``Add``"
+msgstr ""
+
+#: ../../Starting_up.rst:37
+msgid "This file name will end with ``.xcodeproj``"
+msgstr ""
+
+#: ../../Starting_up.rst:39
+msgid "|SelectNewProject|"
+msgstr ""
+
+#: ../../Starting_up.rst:53
+msgid "SelectNewProject"
+msgstr ""
+
+#: ../../Starting_up.rst:41
+msgid "In XCode open ``Build Settings`` tab of imported project"
+msgstr ""
+
+#: ../../Starting_up.rst:43
+msgid "In section ``Embedded Binaries`` click on ``+`` sign"
+msgstr ""
+
+#: ../../Starting_up.rst:45
+msgid "Select ``TigaseSwift.framework`` and add it to project"
+msgstr ""
+
+#: ../../Starting_up.rst:47
+msgid ""
+"It will be located in ``Products`` folder of ``TigaseSwift`` project "
+"|AddTigaseSwiftAsEmbeddedFramework|"
+msgstr ""
+
+#: ../../Starting_up.rst:54
+msgid "AddTigaseSwiftAsEmbeddedFramework"
+msgstr ""
+
+#: ../../Starting_up.rst:49
+msgid "Your project contains embedded ``TigaseSwift`` framework"
+msgstr ""
+
