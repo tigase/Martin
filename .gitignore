@@ -24,3 +24,5 @@ xcuserdata/
 .idea/workspace.xml
 docs
 Documentation/target
+Documentation/src/main/restructured/_build/
+Documentation/src/main/restructured/locale/pl/LC_MESSAGES/.mo
