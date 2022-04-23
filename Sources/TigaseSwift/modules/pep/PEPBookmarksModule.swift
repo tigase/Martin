@@ -56,6 +56,25 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
         
     }
     
+    open func addOrUpdate(bookmark item: Bookmarks.Item) {
+        if let updated = currentBookmarks.updateOrAdd(bookmark: item) {
+            self.publish(bookmarks: updated);
+        }
+    }
+    
+    open func remove(bookmark item: Bookmarks.Item) {
+        if let updated = currentBookmarks.remove(bookmark: item) {
+            self.publish(bookmarks: updated);
+        }
+    }
+    
+    open func setConferenceAutojoin(_ value: Bool, for jid: JID) {
+        guard let conference = self.currentBookmarks.conference(for: jid), conference.autojoin != value else {
+            return;
+        }
+        addOrUpdate(bookmark: conference.with(autojoin: value));
+    }
+    
     public func process(stanza: Stanza) throws {
         throw XMPPError.feature_not_implemented;
     }

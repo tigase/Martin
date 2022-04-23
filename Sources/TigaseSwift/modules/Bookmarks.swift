@@ -84,6 +84,10 @@ open class Bookmarks {
         }
     }
     
+    open func conference(for jid: JID) -> Conference? {
+        return items.compactMap({ $0 as? Conference }).first(where: { $0.jid == jid});
+    }
+    
     open func toElement() -> Element {
         let el = Element(name: "storage", xmlns: "storage:bookmarks");
         el.addChildren(items.map({ item in item.toElement()}));
@@ -91,8 +95,8 @@ open class Bookmarks {
     }
     
     open class Item {
-        let name: String?;
-        let type: ItemType;
+        public let name: String?;
+        public let type: ItemType;
         
         public init(type: ItemType, name: String?) {
             self.type = type;
@@ -145,6 +149,9 @@ open class Bookmarks {
             return el;
         }
         
+        func with(autojoin: Bool) -> Bookmarks.Conference {
+            return Bookmarks.Conference(name: name, jid: jid, autojoin: autojoin, nick: nick, password: password);
+        }
     }
     
     public class Url: Item {
