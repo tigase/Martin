@@ -178,8 +178,16 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 }
             case .failed(_):
                 that.connection?.cancel();
+                that.logger.debug("\(that.userJid) - establishing connection to:\(that.server, privacy: .auto(mask: .hash)) timed out!");
+                if let lastConnectionDetails = that.currentEndpoint as? SocketConnectorNetwork.Endpoint {
+                    that.options.dnsResolver.markAsInvalid(for: that.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
+                }
                 that.state = .disconnected(.timeout);
             case .waiting(_):
+                that.logger.debug("\(that.userJid) - no route to connect to:\(that.server, privacy: .auto(mask: .hash))!");
+                if let lastConnectionDetails = that.currentEndpoint as? SocketConnectorNetwork.Endpoint {
+                    that.options.dnsResolver.markAsInvalid(for: that.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
+                }
                 that.state = .disconnected(.noRouteToServer);
             default:
                 break;
