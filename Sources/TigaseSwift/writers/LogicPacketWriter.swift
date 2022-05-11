@@ -44,7 +44,6 @@ open class LogicPacketWriter: PacketWriter {
                     break;
                 case .failure(_):
                     cancellable.cancel();
-                    completionHandler(.failure(errorDecoder(nil) as! Failure));
                 }
             });
         } else {

@@ -165,9 +165,9 @@ open class ResponseManager {
         }
     }
     
-    private func cancel(entry: Entry) {
-        queue.async {
-            self.handlers.removeValue(forKey: entry.key);
+    private func cancel(entry: Entry) -> Bool {
+        return queue.sync {
+            self.handlers.removeValue(forKey: entry.key) != nil;
         }
     }
     
@@ -182,7 +182,9 @@ open class ResponseManager {
         }
         
         public func cancel() {
-            responseManager.cancel(entry: entry);
+            if responseManager.cancel(entry: entry) {
+                entry.callback(nil);
+            }
         }
     }
 }
