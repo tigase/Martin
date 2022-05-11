@@ -151,8 +151,8 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
             presence.nickname = nick;
         }
         
-        if additionalElements != nil {
-            presence.addChildren(additionalElements!);
+        if let addons = additionalElements {
+            presence.addChildren(addons);
         }
         if let context = context {
             fire(BeforePresenceSendEvent(context: context, presence: presence));

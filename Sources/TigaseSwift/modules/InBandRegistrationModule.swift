@@ -352,10 +352,10 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         }
         
         private func serverSSLCertValidationFailed(_ trust: SecTrust) {
-            if self.onCertificateValidationError != nil {
+            if let onError = self.onCertificateValidationError {
                 let certData = SslCertificateInfo(trust: trust);
                 self.serverAvailable = true;
-                self.onCertificateValidationError!(certData, {() -> Void in
+                onError(certData, {() -> Void in
                     self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
                         options.sslCertificateValidation = .fingerprint(certData.details.fingerprintSha1);
                     })
