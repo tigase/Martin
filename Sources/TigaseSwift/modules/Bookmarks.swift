@@ -149,7 +149,11 @@ open class Bookmarks {
             return el;
         }
         
-        func with(autojoin: Bool) -> Bookmarks.Conference {
+        open func with(autojoin: Bool) -> Bookmarks.Conference {
+            return Bookmarks.Conference(name: name, jid: jid, autojoin: autojoin, nick: nick, password: password);
+        }
+        
+        open func with(password: String?) -> Bookmarks.Conference {
             return Bookmarks.Conference(name: name, jid: jid, autojoin: autojoin, nick: nick, password: password);
         }
     }
