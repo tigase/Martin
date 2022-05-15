@@ -94,6 +94,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     
     open private(set) var isAvailable: Bool = false;
     
+    open var ackDelay: TimeInterval = 0.1;
+    private var scheduledAck: Bool = false;
+    
     open override var context: Context? {
         didSet {
             store(context?.module(.streamFeatures).$streamFeatures.map({ $0.contains(.sm) }).assign(to: \.isAvailable, on: self));
@@ -129,6 +132,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     }
     
     open func reset(scopes: Set<ResetableScope>) {
+        queue.async {
+            self.scheduledAck = false;
+        }
         if scopes.contains(.stream) {
             _ackEnabled = false;
         }
@@ -168,8 +174,16 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
             queue.sync {
                 ackH.incrementIncoming();
-                if lastSentH + 5 <= ackH.incomingCounter {
-                    _sendAck(force: true);
+                guard !self.scheduledAck else {
+                    return;
+                }
+                self.scheduledAck = true;
+                queue.asyncAfter(deadline: .now() + ackDelay) {
+                    guard self.scheduledAck else {
+                        return;
+                    }
+                    self.scheduledAck = false;
+                    self._sendAck(force: true);
                 }
             }
             return false;

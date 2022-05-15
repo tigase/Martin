@@ -139,6 +139,8 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         self.currentEndpoint = endpoint;
         
         let tcpOptions = NWProtocolTCP.Options();
+        tcpOptions.noDelay = options.tcpNoDelay;
+        tcpOptions.disableAckStretching = options.tcpDisableAckStretching;
         if options.enableTcpFastOpen {
             tcpOptions.enableFastOpen = true;
         }
@@ -210,7 +212,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     }
     
     private func scheduleRead() {
-        self.connection?.receive(minimumIncompleteLength: 1, maximumLength: 4096, completion: { data, context, complete, error in
+        self.connection?.receive(minimumIncompleteLength: 1, maximumLength: 4096 * 2, completion: { data, context, complete, error in
             if let data = data {
                 self.networkStack.read(data: data);
                 self.scheduleRead();
@@ -402,6 +404,8 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         public var connectionTimeout: Double?;
         public var dnsResolver: DNSSrvResolver = XMPPDNSSrvResolver(directTlsEnabled: true);
         public var enableTcpFastOpen: Bool = true;
+        public var tcpNoDelay: Bool = true;
+        public var tcpDisableAckStretching: Bool = true;
 
         public var networkProcessorProviders: [NetworkProcessorProvider] = []
         
