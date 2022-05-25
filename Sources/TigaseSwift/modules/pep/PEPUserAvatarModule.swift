@@ -129,7 +129,21 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
                             case .success(_):
                                 publish();
                             case .failure(let error):
-                                completionHandler(.failure(error));
+                                switch error.error.errorCondition {
+                                case .not_acceptable:
+                                    // let's try workaround for Openfire
+                                    form.removeField(named: "pubsub#collection")
+                                    pubsubModule.configureNode(at: at, node: PEPUserAvatarModule.DATA_XMLNS, with: form, completionHandler: { result in
+                                        switch result {
+                                        case .success(_):
+                                            publish();
+                                        case .failure(_):
+                                            completionHandler(.failure(error));
+                                        }
+                                    });
+                                default:
+                                    completionHandler(.failure(error));
+                                }
                             }
                         })
                     } else {
