@@ -38,7 +38,11 @@ extension PubSubModule {
         self.publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ response in
                 guard let publishEl = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "publish"), let id = publishEl.findChild(name: "item")?.getAttribute("id") else {
-                    return .failure(.undefined_condition);
+                    if let id = itemId {
+                        return .success(id);
+                    } else {
+                        return .failure(.undefined_condition);
+                    }
                 }
                 return .success(id);
             }))
