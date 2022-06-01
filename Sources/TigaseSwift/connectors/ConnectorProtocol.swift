@@ -37,7 +37,7 @@ public struct ConnectorProtocol: RawRepresentable, Hashable {
 
 extension ConnectorProtocol {
     
-    static let XMPP = ConnectorProtocol("xmpp-client");
-    static let XMPPS = ConnectorProtocol("xmpps-client");
+    public static let XMPP = ConnectorProtocol("xmpp-client");
+    public static let XMPPS = ConnectorProtocol("xmpps-client");
 
 }

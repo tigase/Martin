@@ -21,7 +21,7 @@
 
 import Foundation
 
-public protocol SSLNetworkProcessor: class {
+public protocol SSLNetworkProcessor: AnyObject {
     
     var serverName: String? { get set }
     var certificateValidation: SSLCertificateValidation { get set }
