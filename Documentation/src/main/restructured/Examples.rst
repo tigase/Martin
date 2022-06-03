@@ -8,7 +8,7 @@ Below is example code of client which send XMPP message to ``recipient@domain.co
 
 .. code:: swift
 
-   .. literalinclude:: ../files/examples/MessageSendingClient.swift
+   .. literalinclude:: files/examples/MessageSendingClient.swift
 
 Simple client setting presence and handling incoming presences
 --------------------------------------------------------------------
@@ -19,7 +19,7 @@ This example will also print any presence we will receive from our contacts. How
 
 .. code:: swift
 
-   .. literalinclude:: ../files/examples/PresenceHandlingClient.swift
+   .. literalinclude:: files/examples/PresenceHandlingClient.swift
 
 
 Simple client setting presence, handling incoming presences and responding on incoming messages
@@ -29,7 +29,7 @@ This example presents way to listen for incoming messages and responding on this
 
 .. code:: swift
 
-   .. literalinclude:: ../files/examples/MessageRespondingClient.swift
+   .. literalinclude:: files/examples/MessageRespondingClient.swift
 
 
 Simple client with support for MUC
@@ -39,7 +39,7 @@ In this example you can find how to join to room, send message to room and handl
 
 .. code:: swift
 
-   .. literalinclude:: ../files/examples/MucClient.swift
+   .. literalinclude:: files/examples/MucClient.swift
 
 Simple client with support for PubSub
 ------------------------------------------
@@ -48,4 +48,4 @@ In this example you can find how to create PubSub node, publish item, receive no
 
 .. code:: swift
 
-   .. literalinclude:: ../files/examples/PubSubClient.swift
+   .. literalinclude:: files/examples/PubSubClient.swift

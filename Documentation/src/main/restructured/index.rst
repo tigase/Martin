@@ -4,8 +4,8 @@ TigaseSwift Development Guide - Version 1.0.0
 ===============================================
 
 .. toctree::
-   :titlesonly:
-   :numbered:
+   :maxdepth: 3
+   :numbered: 3
 
    Starting_up
    Basics
