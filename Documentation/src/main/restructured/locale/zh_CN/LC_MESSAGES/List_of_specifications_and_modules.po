@@ -8,51 +8,225 @@ msgid ""
 msgstr ""
 "Project-Id-Version: TigaseDoc \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-04-21 14:03-0700\n"
+"POT-Creation-Date: 2022-06-05 01:26-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.9.1\n"
+"Generated-By: Babel 2.8.0\n"
 
 #: ../../List_of_specifications_and_modules.rst:2
 msgid "List of specifications and modules implementing it"
 msgstr ""
 
-#: ../../List_of_specifications_and_modules.rst:4
-msgid ""
-"\\| `RFC 6120 XMPP: Core <http://xmpp.org/rfcs/rfc6120.html>`__ \\| \\* "
-"AuthModule \\* SaslModule \\* StreamFeaturesModule \\* "
-"ResourceBinderModule \\* SessionEstablishmentModule \\| `RFC 6121 XMPP: "
-"IM <http://xmpp.org/rfcs/rfc6121.html>`__ \\| \\* MessageModule \\* "
-"PresenceModule \\* RosterModule \\| `XEP-0030: Service Discovery "
-"<http://xmpp.org/extensions/xep-0030.html>`__ \\| \\* DiscoveryModule \\|"
-" `XEP-0045: Multi-User Chat <http://xmpp.org/extensions/xep-0045.html>`__"
-" \\| \\* MucModule \\| `XEP-0054: vcard-temp "
-"<http://xmpp.org/extensions/xep-0054.html>`__ \\| \\* VCardModule \\| "
-"`XEP-0060: Publish-Subscribe "
-"<http://xmpp.org/extensions/xep-0060.html>`__ \\| \\* PubSubModule \\| "
-"`XEP-0077: In-Band Registration "
-"<http://xmpp.org/extensions/xep-0077.html>`__ \\| \\* "
-"InBandRegistrationModule \\| `XEP-0092: SoftwareVersion "
-"<http://xmpp.org/extensions/xep-0092.html>`__ \\| \\* "
-"SoftwareVersionModule \\| `XEP-0115: Entity Capabilities "
-"<http://xmpp.org/extensions/xep-0115.html>`__ \\| \\* CapabilitiesModule "
-"\\| `XEP-0153: vCard-Based Avatars "
-"<http://xmpp.org/extensions/xep-0153.html>`__ \\| \\* VCardModule \\| "
-"`XEP-0163: Personal Eventing Protocol "
-"<http://xmpp.org/extensions/xep-0163.html>`__ \\| \\* PubSubModule \\| "
-"`XEP-0175: SASL Anonymous <http://xmpp.org/extensions/xep-0175.html>`__ "
-"\\| \\* AnonymousMechanism \\| `XEP-0199: XMPP Ping "
-"<http://xmpp.org/extensions/xep-0199.html>`__ \\| \\* PingModule \\| "
-"`XEP-0203: Delayed Delivery <http://xmpp.org/extensions/xep-0203.html>`__"
-" \\| \\* Delay \\| `XEP-0280: Message Carbons "
-"<http://xmpp.org/extensions/xep-0280.html>`__ \\| \\* "
-"MessageCarbonsModule \\| `XEP-0352: Client State Indication "
-"<http://xmpp.org/extensions/xep-0352.html>`__ \\| \\* "
-"ClientStateIndicationModule \\| Mobile Optimizations \\| \\* "
-"MobileModeModule"
+#: ../../List_of_specifications_and_modules.rst:6
+msgid "`RFC 6120 XMPP: Core <http://xmpp.org/rfcs/rfc6120.html>`_"
 msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:6
+msgid "AuthModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:7
+msgid "SaslModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:8
+msgid "StreamFeaturesModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:9
+msgid "ResourceBinderModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:10
+msgid "SessionEstablishmentModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:12
+msgid "`RFC 6121 XMPP: IM <http://xmpp.org/rfcs/rfc6121.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:12
+msgid "MessageModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:13
+msgid "PresenceModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:14
+msgid "RosterModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:16
+msgid "`XEP-0030: Service Discovery <http://xmpp.org/extensions/xep-0030.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:16
+msgid "DiscoveryModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:18
+msgid "`XEP-0045: Multi-User Chat <https://xmpp.org/extensions/xep-0045.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:18
+msgid "MucModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:20
+msgid "`XEP-0054: vcard-temp <https://xmpp.org/extensions/xep-0054.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:20
+#: ../../List_of_specifications_and_modules.rst:30
+msgid "VCardModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:22
+msgid "`XEP-0060: Publish-Subscribe <https://xmpp.org/extensions/xep-0060.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:22
+#: ../../List_of_specifications_and_modules.rst:32
+msgid "PubSubModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:24
+msgid ""
+"`XEP-0077: In-Band Registration "
+"<https://xmpp.org/extensions/xep-0077.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:24
+msgid "InBandRegistrationModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:26
+msgid "`XEP-0092: SoftwareVersion <https://xmpp.org/extensions/xep-0092.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:26
+msgid "SoftwareVersionModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:28
+msgid ""
+"`XEP-0115: Entity Capabilities "
+"<https://xmpp.org/extensions/xep-0115.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:28
+msgid "CapabilitiesModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:30
+msgid ""
+"`XEP-0153: vCard-Based Avatars "
+"<https://xmpp.org/extensions/xep-0153.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:32
+msgid ""
+"`XEP-0163: Personal Eventing Protocol "
+"<https://xmpp.org/extensions/xep-0163.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:34
+msgid "`XEP-0175: SASL Anonymous <https://xmpp.org/extensions/xep-0175.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:34
+msgid "AnonymousMechanism"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:36
+msgid "`XEP-0199: XMPP Ping <https://xmpp.org/extensions/xep-0199.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:36
+msgid "PingModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:38
+msgid "`XEP-0203: Delayed Delivery <https://xmpp.org/extensions/xep-0203.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:38
+msgid "Delay"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:40
+msgid "`XEP-0280: Message Carbons <https://xmpp.org/extensions/xep-0280.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:40
+msgid "MessageCarbonsModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:42
+msgid ""
+"`XEP-0352: Client State Indication "
+"<https://xmpp.org/extensions/xep-0352.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:42
+msgid "ClientStateIndicationModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:44
+msgid "Mobile Optimizations"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:44
+msgid "MobileModeModule"
+msgstr ""
+
+#~ msgid ""
+#~ "\\| `RFC 6120 XMPP: Core "
+#~ "<http://xmpp.org/rfcs/rfc6120.html>`__ \\| \\* "
+#~ "AuthModule \\* SaslModule \\* "
+#~ "StreamFeaturesModule \\* ResourceBinderModule \\*"
+#~ " SessionEstablishmentModule \\| `RFC 6121 "
+#~ "XMPP: IM <http://xmpp.org/rfcs/rfc6121.html>`__ \\|"
+#~ " \\* MessageModule \\* PresenceModule \\*"
+#~ " RosterModule \\| `XEP-0030: Service "
+#~ "Discovery <http://xmpp.org/extensions/xep-0030.html>`__ "
+#~ "\\| \\* DiscoveryModule \\| `XEP-0045: "
+#~ "Multi-User Chat "
+#~ "<http://xmpp.org/extensions/xep-0045.html>`__ \\| \\* "
+#~ "MucModule \\| `XEP-0054: vcard-temp "
+#~ "<http://xmpp.org/extensions/xep-0054.html>`__ \\| \\* "
+#~ "VCardModule \\| `XEP-0060: Publish-Subscribe"
+#~ " <http://xmpp.org/extensions/xep-0060.html>`__ \\| \\*"
+#~ " PubSubModule \\| `XEP-0077: In-Band "
+#~ "Registration <http://xmpp.org/extensions/xep-0077.html>`__ "
+#~ "\\| \\* InBandRegistrationModule \\| "
+#~ "`XEP-0092: SoftwareVersion "
+#~ "<http://xmpp.org/extensions/xep-0092.html>`__ \\| \\* "
+#~ "SoftwareVersionModule \\| `XEP-0115: Entity "
+#~ "Capabilities <http://xmpp.org/extensions/xep-0115.html>`__ "
+#~ "\\| \\* CapabilitiesModule \\| `XEP-0153: "
+#~ "vCard-Based Avatars "
+#~ "<http://xmpp.org/extensions/xep-0153.html>`__ \\| \\* "
+#~ "VCardModule \\| `XEP-0163: Personal Eventing"
+#~ " Protocol <http://xmpp.org/extensions/xep-0163.html>`__ "
+#~ "\\| \\* PubSubModule \\| `XEP-0175: SASL"
+#~ " Anonymous <http://xmpp.org/extensions/xep-0175.html>`__ "
+#~ "\\| \\* AnonymousMechanism \\| `XEP-0199: "
+#~ "XMPP Ping <http://xmpp.org/extensions/xep-0199.html>`__"
+#~ " \\| \\* PingModule \\| `XEP-0203: "
+#~ "Delayed Delivery "
+#~ "<http://xmpp.org/extensions/xep-0203.html>`__ \\| \\* "
+#~ "Delay \\| `XEP-0280: Message Carbons "
+#~ "<http://xmpp.org/extensions/xep-0280.html>`__ \\| \\* "
+#~ "MessageCarbonsModule \\| `XEP-0352: Client "
+#~ "State Indication "
+#~ "<http://xmpp.org/extensions/xep-0352.html>`__ \\| \\* "
+#~ "ClientStateIndicationModule \\| Mobile Optimizations"
+#~ " \\| \\* MobileModeModule"
+#~ msgstr ""
 
