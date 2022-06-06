@@ -1,0 +1,277 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2004-2022, Tigase, Inc
+# This file is distributed under the same license as the TigaseDoc package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: TigaseDoc \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-06-05 01:40-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.8.0\n"
+
+#: ../../Supported_features.rst:2
+msgid "Supported features"
+msgstr ""
+
+#: ../../Supported_features.rst:5
+msgid "Specification"
+msgstr ""
+
+#: ../../Supported_features.rst:5
+msgid "Name"
+msgstr ""
+
+#: ../../Supported_features.rst:5
+msgid "Description"
+msgstr ""
+
+#: ../../Supported_features.rst:7
+msgid "`RFC 6120 <http://xmpp.org/rfcs/rfc6120.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:7
+msgid "Extensible Messaging and Presence Protocol (XMPP): Core"
+msgstr ""
+
+#: ../../Supported_features.rst:7
+msgid ""
+"XMPP specification including SSL/TLS encryption, SASL authentication, "
+"resource binding, etc.."
+msgstr ""
+
+#: ../../Supported_features.rst:9
+msgid "`RFC 6121 <http://xmpp.org/rfcs/rfc6121.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:9
+msgid ""
+"Extensible Messaging and Presence Protocol (XMPP): Instant Messaging and "
+"Presence"
+msgstr ""
+
+#: ../../Supported_features.rst:9
+msgid "Roster management, presence subscription, sending and receiving messages"
+msgstr ""
+
+#: ../../Supported_features.rst:11
+msgid "`EP-0030 <http://xmpp.org/extensions/xep-0030.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:11
+msgid "Service Discovery"
+msgstr ""
+
+#: ../../Supported_features.rst:11
+msgid "Support for XMPP service discovery"
+msgstr ""
+
+#: ../../Supported_features.rst:13
+msgid "`XEP-0045 <http://xmpp.org/extensions/xep-0045.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:13
+msgid "Multi-User Chat"
+msgstr ""
+
+#: ../../Supported_features.rst:13
+msgid "Support for MUC protocol extension"
+msgstr ""
+
+#: ../../Supported_features.rst:15
+msgid "`XEP-0054 <http://xmpp.org/extensions/xep-0054.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:15
+msgid "vcard-temp"
+msgstr ""
+
+#: ../../Supported_features.rst:15
+msgid "User vCard implementation"
+msgstr ""
+
+#: ../../Supported_features.rst:17
+msgid "`XEP-0060 <http://xmpp.org/extensions/xep-0060.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:17
+msgid "Publish-Subscribe"
+msgstr ""
+
+#: ../../Supported_features.rst:17
+msgid "Support for PubSub protocol extension"
+msgstr ""
+
+#: ../../Supported_features.rst:19
+msgid "`XEP-0077 <http://xmpp.org/extensions/xep-0077.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:19
+msgid "In-Band Registration"
+msgstr ""
+
+#: ../../Supported_features.rst:19
+msgid "Support for in-band account registration"
+msgstr ""
+
+#: ../../Supported_features.rst:21
+msgid "`XEP-0082 <http://xmpp.org/extensions/xep-0082.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:21
+msgid "XMPP Date and Time Profiles"
+msgstr ""
+
+#: ../../Supported_features.rst:21
+msgid "Support for standarized ISO 8601 profiles and lexical representation"
+msgstr ""
+
+#: ../../Supported_features.rst:23
+msgid "`XEP-0092 <http://xmpp.org/extensions/xep-0092.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:23
+msgid "Software Version"
+msgstr ""
+
+#: ../../Supported_features.rst:23
+msgid "Support for discovery and advertisement of used software and it’s version"
+msgstr ""
+
+#: ../../Supported_features.rst:25
+msgid "`XEP-0115 <http://xmpp.org/extensions/xep-0115.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:25
+msgid "Entity Capabilities"
+msgstr ""
+
+#: ../../Supported_features.rst:25 ../../Supported_features.rst:27
+msgid ""
+"Support for discovery of features supported and advertised by clients and"
+" servers"
+msgstr ""
+
+#: ../../Supported_features.rst:27
+msgid "`XEP-0138 <http://xmpp.org/extensions/xep-0138.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:27
+msgid "Compression of data exchanged between client and server"
+msgstr ""
+
+#: ../../Supported_features.rst:29
+msgid "`XEP-0153 <http://xmpp.org/extensions/xep-0153.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:29
+msgid "vCard-Based Avatars"
+msgstr ""
+
+#: ../../Supported_features.rst:29
+msgid "Storage of user avatar inside vCard"
+msgstr ""
+
+#: ../../Supported_features.rst:31
+msgid "`XEP-0163 <http://xmpp.org/extensions/xep-0163.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:31
+msgid "Personal Eventing Protocol"
+msgstr ""
+
+#: ../../Supported_features.rst:31
+msgid "Support for PEP protocol extension"
+msgstr ""
+
+#: ../../Supported_features.rst:33
+msgid "`XEP-0172 <http://xmpp.org/extensions/xep-0172.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:33
+msgid "User Nickname"
+msgstr ""
+
+#: ../../Supported_features.rst:33
+msgid "Support for communication of user nickname"
+msgstr ""
+
+#: ../../Supported_features.rst:35
+msgid "`XEP-0175 <https://xmpp.org/extensions/xep-0175.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:35
+msgid "Best Practices for Use of SASL ANONYMOUS"
+msgstr ""
+
+#: ../../Supported_features.rst:35
+msgid "Anonymous authentication"
+msgstr ""
+
+#: ../../Supported_features.rst:37
+msgid "`XEP-0198 <http://xmpp.org/extensions/xep-0198.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:37
+msgid "Stream Management"
+msgstr ""
+
+#: ../../Supported_features.rst:39
+msgid "`XEP-0199 <http://xmpp.org/extensions/xep-0199.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:39
+msgid "XMPP Ping"
+msgstr ""
+
+#: ../../Supported_features.rst:41
+msgid "`XEP-0203 <http://xmpp.org/extensions/xep-0203.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:41
+msgid "Delayed Delivery"
+msgstr ""
+
+#: ../../Supported_features.rst:41
+msgid "Information about delayed delivery of stanza"
+msgstr ""
+
+#: ../../Supported_features.rst:43
+msgid "`XEP-0280 <http://xmpp.org/extensions/xep-0280.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:43
+msgid "Message Carbons"
+msgstr ""
+
+#: ../../Supported_features.rst:43
+msgid "Support for delivery of messages sent to other resources"
+msgstr ""
+
+#: ../../Supported_features.rst:45
+msgid "`XEP-0352 <http://xmpp.org/extensions/xep-0352.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:45
+msgid "Client State Indication"
+msgstr ""
+
+#: ../../Supported_features.rst:45
+msgid "Notifying server about current state of XMPP client"
+msgstr ""
+
+#: ../../Supported_features.rst:47
+msgid "Mobile Optimizations"
+msgstr ""
+
+#: ../../Supported_features.rst:47
+msgid "Optimizations designed for mobile devices"
+msgstr ""
+
