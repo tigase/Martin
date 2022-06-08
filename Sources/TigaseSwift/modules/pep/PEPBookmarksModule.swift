@@ -91,12 +91,10 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
             case .failure(let error):
                 switch error {
                 case .item_not_found:
-                    let config = JabberDataElement(type: .submit);
-                    let formType = HiddenField(name: "FORM_TYPE");
-                    formType.value = "http://jabber.org/protocol/pubsub#node_config";
-                    config.addField(formType);
-                    config.addField(BooleanField(name: "pubsub#persist_items", label: nil, desc: nil, required: false, value: true));
-                    config.addField(TextSingleField(name: "pubsub#access_model", label: nil, desc: nil, required: false, value: "whitelist"));
+                    let config = PubSubNodeConfig();
+                    config.FORM_TYPE = "http://jabber.org/protocol/pubsub#node_config";
+                    config.persistItems = true;
+                    config.accessModel = .whitelist;
                     self.pubsubModule.createNode(at: pepJID.bareJid, node: PEPBookmarksModule.ID, with: config, completionHandler: { result in
                         switch result {
                         case .success(let node):

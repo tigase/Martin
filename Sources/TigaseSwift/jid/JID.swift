@@ -24,7 +24,7 @@ import Foundation
 /**
  XMPP entity address form `localpart@domainpart/resourcepart`
  */
-public struct JID : CustomStringConvertible, Hashable, Equatable, Codable, StringValue {
+public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable, StringValue {
     
     /// BareJID part of JID
     public let bareJid:BareJID;

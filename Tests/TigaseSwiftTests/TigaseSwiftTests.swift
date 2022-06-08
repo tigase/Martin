@@ -7,6 +7,7 @@ final class TigaseSwiftTests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
         //XCTAssertEqual(TigaseSwift().text, "Hello, World!")
+
     }
 
     static var allTests = [

@@ -60,6 +60,10 @@ extension PubSubModule {
      - parameter completionHandler: called when result is available
      */
     public func publishItem<Failure: Error>(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: JabberDataElement? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+        publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions?.submitableElement(type: .submit), errorDecoder: errorDecoder, completionHandler: completionHandler);
+    }
+    
+    public func publishItem<Failure: Error>(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: Element? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         if pubSubJid != nil {
@@ -81,9 +85,9 @@ extension PubSubModule {
             item.addChild(payload);
         }
         
-        if publishOptions != nil {
+        if let publishOptions = publishOptions {
             let publishOptionsEl = Element(name: "publish-options");
-            publishOptionsEl.addChild(publishOptions!.submitableElement(type: .submit));
+            publishOptionsEl.addChild(publishOptions);
             pubsub.addChild(publishOptionsEl);
         }
         

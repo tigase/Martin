@@ -164,6 +164,28 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             });
         })
     }
+    
+    open func getInfo(for jid:JID, node requestedNode:String? = nil, resultHandler: @escaping (Result<DiscoveryInfoResult2,XMPPError>) -> Void) {
+        getInfo(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
+            resultHandler(result.map { stanza in
+                guard let query = stanza.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
+                    return .empty();
+                }
+                let identities = query.mapChildren(transform: { e -> Identity in
+                    return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
+                    }, filter: { (e:Element) -> Bool in
+                       return e.name == "identity" && e.getAttribute("category") != nil && e.getAttribute("type") != nil
+                });
+                let features = query.mapChildren(transform: { e -> String in
+                    return e.getAttribute("var")!;
+                    }, filter: { (e:Element) -> Bool in
+                        return e.name == "feature" && e.getAttribute("var") != nil;
+                })
+                let form = DataForm(element: query.findChild(name: "x", xmlns: "jabber:x:data"));
+                return DiscoveryInfoResult2(identities: identities, features: features, form: form);
+            });
+        })
+    }
 
     /**
      Method retieves items available at particular XMPP recipient and it's node
@@ -415,6 +437,22 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         }
         
         public static func empty() -> DiscoveryInfoResult {
+            return .init(identities: [], features: [], form: nil);
+        }
+    }
+    
+    public struct DiscoveryInfoResult2 {
+        public let identities: [Identity];
+        public let features: [String];
+        public let form: DataForm?;
+        
+        public init(identities: [Identity], features: [String], form: DataForm?) {
+            self.identities = identities;
+            self.features = features;
+            self.form = form;
+        }
+        
+        public static func empty() -> DiscoveryInfoResult2 {
             return .init(identities: [], features: [], form: nil);
         }
     }

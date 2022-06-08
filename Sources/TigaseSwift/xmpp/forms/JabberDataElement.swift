@@ -21,6 +21,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Will be removed. Use DataForm class and related classes")
 open class JabberDataElementFieldAware {
     
     public let element: Element;
@@ -93,6 +94,7 @@ open class JabberDataElementFieldAware {
     
 }
 
+@available(*, deprecated, message: "Will be removed. Use DataForm class and related classes")
 open class JabberDataElement: JabberDataElementFieldAware {
     
     open var visibleFieldNames: [String] {
@@ -184,6 +186,7 @@ open class JabberDataElement: JabberDataElementFieldAware {
     
 }
 
+@available(*, deprecated, message: "Will be removed. Use DataForm class and related classes")
 open class Field {
     
     public let element: Element;
@@ -260,6 +263,7 @@ open class Field {
         return elem;
     }
 
+    @available(*, deprecated, message: "Will be removed. Use DataForm class and related classes")
     open class Media {
         public let element: Element;
         
@@ -294,6 +298,7 @@ open class Field {
     }
 }
 
+@available(*, deprecated, message: "Will be removed. Use DataForm class and related classes")
 open class Reported {
     public let element: Element;
     fileprivate let parent: Element;
@@ -349,6 +354,7 @@ open class Reported {
     }
 }
 
+@available(*, deprecated, message: "Will be removed. Use DataForm class and related classes")
 public enum XDataType: String {
     case cancel
     case form
@@ -356,6 +362,7 @@ public enum XDataType: String {
     case submit
 }
 
+@available(*, deprecated, message: "Will be removed. Use DataForm class and related classes")
 public protocol ValidatableField {
     
     var valid: Bool { get }

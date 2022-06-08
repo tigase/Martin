@@ -52,4 +52,9 @@ open class ChannelInfo {
         form.addField(JidMultiField(name: "Contact")).value = self.contact;
         return form;
     }
+    
+    open func form() -> DataForm {
+        let info = MixChannelInfo(channelInfo: self);
+        return info.form;
+    }
 }

@@ -32,7 +32,7 @@ import Foundation
  Every affiliation contains properties which will tell 
  if action is allowed or not in this affiliation.
  */
-public enum MucAffiliation: String {
+public enum MucAffiliation: String, DataFormEnum {
     case owner
     case admin
     case member

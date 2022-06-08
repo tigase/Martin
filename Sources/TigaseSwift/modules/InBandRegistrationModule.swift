@@ -151,6 +151,44 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         });
     }
 
+    open func retrieveRegistrationForm<Failure: Error>(from jid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, resultHandler completionHandler: @escaping (Result<FormResult2,Failure>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            return;
+        }
+        let iq = Iq();
+        iq.type = StanzaType.get;
+        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
+    
+        let query = Element(name: "query", xmlns: "jabber:iq:register");
+        
+        iq.addChild(query);
+        write(iq, errorDecoder: errorDecoder, completionHandler: { result in
+            completionHandler(result.map { response in
+                if let query = response.findChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.findChild(name: "x", xmlns: "jabber:x:data")) {
+                    return FormResult2(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
+                } else {
+                    let form = DataForm(type: .form);
+                    if let query = response.findChild(name: "query", xmlns: "jabber:iq:register") {
+                        if let instructions = query.findChild(name: "instructions")?.value {
+                            form.instructions = [instructions];
+                        }
+                        if query.findChild(name: "username") != nil {
+                            form.add(field: .TextSingle(var: "username", required: true));
+                        }
+                        if query.findChild(name: "password") != nil {
+                            form.add(field: .TextPrivate(var: "password", required: true));
+                        }
+                        if query.findChild(name: "email") != nil {
+                            form.add(field: .TextSingle(var: "email", required: true));
+                        }
+                    }
+                    return FormResult2(type: .plain, form: form, bob: []);
+                }
+            });
+        });
+    }
+    
     open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         submitRegistrationForm(to: jid, form: form, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
@@ -172,7 +210,25 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         iq.addChild(query);
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
-    
+
+    open func submitRegistrationForm<Failure: Error>(to jid: JID? = nil, form: DataForm, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Void,Failure>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            return;
+        }
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
+        
+        let query = Element(name: "query", xmlns: "jabber:iq:register");
+        query.addChild(form.element(type: .submit, onlyModified: false));
+        
+        iq.addChild(query);
+        write(iq, errorDecoder: errorDecoder, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }))
+        });
+    }
+
     /**
      Unregisters currently connected and authenticated user
      - parameter callback: called when user is unregistrated
@@ -485,5 +541,12 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         let form: JabberDataElement;
         let bob: [BobData];
     }
+
+    public struct FormResult2 {
+        let type: FormType;
+        let form: DataForm;
+        let bob: [BobData];
+    }
+
     public typealias RetrieveFormResult<Failure: Error> = Result<FormResult, Failure>
 }

@@ -37,16 +37,16 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     private var discoModule: DiscoveryModule!;
     
     open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,XMPPError>)->Void) {
-        let data = JabberDataElement(type: .submit);
-        data.addField(TextSingleField(name: "provider", value: provider));
-        data.addField(TextSingleField(name: "device-token", value: deviceId));
+        let data = DataForm(type: .submit);
+        data.add(field: .TextSingle(var: "provider", value: provider));
+        data.add(field: .TextSingle(var: "device-token", value: deviceId));
         if pushkitDeviceId != nil {
-            data.addField(TextSingleField(name: "device-second-token", value: pushkitDeviceId));
+            data.add(field: .TextSingle(var: "device-second-token", value: pushkitDeviceId));
         }
         
         adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data, completionHandler: { result in
             completionHandler(result.flatMap({ response in
-                guard let result = RegistrationResult(form: response.form) else {
+                guard let form = response.form, let result = RegistrationResult(form: form) else {
                     return .failure(.undefined_condition);
                 }
                 return .success(result);
@@ -55,9 +55,9 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     }
     
     open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, XMPPError>)->Void) {
-        let data = JabberDataElement(type: .submit);
-        data.addField(TextSingleField(name: "provider", value: provider));
-        data.addField(TextSingleField(name: "device-token", value: deviceId));
+        let data = DataForm(type: .submit);
+        data.add(field: .TextSingle(var: "provider", value: provider));
+        data.add(field: .TextSingle(var: "device-token", value: deviceId));
         
         adhocModule.execute(on: serviceJid, command: "unregister-device", action: .execute, data: data, completionHandler: { result in
             switch result {
@@ -154,16 +154,15 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         public let node: String;
         public let features: [String]?;
         public let maxPayloadSize: Int?;
-        
-        init?(form resultData: JabberDataElement?) {
-            guard let node = (resultData?.getField(named: "node") as? TextSingleField)?.value else {
+    
+        init?(form: DataForm) {
+            guard let node = form.value(for: "node", type: String.self) else {
                 return nil;
             }
             self.node = node;
-            features = (resultData?.getField(named: "features") as? TextMultiField)?.value;
-            maxPayloadSize = Int((resultData?.getField(named: "max-payload-size") as? TextSingleField)?.value ?? "");
+            features = form.value(for: "features", type: [String].self);
+            maxPayloadSize = form.value(for: "max-payload-size", type: Int.self);
         }
-        
     }
     
     public struct Encryption: PushNotificationsModuleExtension, Hashable {

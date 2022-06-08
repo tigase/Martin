@@ -109,7 +109,23 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         iq.addChild(enable);
         write(iq, completionHandler: completionHandler);
     }
-    
+
+    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
+        enable.setAttribute("jid", value: serviceJid.stringValue);
+        enable.setAttribute("node", value: node);
+        for ext in extensions {
+            ext.apply(to: enable);
+        }
+//        if publishOptions != nil {
+            enable.addChild(publishOptions.element(type: .submit, onlyModified: false));
+//        }
+        iq.addChild(enable);
+        write(iq, completionHandler: completionHandler);
+    }
+
     open func disable(serviceJid: JID, node: String, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;

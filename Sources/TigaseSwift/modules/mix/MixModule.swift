@@ -83,7 +83,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
 
     private var discoModule: DiscoveryModule!;
     private var mamModule: MessageArchiveManagementModule!;
-    private var pubsubModule: PubSubModule!;
+    public var pubsubModule: PubSubModule!;
     private var avatarModule: PEPUserAvatarModule!;
     private var presenceModule: PresenceModule!;
     private var rosterModule: RosterModule!;
@@ -413,10 +413,11 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                     completionHandler?(.failure(.item_not_found));
                     return;
                 }
-                guard let context = self.context, let info = ChannelInfo(form: JabberDataElement(from: item.payload)) else {
+                guard let context = self.context, let payload = item.payload, let mixInfo = MixChannelInfo(element: payload) else {
                     completionHandler?(.failure(.undefined_condition));
                     return;
                 }
+                let info = mixInfo.channelInfo();
                 if let channel = self.channelManager.channel(for: context, with: channelJid) {
                     channel.update(info: info);
                 }
@@ -681,10 +682,10 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         case "urn:xmpp:mix:nodes:info":
             switch notification.action {
             case .published(let item):
-                guard let info = ChannelInfo(form: JabberDataElement(from: item.payload)) else {
+                guard let payload = item.payload, let info = MixChannelInfo(element: payload) else {
                     return;
                 }
-                channel.update(info: info);
+                channel.update(info: info.channelInfo());
             default:
                 break;
             }

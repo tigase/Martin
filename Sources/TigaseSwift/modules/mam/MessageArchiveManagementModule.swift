@@ -139,24 +139,15 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
             return;
         }
         
-        let query = JabberDataElement(type: .submit);
-        let formTypeField = HiddenField(name: "FORM_TYPE");
-        formTypeField.value = version.rawValue;
-        query.addField(formTypeField);
+        let query = MAMQueryForm(version: version);
         if with != nil {
-            let withField = JidSingleField(name: "with");
-            withField.value = with;
-            query.addField(withField);
+            query.with = nil;
         }
         if start != nil {
-            let startField = TextSingleField(name: "start");
-            startField.value = TimestampHelper.format(date: start!);
-            query.addField(startField);
+            query.start = TimestampHelper.format(date: start!);
         }
         if end != nil {
-            let endField = TextSingleField(name: "end");
-            endField.value = TimestampHelper.format(date: end!);
-            query.addField(endField);
+            query.end = TimestampHelper.format(date: end!);
         }
 
         self.queryItems(version: version, componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, completionHandler: completionHandler);
@@ -192,6 +183,37 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         });
     }
     
+    open func queryItems<Failure: Error>(version: Version, componentJid: JID? = nil, node: String? = nil, query: Element, queryId: String, rsm: RSM.Query? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void)
+    {
+
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        iq.to = componentJid;
+        
+        let queryEl = Element(name: "query", xmlns: version.rawValue);
+        iq.addChild(queryEl);
+        
+        queryEl.setAttribute("queryid", value: queryId);
+        queryEl.setAttribute("node", value: node);
+        
+        queryEl.addChild(query);
+        
+        if (rsm != nil) {
+            queryEl.addChild(rsm!.element);
+        }
+        
+        self.dispatcher.async {
+            self.queries[queryId] = Query(id: queryId, version: version);
+        }
+
+        write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
+            self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
+                self.queries.removeValue(forKey: queryId);
+            });
+            completionHandler(result);
+        });
+    }
+    
     static func isComplete(rsm result: RSM.Result?) -> Bool {
         guard let rsm = result else {
             // no RSM, so we have ended
@@ -220,33 +242,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      */
     open func queryItems<Failure: Error>(version: Version, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void)
     {
-
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = componentJid;
-        
-        let queryEl = Element(name: "query", xmlns: version.rawValue);
-        iq.addChild(queryEl);
-        
-        queryEl.setAttribute("queryid", value: queryId);
-        queryEl.setAttribute("node", value: node);
-        
-        queryEl.addChild(query.submitableElement(type: .submit));
-        
-        if (rsm != nil) {
-            queryEl.addChild(rsm!.element);
-        }
-        
-        self.dispatcher.async {
-            self.queries[queryId] = Query(id: queryId, version: version);
-        }
-
-        write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
-            self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
-                self.queries.removeValue(forKey: queryId);
-            });
-            completionHandler(result);
-        });
+        queryItems(version: version, componentJid: componentJid, node: node, query: query.submitableElement(type: .submit), queryId: queryId, rsm: rsm, errorDecoder: errorDecoder, completionHandler: completionHandler);
     }
     
     /**
