@@ -49,7 +49,20 @@ class DataFormTests: XCTestCase {
         print(mixInfo.element(type: .submit, onlyModified: false));
     }
     
+    func testIntegerOrMax() {
+        let config = PubSubNodeConfig();
+        config.maxItems = .max;
+        XCTAssertEqual(.max, config.maxItems);
+        XCTAssertEqual("max", config.value(for: "pubsub#max_items", type: String.self));
+        config.maxItems = .value(10)
+        XCTAssertEqual(.value(10), config.maxItems);
+        XCTAssertEqual("10", config.value(for: "pubsub#max_items", type: String.self));
+        XCTAssertTrue(DataForm.IntegerOrMax.value(9) < 10)
+        XCTAssertTrue(10 < DataForm.IntegerOrMax.max)
+    }
+    
     static var allTests = [
         ("testDataForm", testDataForm),
+        ("testIntegerOrMax", testIntegerOrMax)
     ]
 }

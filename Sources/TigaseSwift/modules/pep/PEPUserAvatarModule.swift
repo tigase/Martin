@@ -118,12 +118,12 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
             }
             
             // lets ensure we are allowed to have as many items published
-            pubsubModule.retrieveNodeConfiguration(from: at, node: PEPUserAvatarModule.DATA_XMLNS, completionHandler: { result in
+            pubsubModule.retrieveNodeConfiguration(from: at, node: PEPUserAvatarModule.DATA_XMLNS, resultHandler: { result in
                 switch result {
                 case .success(let form):
-                    if let limit: TextSingleField = form.getField(named: "pubsub#max_items"), "max" != limit.value && avatars.count > (Int(limit.value ?? "") ?? Int.max) {
+                    if let limit = form.maxItems, limit < avatars.count {
                         // limit is too small, reconfiguring..
-                        limit.value = String(avatars.count);
+                        form.maxItems = .value(avatars.count);
                         pubsubModule.configureNode(at: at, node: PEPUserAvatarModule.DATA_XMLNS, with: form, completionHandler: { result in
                             switch result {
                             case .success(_):
@@ -132,15 +132,19 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
                                 switch error.error.errorCondition {
                                 case .not_acceptable:
                                     // let's try workaround for Openfire
-                                    form.removeField(named: "pubsub#collection")
-                                    pubsubModule.configureNode(at: at, node: PEPUserAvatarModule.DATA_XMLNS, with: form, completionHandler: { result in
-                                        switch result {
-                                        case .success(_):
-                                            publish();
-                                        case .failure(_):
-                                            completionHandler(.failure(error));
-                                        }
-                                    });
+                                    if let field: DataForm.Field = form.field(for: "pubsub#collection") {
+                                        form.remove(field: field);
+                                        pubsubModule.configureNode(at: at, node: PEPUserAvatarModule.DATA_XMLNS, with: form, completionHandler: { result in
+                                            switch result {
+                                            case .success(_):
+                                                publish();
+                                            case .failure(_):
+                                                completionHandler(.failure(error));
+                                            }
+                                        });
+                                    } else {
+                                        completionHandler(.failure(error));
+                                    }
                                 default:
                                     completionHandler(.failure(error));
                                 }

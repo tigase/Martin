@@ -75,7 +75,7 @@ open class PubSubNodeConfig: DataFormWrapper {
     @Field("pubsub#children")
     public var children: [String]?;
     @Field("pubsub#children_max")
-    public var childrenMax: Int?;
+    public var childrenMax: DataForm.IntegerOrMax?;
     @Field("pubsub#collection")
     public var collection: String?;
     @Field("pubsub#contact")
@@ -89,13 +89,13 @@ open class PubSubNodeConfig: DataFormWrapper {
     @Field("pubsub#description")
     public var description: String?;
     @Field("pubsub#item_expire")
-    public var itemExpire: Int?;
+    public var itemExpire: DataForm.IntegerOrMax?;
     @Field("pubsub#itemreply")
     public var itemReply: ItemReply?;
     @Field("pubsub#language", type: .listSingle)
     public var language: String?
     @Field("pubsub#max_items")
-    public var maxItems: Int?;
+    public var maxItems: DataForm.IntegerOrMax?;
     @Field("pubsub#max_payload_size")
     public var maxPayloadSize: Int?;
     @Field("pubsub#node_type")

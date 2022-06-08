@@ -39,3 +39,73 @@ extension DataFormEnum {
         self.init(rawValue: description);
     }
 }
+
+extension DataForm {
+    
+    public enum IntegerOrMax: LosslessStringConvertible, Equatable {
+        case value(Int)
+        case max
+        
+        
+        
+        public static func < (lhs: IntegerOrMax, rhs: Int) -> Bool {
+            switch lhs {
+            case .value(let lval):
+                return lval < rhs;
+            case .max:
+                return false;
+            }
+        }
+        
+        public static func < (lhs: Int, rhs: IntegerOrMax) -> Bool {
+            switch rhs {
+            case .value(let rval):
+                return lhs < rval;
+            case .max:
+                return true;
+            }
+        }
+        
+        public static func == (lhs: IntegerOrMax, rhs: IntegerOrMax) -> Bool {
+            switch lhs {
+            case .max:
+                switch rhs {
+                case .max:
+                    return true;
+                case .value(_):
+                    return false;
+                }
+            case .value(let lval):
+                switch rhs {
+                case .max:
+                    return true;
+                case .value(let rval):
+                    return lval == rval;
+                }
+            }
+        }
+        
+        public var description: String {
+            get {
+                switch self {
+                case .max:
+                    return "max"
+                case .value(let val):
+                    return val.description;
+                }
+            }
+        }
+        
+        public init?(_ description: String) {
+            if description == "max" {
+                self = .max;
+            } else if let val = Int(description) {
+                self = .value(val)
+            } else {
+                return nil;
+            }
+        }
+        
+    }
+    
+}
