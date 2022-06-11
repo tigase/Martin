@@ -120,13 +120,11 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         if subscription == .remove {
             if let item = rosterManager.deleteItem(for: context, jid: jid) {
                 eventsSender.send(.removed(jid));
-                fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .removed));
             }
             return jid;
         } else {
             if let item = rosterManager.updateItem(for: context, jid: jid, name: name, subscription: subscription, groups: groups, ask: ask, annotations: annotations) {
                 eventsSender.send(.addedOrUpdated(item));
-                fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .added));
             }
             return jid;
         }
@@ -178,7 +176,6 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
                     for jid in removed {
                         if let item = self.rosterManager.deleteItem(for: context, jid: jid) {
                             self.eventsSender.send(.removed(jid));
-                            self.fire(ItemUpdatedEvent(context: context, rosterItem: item, action: .removed));
                         }
                     }
                     
@@ -240,30 +237,6 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
     public enum Action {
         case added // or updated
         case removed
-    }
-
-    /// Event fired when roster item is updated
-    @available(*, deprecated, message: "Use RosterModule.events")
-    open class ItemUpdatedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ItemUpdatedEvent();
-        
-        /// Changed roster item
-        public let rosterItem:RosterItemProtocol!;
-        /// Action done to roster item
-        public let action:Action!;
-        
-        fileprivate init() {
-            self.rosterItem = nil;
-            self.action = nil;
-            super.init(type: "ItemUpdatedEvent");
-        }
-        
-        public init(context: Context, rosterItem: RosterItemProtocol, action: Action) {
-            self.rosterItem = rosterItem;
-            self.action = action;
-            super.init(type: "ItemUpdatedEvent", context: context);
-        }
     }
     
 }

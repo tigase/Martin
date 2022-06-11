@@ -72,7 +72,6 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     
     @Published
     public private(set) var state: AuthModule.AuthorizationStatus = .notAuthorized;
-    private var stateObserverCancellable: Cancellable?;
     
     /// Order of mechanisms preference
     open var mechanismsOrder:[String] {
@@ -100,22 +99,6 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
         self.addMechanism(AnonymousMechanism());
-        
-        self.stateObserverCancellable = self.$state.sink(receiveValue: { [weak self] state in
-            guard let that = self, let context = that.context else {
-                return;
-            }
-            switch state {
-            case .authorized:
-                that.fire(SaslAuthSuccessEvent(context: context));
-            case .inProgress:
-                that.fire(SaslAuthStartEvent(context: context));
-            case .error(let error):
-                that.fire(SaslAuthFailedEvent(context: context, error: error as? SaslError ?? .aborted));
-            default:
-                break;
-            }
-        })
     }
     
     open func reset(scopes: Set<ResetableScope>) {
@@ -178,7 +161,6 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
         }
         guard let mechanism = guessSaslMechanism() else {
             self.state = .error(SaslError.invalid_mechanism);
-            fire(SaslAuthFailedEvent(context: context!, error: SaslError.invalid_mechanism));
             return;
         }
         self.mechanismInUse = mechanism;
@@ -266,51 +248,5 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
         }
         return nil;
     }
-    
-    /// Event fired when SASL authentication fails
-    open class SaslAuthFailedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SaslAuthFailedEvent();
-        
-        /// Error which occurred
-        public let error:SaslError!;
-        
-        init() {
-            error = nil;
-            super.init(type: "SaslAuthFailedEvent");
-        }
-        
-        public init(context: Context, error: SaslError) {
-            self.error = error;
-            super.init(type: "SaslAuthFailedEvent", context: context);
-        }
-    }
-    
-    /// Event fired when SASL authentication begins
-    open class SaslAuthStartEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SaslAuthStartEvent();
-                
-        init() {
-            super.init(type: "SaslAuthStartEvent");
-        }
-        
-        public init(context: Context) {
-            super.init(type: "SaslAuthStartEvent", context: context);
-        }
-    }
-    
-    /// Event fired after successful authentication
-    open class SaslAuthSuccessEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SaslAuthSuccessEvent();
-                
-        init() {
-            super.init(type: "SaslAuthSuccessEvent")
-        }
-        
-        public init(context: Context) {
-            super.init(type: "SaslAuthSuccessEvent", context: context);
-        }
-    }
+
 }

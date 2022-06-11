@@ -135,8 +135,6 @@ open class JingleModule: XmppModuleBase, XmppModule {
         let contents = self.contents(from: jingle);
         let bundle = self.bundle(from: jingle);
         
-        fire(JingleEvent(context: context, jid: from, action: action, initiator: initiator, sid: sid, contents: contents, bundle: bundle));
-
         switch action {
         case .sessionInitiate:
             try self.sessionManager.sessionInitiated(for: context, with: from, sid: sid, contents: contents, bundle: bundle);
@@ -198,7 +196,6 @@ open class JingleModule: XmppModuleBase, XmppModule {
             break;
         }
         if let context = context {
-            fire(JingleMessageInitiationEvent(context: context, jid: from, action: action));
             try sessionManager.messageInitiation(for: context, from: from, action: action);
         }
     }
@@ -382,60 +379,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
             });
         });
     }
-    
-    open class JingleEvent: AbstractEvent {
         
-        public static let TYPE = JingleEvent();
-        
-        public let jid: JID!;
-        public let action: Jingle.Action!;
-        public let initiator: JID!;
-        public let sid: String!;
-        public let contents: [Jingle.Content];
-        public let bundle: [String]?;
-        
-        init() {
-            self.jid = nil;
-            self.action = nil;
-            self.initiator = nil;
-            self.sid = nil;
-            self.contents = [];
-            self.bundle = nil;
-            super.init(type: "JingleEvent");
-        }
-        
-        public init(context: Context, jid: JID, action: Jingle.Action, initiator: JID, sid: String, contents: [Jingle.Content], bundle: [String]?) {//}, session: Jingle.Session) {
-            self.jid = jid;
-            self.action = action;
-            self.initiator = initiator;
-            self.sid = sid;
-            self.contents = contents;
-            self.bundle = bundle;
-            super.init(type: "JingleEvent", context: context);
-        }
-        
-    }
-    
-    open class JingleMessageInitiationEvent: AbstractEvent {
-        
-        public static let TYPE = JingleMessageInitiationEvent();
-                
-        public let jid: JID!;
-        public let action: Jingle.MessageInitiationAction!;
-                
-        init() {
-            self.jid = nil;
-            self.action = nil;
-            super.init(type: "JingleMessageInitiationEvent");
-        }
-                
-        public init(context: Context, jid: JID, action: Jingle.MessageInitiationAction) {
-            self.jid = jid;
-            self.action = action;
-            super.init(type: "JingleMessageInitiationEvent", context: context);
-        }
-    }
-    
 }
 
 public enum JingleSessionTerminateReason: String {

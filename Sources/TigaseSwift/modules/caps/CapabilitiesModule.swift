@@ -35,7 +35,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0115: Entity Capabilities]:http://xmpp.org/extensions/xep-0115.html
  */
-open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
+open class CapabilitiesModule: XmppModuleBase, XmppModule {
         
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "caps";
@@ -51,7 +51,6 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
     open override weak var context: Context? {
         willSet {
             if let context = context {
-                context.eventBus.unregister(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
                 discoModule = nil;
                 presenceModule = nil;
             }
@@ -59,9 +58,14 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
         
         didSet {
             if let context = context {
-                context.eventBus.register(handler: self, for: PresenceModule.BeforePresenceSendEvent.TYPE, PresenceModule.ContactPresenceChanged.TYPE);
                 discoModule = context.modulesManager.module(.disco);
                 presenceModule = context.modulesManager.module(.presence);
+                presenceModule.$presence.sink(receiveValue: { [weak self] presence in
+                    self?.updateCaps(in: presence);
+                }).store(in: self);
+                presenceModule.presencePublisher.sink(receiveValue: { [weak self] presence in
+                    self?.receivedPresence(presence);
+                }).store(in: self);
             }
         }
     }
@@ -89,54 +93,37 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, EventHandler {
     open func process(stanza: Stanza) throws {
         throw XMPPError.bad_request(nil);
     }
-        
-    open func handle(event: Event) {
-        switch event {
-        case let e as PresenceModule.BeforePresenceSendEvent:
-            onBeforePresenceSend(event: e);
-        case let e as PresenceModule.ContactPresenceChanged:
-            onReceivedPresence(event: e);
-        default:
-            break;
-        }
-    }
     
-    /**
-     Method called before presence is sent by `PresenceModule.BeforePresenceSendEvent`
-     This method is responsible for calculation of verification string if needed
-     and injecting CAPS element to presence before it is send.
-     
-     - parameter event: event fired before `Presence` is send
-     */
-    func onBeforePresenceSend(event e: PresenceModule.BeforePresenceSendEvent) {
+    open func updateCaps(in presence: Presence) {
+        if let oldC = presence.findChild(name: "c", xmlns: "http://jabber.org/protocol/caps") {
+            presence.removeChild(oldC);
+        }
+
+        logger.debug("updating presence CAPS...")
+        
         guard let ver: String = self.verificationString ?? calculateVerificationString() else {
             return;
         }
-        
+            
         let c = Element(name: "c", xmlns: "http://jabber.org/protocol/caps");
         c.setAttribute("hash", value: "sha-1");
         c.setAttribute("node", value: nodeName);
         c.setAttribute("ver", value: ver);
     
-        e.presence.addChild(c);
+        presence.addChild(c);
     }
  
-    /**
-     Method called by event when `Presence` is received. It looks for CAPS payload
-     and if unknown verification string is found it executes discovery to add it
-     to cache.
-     
-     - parameter event: event fired when `Presence` is received
-     */
-    func onReceivedPresence(event e: PresenceModule.ContactPresenceChanged) {
-        let type = (e.presence.type ?? .available);
-        guard e.presence != nil, let from = e.presence.from, type == .available else {
+    open func receivedPresence(_ change: PresenceModule.ContactPresenceChange) {
+        let type = change.presence.type ?? .available;
+        guard let from = change.presence.from, type == .available else {
             return;
         }
         
-        guard let nodeName = e.presence.capsNode else {
+        guard let nodeName = change.presence.capsNode else {
             return;
         }
+        
+        logger.debug("updating CAPS for \(from)")
         
         dispatcher.async {
             guard !self.inProgress.contains(nodeName) else {

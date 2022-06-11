@@ -87,9 +87,6 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
                 switch result {
                 case .success(let info):
                     self.serverDiscoResult = info;
-                    if let context = self.context {
-                        self.fire(ServerFeaturesReceivedEvent(context: context, features: info.features, identities: info.identities));
-                    }
                 default:
                     break;
                 }
@@ -109,7 +106,6 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
                 switch result {
                 case .success(let info):
                     self.accountDiscoResult = info;
-                    self.fire(AccountFeaturesReceivedEvent(context: context, features: info.features));
                 default:
                     break;
                 }
@@ -379,49 +375,6 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             get {
                 return "Item(jid=\(jid), node=\(String(describing: node)), name=\(String(describing: name)))";
             }
-        }
-    }
-
-    /// Event fired when server features are retrieved
-    @available(*, deprecated, message: "Use $serverDiscoResult publisher")
-    open class ServerFeaturesReceivedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ServerFeaturesReceivedEvent();
-
-        /// Array of available server features
-        public let features: [String]!;
-        public let identities: [Identity]!;
-
-        init() {
-            self.features = nil;
-            self.identities = nil;
-            super.init(type: "ServerFeaturesReceivedEvent");
-        }
-
-        public init(context: Context, features: [String], identities: [Identity]) {
-            self.features = features;
-            self.identities = identities;
-            super.init(type: "ServerFeaturesReceivedEvent", context: context)
-        }
-    }
-
-    /// Event fired when account features are retrieved
-    @available(*, deprecated, message: "Use $accountDiscoResult publisher")
-    open class AccountFeaturesReceivedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = AccountFeaturesReceivedEvent();
-
-        /// Array of available server features
-        public let features: [String]!;
-
-        init() {
-            self.features = nil;
-            super.init(type: "AccountFeaturesReceivedEvent")
-        }
-
-        public init(context: Context, features: [String]) {
-            self.features = features;
-            super.init(type: "AccountFeaturesReceivedEvent", context: context);
         }
     }
 

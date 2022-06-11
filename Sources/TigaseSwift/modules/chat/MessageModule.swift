@@ -70,7 +70,6 @@ open class MessageModule: XmppModuleBase, XmppModule {
                 
         if fireEvents {
             messagesPublisher.send(.init(chat: chat, message: message));
-            fire(MessageReceivedEvent(context: context, chat: chat, message: message));
         }
         
         return chat;
@@ -90,69 +89,6 @@ open class MessageModule: XmppModuleBase, XmppModule {
         }
         
         return chat;
-    }
-        
-    /// Event fired when Chat is created/opened
-    @available(*, deprecated)
-    open class ChatCreatedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ChatCreatedEvent();
-        
-        /// Instance of opened chat
-        public let chat:ChatProtocol!;
-        
-        fileprivate init() {
-            self.chat = nil;
-            super.init(type: "ChatCreatedEvent");
-        }
-        
-        public init(context: Context, chat: ChatProtocol) {
-            self.chat = chat;
-            super.init(type: "ChatCreatedEvent", context: context);
-        }
-    }
-
-    /// Event fired when Chat is closed
-    @available(*, deprecated)
-    open class ChatClosedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ChatClosedEvent();
-        
-        /// Instance of closed chat
-        public let chat:ChatProtocol!;
-        
-        fileprivate init() {
-            self.chat = nil;
-            super.init(type: "ChatClosedEvent")
-        }
-        
-        public init(context: Context, chat:ChatProtocol) {
-            self.chat = chat;
-            super.init(type: "ChatClosedEvent", context: context);
-        }
-    }
-    
-    /// Event fired when message is received
-    @available(*, deprecated, message: "Use MessageModule.messagesPublisher")
-    open class MessageReceivedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = MessageReceivedEvent();
-        
-        public let chat:ChatProtocol!;
-        /// Received message
-        public let message:Message!;
-        
-        fileprivate init() {
-            self.chat = nil;
-            self.message = nil;
-            super.init(type: "MessageReceivedEvent");
-        }
-        
-        public init(context: Context, chat:ChatProtocol, message:Message) {
-            self.chat = chat;
-            self.message = message;
-            super.init(type: "MessageReceivedEvent", context: context);
-        }
     }
     
     public struct MessageReceived {

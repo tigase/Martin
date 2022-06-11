@@ -47,16 +47,6 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     
     open private(set) var bindedJid: JID?;
     
-    /**
-     Method returns binded JID retrieved from property of `SessionObject`
-     - parameter sessionObject: instance of `SessionObject` to retrieve from
-     - returns: binded JID
-     */
-    @available(*, deprecated, message: "Use bindedJid property from ResourceBinderMobule")
-    public static func getBindedJid(_ sessionObject:SessionObject) -> JID? {
-        return sessionObject.context.module(.resourceBind).bindedJid;
-    }
-    
     public override init() {
         
     }
@@ -83,20 +73,10 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
                     let jid = JID(name);
                     self.bindedJid = jid;
                     completionHandler?(.success(jid));
-                    if let context = self.context {
-                        self.fire(ResourceBindSuccessEvent(context: context, bindedJid: jid));
-                    }
-                    return;
                 } else {
-                    if let context = self.context {
-                        self.fire(ResourceBindErrorEvent(context: context, error: .undefined_condition));
-                    }
                     completionHandler?(.failure(.undefined_condition));
                 }
             case .failure(let error):
-                if let context = self.context {
-                    self.fire(ResourceBindErrorEvent(context: context, error: error));
-                }
                 completionHandler?(.failure(error));
             }
         })
@@ -107,42 +87,4 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
         throw ErrorCondition.bad_request
     }
     
-    /// Event fired when resource is binding fails
-    open class ResourceBindErrorEvent: AbstractEvent {
-        
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ResourceBindErrorEvent();
-        
-        /// Error condition returned by server
-        public let error:XMPPError?;
-        
-        fileprivate init() {
-            self.error = nil;
-            super.init(type: "ResourceBindErrorEvent");
-        }
-        
-        public init(context: Context, error:XMPPError?) {
-            self.error = error;
-            super.init(type: "ResourceBindErrorEvent", context: context);
-        }
-    }
-    
-    /// Event fired when resource is binded
-    open class ResourceBindSuccessEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ResourceBindSuccessEvent();
-        
-        /// Full JID with binded resource
-        public let bindedJid:JID!;
-        
-        fileprivate init() {
-            self.bindedJid = nil;
-            super.init(type: "ResourceBindSuccessEvent");
-        }
-        
-        public init(context: Context, bindedJid:JID) {
-            self.bindedJid = bindedJid;
-            super.init(type: "ResourceBindSuccessEvent", context: context)
-        }
-    }
 }

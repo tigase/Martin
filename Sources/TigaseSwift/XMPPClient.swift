@@ -125,13 +125,9 @@ open class XMPPClient: Context {
         }
     }
     
-    public convenience init() {
-        self.init(eventBus: nil);
-    }
-    
-    public init(eventBus: EventBus?) {
+    public init() {
         responseManager = ResponseManager();
-        super.init(eventBus: eventBus ?? EventBus(), modulesManager: XmppModulesManager());
+        super.init(modulesManager: XmppModulesManager());
     }
     
     deinit {
@@ -165,11 +161,9 @@ open class XMPPClient: Context {
                 switch newState {
                 case .connected:
                     that.scheduleKeepAlive();
-                    that.eventBus.fire(SocketConnector.ConnectedEvent(context: that));
                 case .disconnected(let reason):
                     that.releaseKeepAlive();
                     that.handleDisconnection(clean: oldState == .disconnecting, reason: reason);
-                    that.eventBus.fire(SocketConnector.DisconnectedEvent(context: that, connectionDetails: that.currentConnectionDetails, clean: oldState == .disconnecting));
                 default:
                     that.releaseKeepAlive();
                 }

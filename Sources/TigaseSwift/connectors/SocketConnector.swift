@@ -69,14 +69,12 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         
     private var stateSubscription: Cancellable?;
     private let options: Options;
-    private let eventBus: EventBus;
     private let networkStack = NetworkStack();
     private var connectorStreamDelegate: ConnectionStreamDelegate!;
     
     required public init(context: Context) {
         self.userJid = context.connectionConfiguration.userJid;
         self.options = context.connectionConfiguration.connectorOptions as! Options;
-        self.eventBus = context.eventBus;
         
         super.init(context: context);
         
@@ -552,9 +550,6 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
 
                     if !self.sslCertificateValidated! {
                         self.logger.debug("SSL certificate validation failed");
-                        if let context = self.context {
-                            self.eventBus.fire(CertificateErrorEvent(context: context, trust: trust));
-                        }
                         self.closeSocket(newState: .disconnected(.sslCertError(trust)));
                         return;
                     }
@@ -595,69 +590,6 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         inStream?.remove(from: RunLoop.current, forMode: RunLoop.Mode.default);
         outStream?.remove(from: RunLoop.current, forMode: RunLoop.Mode.default);
         sslCertificateValidated = false;
-    }
-    
-    /// Event fired when client establishes TCP connection to XMPP server.
-    @available(*, deprecated, message: "Watch state instead")
-    open class ConnectedEvent: AbstractEvent {
-        
-        /// identified of event which should be used during registration of `EventHandler`
-        public static let TYPE = ConnectedEvent();
-                
-        init() {
-            super.init(type: "connectorConnected");
-        }
-        
-        public init(context: Context) {
-            super.init(type: "connectorConnected", context: context);
-        }
-        
-    }
-    
-    /// Event fired when TCP connection to XMPP server is closed or is broken.
-    @available(*, deprecated, message: "Watch state instead")
-    open class DisconnectedEvent: AbstractEvent {
-        
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = DisconnectedEvent();
-        
-        public let connectionDetails: XMPPSrvRecord?;
-        /// If is `true` then XMPP client was properly closed, in other case it may be broken
-        public let clean:Bool;
-        
-        init() {
-            connectionDetails = nil;
-            clean = false;
-            super.init(type: "connectorDisconnected");
-        }
-        
-        public init(context: Context, connectionDetails: XMPPSrvRecord?, clean: Bool) {
-            self.connectionDetails = connectionDetails;
-            self.clean = clean;
-            super.init(type: "connectorDisconnected", context: context);
-        }
-        
-    }
-    
-    /// Event fired if SSL certificate validation fails
-    @available(*, deprecated, message: "Watch state of .sslCertError")
-    open class CertificateErrorEvent: AbstractEvent {
-        
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = CertificateErrorEvent();
-        
-        /// Instance of SecTrust - contains data related to certificate
-        public let trust: SecTrust!;
-        
-        init() {
-            trust = nil;
-            super.init(type: "certificateError");
-        }
-        
-        init(context: Context, trust: SecTrust) {
-            self.trust = trust;
-            super.init(type: "certificateError", context: context);
-        }
     }
     
     class WriteBuffer {

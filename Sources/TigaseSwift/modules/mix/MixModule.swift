@@ -323,7 +323,6 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             if message.mix != nil {
                 self.messagesPublisher.send(.init(channel: channel, message: message));
             }
-            self.fire(MessageReceivedEvent(context: context, message: message, channel: channel, nickname: message.mix?.nickname, senderJid: message.mix?.jid, timestamp: message.delay?.stamp ?? Date()));
         default:
             break;
         }
@@ -357,9 +356,6 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             case .failure(_):
                 channel.update(permissions: []);
             }
-            if let context = self.context {
-                self.fire(ChannelPermissionsChangedEvent(context: context, channel: channel));
-            }
         })
     }
     
@@ -385,7 +381,6 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                     for participant in participants {
                         self.participantsEvents.send(.joined(participant));
                     }
-                    self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: participants, left: left));
                 }
                 completionHandler?(.success(participants));
             case .failure(let pubsubError):
@@ -589,19 +584,6 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             }
         }
     }
-        
-    public override func stateChanged(newState: XMPPClient.State) {
-        if let context = context {
-            switch newState {
-            case .connected(_), .disconnected(_):
-                for channel in self.channelManager.channels(for: context) {
-                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
-                }
-            default:
-                break;
-            }
-        }
-    }
     
     private func accountFeaturesChanged(_ features: [String]) {
         self.isPAM2SupportAvailable = features.contains(MixModule.PAM2_XMLNS);
@@ -667,16 +649,13 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                     }
                     channel.update(participant: participant);
                     participantsEvents.send(.joined(participant));
-                    self.fire(ParticipantsChangedEvent(context: context, channel: channel, joined: [participant]));
                 }
             case .retracted(let itemId):
                 if channel.participantId == itemId {
                     channel.update(state: .left);
-                    self.fire(ChannelStateChangedEvent(context: context, channel: channel));
                 }
                 if let participant = channel.removeParticipant(withId: itemId) {
                     participantsEvents.send(.left(participant));
-                    self.fire(ParticipantsChangedEvent(context: context, channel: channel, left: [participant]));
                 }
             }
         case "urn:xmpp:mix:nodes:info":
@@ -750,108 +729,6 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         avatarModule.retrieveAvatarMetadata(from: jid, itemId: nil, fireEvents: true, completionHandler: { result in
             completionHandler?(result);
         });
-    }
-
-    /// Event fired when received message in room
-    open class MessageReceivedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = MessageReceivedEvent();
-        
-        /// Received message
-        public let message: Message!;
-        /// Room which delivered message
-        public let channel: ChannelProtocol!;
-        /// Nickname of message sender
-        public let nickname: String?;
-        /// Sender real JID
-        public let senderJid: BareJID?;
-        /// Timestamp of message
-        public let timestamp: Date!;
-        
-        init() {
-            self.message = nil;
-            self.channel = nil;
-            self.nickname = nil;
-            self.senderJid = nil;
-            self.timestamp = nil;
-            super.init(type: "MixModuleMessageReceivedEvent")
-        }
-        
-        public init(context: Context, message: Message, channel: ChannelProtocol, nickname: String?, senderJid: BareJID?, timestamp: Date) {
-            self.message = message;
-            self.channel = channel;
-            self.nickname = nickname;
-            self.senderJid = senderJid;
-            self.timestamp = timestamp;
-            super.init(type: "MixModuleMessageReceivedEvent", context: context);
-        }
-        
-    }
-
-    
-    @available(*, deprecated)
-    open class ChannelStateChangedEvent: AbstractEvent {
-        
-        public static let TYPE = ChannelStateChangedEvent();
-
-        public let channel: ChannelProtocol!;
-
-        init() {
-            self.channel = nil;
-            super.init(type: "MixModuleChannelStateChangedEvent");
-        }
-        
-        public init(context: Context, channel: ChannelProtocol) {
-            self.channel = channel;
-            super.init(type: "MixModuleChannelStateChangedEvent", context: context)
-        }
-    }
-    
-    @available(*, deprecated, message: "Use ChannelProtocol.participantsPublisher")
-    open class ParticipantsChangedEvent: AbstractEvent {
-        
-        public static let TYPE = ParticipantsChangedEvent();
-
-        public let channel: ChannelProtocol!;
-        public let joined: [MixParticipant];
-        public let left: [MixParticipant];
-        
-        init() {
-            self.channel = nil;
-            self.joined = [];
-            self.left = [];
-            super.init(type: "MixModuleParticipantChangedEvent")
-        }
-        
-        public init(context: Context, channel: ChannelProtocol, joined: [MixParticipant] = [], left: [MixParticipant] = []) {
-            self.channel = channel;
-            self.joined = joined;
-            self.left = left;
-            super.init(type: "MixModuleParticipantChangedEvent", context: context);
-        }
-        
-        public enum Action {
-            case joined
-            case left
-        }
-    }
-    
-    @available(*, deprecated, message: "Use ChannelProtocol.permissionsPublisher")
-    open class ChannelPermissionsChangedEvent: AbstractEvent {
-        
-        public static let TYPE = ChannelPermissionsChangedEvent();
-
-        public let channel: ChannelProtocol!;
-
-        init() {
-            self.channel = nil;
-            super.init(type: "MixModuleChannelPermissionsChangedEvent");
-        }
-        
-        public init(context: Context, channel: ChannelProtocol) {
-            self.channel = channel;
-            super.init(type: "MixModuleChannelPermissionsChangedEvent", context: context);
-        }
     }
 
     public typealias ParticipantsResult = Result<[MixParticipant],XMPPError>

@@ -110,8 +110,6 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
 //            }
             if let context = context {
                 archivedMessagesPublisher.send(.init(messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, query: query, timestamp: timestamp, message: message));
-
-                fire(ArchivedMessageReceivedEvent(context: context, queryid: queryId, version: query.version, messageId: messageId, source: stanza.from?.bareJid ?? context.userBareJid, message: message, timestamp: timestamp));
             }
         }
     }
@@ -384,42 +382,6 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         case roster
         /// Messages should not be archived
         case never
-    }
-    
-    /// Event fired when message from archive is retrieved
-    @available(*, deprecated, message: "Use MessageArchiveModule.archivedMessagesPublisher")
-    open class ArchivedMessageReceivedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ArchivedMessageReceivedEvent();
-        
-        /// Timestamp of a message
-        public let timestamp: Date!;
-        /// Forwarded message
-        public let message: Message!;
-        /// Version of MAM request
-        public let version: Version!;
-        /// JID of the archive
-        public let source: BareJID!;
-        /// Message ID
-        public let messageId: String!;
-        
-        init() {
-            self.timestamp = nil;
-            self.message = nil;
-            self.version = nil;
-            self.source = nil;
-            self.messageId = nil;
-            super.init(type: "ArchivedMessageReceivedEvent");
-        }
-        
-        init(context: Context, queryid: String, version: Version, messageId: String, source: BareJID, message: Message, timestamp: Date) {
-            self.message = message;
-            self.version = version;
-            self.messageId = messageId;
-            self.source = source;
-            self.timestamp = timestamp;
-            super.init(type: "ArchivedMessageReceivedEvent", context: context);
-        }
     }
     
     public enum Version: String {

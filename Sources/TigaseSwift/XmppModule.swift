@@ -85,8 +85,4 @@ open class XmppModuleBase: ContextAware, PacketWriter {
         writer.write(stanza, writeCompleted: writeCompleted);
     }
 
-    @available(*, deprecated)
-    public func fire(_ event: Event) {
-        context?.eventBus.fire(event);
-    }
 }

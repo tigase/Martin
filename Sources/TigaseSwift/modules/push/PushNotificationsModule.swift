@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 extension XmppModuleIdentifier {
     public static var push: XmppModuleIdentifier<PushNotificationsModule> {
@@ -70,6 +71,13 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
     }
 //    open var pushServiceJid: JID?;
     
+    public struct NotificationsDisabled {
+        public let serviceJid: JID;
+        public let node: String;
+    }
+    
+    public let notificationsPublisher = PassthroughSubject<NotificationsDisabled,Never>();
+    
     public override init() {
         
     }
@@ -90,8 +98,8 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         guard jid == context.userBareJid && affiliation == "none" else {
             return;
         }
-        
-        fire(NotificationsDisabledEvent(context: context, service: from, node: node));
+    
+        notificationsPublisher.send(NotificationsDisabled(serviceJid: from, node: node));
     }
     
     open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
@@ -135,29 +143,6 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         iq.addChild(disable);
         
         write(iq, completionHandler: completionHandler);
-    }
-    
-    open class NotificationsDisabledEvent : AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = NotificationsDisabledEvent();
-        
-        /// JID of disabled service
-        public let serviceJid: JID!;
-        /// Node of disable service
-        public let serviceNode: String!;
-        
-        
-        init() {
-            self.serviceJid = nil;
-            self.serviceNode = nil;
-            super.init(type: "PushNotificationsDisabledEvent")
-        }
-        
-        init(context: Context, service pushServiceJid: JID, node: String ) {
-            self.serviceJid = pushServiceJid;
-            self.serviceNode = node;
-            super.init(type: "PushNotificationsDisabledEvent", context: context);
-        }
     }
     
 }

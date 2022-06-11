@@ -51,7 +51,6 @@ open class ChatManagerBase<Store: ChatStore>: BaseChatManagerBase<Store.Chat>, C
     public func createChat(for context: Context, with jid: BareJID) -> ChatProtocol? {
         switch store.createChat(for: context, with: jid) {
         case .created(let chat):
-            context.eventBus.fire(MessageModule.ChatCreatedEvent(context: context, chat: chat));
             return chat;
         case .found(let chat):
             return chat;
@@ -62,9 +61,6 @@ open class ChatManagerBase<Store: ChatStore>: BaseChatManagerBase<Store.Chat>, C
     
     open func close(chat: ChatProtocol) -> Bool {
         let result = store.close(chat: chat as! Store.Chat);
-        if result, let context = chat.context {
-            context.eventBus.fire(MessageModule.ChatClosedEvent(context: context, chat: chat));
-        }
         return result;
     }
     

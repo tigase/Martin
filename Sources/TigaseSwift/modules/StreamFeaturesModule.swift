@@ -44,17 +44,6 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Re
     @Published
     open private(set) var streamFeatures: StreamFeatures = .none;
     
-    /**
-     Retrieves stream features which were recevied from server
-     - parameter sessionObject: instance of `SessionObject` to retrieve cached stream features element
-     - returns: element with stream features
-     */
-    @available(*, deprecated, message: "Use stream features property on StreamFeaturesModule")
-    public static func getStreamFeatures(_ sessionObject:SessionObject) -> Element? {
-        return sessionObject.context.module(.streamFeatures).streamFeatures.element;
-    }
-    
-    
     public override init() {
         
     }
@@ -66,16 +55,9 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Re
     open func process(stanza:Stanza) throws {
         setStreamFeatures(stanza.element);
     }
-
-    open func fireEvent(streamFeatures element: Element) {
-        if let context = context {
-            fire(StreamFeaturesReceivedEvent(context: context, element: element));
-        }
-    }
     
     func setStreamFeatures(_ element: Element) {
         self.streamFeatures = StreamFeatures(element: element);
-        fireEvent(streamFeatures: element);
     }
     
     public func reset(scopes: Set<ResetableScope>) {
@@ -83,28 +65,6 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Re
             streamFeatures = .none;
         }
     }
-}
-
-/// Event fired when stream features are received
-@available(*, deprecated, message: "Use StreamFeaturesModule.$streamFeatures publisher")
-open class StreamFeaturesReceivedEvent: AbstractEvent {
-
-    /// Identifier of event which should be used during registration of `EventHandler`
-    public static let TYPE = StreamFeaturesReceivedEvent();
-
-    /// Element with stream features
-    public let featuresElement:Element!;
-
-    init() {
-        featuresElement = nil;
-        super.init(type: "StreamFeaturesReceivedEvent")
-    }
-
-    public init(context: Context, element:Element) {
-        self.featuresElement = element;
-        super.init(type: "StreamFeaturesReceivedEvent", context: context);
-    }
-
 }
 
 public struct StreamFeatures {

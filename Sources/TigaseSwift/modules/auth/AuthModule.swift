@@ -82,91 +82,12 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable {
     
     open func update(state: AuthorizationStatus) {
         self.state = state;
-        guard let context = self.context else {
-            return;
-        }
-        
-        switch state {
-        case .authorized:
-            fire(AuthSuccessEvent(context: context));
-        case .error(let error):
-            fire(AuthFailedEvent(context: context, error: error));
-        case .inProgress:
-            fire(AuthStartEvent(context: context))
-        default:
-            break;
-        }
     }
     
     public func reset(scopes: Set<ResetableScope>) {
         state = .notAuthorized;
     }
-    
-    /// Event fired on authentication failure
-    @available(* , deprecated, message: "Use $state publisher instead")
-    open class AuthFailedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = AuthFailedEvent();
-
-        /// Error returned by server during authentication
-        public let error:Error!;
-
-        init() {
-            error = nil;
-            super.init(type: "AuthFailedEvent");
-        }
-
-        public init(context: Context, error: Error) {
-            self.error = error;
-            super.init(type: "AuthFailedEvent", context: context);
-        }
-    }
-
-    /// Event fired on start of authentication process
-    @available(* , deprecated, message: "Use $state publisher instead")
-    open class AuthStartEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = AuthStartEvent();
-
-        init() {
-            super.init(type: "AuthStartEvent");
-        }
-
-        public init(context: Context) {
-            super.init(type: "AuthStartEvent", context: context);
-        }
-    }
-
-    @available(* , deprecated, message: "Use $state publisher instead")
-    open class AuthFinishExpectedEvent: AbstractEvent {
-
-        public static let TYPE = AuthFinishExpectedEvent();
-
-        init() {
-            super.init(type: "AuthFinishExpectedEvent");
-        }
-
-        public init(context: Context) {
-            super.init(type: "AuthFinishExpectedEvent", context: context);
-        }
-
-    }
-
-    /// Event fired when after sucessful authentication
-    @available(* , deprecated, message: "Use $state publisher instead")
-    open class AuthSuccessEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = AuthSuccessEvent();
-
-        init() {
-            super.init(type: "AuthSuccessEvent");
-        }
-
-        public init(context: Context) {
-            super.init(type: "AuthSuccessEvent", context: context);
-        }
-    }
-    
+        
     public enum AuthorizationStatus: Equatable {
         
         public static func == (lhs: AuthorizationStatus, rhs: AuthorizationStatus) -> Bool {

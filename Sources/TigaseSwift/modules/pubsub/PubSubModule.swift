@@ -94,10 +94,6 @@ open class PubSubModule: XmppModuleBase, XmppModule {
                     default:
                         break;
                     }
-                
-                    if let context = context {
-                        fire(NotificationReceivedEvent(context: context, message: message, nodeName: nodeName, itemId: itemId, payload: payload, timestamp: timestamp, itemType: item.name));
-                    }
                 }
             }
         }
@@ -106,34 +102,19 @@ open class PubSubModule: XmppModuleBase, XmppModule {
             for el in collectionElem.getChildren() {
                 if let childNode = el.getAttribute("node") {
                     switch el.name {
-                    case NotificationCollectionChildrenChangedEvent.Action.associate.rawValue:
+                    case "associate":
                         nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .childAssociated(childNode)))
-                    case NotificationCollectionChildrenChangedEvent.Action.dissociate.rawValue:
+                    case "dissociate":
                         nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .childDisassociated(childNode)))
                     default:
                         break;
                     }
                 }
             }
-            if let context = context {
-                collectionElem.mapChildren(transform: { (el) -> NotificationCollectionChildrenChangedEvent? in
-                    guard let childNode = el.getAttribute("node"), let action = NotificationCollectionChildrenChangedEvent.Action.init(rawValue: el.name) else {
-                        return nil;
-                    }
-                    return NotificationCollectionChildrenChangedEvent(context: context, message: message, nodeName: nodeName, childNodeName: childNode, action: action, timestamp: timestamp);
-                }, filter: { (el) -> Bool in
-                    el.name == NotificationCollectionChildrenChangedEvent.Action.associate.rawValue || el.name == NotificationCollectionChildrenChangedEvent.Action.dissociate.rawValue;
-                }).forEach { ev in
-                    self.fire(ev);
-                }
-            }
         }
         
         if let deleteElem = event.findChild(name: "delete"), let nodeName = deleteElem.getAttribute("node") {
             nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .deleted));
-            if let context = context {
-                self.fire(NotificationNodeDeletedEvent(context: context, message: message, nodeName: nodeName));
-            }
         }
         
     }
@@ -177,119 +158,6 @@ open class PubSubModule: XmppModuleBase, XmppModule {
         }
     }
     
-    /// Event fired when received message with PubSub notification/event with items
-    @available(*, deprecated, message: "Use PubSubModule.itemsEvents")
-    open class NotificationReceivedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = NotificationReceivedEvent();
-        
-        /// Received message with notification
-        public let message: Message!;
-        /// Name of node which sent notification
-        public let nodeName: String?;
-        /// Id of item
-        public let itemId: String?;
-        /// Type of item (action)
-        public let itemType: String!;
-        /// Item content - payload
-        public let payload: Element?;
-        /// Timestamp of event (may not be current if delivery was delayed on server side)
-        public let timestamp: Date!;
-        
-        public var item: Item? {
-            if let id = itemId, let payload = payload {
-                return Item(id: id, payload: payload);
-            } else {
-                return nil;
-            }
-        }
-        
-        init() {
-            self.message = nil;
-            self.nodeName = nil;
-            self.itemId = nil;
-            self.itemType = nil;
-            self.payload = nil;
-            self.timestamp = nil;
-            super.init(type: "PubSubNotificationReceivedEvent");
-        }
-        
-        init(context: Context, message: Message, nodeName: String?, itemId: String?, payload: Element?, timestamp: Date, itemType: String) {
-            self.message = message;
-            self.nodeName = nodeName;
-            self.itemId = itemId;
-            self.itemType = itemType;
-            self.payload = payload;
-            self.timestamp = timestamp;
-            super.init(type: "PubSubNotificationReceivedEvent", context: context);
-        }
-        
-    }
-    
-    @available(*, deprecated, message: "Use PubSubModule.nodeEvents")
-    open class NotificationCollectionChildrenChangedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = NotificationCollectionChildrenChangedEvent();
-
-        /// Received message with notification
-        public let message: Message!;
-        /// Name of node which sent notification
-        public let nodeName: String!;
-        /// Name of child node
-        public let childNodeName: String!;
-        /// Action
-        public let action: Action!;
-        /// Timestamp of event (may not be current if delivery was delayed on server side)
-        public let timestamp: Date!;
-
-        init() {
-            self.message = nil;
-            self.nodeName = nil;
-            self.childNodeName = nil;
-            self.action = nil;
-            self.timestamp = nil;
-            super.init(type: "NotificationCollectionChildrenChangedEvent")
-        }
-        
-        init(context: Context, message: Message, nodeName: String, childNodeName: String, action: Action, timestamp: Date) {
-            self.message = message;
-            self.nodeName = nodeName;
-            self.childNodeName = childNodeName;
-            self.action = action;
-            self.timestamp = timestamp;
-            super.init(type: "NotificationCollectionChildrenChangedEvent", context: context);
-        }
-
-        public enum Action: String {
-            case associate
-            case dissociate
-        }
-    }
-    
-    @available(*, deprecated, message: "Use PubSubModule.nodeEvents")
-    open class NotificationNodeDeletedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = NotificationNodeDeletedEvent();
-        
-        /// Received message with notification
-        public let message: Message!;
-        /// Name of node which sent notification
-        public let nodeName: String!;
-        
-        init() {
-            self.message = nil;
-            self.nodeName = nil;
-            super.init(type: "NotificationNodeDeletedEvent")
-        }
-        
-        init(context: Context, message: Message, nodeName: String) {
-            self.message = message;
-            self.nodeName = nodeName;
-            super.init(type: "NotificationNodeDeletedEvent", context: context);
-        }
-        
-    }
-
     /// Instace which contains item id and payload in single object
     open class Item: CustomStringConvertible {
         

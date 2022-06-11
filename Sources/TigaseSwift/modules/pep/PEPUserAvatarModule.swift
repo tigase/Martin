@@ -207,9 +207,6 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
-                if let context = self.context {
-                    self.fire(AvatarChangedEvent(context: context, jid: JID(jid), itemId: item.id, info: [info]));
-                }
                 completionHandler(.success(info));
             case .failure(let pubsubError):
                 completionHandler(.failure(pubsubError.error));
@@ -238,7 +235,6 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         }
         
         avatarChangePublisher.send(.init(jid: from, itemId: itemId, info: info));
-        context.eventBus.fire(AvatarChangedEvent(context: context, jid: from, itemId: itemId, info: info));
     }
     
     public struct AvatarData {
@@ -286,29 +282,6 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
             }
 
             return info;
-        }
-    }
-    
-    @available(*, deprecated, message: "Use PEPUserAvatarModule.avatarChangePublisher publisher")
-    open class AvatarChangedEvent: AbstractEvent {
-        public static let TYPE = AvatarChangedEvent();
-        
-        public let jid: JID!
-        public let itemId: String!;
-        public let info: [PEPUserAvatarModule.Info]!;
-        
-        init() {
-            self.jid = nil;
-            self.itemId = nil;
-            self.info = nil;
-            super.init(type: "PEPAvatarChanged");
-        }
-        
-        init(context: Context, jid: JID, itemId: String, info: [PEPUserAvatarModule.Info]) {
-            self.jid = jid;
-            self.itemId = itemId;
-            self.info = info;
-            super.init(type: "PEPAvatarChanged", context: context);
         }
     }
     

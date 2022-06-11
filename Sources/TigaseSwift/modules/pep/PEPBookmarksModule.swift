@@ -129,7 +129,6 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
                     if let item = items.items.first {
                         if let bookmarks = Bookmarks(from: item.payload) {
                             self.currentBookmarks = bookmarks;
-                            self.fire(BookmarksChangedEvent(context: context, bookmarks: bookmarks));
                         }
                     }
                 default:
@@ -152,27 +151,10 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
         case .published(let item):
             if let bookmarks = Bookmarks(from: item.payload) {
                 self.currentBookmarks = bookmarks;
-                self.fire(BookmarksChangedEvent(context: context, bookmarks: bookmarks));
             }
         case .retracted(_):
             break;
         }
     }
 
-    open class BookmarksChangedEvent: AbstractEvent {
-        public static let TYPE = BookmarksChangedEvent();
-        
-        public let bookmarks: Bookmarks!;
-        
-        init() {
-            self.bookmarks = nil;
-            super.init(type: "PEPBookmarksChanged");
-        }
-        
-        init(context: Context, bookmarks: Bookmarks) {
-            self.bookmarks = bookmarks;
-            super.init(type: "PEPBookmarksChanged", context: context);
-        }
-        
-    }
 }

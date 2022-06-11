@@ -64,15 +64,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     @Published
-    open fileprivate(set) var blockedJids: [JID]? {
-        didSet {
-            let added = (blockedJids ?? []).filter({ !(oldValue?.contains($0) ?? false) });
-            let removed = (oldValue ?? []).filter({ !(blockedJids?.contains($0) ?? false) });
-            if let context = self.context {
-                fire(BlockedChangedEvent(context: context, blocked: blockedJids ?? [], added: added, removed: removed));
-            }
-        }
-    }
+    open fileprivate(set) var blockedJids: [JID]?
     
     open var automaticallyRetrieve: Bool = true;
     
@@ -219,28 +211,5 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         completionHandler?(.success(blockedJids));
     }
  
-    open class BlockedChangedEvent: AbstractEvent {
-         /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = BlockedChangedEvent();
-               
-        /// List of blocked JIDs
-        public let blocked: [JID];
-        public let added: [JID];
-        public let removed: [JID];
-        
-        fileprivate init() {
-            self.blocked = [];
-            self.added = [];
-            self.removed = [];
-            super.init(type: "BlockingCommandBlockChangedEvent")
-        }
-        
-        public init(context: Context, blocked: [JID], added: [JID], removed: [JID]) {
-            self.blocked = blocked;
-            self.added = added;
-            self.removed = removed;
-            super.init(type: "BlockingCommandBlockChangedEvent", context: context);
-        }
-    }
 }
 

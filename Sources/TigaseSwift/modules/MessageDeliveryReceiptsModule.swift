@@ -91,9 +91,6 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
         case .received(let id):
             // need to notify client - fire event
             receiptsPublisher.send(.init(message: message, messageId: id));
-            if let context = context {
-                fire(ReceiptEvent(context: context, message: message, messageId: id));
-            }
             break;
         }
     }
@@ -113,31 +110,6 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
         response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
         response.hints = [.store];
         write(response);
-    }
-    
-    /// Event fired when message delivery confirmation is received
-    @available(*, deprecated, message: "Use MessageDeliveryReceiptsModule.receiptsPublisher")
-    open class ReceiptEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ReceiptEvent();
-        
-        /// Received message
-        public let message:Message!;
-        /// ID of confirmed message
-        public let messageId: String!;
-        
-        
-        fileprivate init() {
-            self.messageId = nil;
-            self.message = nil;
-            super.init(type: "MessageDeliveryReceiptReceivedEvent")
-        }
-        
-        public init(context: Context, message: Message, messageId: String) {
-            self.message = message;
-            self.messageId = messageId;
-            super.init(type: "MessageDeliveryReceiptReceivedEvent", context: context)
-        }
     }
     
     public struct Receipt {

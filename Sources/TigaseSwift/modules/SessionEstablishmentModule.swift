@@ -72,9 +72,6 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     /// Method called to start session establishemnt
     open func establish(completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
         guard isSessionEstablishmentRequired else {
-            if let context = context {
-                fire(SessionEstablishmentSuccessEvent(context: context));
-            }
             completionHandler?(.success(Void()));
             return;
         }
@@ -85,51 +82,8 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
         iq.element.addChild(session);
 
         write(iq, completionHandler: { result in
-            if let context = self.context {
-                switch result {
-                case .success(_):
-                    self.fire(SessionEstablishmentSuccessEvent(context: context));
-                case .failure(let error):
-                    self.fire(SessionEstablishmentErrorEvent(context: context, error: error));
-                }
-            }
             completionHandler?(result.map({ _ in Void() }));
         })
     }
     
-    /// Event fired when session establishment process fails
-    @available(* , deprecated, message: "You should observe Context.$state instead")
-    open class SessionEstablishmentErrorEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SessionEstablishmentErrorEvent();
-        
-        /// Error condition returned by server
-        public let error: XMPPError!;
-        
-        fileprivate init() {
-            self.error = nil;
-            super.init(type: "SessionEstablishmentErrorEvent")
-        }
-        
-        public init(context: Context, error: XMPPError) {
-            self.error = error;
-            super.init(type: "SessionEstablishmentErrorEvent", context: context);
-        }
-    }
-    
-    /// Event fired when session is established
-    @available(* , deprecated, message: "You should observe Context.$state instead")
-    open class SessionEstablishmentSuccessEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = SessionEstablishmentSuccessEvent();
-        
-        
-        fileprivate init() {
-            super.init(type: "SessionEstablishmentSuccessEvent")
-        }
-        
-        public init(context: Context) {
-            super.init(type: "SessionEstablishmentSuccessEvent", context: context);
-        }
-    }
 }

@@ -73,7 +73,6 @@ open class SocketSessionLogic: XmppSessionLogic {
     private let modulesManager: XmppModulesManager;
     
     public let connector: Connector;
-    private let eventBus: EventBus;
     private let responseManager:ResponseManager;
 
     public var streamLogger: StreamLogger? {
@@ -107,7 +106,6 @@ open class SocketSessionLogic: XmppSessionLogic {
     public init(connector: Connector, responseManager: ResponseManager, context: Context, seeOtherHost: ConnectorEndpoint?) {
         self.modulesManager = context.modulesManager;
         self.connector = connector;
-        self.eventBus = context.eventBus;
         self.connectionConfiguration = context.connectionConfiguration;
         self.context = context;
         self.responseManager = responseManager;
@@ -255,12 +253,6 @@ open class SocketSessionLogic: XmppSessionLogic {
             self.seeOtherHost = connector.prepareEndpoint(withSeeOtherHost: seeOtherHostEl.value);
             self.connector.start(endpoint: self.serverToConnectDetails());
             return false;
-        }
-        let errorName = streamErrorEl.findChild(xmlns: "urn:ietf:params:xml:ns:xmpp-streams")?.name;
-        let streamError = errorName == nil ? nil : StreamError(rawValue: errorName!);
-        if let context = self.context {
-            // how to change that into publisher?
-            eventBus.fire(ErrorEvent.init(context: context, streamError: streamError));
         }
         return true;
     }
@@ -452,24 +444,4 @@ open class SocketSessionLogic: XmppSessionLogic {
         }
     }
     
-    /// Event fired when XMPP stream error happens
-    @available(*, deprecated, message: "Observe changes of state")
-    open class ErrorEvent: AbstractEvent {
-        
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = ErrorEvent();
-        
-        /// Type of stream error which was received - may be nil if it is not known
-        public let streamError:StreamError?;
-        
-        init() {
-            streamError = nil;
-            super.init(type: "errorEvent");
-        }
-        
-        public init(context: Context, streamError: StreamError?) {
-            self.streamError = streamError;
-            super.init(type: "errorEvent", context: context)
-        }
-    }
 }

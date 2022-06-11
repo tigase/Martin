@@ -61,10 +61,6 @@ open class Context: CustomStringConvertible, Resetable {
             }
         }
     }
-    // Instance of `SessionObject` with properties for particular connection/client
-    public let sessionObject: SessionObject;
-    // Instance of `EventBus` which processes events for particular connection/client
-    public let eventBus: EventBus;
     // Instance of `XmppModuleManager` which keeps instances of every registered module for this connection/client
     public let modulesManager: XmppModulesManager;
     
@@ -79,12 +75,9 @@ open class Context: CustomStringConvertible, Resetable {
     
     private var lifecycleAwares: [ContextLifecycleAware] = [];
     
-    init(eventBus: EventBus, modulesManager: XmppModulesManager, writer: PacketWriter = DummyPacketWriter()) {
-        self.sessionObject = SessionObject(eventBus: eventBus);
-        self.eventBus = eventBus;
+    init(modulesManager: XmppModulesManager, writer: PacketWriter = DummyPacketWriter()) {
         self.modulesManager = modulesManager;
         self.writer = writer;
-        self.sessionObject.context = self;
         self.modulesManager.context = self;
     }
     
@@ -98,11 +91,6 @@ open class Context: CustomStringConvertible, Resetable {
     
     open func reset(scopes: Set<ResetableScope>) {
         modulesManager.reset(scopes: scopes);
-        if scopes.contains(.session) {
-            sessionObject.clear();
-        } else {
-            sessionObject.clear(scopes: .stream);
-        }
     }
     
     open func module<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T {

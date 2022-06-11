@@ -42,7 +42,6 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     public private(set) var currentEndpoint: ConnectorEndpoint?;
     
     private let options: Options;
-    private let eventBus: EventBus;
     private let networkStack = SocketConnector.NetworkStack();
 
     private var connection: NWConnection?;
@@ -50,7 +49,6 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     public required init(context: Context) {
         self.userJid = context.connectionConfiguration.userJid;
         self.options = context.connectionConfiguration.connectorOptions as! Options;
-        self.eventBus = context.eventBus;
 
         super.init(context: context);
         

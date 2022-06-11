@@ -136,9 +136,6 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
         let chat = messageModule.processMessage(forwarded, interlocutorJid: jid, fireEvents: false);
         
         carbonsPublisher.send(.init(action: action, jid: jid, message: forwarded));
-        if let context = context {
-            fire(CarbonReceivedEvent(context: context, action: action, message: forwarded, chat: chat));
-        }
     }
     
     /**
@@ -149,34 +146,6 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     public enum Action: String {
         case received
         case sent
-    }
-    
-    /// Event fired when Message Carbon is received
-    @available(*, deprecated, message: "Use MessageCarbonsModule.carbonsPublisher")
-    open class CarbonReceivedEvent: AbstractEvent {
-        /// Identifier of event which should be used during registration of `EventHandler`
-        public static let TYPE = CarbonReceivedEvent();
-        
-        /// Action due to which this carbon was created
-        public let action: Action!;
-        /// Forwarded message
-        public let message: Message!;
-        /// Chat for which this forwarded message belongs to
-        public let chat: ChatProtocol?;
-        
-        init() {
-            self.action = nil;
-            self.message = nil;
-            self.chat = nil;
-            super.init(type: "MessageCarbonReceivedEvent")
-        }
-        
-        init(context: Context, action: Action, message: Message, chat: ChatProtocol?) {
-            self.action = action;
-            self.message = message;
-            self.chat = chat;
-            super.init(type: "MessageCarbonReceivedEvent", context: context);
-        }
     }
     
     public struct CarbonReceived {
