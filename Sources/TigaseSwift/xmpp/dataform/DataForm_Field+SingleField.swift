@@ -22,7 +22,7 @@ import Foundation
 
 extension DataForm.Field {
     
-    class SingleField<Value: Equatable>: DataForm.Field {
+    open class SingleField<Value: Equatable>: DataForm.Field {
 
         private let origValue: Value;
         public var currentValue: Value;
@@ -30,42 +30,46 @@ extension DataForm.Field {
         public override var wasModified: Bool {
             return origValue != currentValue;
         }
-
-        init(`var`: String, type: FieldType? = .textSingle, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: Value, originalValue: Value) {
+        
+        public init(`var`: String, type: FieldType? = .textSingle, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: Value, originalValue: Value) {
             self.origValue = originalValue;
             self.currentValue = value;
             super.init(var: `var`, type: type, required: required, label: label, desc: desc, media: media);
         }
         
-        init?(element el: Element, value: Value) {
+        public init?(element el: Element, value: Value) {
             self.origValue = value;
             self.currentValue = value;
             super.init(element: el);
         }
     }
     
-    class TextSingle: SingleField<String?> {
+    open class TextSingle: SingleField<String?> {
         
-        required init?(element el: Element) {
+        open override var isValid: Bool {
+            return !isRequired || currentValue != nil;
+        }
+
+        public required init?(element el: Element) {
             super.init(element: el, value: el.findChild(name: "value")?.value);
         }
 
-        init(`var`: String, type: FieldType? = .textSingle, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
+        public init(`var`: String, type: FieldType? = .textSingle, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
             super.init(var: `var`, type: type, required: required, label: label, desc: desc, media: media, value: value, originalValue: nil);
         }
         
-        func value<V: LosslessStringConvertible>() -> V? {
+        open func value<V: LosslessStringConvertible>() -> V? {
             guard let val = currentValue else {
                 return nil;
             }
             return V(val);
         }
         
-        func value<V: LosslessStringConvertible>(_ value: V?) {
+        open func value<V: LosslessStringConvertible>(_ value: V?) {
             currentValue = value?.description;
         }
         
-        override func element(formType: DataForm.FormType) -> Element {
+        open override func element(formType: DataForm.FormType) -> Element {
             let el = super.element(formType: formType);
             if let value = currentValue {
                 el.addChild(Element(name: "value", cdata: value));
@@ -75,25 +79,29 @@ extension DataForm.Field {
 
     }
     
-    class JIDSingle: SingleField<JID?> {
+    open class JIDSingle: SingleField<JID?> {
         
-        required init?(element el: Element) {
+        open override var isValid: Bool {
+            return !isRequired || currentValue != nil;
+        }
+
+        public required init?(element el: Element) {
             super.init(element: el, value: JID(el.findChild(name: "value")?.value));
         }
 
-        init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: JID? = nil) {
+        public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: JID? = nil) {
             super.init(var: `var`, type: .jidSingle, required: required, label: label, desc: desc, media: media, value: value, originalValue: nil);
         }
         
-        func value() -> JID? {
+        open func value() -> JID? {
             return currentValue;
         }
         
-        func value(_ value: JID?) {
+        open func value(_ value: JID?) {
             self.currentValue = value;
         }
 
-        override func element(formType: DataForm.FormType) -> Element {
+        open override func element(formType: DataForm.FormType) -> Element {
             let el = super.element(formType: formType);
             if let value = currentValue?.stringValue {
                 el.addChild(Element(name: "value", cdata: value));
@@ -103,26 +111,26 @@ extension DataForm.Field {
 
     }
     
-    class Boolean: SingleField<Bool> {
+    open class Boolean: SingleField<Bool> {
 
-        required init?(element el: Element) {
+        public required init?(element el: Element) {
             let val = el.findChild(name: "value")?.value;
             super.init(element: el, value: "1" == val || "true" == val);
         }
 
-        init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: Bool = false) {
+        public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: Bool = false) {
             super.init(var: `var`, type: .boolean, required: required, label: label, desc: desc, media: media, value: value, originalValue: false);
         }
         
-        func value() -> Bool {
+        open func value() -> Bool {
             return currentValue;
         }
         
-        func value(_ value: Bool) {
+        open func value(_ value: Bool) {
             self.currentValue = currentValue;
         }
         
-        override func element(formType: DataForm.FormType) -> Element {
+        open override func element(formType: DataForm.FormType) -> Element {
             let el = super.element(formType: formType);
             el.addChild(Element(name: "value", cdata: currentValue ? "true" : "false"));
             return el;
@@ -130,48 +138,56 @@ extension DataForm.Field {
 
     }
     
-    class TextPrivate: TextSingle {
+    open class TextPrivate: TextSingle {
         
-        required init?(element: Element) {
+        open override var isValid: Bool {
+            return !isRequired || currentValue != nil;
+        }
+        
+        public required init?(element: Element) {
             super.init(element: element);
         }
         
-        init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
+        public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
             super.init(var: `var`, type: .textPrivate, required: required, label: label, desc: desc, media: media, value: value);
         }
     }
 
-    class Hidden: TextSingle {
+    open class Hidden: TextSingle {
         
-        required init?(element: Element) {
+        public required init?(element: Element) {
             super.init(element: element);
         }
         
-        init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
+        public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
             super.init(var: `var`, type: .hidden, required: required, label: label, desc: desc, media: media, value: value);
         }
     }
 
-    class Fixed: TextSingle {
+    open class Fixed: TextSingle {
         
-        required init?(element: Element) {
+        public required init?(element: Element) {
             super.init(element: element);
         }
         
-        init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
+        public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
             super.init(var: `var`, type: .fixed, required: required, label: label, desc: desc, media: media, value: value);
         }
     }
     
-    class ListSingle: TextSingle {
-        let options: [Option];
+    open class ListSingle: TextSingle {
+        public let options: [Option];
+        
+        open override var isValid: Bool {
+            return !isRequired || currentValue != nil;
+        }
 
-        required init?(element el: Element) {
+        public required init?(element el: Element) {
             options = Option.from(element: el);
             super.init(element: el);
         }
         
-        init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], options: [Option] = [], value: String? = nil) {
+        public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], options: [Option] = [], value: String? = nil) {
             self.options = options;
             super.init(var: `var`, type: .listSingle, required: required, label: label, desc: desc, media: media, value: value);
         }

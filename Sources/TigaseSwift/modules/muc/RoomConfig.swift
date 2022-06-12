@@ -23,46 +23,51 @@ import Foundation
 
 open class RoomConfig: DataFormWrapper {
     
+    public enum WhoisEnum {
+        case moderators
+        case anyone
+    }
+    
     @Field("muc#maxhistoryfetch")
-    var maxHistoryFetch: Int?;
+    public var maxHistoryFetch: Int?;
     @Field("muc#roomconfig_allowpm")
-    var allowPM: Bool?;
+    public var allowPM: Bool?;
     @Field("muc#roomconfig_allowinvites")
-    var allowInvites: Bool?;
+    public var allowInvites: Bool?;
     @Field("muc#roomconfig_changesubject")
-    var changeSubject: Bool?;
+    public var changeSubject: Bool?;
     @Field("muc#roomconfig_enablelogging")
-    var enableLogging: Bool?;
+    public var enableLogging: Bool?;
     @Field("muc#roomconfig_getmemberlist")
-    var getMemberList: [String]?;
+    public var getMemberList: [String]?;
     @Field("muc#roomconfig_lang")
-    var lang: String?;
+    public var lang: String?;
     @Field("muc#roomconfig_pubsub")
-    var pubsub: String?;
+    public var pubsub: String?;
     @Field("muc#roomconfig_maxusers")
-    var maxUsers: Int?;
+    public var maxUsers: Int?;
     @Field("muc#roomconfig_membersonly")
-    var membersOnly: Bool?;
+    public var membersOnly: Bool?;
     @Field("muc#roomconfig_moderatedroom")
-    var moderatedRoom: Bool?;
+    public var moderatedRoom: Bool?;
     @Field("muc#roomconfig_passwordprotectedroom")
-    var passwordProtectedRoom: Bool?;
+    public var passwordProtectedRoom: Bool?;
     @Field("muc#roomconfig_persistentroom")
-    var persistentRoom: Bool?;
+    public var persistentRoom: Bool?;
     @Field("muc#roomconfig_publicroom")
-    var publicRoom: Bool?;
+    public var publicRoom: Bool?;
     @Field("muc#roomconfig_roomadmins")
-    var admins: [JID]?;
+    public var admins: [JID]?;
     @Field("muc#roomconfig_roomdesc")
-    var desc: String?;
+    public var desc: String?;
     @Field("muc#roomconfig_roomname")
-    var name: String?;
+    public var name: String?;
     @Field("muc#roomconfig_roomowners")
-    var owners: [JID]?;
+    public var owners: [JID]?;
     @Field("muc#roomconfig_roomsecret")
-    var secret: String?;
+    public var secret: String?;
     @Field("muc#roomconfig_whois")
-    var whois: MucAffiliation?;
+    public var whois: WhoisEnum?;
     
     public convenience init?(element: Element) {
         guard let form = DataForm(element: element) else {

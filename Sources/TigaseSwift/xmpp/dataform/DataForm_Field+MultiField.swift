@@ -23,7 +23,7 @@ import Foundation
 
 extension DataForm.Field {
     
-    class MultiField<Value: Equatable>: DataForm.Field {
+    open class MultiField<Value: Equatable>: DataForm.Field {
         private let origValues: [Value];
         public var currentValues: [Value];
 
@@ -31,13 +31,13 @@ extension DataForm.Field {
             return origValues != currentValues;
         }
         
-        init(`var`: String, type: FieldType? = .textMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [Value] = []) {
+        public init(`var`: String, type: FieldType? = .textMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [Value] = []) {
             self.origValues = [];
             self.currentValues = values;
             super.init(var: `var`, type: type, required: required, label: label, desc: desc, media: media);
         }
 
-        init?(element el: Element, values: [Value]) {
+        public init?(element el: Element, values: [Value]) {
             origValues = values;
             currentValues = values;
             super.init(element: el);
@@ -45,25 +45,29 @@ extension DataForm.Field {
 
     }
 
-    class TextMulti: MultiField<String> {
+    open class TextMulti: MultiField<String> {
 
-        required init?(element el: Element) {
+        open override var isValid: Bool {
+            return !isRequired || !currentValues.isEmpty;
+        }
+        
+        public required init?(element el: Element) {
             super.init(element: el, values: el.getChildren(name: "value").compactMap({ $0.value }));
         }
         
-        override init(`var`: String, type: FieldType? = .textMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [String] = []) {
+        public override init(`var`: String, type: FieldType? = .textMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [String] = []) {
             super.init(var: `var`, type: type, required: required, label: label, desc: desc, media: media, values: values);
         }
         
-        func values<K: LosslessStringConvertible>() -> [K] {
+        open func values<K: LosslessStringConvertible>() -> [K] {
             return currentValues.compactMap({ K($0) });
         }
         
-        func values<K: LosslessStringConvertible>(_ values: [K]) {
+        open func values<K: LosslessStringConvertible>(_ values: [K]) {
             currentValues = values.map({ $0.description })
         }
 
-        override func element(formType: DataForm.FormType) -> Element {
+        open override func element(formType: DataForm.FormType) -> Element {
             let el = super.element(formType: formType);
             for value in currentValues {
                 el.addChild(Element(name: "value", cdata: value));
@@ -73,25 +77,29 @@ extension DataForm.Field {
 
     }
     
-    class JIDMulti: MultiField<JID> {
+    open class JIDMulti: MultiField<JID> {
         
-        required init?(element el: Element) {
+        open override var isValid: Bool {
+            return !isRequired || !currentValues.isEmpty;
+        }
+        
+        public required init?(element el: Element) {
             super.init(element: el, values: el.getChildren(name: "value").compactMap({ $0.value }).compactMap({ JID( $0 )}));
         }
         
-        override init(`var`: String, type: FieldType? = .jidMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [JID] = []) {
+        public override init(`var`: String, type: FieldType? = .jidMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [JID] = []) {
             super.init(var: `var`, type: type, required: required, label: label, desc: desc, media: media, values: values);
         }
         
-        func values() -> [JID] {
+        open func values() -> [JID] {
             return currentValues;
         }
         
-        func values(_ values: [JID]) {
+        open func values(_ values: [JID]) {
             currentValues = values;
         }
 
-        override func element(formType: DataForm.FormType) -> Element {
+        open override func element(formType: DataForm.FormType) -> Element {
             let el = super.element(formType: formType);
             for value in currentValues {
                 el.addChild(Element(name: "value", cdata: value.stringValue));
@@ -100,15 +108,19 @@ extension DataForm.Field {
         }
     }
 
-    class ListMulti: TextMulti {
-        let options: [Option];
+    open class ListMulti: TextMulti {
+        public let options: [Option];
         
-        required init?(element el: Element) {
+        open override var isValid: Bool {
+            return !isRequired || !currentValues.isEmpty;
+        }
+
+        public required init?(element el: Element) {
             options = Option.from(element: el);
             super.init(element: el);
         }
 
-        init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], options: [Option] = [], values: [String] = []) {
+        public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], options: [Option] = [], values: [String] = []) {
             self.options = options;
             super.init(var: `var`, type: .listMulti, required: required, label: label, desc: desc, media: media, values: values);
         }

@@ -21,7 +21,7 @@
 
 import Foundation
 
-public protocol StreamLogger: class {
+public protocol StreamLogger: AnyObject {
     
     func incoming(_ value: StreamEvent);
 

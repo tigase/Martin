@@ -157,6 +157,10 @@ open class DataForm: DataFormProtocol {
             return self.isRequired || self.wasModified || self.type == .hidden;
         }
         
+        open var isValid: Bool {
+            return true;
+        }
+        
         public init?(element el: Element) {
             guard let v = el.getAttribute("var") else {
                 return nil;
