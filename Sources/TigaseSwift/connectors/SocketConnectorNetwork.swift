@@ -95,8 +95,6 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 return;
             }
             
-            let start = Date();
-            let timeout: Double? = self.options.connectionTimeout;
             state = .connecting;
             //            if let srvRecord = self.sessionLogic?.serverToConnectDetails() {
             //                self.connect(dnsName: srvRecord.target, srvRecord: srvRecord);

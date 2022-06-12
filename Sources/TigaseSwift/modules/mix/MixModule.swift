@@ -223,7 +223,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                 case .success(let response):
                     if let joinEl = response.findChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.getAttribute("id") {
                         self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
-                        self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
+                        _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                     }
                 default:
                     break;
@@ -374,13 +374,11 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                     channel.update(ownNickname: ownParticipant.nickname);
                 }
                 channel.set(participants: participants);
-                if let context = self.context {
-                    for participant in left {
-                        self.participantsEvents.send(.left(participant));
-                    }
-                    for participant in participants {
-                        self.participantsEvents.send(.joined(participant));
-                    }
+                for participant in left {
+                    self.participantsEvents.send(.left(participant));
+                }
+                for participant in participants {
+                    self.participantsEvents.send(.joined(participant));
                 }
                 completionHandler?(.success(participants));
             case .failure(let pubsubError):

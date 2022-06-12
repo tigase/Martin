@@ -197,7 +197,7 @@ open class SocketSessionLogic: XmppSessionLogic {
             if streamFeaturesWithPipelining.active {
                 self.startStream();
             }
-        case .error(let error):
+        case .error(_):
             _ = self.stop(force: true);
         default:
             logger.debug("Received auth state: \(state)")

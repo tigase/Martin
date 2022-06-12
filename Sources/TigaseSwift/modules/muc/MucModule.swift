@@ -418,12 +418,8 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
                 oldOccupant.set(presence: presence);
             }
         } else {
-            let temp = room.removeTemp(nickname: nickname);
-            let occupant = room.addOccupant(nickname: nickname, presence: presence);
-            
             if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
                 room.update(state: .joined);
-                let occupant = room.addOccupant(nickname: nickname, presence: presence);
                 
                 let wasCreated = xUser?.statuses.firstIndex(of: 201) != nil;
                 context.dispatcher.async {
@@ -441,7 +437,6 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
     func processMessage(_ message: Message) {
         let from = message.from!;
         let roomJid = from.bareJid;
-        let nickname = from.resource;
         
         guard let context = context else {
             return;
@@ -487,7 +482,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         let reason = decline?.findChild(name: "reason")?.stringValue;
         let invitee = decline?.getAttribute("from");
         
-        if let context = self.context, let inviteeJid = JID(invitee) {
+        if let inviteeJid = JID(invitee) {
             let declined = DeclinedInvitation(context: context, message: message, roomJid: from, invitee: inviteeJid, reason: reason);
             self.inivitationsPublisher.send(declined)
         }

@@ -360,7 +360,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         let id = stanza.getAttribute("id");
         let r = stanza.getAttribute("resume");
         let mx = stanza.getAttribute("max");
-        let resume = (r == "true" || r == "1") && id != nil;
+        //let resume = (r == "true" || r == "1") && id != nil;
         _resumptionLocation = (self.context as? XMPPClient)?.connector?.prepareEndpoint(withResumptionLocation: stanza.getAttribute("location"))
         
         resumptionId = id;

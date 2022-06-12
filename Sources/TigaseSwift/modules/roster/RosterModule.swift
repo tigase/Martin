@@ -118,7 +118,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         let annotations: [RosterItemAnnotation] = processRosterItemForAnnotations(item: item);
 
         if subscription == .remove {
-            if let item = rosterManager.deleteItem(for: context, jid: jid) {
+            if rosterManager.deleteItem(for: context, jid: jid) != nil {
                 eventsSender.send(.removed(jid));
             }
             return jid;
@@ -174,7 +174,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
                     
                     let removed = oldJids.filter({ !newJids.contains($0) });
                     for jid in removed {
-                        if let item = self.rosterManager.deleteItem(for: context, jid: jid) {
+                        if self.rosterManager.deleteItem(for: context, jid: jid) != nil {
                             self.eventsSender.send(.removed(jid));
                         }
                     }

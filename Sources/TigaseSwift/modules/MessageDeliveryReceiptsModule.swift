@@ -76,7 +76,7 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
     }
     
     private func process(message: Message, sendReceived: Bool) {
-        guard message.type != StanzaType.error, let delivery = message.messageDelivery, let jid = message.from else {
+        guard message.type != StanzaType.error, let delivery = message.messageDelivery, message.from != nil else {
             return;
         }
         

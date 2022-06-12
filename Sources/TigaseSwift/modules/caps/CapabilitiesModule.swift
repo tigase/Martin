@@ -50,10 +50,8 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     
     open override weak var context: Context? {
         willSet {
-            if let context = context {
-                discoModule = nil;
-                presenceModule = nil;
-            }
+            discoModule = nil;
+            presenceModule = nil;
         }
         
         didSet {

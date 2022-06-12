@@ -153,7 +153,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
                     } else {
                         publish();
                     }
-                case .failure(let error):
+                case .failure(_):
                      publish();
                 }
             })

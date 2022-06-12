@@ -101,7 +101,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      - parameter onError: called when received error or request timed out
      */
     open func discoverAccountFeatures(completionHandler:((Result<DiscoveryInfoResult,XMPPError>) -> Void)?) {
-        if let jid = context?.boundJid, let context = context {
+        if let jid = context?.boundJid {
             getInfo(for: jid.withoutResource, completionHandler: { result in
                 switch result {
                 case .success(let info):

@@ -133,7 +133,7 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
         guard let jid = action == .received ? forwarded.from : forwarded.to else {
             return;
         }
-        let chat = messageModule.processMessage(forwarded, interlocutorJid: jid, fireEvents: false);
+        _ = messageModule.processMessage(forwarded, interlocutorJid: jid, fireEvents: false);
         
         carbonsPublisher.send(.init(action: action, jid: jid, message: forwarded));
     }

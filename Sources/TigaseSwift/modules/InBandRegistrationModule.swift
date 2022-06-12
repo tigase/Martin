@@ -234,10 +234,6 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
      - parameter callback: called when user is unregistrated
      */
     open func unregister<Failure: Error>(from: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
-        guard let context = context else {
-            completionHandler(.failure(errorDecoder(nil) as! Failure));
-            return;
-        }
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = from;
