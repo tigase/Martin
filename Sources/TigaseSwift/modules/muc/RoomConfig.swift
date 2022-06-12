@@ -80,38 +80,3 @@ open class RoomConfig: DataFormWrapper {
         super.init(form: form);
     }
 }
-
-extension MucModule {
-    
-    open func roomConfiguration(roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = roomJid;
-        
-        iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
-        write(iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                guard let formEl = stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data"), let data = RoomConfig(element: formEl) else {
-                    return .failure(.undefined_condition);
-                }
-                
-                return .success(data);
-            }))
-        });
-    }
-    
-    open func setRoomConfiguration(roomJid: JID, configuration: RoomConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = roomJid;
-        
-        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
-        iq.addChild(query);
-        query.addChild(configuration.element(type: .submit, onlyModified: true));
-        
-        write(iq, completionHandler: { result in
-            completionHandler(result.map { _ in Void() });
-        });
-    }
-    
-}

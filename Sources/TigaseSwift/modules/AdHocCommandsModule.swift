@@ -45,7 +45,7 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
         throw XMPPError.feature_not_implemented;
     }
     
-    open func execute(on to: JID?, command node: String, action: Action?, data: JabberDataElement?, completionHandler: @escaping (AdHocResult)->Void) {
+    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?, completionHandler: @escaping (Result<AdHocCommandsModule.Response, XMPPError>)->Void) {
         let iq = Iq();
         iq.type = .set;
         iq.to = to;
@@ -53,36 +53,7 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
         let command = Element(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS);
         command.setAttribute("node", value: node);
         
-        if data != nil {
-            command.addChild(data!.submitableElement(type: XDataType.submit));
-        }
-        
-        iq.addChild(command);
-        
-        write(iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                guard let command = stanza.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
-                    return .failure(.undefined_condition);
-                }
-                let form = JabberDataElement(from: command.findChild(name: "x", xmlns: "jabber:x:data"));
-                let actions = command.findChild(name: "actions")?.mapChildren(transform: { Action(rawValue: $0.name) }) ?? [];
-                let notes = command.mapChildren(transform: { Note.from(element: $0) });
-                let status = Status(rawValue: command.getAttribute("status") ?? "") ?? Status.completed;
-                
-                return .success(Response(status: status, form: form, actions: actions, notes: notes));
-            }))
-        });
-    }
-    
-    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm, completionHandler: @escaping (Result<AdHocCommandsModule.Response2, XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = to;
-        
-        let command = Element(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS);
-        command.setAttribute("node", value: node);
-        
-        if data != nil {
+        if let data = data {
             command.addChild(data.element(type: .submit, onlyModified: false));
         }
         
@@ -99,7 +70,7 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
                 let notes = command.mapChildren(transform: { Note.from(element: $0) });
                 let status = Status(rawValue: command.getAttribute("status") ?? "") ?? Status.completed;
                 
-                return .success(Response2(status: status, form: form, actions: actions, notes: notes));
+                return .success(Response(status: status, form: form, actions: actions, notes: notes));
             }))
         });
     }
@@ -140,17 +111,8 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
     
     public struct Response {
         public let status: AdHocCommandsModule.Status;
-        public let form: JabberDataElement?;
-        public let actions: [AdHocCommandsModule.Action];
-        public let notes: [AdHocCommandsModule.Note];
-    }
-    
-    public struct Response2 {
-        public let status: AdHocCommandsModule.Status;
         public let form: DataForm?;
         public let actions: [AdHocCommandsModule.Action];
         public let notes: [AdHocCommandsModule.Note];
     }
 }
-
-public typealias AdHocResult = Result<AdHocCommandsModule.Response, XMPPError>

@@ -31,33 +31,7 @@ extension PubSubModule {
      - parameter with: optional subscription options
      - parameter completionHandler: called when result is available
      */
-    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: JabberDataElement? = nil, completionHandler: ((PubSubResult<PubSubSubscriptionElement>)->Void)?) {
-        
-        self.subscribe(at: pubSubJid, to: nodeName, subscriber: subscriber, with: options, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
-            completionHandler?(result.flatMap({ response in
-                guard let subscriptionEl = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "subscription"), let subscription = PubSubSubscriptionElement(from: subscriptionEl) else {
-                    return .failure(.undefined_condition);
-                }
-                return .success(subscription);
-            }));
-            
-        });
-    }
-
-    /**
-     Subscribe to node
-     - parameter at: jid of PubSub service
-     - parameter to: node name
-     - parameter subscriber: jid of subscriber
-     - parameter with: optional subscription options
-     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
-     - parameter completionHandler: called when result is available
-     */
-    public func subscribe<Failure: Error>(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: JabberDataElement? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
-        subscribe(at: pubSubJid, to: nodeName, subscriber: subscriber, with: options?.submitableElement(type: .submit), errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-    
-    public func subscribe<Failure: Error>(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: Element? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions? = nil, completionHandler: ((PubSubResult<PubSubSubscriptionElement>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -70,7 +44,7 @@ extension PubSubModule {
         subscribe.setAttribute("jid", value: subscriber.stringValue);
         pubsub.addChild(subscribe);
         
-        if let options = options {
+        if let options = options?.element(type: .submit, onlyModified: false) {
             let optionsEl = Element(name: "options");
             optionsEl.setAttribute("jid", value: subscriber.stringValue);
             optionsEl.setAttribute("node", value: nodeName);
@@ -78,7 +52,14 @@ extension PubSubModule {
             pubsub.addChild(optionsEl);
         }
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler?(result.flatMap({ response in
+                guard let subscriptionEl = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "subscription"), let subscription = PubSubSubscriptionElement(from: subscriptionEl) else {
+                    return .failure(.undefined_condition);
+                }
+                return .success(subscription);
+            }))
+        });
     }
     
     /**
@@ -126,26 +107,7 @@ extension PubSubModule {
      - parameter with: configuration to apply
      - parameter completionHandler: called when result is available
      */
-    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: JabberDataElement, completionHandler: ((PubSubResult<Void>)->Void)?) {
-        self.configureSubscription(at: pubSubJid, for: nodeName, subscriber: subscriber, with: options, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
-            completionHandler?(result.map { _ in Void() });
-        });
-    }
-    
-    /**
-     Configure subscription for node
-     - parameter at: jid of PubSub service
-     - parameter for: node name
-     - parameter subscriber: jid of subscriber
-     - parameter with: configuration to apply
-     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
-     - parameter completionHandler: called when result is available
-     */
-    public func configureSubscription<Failure: Error>(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
-        self.configureSubscription(at: pubSubJid, for: nodeName, subscriber: subscriber, with: options.submitableElement(type: .submit), errorDecoder: PubSubError.from(stanza: ), completionHandler: completionHandler);
-    }
-    
-    public func configureSubscription<Failure: Error>(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: Element, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions, completionHandler: ((PubSubResult<Void>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = JID(pubSubJid);
@@ -156,10 +118,12 @@ extension PubSubModule {
         let optionsEl = Element(name: "options");
         optionsEl.setAttribute("jid", value: subscriber.stringValue);
         optionsEl.setAttribute("node", value: nodeName);
-        optionsEl.addChild(options);
+        optionsEl.addChild(options.element(type: .submit, onlyModified: false));
         pubsub.addChild(optionsEl);
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler?(result.map { _ in Void() });
+        });
     }
 
     /**
@@ -168,25 +132,7 @@ extension PubSubModule {
      - parameter for: node name
      - parameter completionHandler: called when result is available
      */
-    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?, completionHandler: ((PubSubResult<JabberDataElement>)->Void)?) {
-        self.retrieveDefaultSubscriptionConfiguration(from: pubSubJid, for: nodeName, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
-            completionHandler?(result.flatMap({ stanza in
-                if let defaultEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "default"), let x = defaultEl.findChild(name: "x", xmlns: "jabber:x:data"), let defaults = JabberDataElement(from: x) {
-                    return .success(defaults);
-                }
-                return .failure(.undefined_condition);
-            }))
-        });
-    }
-    
-    /**
-     Retrieve default configuration for subscription
-     - parameter from: jid of PubSub service
-     - parameter for: node name
-     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
-     - parameter completionHandler: called when result is available
-     */
-    public func retrieveDefaultSubscriptionConfiguration<Failure: Error>(from pubSubJid: BareJID, for nodeName: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?, completionHandler: ((PubSubResult<PubSubSubscribeOptions>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
@@ -198,7 +144,14 @@ extension PubSubModule {
         optionsEl.setAttribute("node", value: nodeName);
         pubsub.addChild(optionsEl);
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler?(result.flatMap({ stanza in
+                if let defaultEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "default"), let x = defaultEl.findChild(name: "x", xmlns: "jabber:x:data"), let defaults = PubSubSubscribeOptions(element: x) {
+                    return .success(defaults);
+                }
+                return .failure(.undefined_condition);
+            }))
+        });
     }
 
     /**
@@ -208,26 +161,7 @@ extension PubSubModule {
      - parameter subscriber: subscriber jid
      - parameter completionHandler: called when response is available
      */
-    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID, completionHandler: ((PubSubResult<JabberDataElement>)->Void)?) {
-        self.retrieveSubscriptionConfiguration(from: pubSubJid, for: nodeName, subscriber: subscriber, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
-            completionHandler?(result.flatMap({ stanza in
-                guard let optionsEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "options"), let x = optionsEl.findChild(name: "x", xmlns: "jabber:x:data"), let options = JabberDataElement(from: x) else {
-                    return .failure(.undefined_condition);
-                }
-                return .success(options);
-            }))
-        });
-    }
-    
-    /**
-     Retrieve configuration of subscription
-     - parameter from: jid of PubSub service
-     - parameter for: node name
-     - parameter subscriber: subscriber jid
-     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
-     - parameter completionHandler: called when result is available
-     */
-    public func retrieveSubscriptionConfiguration<Failure: Error>(from pubSubJid: BareJID, for nodeName: String, subscriber: JID, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID, completionHandler: ((PubSubResult<PubSubSubscribeOptions>)->Void)?) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = JID(pubSubJid);
@@ -240,7 +174,14 @@ extension PubSubModule {
         optionsEl.setAttribute("node", value: nodeName);
         pubsub.addChild(optionsEl);
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+            completionHandler?(result.flatMap({ stanza in
+                guard let optionsEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "options"), let x = optionsEl.findChild(name: "x", xmlns: "jabber:x:data"), let options = PubSubSubscribeOptions(element: x) else {
+                    return .failure(.undefined_condition);
+                }
+                return .success(options);
+            }))
+        });
     }
 
     /**

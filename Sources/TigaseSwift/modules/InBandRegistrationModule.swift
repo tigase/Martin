@@ -110,12 +110,8 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
      - parameter completionHandler: called when result is available
      */
     open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult<XMPPError>)->Void) {
-        retrieveRegistrationForm(from: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: completionHandler);
-    }
-    
-    open func retrieveRegistrationForm<Failure: Error>(from jid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (RetrieveFormResult<Failure>)->Void) {
         guard let context = context else {
-            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            completionHandler(.failure(.undefined_condition));
             return;
         }
         let iq = Iq();
@@ -125,48 +121,10 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         
         iq.addChild(query);
-        write(iq, errorDecoder: errorDecoder, completionHandler: { result in
-            completionHandler(result.map { response in
-                if let query = response.findChild(name: "query", xmlns: "jabber:iq:register"), let form = JabberDataElement(from: query.findChild(name: "x", xmlns: "jabber:x:data")) {
-                    return FormResult(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
-                } else {
-                    let form = JabberDataElement(type: .form);
-                    if let query = response.findChild(name: "query", xmlns: "jabber:iq:register") {
-                        if let instructions = query.findChild(name: "instructions")?.value {
-                            form.instructions = [instructions];
-                        }
-                        if query.findChild(name: "username") != nil {
-                            form.addField(TextSingleField(name: "username", required: true));
-                        }
-                        if query.findChild(name: "password") != nil {
-                            form.addField(TextPrivateField(name: "password", required: true));
-                        }
-                        if query.findChild(name: "email") != nil {
-                            form.addField(TextSingleField(name: "email", required: true));
-                        }
-                    }
-                    return FormResult(type: .plain, form: form, bob: []);
-                }
-            });
-        });
-    }
-
-    open func retrieveRegistrationForm<Failure: Error>(from jid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, resultHandler completionHandler: @escaping (Result<FormResult2,Failure>)->Void) {
-        guard let context = context else {
-            completionHandler(.failure(errorDecoder(nil) as! Failure));
-            return;
-        }
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
-    
-        let query = Element(name: "query", xmlns: "jabber:iq:register");
-        
-        iq.addChild(query);
-        write(iq, errorDecoder: errorDecoder, completionHandler: { result in
+        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.map { response in
                 if let query = response.findChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.findChild(name: "x", xmlns: "jabber:x:data")) {
-                    return FormResult2(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
+                    return FormResult(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
                 } else {
                     let form = DataForm(type: .form);
                     if let query = response.findChild(name: "query", xmlns: "jabber:iq:register") {
@@ -183,37 +141,15 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                             form.add(field: .TextSingle(var: "email", required: true));
                         }
                     }
-                    return FormResult2(type: .plain, form: form, bob: []);
+                    return FormResult(type: .plain, form: form, bob: []);
                 }
             });
         });
     }
-    
-    open func submitRegistrationForm(to jid: JID? = nil, form: JabberDataElement, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        submitRegistrationForm(to: jid, form: form, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        })
-    }
-    
-    open func submitRegistrationForm<Failure: Error>(to jid: JID? = nil, form: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
-        guard let context = context else {
-            completionHandler(.failure(errorDecoder(nil) as! Failure));
-            return;
-        }
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
-        
-        let query = Element(name: "query", xmlns: "jabber:iq:register");
-        query.addChild(form.submitableElement(type: .submit));
-        
-        iq.addChild(query);
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
 
-    open func submitRegistrationForm<Failure: Error>(to jid: JID? = nil, form: DataForm, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Void,Failure>)->Void) {
+    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard let context = context else {
-            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            completionHandler(.failure(.undefined_condition));
             return;
         }
         let iq = Iq();
@@ -224,7 +160,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         query.addChild(form.element(type: .submit, onlyModified: false));
         
         iq.addChild(query);
-        write(iq, errorDecoder: errorDecoder, completionHandler: { result in
+        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.map({ _ in Void() }))
         });
     }
@@ -310,17 +246,17 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             }
         };
         var inBandRegistrationModule: InBandRegistrationModule!;
-        var onForm: ((JabberDataElement, [BobData], AccountRegistrationTask)->Void)?;
+        var onForm: ((DataForm, [BobData], AccountRegistrationTask)->Void)?;
         var completionHandler: ((RegistrationResult)->Void)?;
         var onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)?;
         
         var usesDataForm = false;
-        var formToSubmit: JabberDataElement?;
+        var formToSubmit: DataForm?;
         var serverAvailable: Bool = false;
         
         var acceptedCertificate: SslCertificateInfo? = nil;
         
-        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (JabberDataElement, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
+        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (DataForm, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
             let localClient = client ?? XMPPClient();
             _ = localClient.modulesManager.register(StreamFeaturesModule());
             self.setClient(client: localClient);
@@ -344,7 +280,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             }
         }
         
-        open func submit(form: JabberDataElement) {
+        open func submit(form: DataForm) {
             formToSubmit = form;
             guard (client?.state ?? .disconnected()) != .disconnected() else {
                 client?.login();
@@ -364,9 +300,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                     }
                 });
             } else {
-                let username = (form.getField(named: "username") as? TextSingleField)?.value;
-                let password = (form.getField(named: "password") as? TextPrivateField)?.value;
-                let email = (form.getField(named: "email") as? TextSingleField)?.value;
+                let username = form.value(for: "username", type: String.self);
+                let password = form.value(for: "password", type: String.self);
+                let email = form.value(for: "email", type: String.self);
                 inBandRegistrationModule.register(username: username, password: password, email: email, completionHandler: { result in
                     switch result {
                     case .success(_):
@@ -426,28 +362,28 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                     if self.formToSubmit == nil {
                         self.onForm?(formResult.form, formResult.bob, self);
                     } else {
-                        var sameForm = true;
+                        var oldFields = self.formToSubmit?.fields ?? [];
+                        var sameForm = !oldFields.isEmpty;
                         var labelsChanged = false;
-                        formResult.form.fieldNames.forEach({(name) in
-                            let newField = formResult.form.getField(named: name);
-                            let oldField = self.formToSubmit!.getField(named: name);
-                            if newField != nil && oldField != nil {
-                                labelsChanged = newField?.label != oldField?.label;
-                                if labelsChanged {
-                                    oldField?.label = newField?.label;
-                                    oldField?.element.removeChildren(where: { (el) -> Bool in
-                                        el.name == "value";
-                                    })
+                        for oldField in oldFields  {
+                            if let newField = formResult.form.field(for: oldField.var) {
+                                if oldField.type != newField.type {
+                                    sameForm = false;
+                                } else {
+                                    labelsChanged = labelsChanged || newField.label != oldField.label;
                                 }
                             } else {
                                 sameForm = false;
                             }
-                        });
+                        }
+                    
+                        if let submitForm = self.formToSubmit {
+                            formResult.form.copyValues(from: submitForm)
+                        }
+
                         DispatchQueue.global().async {
-                            if (!sameForm) {
+                            if (!sameForm) || labelsChanged {
                                 self.onForm?(formResult.form, formResult.bob, self);
-                            } else if (labelsChanged) {
-                                self.onForm?(self.formToSubmit!, formResult.bob, self);
                             } else {
                                 self.submit(form: self.formToSubmit!);
                             }
@@ -533,12 +469,6 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     }
     
     public struct FormResult {
-        let type: FormType;
-        let form: JabberDataElement;
-        let bob: [BobData];
-    }
-
-    public struct FormResult2 {
         let type: FormType;
         let form: DataForm;
         let bob: [BobData];

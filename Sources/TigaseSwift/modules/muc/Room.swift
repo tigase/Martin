@@ -37,8 +37,8 @@ extension RoomWithPushSupportProtocol {
         regModule.retrieveRegistrationForm(from: JID(self.jid), completionHandler: { result in
             switch result {
             case .success(let formResult):
-                if formResult.type == .dataForm, let field: BooleanField = formResult.form.getField(named: "{http://tigase.org/protocol/muc}offline") {
-                    completionHandler(.success(field.value));
+                if formResult.type == .dataForm, let field: DataForm.Field.Boolean = formResult.form.field(for: "{http://tigase.org/protocol/muc}offline") {
+                    completionHandler(.success(field.value()));
                 } else {
                     completionHandler(.failure(.undefined_condition));
                 }
@@ -57,13 +57,13 @@ extension RoomWithPushSupportProtocol {
         regModule.retrieveRegistrationForm(from: JID(self.jid), completionHandler: { result in
             switch result {
             case .success(let formResult):
-                if formResult.type == .dataForm, let valueField: BooleanField = formResult.form.getField(named: "{http://tigase.org/protocol/muc}offline"), let nicknameField: TextSingleField = formResult.form.getField(named: "muc#register_roomnick") {
-                    if valueField.value == value {
+                if formResult.type == .dataForm, let valueField: DataForm.Field.Boolean = formResult.form.field(for: "{http://tigase.org/protocol/muc}offline"), let nicknameField: DataForm.Field.TextSingle = formResult.form.field(for: "muc#register_roomnick") {
+                    if valueField.currentValue == value {
                         completionHandler(.success(value));
                     } else {
                         if value {
-                            valueField.value = value;
-                            nicknameField.value = self.nickname;
+                            valueField.currentValue = value;
+                            nicknameField.currentValue = self.nickname;
                             regModule.submitRegistrationForm(to: JID(self.jid), form: formResult.form, completionHandler: { result in
                                 switch result {
                                 case .success(_):

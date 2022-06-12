@@ -388,7 +388,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
     }
     
     open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
-        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().submitableElement(type: .result), completionHandler: { response in
+        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().element(type: .result, onlyModified: false), completionHandler: { response in
             switch response {
             case .success(_):
                 completionHandler?(.success(Void()));
@@ -421,7 +421,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         });
     }
 
-    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<JabberDataElement,XMPPError>)->Void) {
+    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<MixChannelConfig,XMPPError>)->Void) {
         pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", limit: .lastItems(1), completionHandler: { result in
             switch result {
             case .success(let items):
@@ -429,7 +429,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
-                guard let config = JabberDataElement(from: item.payload) else {
+                guard let payload = item.payload, let config = MixChannelConfig(element: payload) else {
                     completionHandler(.failure(.undefined_condition));
                     return;
                 }
@@ -440,8 +440,8 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         });
     }
     
-    open func updateConfig(for channelJid: BareJID, config: JabberDataElement, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.submitableElement(type: .submit), completionHandler: { response in
+    open func updateConfig(for channelJid: BareJID, config: MixChannelConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.element(type: .submit, onlyModified: false), completionHandler: { response in
             switch response {
             case .success(_):
                 completionHandler(.success(Void()));

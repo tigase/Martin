@@ -280,6 +280,15 @@ open class DataForm: DataFormProtocol {
             } else {
                 return type.init(value);
             }
+        case let fixedField as Field.Fixed:
+            guard let value = fixedField.currentValue else {
+                return nil;
+            }
+            if type is String.Type {
+                return value as? V;
+            } else {
+                return type.init(value);
+            }
         case let booleanField as Field.Boolean:
             switch type {
             case is Bool.Type:
@@ -338,6 +347,33 @@ open class DataForm: DataFormProtocol {
             elem.addChild(field.element(formType: type));
         }
         return elem;
+    }
+    
+    open func copyValues(from source: DataForm) {
+        for newField in fields {
+            if let oldField = source.field(for: newField.var) {
+                switch newField {
+                case let f as Field.JIDSingle:
+                    f.currentValue = (oldField as? Field.JIDSingle)?.currentValue;
+                case let f as Field.TextSingle:
+                    f.currentValue = (oldField as? Field.TextSingle)?.currentValue;
+                case let nf as Field.Boolean:
+                    if let of = oldField as? Field.Boolean {
+                        nf.currentValue = of.currentValue;
+                    }
+                case let nf as Field.JIDMulti:
+                    if let of = oldField as? Field.JIDMulti {
+                        nf.currentValues = of.currentValues;
+                    }
+                case let nf as Field.TextMulti:
+                    if let of = oldField as? Field.TextMulti {
+                        nf.currentValues = of.currentValues;
+                    }
+                default:
+                    break;
+                }
+            }
+        }
     }
 }
 

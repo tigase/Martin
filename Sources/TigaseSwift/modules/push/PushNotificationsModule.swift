@@ -101,24 +101,8 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
     
         notificationsPublisher.send(NotificationsDisabled(serviceJid: from, node: node));
     }
-    
-    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
-        enable.setAttribute("jid", value: serviceJid.stringValue);
-        enable.setAttribute("node", value: node);
-        for ext in extensions {
-            ext.apply(to: enable);
-        }
-        if publishOptions != nil {
-            enable.addChild(publishOptions!.submitableElement(type: .submit));
-        }
-        iq.addChild(enable);
-        write(iq, completionHandler: completionHandler);
-    }
 
-    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
@@ -127,9 +111,9 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         for ext in extensions {
             ext.apply(to: enable);
         }
-//        if publishOptions != nil {
+        if let publishOptions = publishOptions {
             enable.addChild(publishOptions.element(type: .submit, onlyModified: false));
-//        }
+        }
         iq.addChild(enable);
         write(iq, completionHandler: completionHandler);
     }

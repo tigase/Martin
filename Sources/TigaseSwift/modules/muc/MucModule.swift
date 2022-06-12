@@ -115,7 +115,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter onSuccess: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func getRoomConfiguration(roomJid: JID, completionHandler: @escaping (Result<JabberDataElement,XMPPError>)->Void) {
+    open func getRoomConfiguration(roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = roomJid;
@@ -123,7 +123,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
         write(iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
-                guard let data = JabberDataElement(from: stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data")) else {
+                guard let formEl = stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data"), let data = RoomConfig(element: formEl) else {
                     return .failure(.undefined_condition);
                 }
                 
@@ -139,14 +139,14 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter onSuccess: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func setRoomConfiguration(roomJid: JID, configuration: JabberDataElement, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func setRoomConfiguration(roomJid: JID, configuration: RoomConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = roomJid;
         
         let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
         iq.addChild(query);
-        query.addChild(configuration.submitableElement(type: .submit));
+        query.addChild(configuration.element(type: .submit, onlyModified: true));
         
         write(iq, completionHandler: { result in
             completionHandler(result.map { _ in Void() });

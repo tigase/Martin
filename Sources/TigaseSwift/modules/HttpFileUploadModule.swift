@@ -88,8 +88,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
                         case .success(let info):
                             if info.features.contains(HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS) {
                                 DispatchQueue.main.async {
-                                    let maxSizeField: TextSingleField? = info.form?.getField(named: "max-file-size");
-                                    let maxSize = Int(maxSizeField?.value ?? "") ?? Int.max;
+                                    let maxSize: Int = info.form?.value(for: "max-file-size", type: Int.self) ?? Int.max;
                                     results.append(UploadComponent(jid: item.jid, maxSize: maxSize));
                                 }
                             }

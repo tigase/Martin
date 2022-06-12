@@ -27,30 +27,10 @@ open class ChannelInfo {
     public let description: String?;
     public let contact: [JID];
     
-    public convenience init?(form: JabberDataElement?) {
-        guard let form = form, let formType: HiddenField = form.getField(named: "FORM_TYPE"), formType.value == MixModule.CORE_XMLNS else {
-            return nil;
-        }
-        let nameField: TextSingleField? = form.getField(named: "Name");
-        let descriptionField: TextSingleField? = form.getField(named: "Description");
-        let contactField: JidMultiField? = form.getField(named: "Contact");
-        
-        self.init(name: nameField?.value, description: descriptionField?.value, contact: contactField?.value ?? []);
-    }
-    
     public init(name: String?, description: String?, contact: [JID]) {
         self.name = name;
         self.description = description;
         self.contact = contact;
-    }
-    
-    open func form() -> JabberDataElement {
-        let form = JabberDataElement(type: .result);
-        form.addField(HiddenField(name: "FORM_TYPE")).value = MixModule.CORE_XMLNS;
-        form.addField(TextSingleField(name: "Name")).value = self.name;
-        form.addField(TextSingleField(name: "Description")).value = self.description;
-        form.addField(JidMultiField(name: "Contact")).value = self.contact;
-        return form;
     }
     
     open func form() -> DataForm {

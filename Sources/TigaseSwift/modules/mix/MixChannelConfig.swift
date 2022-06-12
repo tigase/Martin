@@ -105,37 +105,3 @@ open class MixChannelConfig: DataFormWrapper {
         FORM_TYPE = MixModule.CORE_XMLNS;
     }
 }
-
-extension MixModule {
-    
-    open func retrieveConfig(for channelJid: BareJID, resultHandler: @escaping (Result<MixChannelConfig,XMPPError>)->Void) {
-        pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", limit: .lastItems(1), completionHandler: { result in
-            switch result {
-            case .success(let items):
-                guard let item = items.items.first else {
-                    resultHandler(.failure(.item_not_found));
-                    return;
-                }
-                guard let payload = item.payload, let config = MixChannelConfig(element: payload) else {
-                    resultHandler(.failure(.undefined_condition));
-                    return;
-                }
-                resultHandler(.success(config));
-            case .failure(let pubsubError):
-                resultHandler(.failure(pubsubError.error));
-            }
-        });
-    }
-    
-    open func updateConfig(for channelJid: BareJID, config: MixChannelConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.element(type: .submit, onlyModified: true), completionHandler: { response in
-            switch response {
-            case .success(_):
-                completionHandler(.success(Void()));
-            case .failure(let pubsubError):
-                completionHandler(.failure(pubsubError.error));
-            }
-        });
-    }
-    
-}

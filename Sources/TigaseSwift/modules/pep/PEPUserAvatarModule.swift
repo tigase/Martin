@@ -118,7 +118,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
             }
             
             // lets ensure we are allowed to have as many items published
-            pubsubModule.retrieveNodeConfiguration(from: at, node: PEPUserAvatarModule.DATA_XMLNS, resultHandler: { result in
+            pubsubModule.retrieveNodeConfiguration(from: at, node: PEPUserAvatarModule.DATA_XMLNS, completionHandler: { result in
                 switch result {
                 case .success(let form):
                     if let limit = form.maxItems, limit < avatars.count {

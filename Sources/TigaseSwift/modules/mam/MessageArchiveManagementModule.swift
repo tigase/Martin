@@ -160,29 +160,12 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      - parameter rsm: instance defining result set Management
      - parameter completionHandler: callback called when query results
      */
-    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
+    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
     {
         guard let version = version ?? self.availableVersions.first else {
             completionHandler(.failure(.feature_not_implemented))
             return;
         }
-
-        queryItems(version: version, componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
-            completionHandler(result.flatMap { response in
-                guard let fin = response.findChild(name: "fin", xmlns: version.rawValue) else {
-                    return .failure(.undefined_condition);
-                }
-                
-                let rsmResult = RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
-    
-                let complete = ("true" == fin.getAttribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
-                return .success(QueryResult(queryId: queryId, complete: complete, rsm: rsmResult));
-            })
-        });
-    }
-    
-    open func queryItems<Failure: Error>(version: Version, componentJid: JID? = nil, node: String? = nil, query: Element, queryId: String, rsm: RSM.Query? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void)
-    {
 
         let iq = Iq();
         iq.type = StanzaType.set;
@@ -194,7 +177,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         queryEl.setAttribute("queryid", value: queryId);
         queryEl.setAttribute("node", value: node);
         
-        queryEl.addChild(query);
+        queryEl.addChild(query.element(type: .submit, onlyModified: false));
         
         if (rsm != nil) {
             queryEl.addChild(rsm!.element);
@@ -204,11 +187,17 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
             self.queries[queryId] = Query(id: queryId, version: version);
         }
 
-        write(iq, errorDecoder: errorDecoder, completionHandler: { (result: Result<Iq, Failure>) in
-            self.dispatcher.asyncAfter(deadline: DispatchTime.now() + 60.0, execute: {
-                self.queries.removeValue(forKey: queryId);
-            });
-            completionHandler(result);
+        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            completionHandler(result.flatMap { response in
+                guard let fin = response.findChild(name: "fin", xmlns: version.rawValue) else {
+                    return .failure(.undefined_condition);
+                }
+                
+                let rsmResult = RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
+    
+                let complete = ("true" == fin.getAttribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
+                return .success(QueryResult(queryId: queryId, complete: complete, rsm: rsmResult));
+            })
         });
     }
     
@@ -230,45 +219,15 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     }
 
     /**
-     Query archived messages
-     - parameter componentJid: jid of an archiving component
-     - parameter node: PubSub node to query (if querying PubSub component)
-     - parameter query: instace of `JabberDataElement` with a query form
-     - parameter queryId: id of a query
-     - parameter rsm: instance defining result set Management
-     - parameter callback: callback called when response for a query is received
-     */
-    open func queryItems<Failure: Error>(version: Version, componentJid: JID? = nil, node: String? = nil, query: JabberDataElement, queryId: String, rsm: RSM.Query? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void)
-    {
-        queryItems(version: version, componentJid: componentJid, node: node, query: query.submitableElement(type: .submit), queryId: queryId, rsm: rsm, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-    
-    /**
      Retrieve query form a for querying archvived messages
      - parameter componentJid: jid of an archiving component
      - parameter completionHandler: called with result
      */
-    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (Result<JabberDataElement,XMPPError>)->Void) {
+    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, resultHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
         guard let version = version ?? availableVersions.first else {
-            completionHandler(.failure(.feature_not_implemented));
+            resultHandler(.failure(.feature_not_implemented));
             return;
         }
-        retieveForm(version: version, componentJid: componentJid, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
-            completionHandler(result.flatMap { stanza in
-                guard let query = stanza.findChild(name: "query", xmlns: version.rawValue), let x = query.findChild(name: "x", xmlns: "jabber:x:data"), let form = JabberDataElement(from: x) else {
-                    return .failure(.undefined_condition);
-                }
-                return .success(form);
-            })
-        });
-    }
-    
-    /**
-     Retrieve query form a for querying archvived messages
-     - parameter componentJid: jid of an archiving component
-     - parameter callback: called when response for a query is received
-     */
-    open func retieveForm<Failure: Error>(version: Version, componentJid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = componentJid;
@@ -276,7 +235,14 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
      
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+            resultHandler(result.flatMap { stanza in
+                guard let query = stanza.findChild(name: "query", xmlns: version.rawValue), let x = query.findChild(name: "x", xmlns: "jabber:x:data"), let form = DataForm(element: x) else {
+                    return .failure(.undefined_condition);
+                }
+                return .success(MAMQueryForm(form: form));
+            })
+        });
     }
     
     public struct Settings {
