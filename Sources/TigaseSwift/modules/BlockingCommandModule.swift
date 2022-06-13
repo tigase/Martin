@@ -30,7 +30,13 @@ extension XmppModuleIdentifier {
 
 open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
     
+    public enum Cause: String {
+        case spam = "urn:xmpp:reporting:spam"
+        case abuse = "urn:xmpp:reporting:abuse"
+    }
+    
     public static let BC_XMLNS = "urn:xmpp:blocking";
+    public static let REPORTING_XMLNS = "urn:xmpp:reporting:1"
     /// ID of module to lookup for in `XmppModulesManager`
     public static let ID = BC_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<BlockingCommandModule>();
@@ -52,6 +58,9 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
     
     open var isAvailable: Bool {
         return discoModule.serverDiscoResult.features.contains(BlockingCommandModule.BC_XMLNS);
+    }
+    open var isReportingSupported: Bool {
+        return discoModule.serverDiscoResult.features.contains(BlockingCommandModule.REPORTING_XMLNS);
     }
     
     @Published
@@ -104,6 +113,46 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
     
+    public struct Report {
+        public struct ReportedStanza {
+            let id: String;
+            let by: JID;
+        }
+
+        public let cause: Cause
+        public let text: String?
+        public let stanzas: [ReportedStanza]
+
+        public init(cause: Cause, text: String? = nil, stanzas: [ReportedStanza] = []) {
+            self.cause = cause;
+            self.text = text;
+            self.stanzas = stanzas;
+        }
+    }
+    
+    open func block(jid: JID, report: Report? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS);
+        let item =  Element(name: "item", attributes: ["jid": jid.stringValue]);
+        if let report = report {
+            let reportEl = Element(name: "report", xmlns: BlockingCommandModule.REPORTING_XMLNS);
+            reportEl.setAttribute("reason", value: report.cause.rawValue)
+            for stanza in report.stanzas {
+                reportEl.addChild(Element(name: "stanza-id", attributes: ["by": stanza.by.stringValue, "id": stanza.id]));
+            }
+            if let text = report.text {
+                reportEl.addChild(Element(name: "text", cdata: text));
+            }
+            item.addChild(reportEl);
+        }
+        block.addChild(item);
+        iq.addChild(block);
+        write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
+        })
+    }
+    
     /**
      Block communication with jid
      - paramater jid: jid to block
@@ -121,6 +170,10 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
+    }
+    
+    open func unblock(jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        unblock(jids: [jid], completionHandler: completionHandler);
     }
     
     /**
