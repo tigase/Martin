@@ -33,7 +33,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     }
     
     /// Internal processing queue
-    private let queue: QueueDispatcher = QueueDispatcher(label: "xmpp_socket_queue");
+    private let queue = DispatchQueue(label: "xmpp_socket_queue");
     
     private let userJid: BareJID;
     private var server: String {
@@ -203,7 +203,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         if options.enableTcpFastOpen {
             self.streamEvents.send(.streamStart);
         } else {
-            connection?.start(queue: self.queue.queue);
+            connection?.start(queue: self.queue);
         }
     }
     
@@ -336,7 +336,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         super.serialize(event, completion: completion);
         switch event {
         case .stanza(let stanza):
-            self.sendSync(stanza.element.stringValue, completion: completion);
+            self.sendSync(stanza.element.description, completion: completion);
         case .streamClose:
             self.sendSync("<stream:stream/>", completion: completion);
         case .streamOpen(let attributes):
@@ -354,7 +354,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 if self.options.enableTcpFastOpen, let connection = self.connection, connection.state == .setup {
                     self.serialize(data, completion: completion);
                     self.logger.debug("starting NWConnection...");
-                    connection.start(queue: self.queue.queue);
+                    connection.start(queue: self.queue);
                 }
                 return;
             }

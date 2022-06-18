@@ -30,12 +30,18 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable, Str
     public let bareJid:BareJID;
     /// Resouce part
     public let resource:String?;
-    /// String representation of JID
-    public var stringValue:String {
+    
+    public var description : String {
         guard let resource = self.resource else {
-            return bareJid.stringValue;
+            return bareJid.description;
         }
-        return "\(bareJid)/\(resource)";
+        return "\(bareJid)/\(resource)"
+    }
+    
+    /// String representation of JID
+    @available(*, deprecated, renamed: "description")
+    public var stringValue:String {
+        return description;
     }
     /// Local part
     public var localPart:String? {
@@ -93,10 +99,6 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable, Str
         self.init(jid!);
     }
     
-    public var description : String {
-        return self.stringValue;
-    }
-    
     public func hash(into hasher: inout Hasher) {
         hasher.combine(bareJid);
         if resource != nil {
@@ -106,7 +108,7 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable, Str
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer();
-        try container.encode(self.stringValue);
+        try container.encode(self.description);
     }
     
     public func with(resource: String) -> JID {

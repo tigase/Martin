@@ -52,7 +52,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
     private var sslCertificateValidated: Bool? = false;
     
     /// Internal processing queue
-    private let queue: QueueDispatcher = QueueDispatcher(label: "xmpp_socket_queue");
+    private let queue = DispatchQueue(label: "xmpp_socket_queue");
     
     private let userJid: BareJID;
     private var server: String {
@@ -409,7 +409,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         super.serialize(event, completion: .none);
         switch event {
         case .stanza(let stanza):
-            sendSync(stanza.element.stringValue, completion: completion);
+            sendSync(stanza.element.description, completion: completion);
         case .streamClose:
             sendSync("<stream:stream/>", completion: completion);
         case .streamOpen(let attributes):

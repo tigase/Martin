@@ -77,7 +77,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     
     private var presenceModule: PresenceModule!;
     private var discoModule: DiscoveryModule!;
-    private let dispatcher = QueueDispatcher(label: "capsInProgressSynchronizer");
+    private let queue = DispatchQueue(label: "capsInProgressSynchronizer");
     private var inProgress: [String] = [];
     
     public let additionalFeatures: [AdditionalFeatures];
@@ -123,7 +123,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
         
         logger.debug("updating CAPS for \(from)")
         
-        dispatcher.async {
+        queue.async {
             guard !self.inProgress.contains(nodeName) else {
                 return;
             }
@@ -131,14 +131,14 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
                 guard !cached else {
                     return;
                 }
-                self.dispatcher.async {
+                self.queue.async {
                     guard !self.inProgress.contains(nodeName) else {
                         return;
                     }
                     self.inProgress.append(nodeName);
                     self.logger.debug("\(self.context) - caps disco#info send for: \(nodeName, privacy: .public) to: \(from, privacy: .auto(mask: .hash))");
                     self.discoModule.getInfo(for: from, node: nodeName, completionHandler: { result in
-                        self.dispatcher.async {
+                        self.queue.async {
                             if let idx = self.inProgress.firstIndex(of: nodeName) {
                                 self.inProgress.remove(at: idx);
                                 self.logger.debug("\(self.context) - caps disco#info received from: \(from, privacy: .public) result: \(result, privacy: .public)");

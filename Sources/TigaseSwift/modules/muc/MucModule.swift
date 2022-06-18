@@ -73,7 +73,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
     open func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.session) {
             markRoomsAsNotJoined();
-            self.context?.dispatcher.async {
+            self.context?.queue.async {
                 let futures = self.joinPromises.values;
                 self.joinPromises.removeAll();
                 for future in futures {
@@ -268,7 +268,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
                 promise(.failure(.undefined_condition));
                 return;
             }
-            context.dispatcher.async {
+            context.queue.async {
                 self.joinPromises[room.jid] = promise;
             }
             let presence = Presence();
@@ -298,7 +298,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
                 guard case .failure(let error) = result else {
                     return;
                 }
-                context.dispatcher.async {
+                context.queue.async {
                     self.joinPromises.removeValue(forKey: room.jid);
                 }
                 promise(.failure(error));
@@ -391,7 +391,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
                 } else {
                     room.update(state: .not_joined());
                 }
-                self.context?.dispatcher.async {
+                self.context?.queue.async {
                     self.joinPromises.removeValue(forKey: roomJid)?(.failure(presence.error ?? .undefined_condition));
                 }
             }
@@ -422,7 +422,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
                 room.update(state: .joined);
                 
                 let wasCreated = xUser?.statuses.firstIndex(of: 201) != nil;
-                context.dispatcher.async {
+                context.queue.async {
                     self.joinPromises.removeValue(forKey: room.jid)?(.success(wasCreated ? .created(room) : .joined(room)));
                 }
             }
@@ -479,7 +479,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
         
         let decline = message.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user")?.findChild(name: "decline");
-        let reason = decline?.findChild(name: "reason")?.stringValue;
+        let reason = decline?.findChild(name: "reason")?.description;
         let invitee = decline?.getAttribute("from");
         
         if let inviteeJid = JID(invitee) {

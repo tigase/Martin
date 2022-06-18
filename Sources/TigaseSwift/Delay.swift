@@ -26,7 +26,7 @@ import Foundation
  
  [XEP-0203: Delayed Delivery]: http://xmpp.org/extensions/xep-0203.html
  */
-open class Delay {
+public struct Delay {
     
     /// Holds timestamp when delay started. In most cases it is very close to time when stanza was sent.
     public let stamp:Date?;

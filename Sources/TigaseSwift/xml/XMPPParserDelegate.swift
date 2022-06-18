@@ -21,7 +21,7 @@
 
 import Foundation
 
-public protocol XMPPParserDelegateDelegate: class {
+public protocol XMPPParserDelegateDelegate: AnyObject {
     
     func parsed(parserEvent: XMPPParserEvent)
     
@@ -106,7 +106,7 @@ open class XMPPParserDelegate: XMLParserDelegate {
     }
     
     open func charactersFound(_ value: String) {
-        el_stack.last?.addNode(CData(value: value))
+        el_stack.last?.addNode(.cdata(value))
     }
         
 }

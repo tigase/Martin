@@ -31,7 +31,7 @@ import dnssd;
  */
 open class XMPPDNSSrvResolver: DNSSrvResolver {
     
-    private let resolverDispatcher: QueueDispatcher = QueueDispatcher(label: "XmmpDnsSrvResolverQueue");
+    private let queue = DispatchQueue(label: "XmmpDnsSrvResolverQueue");
     
     public var directTlsEnabled: Bool = false;
     
@@ -46,15 +46,15 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPDNSSrvResolver.DNSOperation");
         let domain: String;
         let dispatchGroup = DispatchGroup();
-        let dispatcher: QueueDispatcher;
+        let queue: DispatchQueue;
         var completionHandlers: [BareJID:(Result<XMPPSrvResult,DNSError>) -> Void] = [:];
         var requests: [Request] = [];
         var results: [Result<[XMPPSrvRecord],DNSError>] = [];
         let onFinish: ()->Void;
         
-        init(domain: String, dispatcher: QueueDispatcher, onFinish: @escaping ()->Void) {
+        init(domain: String, queue: DispatchQueue, onFinish: @escaping ()->Void) {
             self.domain = domain;
-            self.dispatcher = dispatcher;
+            self.queue = queue;
             self.onFinish = onFinish;
         }
         
@@ -71,7 +71,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                 dispatchGroup.enter();
                 logger.debug("starting for service: \(service, privacy: .public) at: \(self.domain, privacy: .auto(mask: .hash))");
                 requests.append(Request(srvName: "\(service)\(self.domain)", completionHandler: { result in
-                    self.dispatcher.async {
+                    self.queue.async {
                         self.results.append(result);
                         self.dispatchGroup.leave();
                     }
@@ -81,7 +81,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                 logger.debug("starting for service: \(request.srvName, privacy: .public) at: \(self.domain, privacy: .auto(mask: .hash))");
                 request.resolve(timeout: timeout);
             }
-            dispatchGroup.notify(queue: dispatcher.queue, execute: {
+            dispatchGroup.notify(queue: queue, execute: {
                 self.finished();
             })
         }
@@ -146,11 +146,11 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
     open func resolve(domain: String, for jid: BareJID, completionHandler: @escaping (Result<XMPPSrvResult,DNSError>) -> Void) {
         let timeout = domain.hasSuffix(".local") ? 2.0 : 30.0;
 
-        resolverDispatcher.async {
+        queue.async {
             if let operation = self.inProgress[domain] {
                 operation.add(completionHandler: completionHandler, for: jid);
             } else {
-                let operation = DNSOperation(domain: domain, dispatcher: self.resolverDispatcher, onFinish: {
+                let operation = DNSOperation(domain: domain, queue: self.queue, onFinish: {
                     self.inProgress.removeValue(forKey: domain);
                 });
                 self.inProgress[domain] = operation;
@@ -178,7 +178,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
 
     class Request {
         
-        private let dispatcher = QueueDispatcher(label: "DnsSrvResolverQueue");
+        private let queue = DispatchQueue(label: "DnsSrvResolverQueue");
         let srvName: String;
         private var sdRef: DNSServiceRef?;
         private var sdFd: dnssd_sock_t = -1;
@@ -199,7 +199,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         }
         
         func resolve(timeout: TimeInterval) {
-            dispatcher.async {
+            queue.async {
             let result: DNSServiceErrorType = self.srvName.withCString { (srvNameC) -> DNSServiceErrorType in
                 let sdErr = DNSServiceQueryRecord(&self.sdRef, kDNSServiceFlagsReturnIntermediates, UInt32(kDNSServiceInterfaceIndexAny), srvNameC, UInt16(kDNSServiceType_SRV), UInt16(kDNSServiceClass_IN), QueryRecordCallback, XMPPDNSSrvResolver.bridge(self));
                 return sdErr;
@@ -216,7 +216,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                     self.fail(withError: .internalError);
                     return;
                 }
-                self.sdFdReadSource = DispatchSource.makeReadSource(fileDescriptor: self.sdFd, queue: self.dispatcher.queue);
+                self.sdFdReadSource = DispatchSource.makeReadSource(fileDescriptor: self.sdFd, queue: self.queue);
                 self.sdFdReadSource?.setEventHandler(handler: {
                     // lets process data..
                     let res = DNSServiceProcessResult(sdRef);
@@ -230,7 +230,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                 })
                 self.sdFdReadSource?.resume();
                 
-                self.timeoutTimer = DispatchSource.makeTimerSource(flags: [], queue: self.dispatcher.queue);
+                self.timeoutTimer = DispatchSource.makeTimerSource(flags: [], queue: self.queue);
                 self.timeoutTimer?.setEventHandler(handler: {
                     self.fail(withError: .timeout);
                 })
@@ -283,7 +283,7 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         }
         
         func cancel() {
-            dispatcher.sync {
+            queue.sync {
                 complete(with: .failure(DNSError.unknownError));
             }
         }

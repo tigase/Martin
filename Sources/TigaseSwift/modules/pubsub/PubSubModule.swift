@@ -167,7 +167,7 @@ open class PubSubModule: XmppModuleBase, XmppModule {
         public let payload: Element?;
         
         open var description: String {
-            return "[id: " + id + ", payload: " + (payload?.stringValue ?? "nil") + "]";
+            return "[id: " + id + ", payload: " + (payload?.description ?? "nil") + "]";
         }
         
         public init(id: String, payload: Element?) {

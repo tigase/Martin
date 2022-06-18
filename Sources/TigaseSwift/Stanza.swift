@@ -29,7 +29,14 @@ import Foundation
  */
 open class Stanza: ElementProtocol, CustomStringConvertible {
     
-    fileprivate let defStanzaType:StanzaType?;
+    private var _lock = os_unfair_lock();
+    private func withLock<T>(_ block: ()->T) -> T {
+        os_unfair_lock_lock(&_lock)
+        defer {
+            os_unfair_lock_unlock(&_lock);
+        }
+        return block();
+    }
     
     public var attributes: [String : String] {
         return element.attributes;
@@ -42,7 +49,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     public var debugDescription: String {
         String("Stanza : \(element.debugDescription)")
     }
-
+    
     open var description: String {
         return element.description;
     }
@@ -65,7 +72,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
     
-    fileprivate var from_: JID?;
+    private var from_: JID?;
     /**
      Sender address of stanza
      
@@ -74,14 +81,18 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
      */
     open var from:JID? {
         get {
-            if from_ == nil, let jidStr = element.getAttribute("from") {
-                from_ = JID(jidStr);
-            }
-            return from_;
+            withLock({
+                if from_ == nil, let jidStr = element.getAttribute("from") {
+                    from_ = JID(jidStr);
+                }
+                return from_;
+            })
         }
         set {
-            from_ = newValue;
-            element.setAttribute("from", value: newValue?.stringValue);
+            withLock({
+                from_ = newValue;
+                element.setAttribute("from", value: newValue?.stringValue);
+            })
         }
     }
     
@@ -94,14 +105,18 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
      */
     open var to:JID? {
         get {
-            if to_ == nil, let jidStr = element.getAttribute("to") {
-                to_ = JID(jidStr);
-            }
-            return to_;
+            withLock({
+                if to_ == nil, let jidStr = element.getAttribute("to") {
+                    to_ = JID(jidStr);
+                }
+                return to_;
+            })
         }
         set {
-            to_ = newValue;
-            element.setAttribute("to", value:newValue?.stringValue);
+            withLock({
+                to_ = newValue;
+                element.setAttribute("to", value:newValue?.stringValue);
+            })
         }
     }
     
@@ -122,10 +137,10 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
             if let type = element.getAttribute("type") {
                 return StanzaType(rawValue: type);
             }
-            return defStanzaType;
+            return nil;
         }
         set {
-            element.setAttribute("type", value: (newValue == defStanzaType) ? nil : newValue?.rawValue);
+            element.setAttribute("type", value: newValue?.rawValue);
         }
     }
     
@@ -166,66 +181,55 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
             return element.xmlns;
         }
     }
-    
-    init(name:String, defStanzaType:StanzaType? = nil, xmlns: String? = nil) {
+        
+    init(name: String, xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
         self.element = Element(name: name, xmlns: xmlns);
-        self.defStanzaType = defStanzaType;
+        if let type = type {
+            self.element.attribute("type", newValue: type.rawValue);
+        }
+        if let id = id {
+            self.element.attribute("id", newValue: id);
+        }
     }
     
-    init(elem:Element, defStanzaType:StanzaType? = nil) {
+    init(elem: Element) {
         self.element = elem;
-        self.defStanzaType = defStanzaType;
     }
     
     open func addChild(_ child: Element) {
-        self.element.addNode(child)
+        self.element.addChild(child)
     }
     
     open func addChildren(_ children: [Element]) {
         self.element.addChildren(children);
     }
     
-    @available(*, deprecated, renamed: "firstChild")
-    open func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
-        return self.element.findChild(name: name, xmlns: xmlns);
+    public func attribute(_ key: String) -> String? {
+        return element.attribute(key);
     }
     
-    @available(*, deprecated, renamed: "firstChild")
-    open func findChild(where body: (Element) -> Bool) -> Element? {
-        return self.element.findChild(where: body);
+    public func attribute(_ key: String, newValue: String?) {
+        return element.attribute(key, newValue: newValue);
     }
     
-    @available(*, deprecated, message: "Method removed")
-    public func firstIndex(ofChild child: Element) -> Int? {
-        return self.element.firstIndex(ofChild: child);
+    public func removeAttribute(_ key: String) {
+        return element.removeAttribute(key);
     }
     
-    @available(*, deprecated, renamed: "filterChildren")
-    open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
-        return self.element.getChildren(name: name, xmlns: xmlns);
+    public func firstChild(where body: (Element) -> Bool) -> Element? {
+        return element.firstChild(where: body);
     }
-    
-    @available(*, deprecated, renamed: "filterChildren")
-    open func getChildren(where body: (Element) -> Bool) -> Array<Element> {
-        return self.element.getChildren(where: body);
-    }
-    
-    @available(*, deprecated, renamed: "attribute(_:)")
-    open func getAttribute(_ key:String) -> String? {
-        return self.element.getAttribute(key);
+
+    public func filterChildren(where body: (Element) -> Bool) -> Array<Element> {
+        return element.filterChildren(where: body)
     }
     
     open func removeChild(_ child: Element) {
         self.element.removeChild(child);
     }
-    
+
     open func removeChildren(where body: (Element)->Bool) {
         self.element.removeChildren(where: body);
-    }
-    
-    @available(*, deprecated, renamed: "attribute(_:newValue:)")
-    open func setAttribute(_ key:String, value:String?) {
-        self.element.setAttribute(key, value: value);
     }
     
     /**
@@ -297,7 +301,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
      Creates response stanza with following type set
      - parameter type: type to set in response stanza
      */
-    open func makeResult(type:StanzaType) -> Stanza {
+    open func makeResult(type: StanzaType) -> Stanza {
         let elem = Element(name: element.name, cdata: nil, attributes: element.attributes);
         let response = Stanza.from(element: elem);
         response.to = self.from;
@@ -318,6 +322,41 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
             element.addChild(Element(name: name, cdata: value!, xmlns: xmlns));
         }
     }
+}
+
+// implementation of deprecated methods
+extension Stanza {
+    
+    @available(*, deprecated, renamed: "firstChild")
+    open func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+        return self.element.findChild(name: name, xmlns: xmlns);
+    }
+    @available(*, deprecated, renamed: "firstChild")
+    open func findChild(where body: (Element) -> Bool) -> Element? {
+        return self.element.findChild(where: body);
+    }
+    @available(*, deprecated, message: "Method removed")
+    public func firstIndex(ofChild child: Element) -> Int? {
+        return self.element.firstIndex(ofChild: child);
+    }
+    @available(*, deprecated, renamed: "filterChildren")
+    open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+        return self.element.getChildren(name: name, xmlns: xmlns);
+    }
+    @available(*, deprecated, renamed: "filterChildren")
+    open func getChildren(where body: (Element) -> Bool) -> Array<Element> {
+        return self.element.getChildren(where: body);
+    }
+    @available(*, deprecated, renamed: "attribute(_:)")
+    open func getAttribute(_ key:String) -> String? {
+        return self.element.getAttribute(key);
+    }
+    
+    @available(*, deprecated, renamed: "attribute(_:newValue:)")
+    open func setAttribute(_ key:String, value:String?) {
+        self.element.setAttribute(key, value: value);
+    }
+    
 }
 
 /// Extenstion of `Stanza` class with specific features existing only in `message' elements.
@@ -384,12 +423,12 @@ open class Message: Stanza {
         return String("Message : \(element)")
     }
     
-    public init() {
-        super.init(name: "message", defStanzaType: StanzaType.normal);
+    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
+        super.init(name: "message", xmlns: xmlns, type: type, id: id);
     }
     
-    public init(elem: Element) {
-        super.init(elem: elem, defStanzaType: StanzaType.normal);
+    public override init(elem: Element) {
+        super.init(elem: elem);
     }
 
     public enum ProcessingHint {
@@ -546,11 +585,11 @@ open class Presence: Stanza {
         }
     }
     
-    public init() {
-        super.init(name: "presence");
+    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
+        super.init(name: "presence", xmlns: xmlns, type: type, id: id);
     }
     
-    public init(elem: Element) {
+    public override init(elem: Element) {
         super.init(elem: elem);
     }
 
@@ -563,11 +602,11 @@ open class Iq: Stanza {
         return String("Iq : \(element)")
     }
     
-    public init() {
-        super.init(name: "iq");
+    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
+        super.init(name: "iq", xmlns: xmlns, type: type, id: id);
     }
     
-    public init(elem: Element) {
+    public override init(elem: Element) {
         super.init(elem: elem);
     }
     

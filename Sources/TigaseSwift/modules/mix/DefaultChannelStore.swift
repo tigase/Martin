@@ -25,24 +25,24 @@ open class DefaultChannelStore: ChannelStore {
         
     public typealias Channel = ChannelBase
     
-    public let dispatcher = QueueDispatcher(label: "DefaultChannelStore");
+    public let queue = DispatchQueue(label: "DefaultChannelStore");
     
     private var items: [BareJID: Channel] = [:];
 
     open func channels(for context: Context) -> [Channel] {
-        return dispatcher.sync {
+        return queue.sync {
             return Array(items.values);
         }
     }
     
     open func channel(for context: Context, with channelJid: BareJID) -> Channel? {
-        return dispatcher.sync {
+        return queue.sync {
             return self.items[channelJid];
         }
     }
     
     open func createChannel(for context: Context, with jid: BareJID, participantId: String, nick: String?, state: ChannelState) -> ConversationCreateResult<Channel> {
-        return dispatcher.sync {
+        return queue.sync {
             guard self.items[jid] == nil else {
                 return .none;
             }
@@ -53,7 +53,7 @@ open class DefaultChannelStore: ChannelStore {
     }
     
     open func close(channel: Channel) -> Bool {
-        return dispatcher.sync {
+        return queue.sync {
             return self.items.removeValue(forKey: channel.jid) != nil;
         }
     }

@@ -91,7 +91,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         return $state;
     }
 
-    private let dispatcher: QueueDispatcher = QueueDispatcher(label: "SocketSessionLogic");
+    private let queue = DispatchQueue(label: "SocketSessionLogic");
     private var seeOtherHost: ConnectorEndpoint? = nil;
     
     private let connectionConfiguration: ConnectionConfiguration;
@@ -111,7 +111,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         self.responseManager = responseManager;
         self.seeOtherHost = seeOtherHost;
         
-        connector.statePublisher.removeDuplicates().dropFirst(1).receive(on: self.dispatcher.queue).sink(receiveValue: { [weak self] newState in
+        connector.statePublisher.removeDuplicates().dropFirst(1).receive(on: self.queue).sink(receiveValue: { [weak self] newState in
             guard newState != .connected else {
                 return;
             }
@@ -140,7 +140,7 @@ open class SocketSessionLogic: XmppSessionLogic {
                 that.state = .disconnected(reason.clientDisconnectionReason);
             }
         }).store(in: &socketSubscriptions);
-        connector.streamEventsPublisher.receive(on: dispatcher.queue).sink(receiveValue: { [weak self] event in
+        connector.streamEventsPublisher.receive(on: queue).sink(receiveValue: { [weak self] event in
             guard let that = self else {
                 return;
             }
@@ -166,7 +166,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         for subscription in moduleSubscriptions {
             subscription.cancel();
         }
-        self.dispatcher.sync {
+        self.queue.sync {
             if state != .disconnected() {
                 state = .disconnected();
             }
@@ -174,8 +174,8 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
         
     open func bind() {
-        context?.moduleOrNil(.auth)?.$state.receive(on: dispatcher.queue).sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }).store(in: &moduleSubscriptions);
-        context?.module(.streamFeatures).$streamFeatures.receive(on: self.dispatcher.queue).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }).store(in: &moduleSubscriptions);
+        context?.moduleOrNil(.auth)?.$state.receive(on: queue).sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }).store(in: &moduleSubscriptions);
+        context?.module(.streamFeatures).$streamFeatures.receive(on: self.queue).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }).store(in: &moduleSubscriptions);
 
         responseManager.start();
     }
@@ -237,7 +237,7 @@ open class SocketSessionLogic: XmppSessionLogic {
             streamManagementModule.sendAck();
         }
         if let completionHandler = completionHandler {
-            dispatcher.async {
+            queue.async {
                 completionHandler();
             }
         }
@@ -307,7 +307,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
     
     open func send(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
-        dispatcher.async {
+        queue.async {
             let state = self.state;
             guard state == .connected() || state == .connecting else {
                 completionHandler?(.failure(.not_authorized("You are not connected to the XMPP server")));
@@ -324,7 +324,7 @@ open class SocketSessionLogic: XmppSessionLogic {
 
     
     private func sendingOutgoingStanza(_ stanza: Stanza) {
-        dispatcher.async {
+        queue.async {
             for filter in self.modulesManager.filters {
                 filter.processOutgoing(stanza: stanza);
             }

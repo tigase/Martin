@@ -42,58 +42,58 @@ open class RoomBase: ConversationBase, RoomProtocol {
         return occupantsStore.occupantsPublisher;
     }
     
-    private let dispatcher: QueueDispatcher;
+    private let queue: DispatchQueue;
     
     public var affiliation: MucAffiliation = .none;
     public var role: MucRole = .none;
     
-    public init(context: Context, jid: BareJID, nickname: String, password: String?, dispatcher: QueueDispatcher) {
+    public init(context: Context, jid: BareJID, nickname: String, password: String?, queue: DispatchQueue) {
         self.nickname = nickname;
         self.password = password;
-        self.dispatcher = dispatcher;
+        self.queue = queue;
         super.init(context: context, jid: jid);
     }
     
     public var occupants: [MucOccupant] {
-        return dispatcher.sync {
+        return queue.sync {
             return self.occupantsStore.occupants;
         }
     }
     
     public func occupant(nickname: String) -> MucOccupant? {
-        return dispatcher.sync {
+        return queue.sync {
             return occupantsStore.occupant(nickname: nickname);
         }
     }
     
     public func addOccupant(nickname: String, presence: Presence) -> MucOccupant {
         let occupant = MucOccupant(nickname: nickname, presence: presence, for: self);
-        dispatcher.async(flags: .barrier) {
+        queue.async(flags: .barrier) {
             self.occupantsStore.add(occupant: occupant);
         }
         return occupant;
     }
     
     public func remove(occupant: MucOccupant) {
-        dispatcher.async(flags: .barrier) {
+        queue.async(flags: .barrier) {
             self.occupantsStore.remove(occupant: occupant);
         }
     }
     
     public func addTemp(nickname: String, occupant: MucOccupant) {
-        dispatcher.async(flags: .barrier) {
+        queue.async(flags: .barrier) {
             self.occupantsStore.addTemp(nickname: nickname, occupant: occupant);
         }
     }
     
     public func removeTemp(nickname: String) -> MucOccupant? {
-        return dispatcher.sync(flags: .barrier) {
+        return queue.sync(flags: .barrier) {
             return occupantsStore.removeTemp(nickname: nickname);
         }
     }
     
     public func update(state: RoomState) {
-        dispatcher.async {
+        queue.async {
             self.state = state;
         }
     }

@@ -20,142 +20,153 @@
 //
 
 import Foundation
+import CoreMedia
 
-
-open class RSM {
+public struct RSM {
     
     public static let XMLNS = "http://jabber.org/protocol/rsm";
-    
-    open class Query {
+
+    public enum Query {
+        case after(String, max: Int?)
+        case before(String, max: Int?)
+        case between(String, String, max: Int?)
+        case skipOffset(Int, max: Int?)
+        case last(Int)
+        case max(Int)
         
-        let element: Element;
-        
-        var after: String? {
-            return element.findChild(name: "after")?.value;
-        }
-        
-        var before: String? {
-            return element.findChild(name: "before")?.value;
-        }
-        
-        var index: Int? {
-            guard let v = element.findChild(name: "index")?.value else {
+        public init?(_ el: Element) {
+            guard el.name == "set" && el.xmlns == RSM.XMLNS else {
                 return nil;
             }
-            return Int(v);
-        }
-        
-        var max: Int? {
-            guard let v = element.findChild(name: "max")?.value else {
-                return nil;
-            }
-            return Int(v);
-        }
-        
-        init() {
-            element = Element(name: "set", xmlns: RSM.XMLNS);
-        }
-        
-        public convenience init(before: String? = nil, after: String? = nil, max: Int? = nil) {
-            self.init();
-            if max != nil {
-                element.addChild(Element(name: "max", cdata: String(max!)));
-            }
-            if before != nil {
-                element.addChild(Element(name: "before", cdata: before!));
-            }
-            if after != nil {
-                element.addChild(Element(name: "after", cdata: after!));
-            }
-        }
-        
-        public convenience init(lastItems: Int) {
-            self.init();
-            element.addChild(Element(name: "max", cdata: String(lastItems)));
-            element.addChild(Element(name: "before"));
-        }
-        
-        public convenience init(from: Int, max: Int?) {
-            self.init();
-            if max != nil {
-                element.addChild(Element(name: "max", cdata: String(max!)));
-            }
-            
-            element.addChild(Element(name: "index", cdata: String(from)));
-        }
-        
-        func setValue(_ name: String, value: String?) {
-            if let elem = element.findChild(name: name) {
-                if value != nil {
-                    elem.value = value;
+            let maxStr = el.firstChild(name: "max")?.value;
+            let max = maxStr != nil ? Int(maxStr!) : nil;
+            let beforeEl = el.firstChild(name: "before");
+            if let after = el.firstChild(name: "after")?.value {
+                if let before = beforeEl?.value {
+                    self = .between(after, before, max: max);
                 } else {
-                    element.removeChild(elem);
+                    self = .after(after, max: max);
                 }
-            } else if value != nil {
-                element.addChild(Element(name: name, cdata: value!));
+            } else if beforeEl != nil {
+                if let before = beforeEl?.value {
+                    self = .before(before, max: max);
+                } else if let max = max {
+                    self = .last(max)
+                } else {
+                    return nil;
+                }
+            } else if let indexStr = el.firstChild(name: "index")?.value, let index = Int(indexStr) {
+                self = .skipOffset(index, max: max);
+            } else if let max = max {
+                self = .max(max);
             }
+            return nil;
+        }
+        
+        public func element() -> Element {
+            let element = Element(name: "set", xmlns: RSM.XMLNS);
+            switch self {
+            case .after(let id, let max):
+                element.addChild(Element(name: "after", cdata: id));
+                if let max = max {
+                    element.addChild(Element(name: "max", cdata: String(max)));
+                }
+            case .before(let id, let max):
+                element.addChild(Element(name: "before", cdata: id));
+                if let max = max {
+                    element.addChild(Element(name: "max", cdata: String(max)));
+                }
+            case .between(let aid, let bid, let max):
+                element.addChild(Element(name: "after", cdata: aid));
+                element.addChild(Element(name: "before", cdata: bid));
+                if let max = max {
+                    element.addChild(Element(name: "max", cdata: String(max)));
+                }
+            case .skipOffset(let offset, let max):
+                element.addChild(Element(name: "index", cdata: String(offset)));
+                if let max = max {
+                    element.addChild(Element(name: "max", cdata: String(max)));
+                }
+            case .last(let max):
+                element.addChild(Element(name: "before"));
+                element.addChild(Element(name: "max", cdata: String(max)));
+            case .max(let max):
+                element.addChild(Element(name: "max", cdata: String(max)));
+            }
+            return element;
         }
         
     }
-    
-    open class Result {
+
+    public struct Result {
+        public let first: String?;
+        public let last: String?;
+        public let index: Int?;
+        public let count: Int?;
         
-        let element: Element;
-        
-        open var first: String? {
-            return element.findChild(name: "first")?.value;
+        public init(first: String?, last: String?, index: Int?, count: Int?) {
+            self.first = first;
+            self.last = last;
+            self.index = index;
+            self.count = count;
         }
         
-        open var last: String? {
-            return element.findChild(name: "last")?.value;
-        }
-        
-        open var index: Int? {
-            guard let v = element.findChild(name: "first")?.getAttribute("index") else {
+        public init?(from element: Element?) {
+            guard let el = element else {
                 return nil;
             }
-            return Int(v);
+            self.init(element: el);
         }
         
-        open var count: Int? {
-            guard let v = element.findChild(name: "count")?.value else {
+        public init?(element: Element) {
+            guard element.name == "set" && element.xmlns == RSM.XMLNS else {
                 return nil;
             }
-            return Int(v);
-        }
-        
-        public init?(from: Element?) {
-            guard from?.name == "set" && from?.xmlns == RSM.XMLNS else {
-                return nil;
+            first = element.firstChild(name: "first")?.value;
+            last = element.firstChild(name: "last")?.value;
+            if let indexStr = element.firstChild(name: "first")?.attribute("index") {
+                index = Int(indexStr);
+            } else {
+                index = nil;
             }
-            
-            self.element = from!;
+            if let countStr = element.firstChild(name: "count")?.value {
+                count = Int(countStr);
+            } else {
+                count = nil;
+            }
         }
         
         public func next(_ max: Int? = nil) -> RSM.Query? {
-            if let last = self.last {
-                return RSM.Query(after: last, max: max);
+            if let last = last {
+                return .after(last, max: max);
             }
             return nil;
         }
         
         public func previous(_ max: Int? = nil) -> RSM.Query? {
-            if let first = self.first {
-                return RSM.Query(before: first, max: max);
+            if let first = first {
+                return .before(first, max: max);
             }
             return nil;
         }
         
-        func setValue(_ name: String, value: String?) {
-            if let elem = element.findChild(name: name) {
-                if value != nil {
-                    elem.value = value;
-                } else {
-                    element.removeChild(elem);
+        public func element() -> Element? {
+            let el = Element(name: "set", xmlns: RSM.XMLNS);
+            if let first = first {
+                let firstEl = Element(name: "first", cdata: first);
+                if let index = index {
+                    el.attribute("index", newValue: String(index));
                 }
-            } else if value != nil {
-                element.addChild(Element(name: name, cdata: value!));
+                el.addChild(firstEl)
             }
+            if let last = last {
+                el.addChild(Element(name: "last", cdata: last));
+            }
+            if let count = count {
+                el.addChild(Element(name: "count", cdata: String(count)));
+            }
+            return el;
         }
     }
+    
 }

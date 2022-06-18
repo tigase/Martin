@@ -24,15 +24,6 @@ import TigaseSwift
 import XCTest
 
 class ElementTests: XCTestCase {
-    
-    func testEquality() {
-        let el1 = Element(name: "item", children: [Element(name: "name", cdata: "Swift")]);
-        let el2 = Element(name: "item", children: [Element(name: "name", cdata: "Java")]);
-        let el3 = Element(name: "item", children: [Element(name: "name", cdata: "Swift")]);
-        XCTAssertFalse(el1 == el2, "Elements should not match!")
-        XCTAssertTrue(el1 === el1, "Elements should match!");
-        XCTAssertTrue(el1 == el3, "Elements should match!");
-    }
 
     func testIndexOfChild() {
         let nameEl = Element(name: "name", cdata: "Swift");
@@ -45,10 +36,9 @@ class ElementTests: XCTestCase {
     func testRemoveChild() {
         let el1 = Element(name: "item", children: [Element(name: "name", cdata: "Swift")]);
         el1.removeChild(Element(name: "name", cdata: "Swift"));
-        XCTAssertNotNil(el1.findChild(name: "name", xmlns: nil));
-        let nameEl = el1.findChild(name: "name", xmlns: nil)!;
+        XCTAssertNotNil(el1.firstChild(name: "name", xmlns: nil));
+        let nameEl = el1.firstChild(name: "name", xmlns: nil)!;
         el1.removeChild(nameEl);
-        XCTAssertNil(el1.firstIndex(ofChild: nameEl));
-        XCTAssertNil(el1.findChild(name: "name", xmlns: nil));
+        XCTAssertNil(el1.firstChild(name: "name", xmlns: nil));
     }
 }

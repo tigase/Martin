@@ -24,23 +24,27 @@ import Foundation
 /**
  XMPP entity address for `localpart@domainpart`
  */
-public struct BareJID: LosslessStringConvertible, Hashable, Equatable, Codable, StringValue, Comparable {
+public struct BareJID : LosslessStringConvertible, Hashable, Equatable, Codable, StringValue, Comparable {
     
     public static func < (lhs: BareJID, rhs: BareJID) -> Bool {
-        return lhs.stringValue.compare(rhs.stringValue) == .orderedAscending;
+        return lhs.description.compare(rhs.description) == .orderedAscending;
     }
     
-    
     /// Local part
-    public let localPart:String?;
+    public let localPart: String?;
     /// Domain part
-    public let domain:String;
-    /// String representation
-    public var stringValue:String {
+    public let domain: String;
+    
+    public var description: String {
         guard let localPart = self.localPart else {
             return domain;
         }
         return "\(localPart)@\(domain)";
+    }
+    /// String representation
+    @available(*, deprecated, renamed: "description")
+    public var stringValue: String {
+        return description;
     }
     
     public init(from decoder: Decoder) throws {
@@ -89,13 +93,9 @@ public struct BareJID: LosslessStringConvertible, Hashable, Equatable, Codable, 
         self.init(jid);
     }
     
-    public var description : String {
-        return stringValue;
-    }
-    
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer();
-        try container.encode(self.stringValue);
+        try container.encode(self.description);
     }
     
     public func hash(into hasher: inout Hasher) {

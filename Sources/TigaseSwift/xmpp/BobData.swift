@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class BobData {
+public struct BobData {
     
     public let cid: String;
     public let type: String?;
@@ -54,7 +54,7 @@ open class BobData {
         self.data = data;
     }
     
-    open func toElement() -> Element {
+    public func toElement() -> Element {
         let el = Element(name: "data", xmlns: "urn:xmpp:bob");
         el.setAttribute("cid", value: cid);
         el.setAttribute("type", value: type);
@@ -65,7 +65,7 @@ open class BobData {
         return el;
     }
     
-    open func matches(uri: String) -> Bool {
+    public func matches(uri: String) -> Bool {
         guard uri.starts(with: "cid:") else {
             return false;
         }

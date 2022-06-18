@@ -24,7 +24,7 @@ import Combine
 
 open class DefaultPresenceStore: PresenceStore {
     
-    private let dispatcher = QueueDispatcher(label: "presence_store_queue", attributes: DispatchQueue.Attributes.concurrent);
+    private let queue = DispatchQueue(label: "presence_store_queue", attributes: DispatchQueue.Attributes.concurrent);
     
     @Published
     public private(set) var bestPresences: [BareJID: Presence] = [:];
@@ -42,7 +42,7 @@ open class DefaultPresenceStore: PresenceStore {
     
     public func reset(scopes: Set<ResetableScope>, for context: Context) {
         if scopes.contains(.session) {
-            dispatcher.sync(flags: .barrier) {
+            queue.sync(flags: .barrier) {
                 presencesByBareJID.removeAll();
                 let events = bestPresences.values.compactMap({ presence -> BestPresenceEvent? in
                     guard let account = presence.to?.bareJid, let jid = presence.from?.bareJid else {
@@ -59,13 +59,13 @@ open class DefaultPresenceStore: PresenceStore {
     }
     
     open func presence(for jid: JID, context: Context) -> Presence? {
-        return dispatcher.sync {
+        return queue.sync {
             return self.presencesByBareJID[jid.bareJid]?.presence(for: jid);
         }
     }
     
     open func presences(for jid: BareJID, context: Context) -> [Presence] {
-        return dispatcher.sync {
+        return queue.sync {
             return self.presencesByBareJID[jid]?.presences;
         } ?? [];
     }
@@ -80,7 +80,7 @@ open class DefaultPresenceStore: PresenceStore {
             return nil;
         }
         
-        return dispatcher.sync(flags: .barrier) {
+        return queue.sync(flags: .barrier) {
             let holder = self.holder(for: jid.bareJid);
             holder.update(presence: presence);
             if let best = holder.bestPresence, self.bestPresences[jid.bareJid] !== best {
@@ -92,7 +92,7 @@ open class DefaultPresenceStore: PresenceStore {
     }
     
     open func removePresence(for jid: JID, context: Context) -> Bool {
-        dispatcher.sync(flags: .barrier) {
+        queue.sync(flags: .barrier) {
             guard let holder = self.presencesByBareJID[jid.bareJid] else {
                 return false;
             }

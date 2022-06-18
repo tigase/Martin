@@ -24,63 +24,53 @@ import Foundation
 /**
  Common protocol for classes representing `Element`
  */
-public protocol ElementProtocol: CustomStringConvertible {
+public protocol ElementProtocol: CustomStringConvertible, CustomDebugStringConvertible {
     
     /// Name of element
     var name:String { get }
     /// XMLNS of element
     var xmlns:String? { get }
-
+    var attributes: [String: String] { get }
+    var children: [Element] { get }
+    
     /**
      Add child element
      - parameter child: element to add as subelement
      */
     func addChild(_ child: Element);
     /**
-     Find child element with matching name and xmlns
-     - parameter name: name of element to find
-     - parameter xmlns: xmlns of element to find
-     - returns: first found element if any
-     */
-    @available(*, deprecated, renamed: "firstChild")
-    func findChild(name: String?, xmlns: String?) -> Element?;
-    /**
      In subelements finds element for which passed closure returns true
      - parameter where: element matcher
      - returns: first element which matches
      */
-    @available(*, deprecated, renamed: "firstChild")
-    func findChild(where: (Element)->Bool) -> Element?;
-    
+    func firstChild(where: (Element)->Bool) -> Element?;
+
     /**
-     Finds first index at which this child is found (comparison by reference).
-     - returns: first index at which element was found if any
-     */
-    @available(*, deprecated, message: "Method will be removed")
-    func firstIndex(ofChild child: Element) -> Int?;
-    
-    /**
-     Find child elements matching name and xmlns
-     - parameter name: name of element
-     - parameter xmlns: xmlns of element
+     Find child matching elements
+     - parameter where: matcher closure
      - returns: array of matching child elements
      */
-    @available(*, deprecated, renamed: "filterChildren")
-    func getChildren(name: String?, xmlns: String?) -> Array<Element>;
-    /**
-     Finds every child element for which matcher returns true
-     - parameter where: matcher closure
-     - returns: array of matching elements
-     */
-    @available(*, deprecated, renamed: "filterChildren")
-    func getChildren(where: (Element)->Bool) -> Array<Element>;
+    func filterChildren(where: (Element)->Bool) -> Array<Element>
+
     /**
      Get value for attribute
      - parameter key: attribute
      - returns: value for attibutes
      */
-    @available(*, deprecated, renamed: "attribute(_:)")
-    func getAttribute(_ key:String) -> String?;
+    func attribute(_ key:String) -> String?;
+    /**
+     Set value for attribute
+     - parameter key: attribute
+     - parameter newValue: value to set
+     */
+    func attribute(_ key: String, newValue: String?);
+
+    /**
+     Remove attribute
+     - parameter key: attribute
+     */
+    func removeAttribute(_ key: String);
+    
     /**
      Remove element from child elements (reference comparison)
      - parameter child: element to remove
@@ -91,53 +81,65 @@ public protocol ElementProtocol: CustomStringConvertible {
      - parameter where: matcher closure
      */
     func removeChildren(where: (Element)->Bool);
-    /**
-     Set value for attribute
-     - parameter key: attribute
-     - parameter value: value to set
-     */
-    @available(*, deprecated, renamed: "attribute(_:newValue:)")
-    func setAttribute(_ key: String, value: String?);
     
 }
 
 extension ElementProtocol {
     
-    public func attribute(_ key: String, newValue: String?) {
-        setAttribute(key, value: newValue);
+    public func hasChild(name: String, xmlns: String? = nil) -> Bool {
+        return firstChild(name: name, xmlns: xmlns) != nil;
     }
     
-    public func attribute(_ key:String) -> String? {
-        return getAttribute(key);
-    }
-
-    
-    public func firstChild(where body: (Element)->Bool) -> Element? {
-        return findChild(where: body);
-    }
-    
+    /**
+     Find child element with matching name and xmlns
+     - parameter name: name of element to find
+     - parameter xmlns: xmlns of element to find
+     - returns: first found element if any
+     */
     public func firstChild(name: String, xmlns: String? = nil) -> Element? {
         return firstChild(where: { $0.name == name && (xmlns == nil || $0.xmlns == xmlns) });
     }
-
+    /**
+     In subelements finds element for which passed closure returns true
+     - parameter where: element matcher
+     - returns: first element which matches
+     */
     public func firstChild(xmlns: String) -> Element? {
         return firstChild(where: { $0.xmlns == xmlns })
     }
 
-    public func filterChildren(where body: (Element)->Bool) -> Array<Element> {
-        return getChildren(where: body);
-    }
-
+    /**
+     Find child elements matching name and xmlns
+     - parameter name: name of element
+     - parameter xmlns: xmlns of element
+     - returns: array of matching child elements
+     */
     public func filterChildren(name: String, xmlns: String?) -> Array<Element> {
         filterChildren(where: { $0.name == name && (xmlns == nil || $0.xmlns == xmlns) });
     }
-
+    
+    /**
+     Remove mathing elements from child elements
+     - parameter name: element name
+     - parameter xmlns: element xmlns
+     */
     public func removeChildren(name: String, xmlns: String? = nil) {
         removeChildren(where: { $0.name == name && (xmlns == nil || $0.xmlns == xmlns) });
     }
 
-    func hasChild(name: String? = nil, xmlns: String? = nil) -> Bool {
-        return findChild(name: name, xmlns: xmlns) != nil;
+    /**
+     Remove mathing elements from child elements
+     - parameter xmlns: element name
+     */
+    public func removeChildren(xmlns: String) {
+        removeChildren(where: { $0.xmlns == xmlns });
     }
-    
+
+    /**
+     Remove all child elements
+     */
+    public func removeAllChildren() {
+        removeChildren(where: { _ in true });
+    }
+
 }

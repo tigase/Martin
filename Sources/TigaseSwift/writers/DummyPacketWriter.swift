@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class DummyPacketWriter: PacketWriter {
+public struct DummyPacketWriter: PacketWriter {
     
     public func write<Failure>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) where Failure : Error {
         completionHandler?(.failure(errorDecoder(nil) as! Failure));

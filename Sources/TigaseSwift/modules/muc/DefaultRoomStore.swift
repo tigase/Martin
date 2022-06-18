@@ -25,25 +25,25 @@ open class DefaultRoomStore: RoomStore {
     
     public typealias Room = RoomBase
 
-    private let dispatcher = QueueDispatcher(label: "DefaultRoomsStore");
+    private let queue = DispatchQueue(label: "DefaultRoomsStore");
     private var rooms = [BareJID: Room]();
     
     public func rooms(for context: Context) -> [RoomBase] {
-        return dispatcher.sync {
+        return queue.sync {
             return rooms.values.compactMap({ $0 });
         }
     }
     
     public func room(for context: Context, with jid: BareJID) -> RoomBase? {
-        return dispatcher.sync {
+        return queue.sync {
             return rooms[jid];
         }
     }
     
     public func createRoom(for context: Context, with jid: BareJID, nickname: String, password: String?) -> ConversationCreateResult<RoomBase> {
-        return dispatcher.sync {
+        return queue.sync {
             guard let room = rooms[jid] else {
-                let room = RoomBase(context: context, jid: jid, nickname: nickname, password: password, dispatcher: self.dispatcher);
+                let room = RoomBase(context: context, jid: jid, nickname: nickname, password: password, queue: self.queue);
                 rooms[jid] = room;
                 return .created(room);
             }
@@ -52,7 +52,7 @@ open class DefaultRoomStore: RoomStore {
     }
     
     public func close(room: RoomBase) -> Bool {
-        return dispatcher.sync {
+        return queue.sync {
             return self.rooms.removeValue(forKey: room.jid) != nil;
         }
     }

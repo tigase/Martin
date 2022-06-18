@@ -27,7 +27,7 @@ import Foundation
  */
 open class Context: CustomStringConvertible, Resetable {
     
-    let dispatcher: QueueDispatcher = QueueDispatcher(label: "context_queue");
+    let queue = DispatchQueue(label: "context_queue");
     
     open var description: String {
         return connectionConfiguration.userJid.stringValue;
@@ -44,7 +44,7 @@ open class Context: CustomStringConvertible, Resetable {
     public var connectionConfiguration: ConnectionConfiguration = ConnectionConfiguration() {
         willSet {
             if connectionConfiguration.userJid != newValue.userJid {
-                dispatcher.sync {
+                queue.sync {
                     for lifecycleAware in self.lifecycleAwares {
                         lifecycleAware.deinitialize(context: self);
                     }
@@ -53,7 +53,7 @@ open class Context: CustomStringConvertible, Resetable {
         }
         didSet {
             if connectionConfiguration.userJid != oldValue.userJid {
-                dispatcher.sync {
+                queue.sync {
                     for lifecycleAware in self.lifecycleAwares {
                         lifecycleAware.initialize(context: self);
                     }
@@ -82,7 +82,7 @@ open class Context: CustomStringConvertible, Resetable {
     }
     
     deinit {
-        dispatcher.sync {
+        queue.sync {
             for lifecycleAware in lifecycleAwares {
                 lifecycleAware.deinitialize(context: self);
             }
@@ -110,14 +110,14 @@ open class Context: CustomStringConvertible, Resetable {
     }
 
     open func register(lifecycleAware: ContextLifecycleAware) {
-        dispatcher.async {
+        queue.async {
             self.lifecycleAwares.append(lifecycleAware);
             lifecycleAware.initialize(context: self);
         }
     }
     
     open func unregister(lifecycleAware: ContextLifecycleAware) {
-        dispatcher.async {
+        queue.async {
             lifecycleAware.deinitialize(context: self);
             self.lifecycleAwares.append(lifecycleAware);
         }

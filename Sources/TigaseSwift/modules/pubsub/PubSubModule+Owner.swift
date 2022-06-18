@@ -307,7 +307,7 @@ extension PubSubModule {
                 affiliations.setAttribute("node", value: node);
             }
         }
-        pubsubEl.addNode(affiliations);
+        pubsubEl.addChild(affiliations);
         return affiliations;
     }
 

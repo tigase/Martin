@@ -25,7 +25,7 @@ import TigaseLogging
 open class DNSSrvResolverWithCache: DNSSrvResolver {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "DNSSrvResolverWithCache");
-    private let dispatcher = QueueDispatcher(label: "DnsSrvResolverWithCache");
+    private let queue = DispatchQueue(label: "DnsSrvResolverWithCache");
     fileprivate let resolver: DNSSrvResolver;
     fileprivate let cache: DNSSrvResolverCache;
     fileprivate let automaticRefresh: Bool;
@@ -37,7 +37,7 @@ open class DNSSrvResolverWithCache: DNSSrvResolver {
     }
     
     open func resolve(domain: String, for jid: BareJID, completionHandler: @escaping (_ result: Result<XMPPSrvResult,DNSError>) -> Void) {
-        self.dispatcher.async {
+        self.queue.async {
             if let records = self.cache.getRecords(for: domain), records.hasValid {
                 self.logger.log("loaded DNS records for domain: \(domain) from cache \(records.records)");
                 completionHandler(.success(records));
@@ -71,14 +71,14 @@ open class DNSSrvResolverWithCache: DNSSrvResolver {
     }
     
     public func markAsInvalid(for domain: String, record: XMPPSrvRecord, for period: TimeInterval) {
-        self.dispatcher.async {
+        self.queue.async {
             self.resolver.markAsInvalid(for: domain, record: record, for: period);
             self.cache.markAsInvalid(for: domain, record: record, for: period);
         }
     }
     
     public func markAsInvalid(for domain: String, host: String, port: Int, for period: TimeInterval) {
-        self.dispatcher.async {
+        self.queue.async {
             self.resolver.markAsInvalid(for: domain, host: host, port: port, for: period);
             self.cache.markAsInvalid(for: domain, host: host, port: port, for: period)
         }

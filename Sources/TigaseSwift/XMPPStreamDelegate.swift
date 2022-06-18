@@ -21,7 +21,7 @@
 
 import Foundation
 
-public protocol XMPPStreamDelegate: class {
+public protocol XMPPStreamDelegate: AnyObject {
     
     func onStreamStart(attributes:[String:String])
     func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason);

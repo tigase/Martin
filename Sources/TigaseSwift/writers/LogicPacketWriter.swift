@@ -24,7 +24,7 @@ import Foundation
 /**
  Implementation of `PacketWriter` protocol passed to `Context` instance
  */
-open class LogicPacketWriter: PacketWriter {
+public struct LogicPacketWriter: PacketWriter {
     
     let sessionLogic: XmppSessionLogic;
     let responseManager: ResponseManager;

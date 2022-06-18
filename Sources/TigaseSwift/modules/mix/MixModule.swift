@@ -194,14 +194,14 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                             let jid = BareJID(String(resultJid[resultJid.index(after: idx)..<resultJid.endIndex]));
                             _ = self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                             
-                            self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
+                            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
                             if presenceSubscription {
                                 self.presenceModule?.subscribed(by: JID(channelJid));
                                 self.presenceModule?.subscribe(to: JID(channelJid));
                             }
                         } else if let participantId = joinEl.getAttribute("id") {
                             _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
-                            self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
+                            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
                             if presenceSubscription {
                                 self.presenceModule?.subscribed(by: JID(channelJid));
                                 self.presenceModule?.subscribe(to: JID(channelJid));
@@ -222,7 +222,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                 switch result {
                 case .success(let response):
                     if let joinEl = response.findChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.getAttribute("id") {
-                        self.retrieveHistory(fromChannel: channelJid, max: messageSyncLimit);
+                        self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
                         _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.findChild(name: "nick")?.value);
                     }
                 default:
@@ -595,9 +595,9 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             if !isPAM2SupportAvailable {
                 for channel in self.channelManager.channels(for: context) {
                     if let lastMessageDate = (channel as? LastMessageTimestampAware)?.lastMessageTimestamp {
-                        self.retrieveHistory(fromChannel: channel.jid, start: lastMessageDate, after: nil);
+                        self.retrieveHistory(fromChannel: channel.jid, start: lastMessageDate, rsm: .max(100));
                     } else {
-                        self.retrieveHistory(fromChannel: channel.jid, max: 100);
+                        self.retrieveHistory(fromChannel: channel.jid, rsm: .last(100));
                     }
                 }
             }
@@ -624,7 +624,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                 }), let participantId = annotation.values["participant-id"] {
                     let result = self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
                     if let channel = result, (channel as? LastMessageTimestampAware)?.lastMessageTimestamp == nil {
-                        retrieveHistory(fromChannel: item.jid.bareJid, max: 100);
+                        retrieveHistory(fromChannel: item.jid.bareJid, rsm: .last(100));
                     }
                 }
             }
@@ -686,9 +686,9 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             
             let result = self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
             if !isPAM2SupportAvailable {
-                retrieveHistory(fromChannel: item.jid.bareJid, max: 100);
+                retrieveHistory(fromChannel: item.jid.bareJid, rsm: .last(100));
             } else if let channel = result, (channel as? LastMessageTimestampAware)?.lastMessageTimestamp == nil {
-                retrieveHistory(fromChannel: item.jid.bareJid, max: 100);
+                retrieveHistory(fromChannel: item.jid.bareJid, rsm: .last(100));
             }
         case .removed(let jid):
             guard let channel = channelManager.channel(for: context, with: jid.bareJid) else {
@@ -697,17 +697,8 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             self.channelLeft(channel: channel);
         }
     }
-    
-    // for initial retrieval after join..
-    open func retrieveHistory(fromChannel jid: BareJID, max: Int) {
-        self.retrieveHistory(fromChannel: jid, start: nil, rsm: RSM.Query(lastItems: max))
-    }
 
-    open func retrieveHistory(fromChannel jid: BareJID, start: Date, after: String?) {
-        self.retrieveHistory(fromChannel: jid, start: start, rsm: RSM.Query(before: nil, after: after, max: 100));
-    }
-
-    open func retrieveHistory(fromChannel jid: BareJID, start: Date?, rsm: RSM.Query) {
+    open func retrieveHistory(fromChannel jid: BareJID, start: Date? = nil, rsm: RSM.Query) {
         let queryId = UUID().uuidString;
         // should we query MIX messages node? or just MAM at MIX channel without a node?
         mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: "urn:xmpp:mix:nodes:messages", start: nil, queryId: queryId, rsm: rsm, completionHandler: { result in

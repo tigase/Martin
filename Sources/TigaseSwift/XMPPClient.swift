@@ -145,7 +145,7 @@ open class XMPPClient: Context {
             return;
         }
         logger.debug("starting connection......");
-        dispatcher.sync {
+        queue.sync {
             self.responseManager.accountJID = JID(context.userBareJid);
             let socketConnector = self.connectionConfiguration.connectorOptions.connector.init(context: context); 
             let sessionLogic: XmppSessionLogic = SocketSessionLogic(connector: socketConnector, responseManager: responseManager, context: context, seeOtherHost: lastSeeOtherHost);
@@ -204,7 +204,7 @@ open class XMPPClient: Context {
         let scopes: Set<ResetableScope> = clean ? [.session, .stream] : [.stream];
         self.reset(scopes: scopes);
         sessionLogic?.unbind();
-        dispatcher.sync {
+        queue.sync {
             self.update(state: .disconnected(reason));
             sessionLogic = nil;
         }

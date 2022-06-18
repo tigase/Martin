@@ -246,7 +246,7 @@ extension PubSubModule {
                 items.addChild(item);
             }
         case .rsm(let rsm):
-            pubsub.addChild(rsm.element);
+            pubsub.addChild(rsm.element());
         case .lastItems(let maxItems):
             items.setAttribute("max_items", value: String(maxItems));
         }

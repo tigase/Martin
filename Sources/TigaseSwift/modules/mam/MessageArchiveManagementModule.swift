@@ -179,8 +179,8 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         
         queryEl.addChild(query.element(type: .submit, onlyModified: false));
         
-        if (rsm != nil) {
-            queryEl.addChild(rsm!.element);
+        if let rsm = rsm {
+            queryEl.addChild(rsm.element());
         }
         
         self.dispatcher.async {
