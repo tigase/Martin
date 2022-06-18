@@ -31,7 +31,11 @@ open class Element : Node, ElementProtocol {
     fileprivate var attributes_:[String:String];
     fileprivate var nodes = Array<Node>()
     
-    open var description: String {
+    open override var description: String {
+        return stringValue;
+    }
+    
+    open var debugDescription: String {
         return toPrettyString(secure: true);
     }
     
@@ -459,6 +463,14 @@ open class Element : Node, ElementProtocol {
         try? parser.parse(data: data!);
         return xmlDelegate.parsed.first;
     }
+}
+
+extension Element {
+    
+    public var children: [Element] {
+        return getChildren();
+    }
+    
 }
 
 /**

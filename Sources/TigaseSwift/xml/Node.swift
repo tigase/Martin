@@ -26,6 +26,10 @@ import Foundation
  */
 open class Node: StringValue {
     
+    open var description: String {
+        return stringValue;
+    }
+    
     /// returns serialized value
     open var stringValue:String {
         return "Node";

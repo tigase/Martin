@@ -21,8 +21,10 @@
 
 import Foundation
 
-public protocol StringValue {
+@available(*, deprecated, message: "StringValue protocol will be removed")
+public protocol StringValue: CustomStringConvertible {
     
+    @available(*, deprecated, renamed: "description")
     var stringValue:String { get }
     
 }

@@ -30,7 +30,7 @@ public protocol ElementProtocol: CustomStringConvertible {
     var name:String { get }
     /// XMLNS of element
     var xmlns:String? { get }
-    
+
     /**
      Add child element
      - parameter child: element to add as subelement
@@ -42,18 +42,21 @@ public protocol ElementProtocol: CustomStringConvertible {
      - parameter xmlns: xmlns of element to find
      - returns: first found element if any
      */
+    @available(*, deprecated, renamed: "firstChild")
     func findChild(name: String?, xmlns: String?) -> Element?;
     /**
      In subelements finds element for which passed closure returns true
      - parameter where: element matcher
      - returns: first element which matches
      */
+    @available(*, deprecated, renamed: "firstChild")
     func findChild(where: (Element)->Bool) -> Element?;
     
     /**
      Finds first index at which this child is found (comparison by reference).
      - returns: first index at which element was found if any
      */
+    @available(*, deprecated, message: "Method will be removed")
     func firstIndex(ofChild child: Element) -> Int?;
     
     /**
@@ -62,18 +65,21 @@ public protocol ElementProtocol: CustomStringConvertible {
      - parameter xmlns: xmlns of element
      - returns: array of matching child elements
      */
+    @available(*, deprecated, renamed: "filterChildren")
     func getChildren(name: String?, xmlns: String?) -> Array<Element>;
     /**
      Finds every child element for which matcher returns true
      - parameter where: matcher closure
      - returns: array of matching elements
      */
+    @available(*, deprecated, renamed: "filterChildren")
     func getChildren(where: (Element)->Bool) -> Array<Element>;
     /**
      Get value for attribute
      - parameter key: attribute
      - returns: value for attibutes
      */
+    @available(*, deprecated, renamed: "attribute(_:)")
     func getAttribute(_ key:String) -> String?;
     /**
      Remove element from child elements (reference comparison)
@@ -90,12 +96,46 @@ public protocol ElementProtocol: CustomStringConvertible {
      - parameter key: attribute
      - parameter value: value to set
      */
+    @available(*, deprecated, renamed: "attribute(_:newValue:)")
     func setAttribute(_ key: String, value: String?);
     
 }
 
 extension ElementProtocol {
     
+    public func attribute(_ key: String, newValue: String?) {
+        setAttribute(key, value: newValue);
+    }
+    
+    public func attribute(_ key:String) -> String? {
+        return getAttribute(key);
+    }
+
+    
+    public func firstChild(where body: (Element)->Bool) -> Element? {
+        return findChild(where: body);
+    }
+    
+    public func firstChild(name: String, xmlns: String? = nil) -> Element? {
+        return firstChild(where: { $0.name == name && (xmlns == nil || $0.xmlns == xmlns) });
+    }
+
+    public func firstChild(xmlns: String) -> Element? {
+        return firstChild(where: { $0.xmlns == xmlns })
+    }
+
+    public func filterChildren(where body: (Element)->Bool) -> Array<Element> {
+        return getChildren(where: body);
+    }
+
+    public func filterChildren(name: String, xmlns: String?) -> Array<Element> {
+        filterChildren(where: { $0.name == name && (xmlns == nil || $0.xmlns == xmlns) });
+    }
+
+    public func removeChildren(name: String, xmlns: String? = nil) {
+        removeChildren(where: { $0.name == name && (xmlns == nil || $0.xmlns == xmlns) });
+    }
+
     func hasChild(name: String? = nil, xmlns: String? = nil) -> Bool {
         return findChild(name: name, xmlns: xmlns) != nil;
     }

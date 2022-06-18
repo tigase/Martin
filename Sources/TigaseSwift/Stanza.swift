@@ -31,8 +31,20 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     
     fileprivate let defStanzaType:StanzaType?;
     
+    public var attributes: [String : String] {
+        return element.attributes;
+    }
+    
+    public var children: [Element] {
+        return element.children;
+    }
+        
+    public var debugDescription: String {
+        String("Stanza : \(element.debugDescription)")
+    }
+
     open var description: String {
-        return String("Stanza : \(element)")
+        return element.description;
     }
     
     /// Keeps instance of root XML element
@@ -124,6 +136,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Returns error condition due to which this response stanza is marked as an error
+    @available(*, deprecated, message: "Use `error` property instead")
     open var errorCondition:ErrorCondition? {
         get {
             if type != StanzaType.error {
@@ -137,6 +150,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Returns error text associated with this error stanza
+    @available(*, deprecated, message: "Use `error` property instead")
     open var errorText: String? {
         get {
             if type != StanzaType.error {
@@ -171,26 +185,32 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         self.element.addChildren(children);
     }
     
+    @available(*, deprecated, renamed: "firstChild")
     open func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
         return self.element.findChild(name: name, xmlns: xmlns);
     }
     
+    @available(*, deprecated, renamed: "firstChild")
     open func findChild(where body: (Element) -> Bool) -> Element? {
         return self.element.findChild(where: body);
     }
     
+    @available(*, deprecated, message: "Method removed")
     public func firstIndex(ofChild child: Element) -> Int? {
         return self.element.firstIndex(ofChild: child);
     }
     
+    @available(*, deprecated, renamed: "filterChildren")
     open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         return self.element.getChildren(name: name, xmlns: xmlns);
     }
     
+    @available(*, deprecated, renamed: "filterChildren")
     open func getChildren(where body: (Element) -> Bool) -> Array<Element> {
         return self.element.getChildren(where: body);
     }
     
+    @available(*, deprecated, renamed: "attribute(_:)")
     open func getAttribute(_ key:String) -> String? {
         return self.element.getAttribute(key);
     }
@@ -203,6 +223,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         self.element.removeChildren(where: body);
     }
     
+    @available(*, deprecated, renamed: "attribute(_:newValue:)")
     open func setAttribute(_ key:String, value:String?) {
         self.element.setAttribute(key, value: value);
     }
@@ -359,7 +380,7 @@ open class Message: Stanza {
         }
     }
     
-    open override var description: String {
+    open override var debugDescription: String {
         return String("Message : \(element)")
     }
     
@@ -452,7 +473,7 @@ open class Presence: Stanza {
         }
     }
     
-    open override var description: String {
+    open override var debugDescription: String {
         return String("Presence : \(element)")
     }
 
@@ -538,7 +559,7 @@ open class Presence: Stanza {
 /// Extenstion of `Stanza` class with specific features existing only in `iq` elements.
 open class Iq: Stanza {
 
-    open override var description: String {
+    open override var debugDescription: String {
         return String("Iq : \(element)")
     }
     

@@ -68,6 +68,7 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable, Str
      Creates new instance with same values
      - parameter jid: instance of JID
      */
+    @available(*, deprecated, message: "Removed as this is a struct and it doesn't need copy creation constructor")
     public init(_ jid: JID) {
         self.bareJid = jid.bareJid;
         self.resource = jid.resource;

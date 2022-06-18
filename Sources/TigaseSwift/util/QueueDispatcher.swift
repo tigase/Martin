@@ -24,6 +24,7 @@ import Foundation
 /**
  Helper protocol for classes using internal dispatch queues
  */
+@available(*, deprecated, message: "Class removed as features provided by it are not used anymore. Use DispatchQueue directly instead")
 public class QueueDispatcher {
     
     struct QueueIdentity {

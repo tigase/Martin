@@ -26,6 +26,10 @@ import Foundation
  */
 open class CData : Node {
     
+    open override var description: String {
+        return stringValue;
+    }
+    
     /// cdata
     open var value:String;
     
