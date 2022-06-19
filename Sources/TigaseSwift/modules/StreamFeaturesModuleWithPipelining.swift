@@ -102,7 +102,7 @@ open class StreamFeaturesModuleWithPipelining: StreamFeaturesModule {
         switch newState {
         case .connected:
             let pipeliningSupported = newCachedFeatures.count > 0 && newCachedFeatures.count == newCachedFeatures.filter({ features in
-                return features.findChild(name: "pipelining", xmlns: "urn:xmpp:features:pipelining") != nil;
+                return features.firstChild(name: "pipelining", xmlns: "urn:xmpp:features:pipelining") != nil;
             }).count;
             cache?.set(for: context, features: pipeliningSupported ? newCachedFeatures : nil);
             newCachedFeatures.removeAll();

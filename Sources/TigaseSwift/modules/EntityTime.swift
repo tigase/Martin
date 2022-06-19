@@ -58,12 +58,12 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
         
         write(iq, completionHandler: { result in
             completionHandler(result.map { response in
-                let timeEl = response.findChild(name: "time", xmlns: EntityTimeModule.XMLNS);
+                let timeEl = response.firstChild(name: "time", xmlns: EntityTimeModule.XMLNS);
                 var date: Date? = nil;
-                if let utc = timeEl?.findChild(name: "utc")?.value {
+                if let utc = timeEl?.firstChild(name: "utc")?.value {
                     date = EntityTimeModule.stampFormatter.date(from: utc);
                 }
-                return QueryResult(timeZone: timeEl?.findChild(name: "tzo")?.value, timestamp: date);
+                return QueryResult(timeZone: timeEl?.firstChild(name: "tzo")?.value, timestamp: date);
             })
         });
     }
@@ -94,7 +94,7 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+        throw XMPPError.bad_request(nil);
     }
     
 }

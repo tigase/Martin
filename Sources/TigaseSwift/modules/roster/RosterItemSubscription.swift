@@ -28,6 +28,13 @@ public enum RosterItemSubscription: String {
     case remove
     case to
     
+    public init?(_ value: String?) {
+        guard let val = value else {
+            return nil;
+        }
+        self.init(rawValue: val);
+    }
+    
     public var isFrom: Bool {
         switch self {
         case .from, .both:

@@ -67,23 +67,23 @@ extension Message {
     
     public var chatMarkers: ChatMarkers? {
         get {
-            guard let el = findChild(xmlns: ChatMarkers.XMLNS) else {
+            guard let el = firstChild(xmlns: ChatMarkers.XMLNS) else {
                 return nil;
             }
             
             switch el.name {
             case "received":
-                guard let id = el.getAttribute("id") else {
+                guard let id = el.attribute("id") else {
                     return nil;
                 }
                 return .received(id: id);
             case "displayed":
-                guard let id = el.getAttribute("id") else {
+                guard let id = el.attribute("id") else {
                     return nil;
                 }
                 return .displayed(id: id);
             case "acknowledged":
-                guard let id = el.getAttribute("id") else {
+                guard let id = el.attribute("id") else {
                     return nil;
                 }
                 return .acknowledged(id: id);

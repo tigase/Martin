@@ -69,7 +69,7 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
         write(iq, completionHandler: { result in
             switch result {
             case .success(let stanza):
-                if let name = stanza.findChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.findChild(name: "jid")?.value {
+                if let name = stanza.firstChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.firstChild(name: "jid")?.value {
                     let jid = JID(name);
                     self.bindedJid = jid;
                     completionHandler?(.success(jid));
@@ -84,7 +84,7 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     
     /// Method should not be called due to empty `criteria` property
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request
+        throw XMPPError.bad_request(nil)
     }
     
 }

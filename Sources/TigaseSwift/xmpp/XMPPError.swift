@@ -55,7 +55,7 @@ public enum XMPPError: LocalizedError, Equatable, CustomStringConvertible {
         if let message = self.message?.trimmingCharacters(in: .whitespacesAndNewlines), !message.isEmpty {
             return "\(message) (\(errorCondition.rawValue))";
         } else {
-            return "\(errorCondition.localizedDescription) (\(errorCondition.rawValue))";
+            return "\(errorCondition.errorDescription!) (\(errorCondition.rawValue))";
         }
     }
     
@@ -177,7 +177,7 @@ public enum XMPPError: LocalizedError, Equatable, CustomStringConvertible {
         let errorCondition = self.errorCondition;
 
         let errorEl = Element(name: "error");
-        errorEl.setAttribute("type", value: errorCondition.type);
+        errorEl.attribute("type", newValue: errorCondition.type);
         
         let conditon = Element(name: errorCondition.rawValue, xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas");
         if case let .redirect(uri, _) = self {
@@ -203,15 +203,15 @@ public enum XMPPError: LocalizedError, Equatable, CustomStringConvertible {
     }
     
     public static func parse(stanza: Stanza) -> XMPPError? {
-        guard stanza.type == .error, let errorEl = stanza.findChild(where: { $0.name ==  "error" && ($0.xmlns == stanza.xmlns || $0.xmlns == nil) }) else {
+        guard stanza.type == .error, let errorEl = stanza.firstChild(where: { $0.name ==  "error" && ($0.xmlns == stanza.xmlns || $0.xmlns == nil) }) else {
             return nil;
         }
         
-        guard let errorNameEl = errorEl.findChild(xmlns:"urn:ietf:params:xml:ns:xmpp-stanzas"), let errorCondition = ErrorCondition(rawValue: errorNameEl.name) else {
+        guard let errorNameEl = errorEl.firstChild(xmlns:"urn:ietf:params:xml:ns:xmpp-stanzas"), let errorCondition = ErrorCondition(rawValue: errorNameEl.name) else {
             return .undefined_condition;
         }
         
-        let text = errorEl.findChild(name: "text")?.value;
+        let text = errorEl.firstChild(name: "text")?.value;
         switch errorCondition {
         case .bad_request:
             return .bad_request(text);

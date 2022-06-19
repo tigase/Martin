@@ -126,7 +126,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         iq.type = StanzaType.get;
         let query = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
         if node != nil {
-            query.setAttribute("node", value: node);
+            query.attribute("node", newValue: node);
         }
         iq.addChild(query);
         
@@ -142,20 +142,12 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
     open func getInfo(for jid:JID, node requestedNode:String? = nil, completionHandler: @escaping (Result<DiscoveryInfoResult,XMPPError>) -> Void) {
         getInfo(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
             completionHandler(result.map { stanza in
-                guard let query = stanza.findChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
+                guard let query = stanza.firstChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
                     return .empty();
                 }
-                let identities = query.mapChildren(transform: { e -> Identity in
-                    return Identity(category: e.getAttribute("category")!, type: e.getAttribute("type")!, name: e.getAttribute("name"));
-                    }, filter: { (e:Element) -> Bool in
-                       return e.name == "identity" && e.getAttribute("category") != nil && e.getAttribute("type") != nil
-                });
-                let features = query.mapChildren(transform: { e -> String in
-                    return e.getAttribute("var")!;
-                    }, filter: { (e:Element) -> Bool in
-                        return e.name == "feature" && e.getAttribute("var") != nil;
-                })
-                let form = DataForm(element: query.findChild(name: "x", xmlns: "jabber:x:data"));
+                let identities = query.compactMapChildren(Identity.init(_:));
+                let features = query.filterChildren(name: "feature").compactMap({ $0.attribute("var") });
+                let form = DataForm(element: query.firstChild(name: "x", xmlns: "jabber:x:data"));
                 return DiscoveryInfoResult(identities: identities, features: features, form: form);
             });
         })
@@ -173,7 +165,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         iq.type = StanzaType.get;
         let query = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
         if node != nil {
-            query.setAttribute("node", value: node);
+            query.attribute("node", newValue: node);
         }
         iq.addChild(query);
         
@@ -189,15 +181,11 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
     open func getItems(for jid: JID, node requestedNode: String? = nil, completionHandler: @escaping (Result<DiscoveryItemsResult,XMPPError>) -> Void) {
         getItems(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
             completionHandler(result.map({ stanza in
-                guard let query = stanza.findChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
+                guard let query = stanza.firstChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
                     return DiscoveryItemsResult(node: requestedNode, items: []);
                 }
-                let items = query.mapChildren(transform: { i -> Item in
-                        return Item(jid: JID(i.getAttribute("jid")!), node: i.getAttribute("node"), name: i.getAttribute("name"));
-                    }, filter: { (e) -> Bool in
-                        return e.name == "item" && e.getAttribute("jid") != nil;
-                })
-                return DiscoveryItemsResult(node: query.getAttribute("node") ?? requestedNode, items: items);
+                let items = query.compactMapChildren(Item.init(_:));
+                return DiscoveryItemsResult(node: query.attribute("node") ?? requestedNode, items: items);
             }))
         });
     }
@@ -221,8 +209,8 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      Processes stanzas with type equal `get`
      */
     open func processGet(stanza:Stanza) throws {
-        let query = stanza.findChild(name: "query")!;
-        let node = query.getAttribute("node");
+        let query = stanza.firstChild(name: "query")!;
+        let node = query.attribute("node");
         if let xmlns = query.xmlns {
             if let callback = callbacks[node ?? ""] {
                 switch xmlns {
@@ -231,11 +219,11 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
                 case DiscoveryModule.ITEMS_XMLNS:
                     processGetItems(stanza, node, callback);
                 default:
-                    throw ErrorCondition.bad_request;
+                    throw XMPPError.bad_request(nil);
                 }
             }
         } else {
-            throw ErrorCondition.bad_request;
+            throw XMPPError.bad_request(nil);
         }
     }
 
@@ -243,7 +231,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      Processes stanzas with type equal `set`
      */
     open func processSet(stanza:Stanza) throws {
-        throw ErrorCondition.not_allowed;
+        throw XMPPError.not_allowed(nil);
     }
     
     private func processGetInfo(_ stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
@@ -251,15 +239,15 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         
         let queryResult = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
         if node != nil {
-            queryResult.setAttribute("node", value: node);
+            queryResult.attribute("node", newValue: node);
         }
         result.addChild(queryResult);
         
         if let context = context, let identity = nodeDetailsEntry.identity(context, stanza, node) {
             let identityElement = Element(name: "identity");
-            identityElement.setAttribute("category", value: identity.category);
-            identityElement.setAttribute("type", value: identity.type);
-            identityElement.setAttribute("name", value: identity.name);
+            identityElement.attribute("category", newValue: identity.category);
+            identityElement.attribute("type", newValue: identity.type);
+            identityElement.attribute("name", newValue: identity.name);
             queryResult.addChild(identityElement);
         }
         
@@ -278,16 +266,16 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         
         let queryResult = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
         if node != nil {
-            queryResult.setAttribute("node", value: node);
+            queryResult.attribute("node", newValue: node);
         }
         result.addChild(queryResult);
         
         if let context = context, let items = nodeDetailsEntry.items(context, stanza, node) {
             for item in items {
                 let e = Element(name: "item");
-                e.setAttribute("jid", value: item.jid.description);
-                e.setAttribute("node", value: item.node);
-                e.setAttribute("name", value: item.name);
+                e.attribute("jid", newValue: item.jid.description);
+                e.attribute("node", newValue: item.node);
+                e.attribute("name", newValue: item.name);
                 queryResult.addChild(e);
             }
         }
@@ -318,11 +306,23 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         }
     }
     
-    open class Identity: CustomStringConvertible {
+    public struct Identity: CustomStringConvertible {
         
         public let category: String;
         public let type: String;
         public let name: String?;
+        
+        public init?(_ el: Element) {
+            guard el.name == "identity" else {
+                return nil;
+            }
+            guard let category = el.attribute("category"), let type = el.attribute("type") else {
+                return nil;
+            }
+            self.category = category;
+            self.type = type;
+            name = el.attribute("name");
+        }
         
         public init(category: String, type: String, name: String? = nil) {
             self.category = category;
@@ -330,18 +330,30 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             self.name = name;
         }
         
-        open var description: String {
+        public var description: String {
             get {
                 return "Identity(category=\(category), type=\(type), name=\(String(describing: name)))";
             }
         }
     }
     
-    open class Item: CustomStringConvertible {
+    public struct Item: CustomStringConvertible {
         
         public let jid:JID;
         public let node:String?;
         public let name:String?;
+        
+        public init?(_ el: Element) {
+            guard el.name == "item" else {
+                return nil;
+            }
+            guard let jid = JID(el.attribute("jid")) else {
+                return nil;
+            }
+            self.jid = jid;
+            self.node = el.attribute("node");
+            self.name = el.attribute("name");
+        }
         
         public init(jid: JID, node: String? = nil, name: String? = nil) {
             self.jid = jid;
@@ -349,7 +361,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             self.name = name;
         }
         
-        open var description: String {
+        public var description: String {
             get {
                 return "Item(jid=\(jid), node=\(String(describing: node)), name=\(String(describing: name)))";
             }

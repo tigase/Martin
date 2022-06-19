@@ -101,7 +101,7 @@ open class VCard4Module: XmppModuleBase, XmppModule, VCardModuleProtocol {
     open func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
         retrieveVCard(from: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.map({ response in
-                if let vcardEl = response.findChild(name: "vcard", xmlns: VCard4Module.VCARD_XMLNS), let vcard = VCard(vcard4: vcardEl) {
+                if let vcardEl = response.firstChild(name: "vcard", xmlns: VCard4Module.VCARD_XMLNS), let vcard = VCard(vcard4: vcardEl) {
                     return vcard;
                 } else {
                     return VCard();
@@ -114,95 +114,82 @@ open class VCard4Module: XmppModuleBase, XmppModule, VCardModuleProtocol {
 
 extension VCard {
     
-    public convenience init?(vcard4: Element?) {
-        guard vcard4 != nil && vcard4!.name == "vcard" && vcard4!.xmlns == "urn:ietf:params:xml:ns:vcard-4.0" else {
+    public convenience init?(vcard4 el: Element?) {
+        guard let vcard4 = el, vcard4.name == "vcard" && vcard4.xmlns == "urn:ietf:params:xml:ns:vcard-4.0" else {
             return nil;
         }
         self.init();
         
-        self.bday = vcard4!.findChild(name: "bday")?.findChild(name: "date")?.value;
-        self.fn = vcard4!.findChild(name: "fn")?.findChild(name: "text")?.value;
-        if let n = vcard4!.findChild(name: "n") {
-            self.surname = n.findChild(name: "surname")?.value;
-            self.givenName = n.findChild(name: "given")?.value;
-            self.additionalName = n.mapChildren(transform: {(el) in
-                return el.value!;
-            }, filter: {(el)->Bool in
-                return el.name == "additional" && el.value != nil;
-            });
-            self.namePrefixes = n.mapChildren(transform: {(el) in
-                return el.value!;
-            }, filter: {(el)->Bool in
-                return el.name == "prefix" && el.value != nil;
-            });
-            self.nameSuffixes = n.mapChildren(transform: {(el) in
-                return el.value!;
-            }, filter: {(el)->Bool in
-                return el.name == "suffix" && el.value != nil;
-            });
+        self.bday = vcard4.firstChild(name: "bday")?.firstChild(name: "date")?.value;
+        self.fn = vcard4.firstChild(name: "fn")?.firstChild(name: "text")?.value;
+        if let n = vcard4.firstChild(name: "n") {
+            self.surname = n.firstChild(name: "surname")?.value;
+            self.givenName = n.firstChild(name: "given")?.value;
+            self.additionalName = n.filterChildren(name: "additional").compactMap({ $0.value });
+            self.namePrefixes = n.filterChildren(name: "prefix").compactMap({ $0.value });
+            self.nameSuffixes = n.filterChildren(name: "suffix").compactMap({ $0.value });
         }
-        vcard4!.forEachChild(name: "nickname") { (el) in
-            if let nick = el.findChild(name: "text")?.value {
-                self.nicknames.append(nick);
-            }
-        }
-        self.title = vcard4!.findChild(name: "title")?.findChild(name: "text")?.value;
-        self.role = vcard4!.findChild(name: "role")?.findChild(name: "text")?.value;
-        self.note = vcard4!.findChild(name: "note")?.findChild(name: "text")?.value;
+        self.nicknames = vcard4.filterChildren(name: "nickname").compactMap({ el -> String? in el.firstChild(name: "text")?.value });
+        self.title = vcard4.firstChild(name: "title")?.firstChild(name: "text")?.value;
+        self.role = vcard4.firstChild(name: "role")?.firstChild(name: "text")?.value;
+        self.note = vcard4.firstChild(name: "note")?.firstChild(name: "text")?.value;
         
-        self.addresses = vcard4!.mapChildren(transform: {(el)->Address in
+        self.addresses = vcard4.filterChildren(name: "adr").map({ el -> Address in
             let addr = Address();
-            addr.ext = el.findChild(name: "ext")?.value;
-            addr.country = el.findChild(name: "country")?.value;
-            addr.locality = el.findChild(name: "locality")?.value;
-            addr.postalCode = el.findChild(name: "code")?.value;
-            addr.region = el.findChild(name: "region")?.value;
-            addr.street = el.findChild(name: "street")?.value;
-            VCard.convertVCard4ParamtersToTypes(el: el, entry: addr);
+            addr.ext = el.firstChild(name: "ext")?.value;
+            addr.country = el.firstChild(name: "country")?.value;
+            addr.locality = el.firstChild(name: "locality")?.value;
+            addr.postalCode = el.firstChild(name: "code")?.value;
+            addr.region = el.firstChild(name: "region")?.value;
+            addr.street = el.firstChild(name: "street")?.value;
+            addr.types = VCard.convertVCard4ParamtersToTypes(el: el);
             return addr;
-        }, filter: {(el)->Bool in
-            return el.name == "adr"
         });
         
-        vcard4!.forEachChild(name: "email") { (el) in
-            if let address = el.findChild(name: "text")?.value {
-                let email = Email(address: address);
-                VCard.convertVCard4ParamtersToTypes(el: el, entry: email);
-                self.emails.append(email);
+        self.emails = vcard4.filterChildren(name: "email").compactMap({ el -> Email? in
+            guard let address = el.firstChild(name: "text")?.value else {
+                return nil;
             }
-        }
+            let email = Email(address: address);
+            email.types = VCard.convertVCard4ParamtersToTypes(el: el);
+            return email;
+        })
         
-        vcard4!.forEachChild(name: "impp") { (el) in
-            if let uri = el.findChild(name: "uri")?.value {
-                let impp = IMPP(uri: uri);
-                VCard.convertVCard4ParamtersToTypes(el: el, entry: impp);
-                self.impps.append(impp);
+        self.impps = vcard4.filterChildren(name: "impp").compactMap({ el -> IMPP? in
+            guard let uri = el.firstChild(name: "uri")?.value else {
+                return nil;
             }
-        }
+            let impp = IMPP(uri: uri);
+            impp.types = VCard.convertVCard4ParamtersToTypes(el: el);
+            return impp;
+        })
         
-        vcard4!.forEachChild(name: "org") { (el) in
-            if let name = el.findChild(name: "text")?.value {
-                let org = Organization(name: name);
-                VCard.convertVCard4ParamtersToTypes(el: el, entry: org);
-                self.organizations.append(org);
+        self.organizations = vcard4.filterChildren(name: "org").compactMap({ el -> Organization? in
+            guard let name = el.firstChild(name: "text")?.value else {
+                return nil;
             }
-        }
+            let org = Organization(name: name);
+            org.types = VCard.convertVCard4ParamtersToTypes(el: el);
+            return org;
+        })
         
-        vcard4!.forEachChild(name: "photo") { (el) in
-            if let uri = el.findChild(name: "uri")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
-                let photo = Photo(uri: uri);
-                VCard.convertVCard4ParamtersToTypes(el: el, entry: photo);
-                self.photos.append(photo);
+        self.photos = vcard4.filterChildren(name: "photo").compactMap({ el -> Photo? in
+            guard let uri = el.firstChild(name: "uri")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") else {
+                return nil;
             }
-        }
+            let photo = Photo(uri: uri);
+            photo.types = VCard.convertVCard4ParamtersToTypes(el: el);
+            return photo;
+        })
         
-        vcard4!.forEachChild(name: "tel") { (el) in
-            if let uri = el.findChild(name: "uri")?.value {
-                let tel = Telephone(uri: uri);
-                VCard.convertVCard4ParamtersToTypes(el: el, entry: tel);
-                self.telephones.append(tel);
+        self.telephones = vcard4.filterChildren(name: "tel").compactMap({ el -> Telephone? in
+            guard let uri = el.firstChild(name: "uri")?.value else {
+                return nil;
             }
-        }
+            let tel = Telephone(uri: uri);
+            tel.types = VCard.convertVCard4ParamtersToTypes(el: el);
+            return tel;
+        })
     }
     
     open func toVCard4() -> Element {
@@ -296,21 +283,24 @@ extension VCard {
         return vcard;
     }
     
-    fileprivate static func convertVCard4ParamtersToTypes(el: Element, entry: VCardEntryItemTypeAware) {
-        el.findChild(name: "parameters")?.forEachChild(name: "type") { (type) in
-            if let val = type.findChild(name: "text")?.value {
-                if val == "work" {
-                    entry.types.append(.work);
-                }
-                if val == "home" {
-                    entry.types.append(.home);
-                }
+    fileprivate static func convertVCard4ParamtersToTypes(el: Element) -> [VCard.EntryType] {
+        return el.firstChild(name: "parameters")?.filterChildren(name: "type").compactMap({ type in
+            guard let val = type.firstChild(name: "text")?.value else {
+                return nil;
             }
-        }
+            switch val {
+            case "work":
+                return .work;
+            case "home":
+                return .home;
+            default:
+                return nil;
+            }
+        }) ?? [];
     }
     
     fileprivate static func convertTypesToVCard4Parameters(el: Element, entry: VCardEntryItemTypeAware) {
-        var params = el.findChild(name: "parameters");
+        var params = el.firstChild(name: "parameters");
         if params == nil {
             params = Element(name: "parameters");
             el.addChild(params!);

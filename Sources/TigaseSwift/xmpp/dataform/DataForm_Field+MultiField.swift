@@ -52,7 +52,7 @@ extension DataForm.Field {
         }
         
         public required init?(element el: Element) {
-            super.init(element: el, values: el.getChildren(name: "value").compactMap({ $0.value }));
+            super.init(element: el, values: el.filterChildren(name: "value").compactMap({ $0.value }));
         }
         
         public override init(`var`: String, type: FieldType? = .textMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [String] = []) {
@@ -84,7 +84,7 @@ extension DataForm.Field {
         }
         
         public required init?(element el: Element) {
-            super.init(element: el, values: el.getChildren(name: "value").compactMap({ $0.value }).compactMap({ JID( $0 )}));
+            super.init(element: el, values: el.filterChildren(name: "value").compactMap({ $0.value }).compactMap({ JID( $0 )}));
         }
         
         public override init(`var`: String, type: FieldType? = .jidMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [JID] = []) {
@@ -102,7 +102,7 @@ extension DataForm.Field {
         open override func element(formType: DataForm.FormType) -> Element {
             let el = super.element(formType: formType);
             for value in currentValues {
-                el.addChild(Element(name: "value", cdata: value.stringValue));
+                el.addChild(Element(name: "value", cdata: value.description));
             }
             return el;
         }

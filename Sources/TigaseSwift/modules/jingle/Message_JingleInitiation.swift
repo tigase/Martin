@@ -25,7 +25,7 @@ extension Message {
     
     public var jingleMessageInitiationAction: Jingle.MessageInitiationAction? {
         get {
-            guard let actionEl = element.findChild(xmlns: "urn:xmpp:jingle-message:0") else {
+            guard let actionEl = element.firstChild(xmlns: "urn:xmpp:jingle-message:0") else {
                 return nil;
             }
             return Jingle.MessageInitiationAction.from(element: actionEl);
@@ -34,7 +34,7 @@ extension Message {
             element.removeChildren(where: { $0.xmlns == "urn:xmpp:jingle-message:0" });
             if let value = newValue {
                 let actionEl = Element(name: value.actionName, xmlns: "urn:xmpp:jingle-message:0");
-                actionEl.setAttribute("id", value: value.id);
+                actionEl.attribute("id", newValue: value.id);
                 switch value {
                 case .propose(_, let descriptions):
                     actionEl.addChildren(descriptions.map({ $0.element() }));
@@ -58,7 +58,7 @@ public enum MessageInitiationAction {
     case reject(id: String)
     
     public static func from(element actionEl: Element) -> MessageInitiationAction? {
-        guard let id = actionEl.getAttribute("id") else {
+        guard let id = actionEl.attribute("id") else {
             return nil;
         }
         switch actionEl.name {
@@ -67,7 +67,7 @@ public enum MessageInitiationAction {
         case "proceed":
             return .proceed(id: id);
         case "propose":
-            let descriptions = actionEl.mapChildren(transform: { Description(element: $0) });
+            let descriptions = actionEl.compactMapChildren(Description.init(element:));
             guard !descriptions.isEmpty else {
                 return nil;
             }
@@ -118,7 +118,7 @@ public enum MessageInitiationAction {
         public let media: String;
         
         public convenience init?(element descEl: Element) {
-            guard let xmlns = descEl.xmlns, let media = descEl.getAttribute("media") else {
+            guard let xmlns = descEl.xmlns, let media = descEl.attribute("media") else {
                 return nil;
             }
             self.init(xmlns: xmlns, media: media);

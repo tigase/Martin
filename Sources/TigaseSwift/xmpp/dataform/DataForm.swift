@@ -55,7 +55,7 @@ open class DataForm: DataFormProtocol {
         public struct Media {
 
             public static func from(element el: Element) -> [Media] {
-                return el.mapChildren(transform: Media.init(element:));
+                return el.compactMapChildren(Media.init(element:));
             }
 
             public let uris: [Uri];
@@ -64,7 +64,7 @@ open class DataForm: DataFormProtocol {
                 guard el.name == "media" && el.xmlns == "urn:xmpp:media-element" else {
                     return nil;
                 }
-                uris = el.getChildren(name: "uri").compactMap(Uri.init(element:));
+                uris = el.filterChildren(name: "uri").compactMap(Uri.init(element:));
             }
 
             public init(uris: [Uri]) {
@@ -81,7 +81,7 @@ open class DataForm: DataFormProtocol {
                 }
 
                 public init?(element el: Element) {
-                    guard el.name == "uri", let type = el.getAttribute("type"), let value = el.value else {
+                    guard el.name == "uri", let type = el.attribute("type"), let value = el.value else {
                         return nil;
                     }
                     self.init(type: type, value: value);
@@ -92,7 +92,7 @@ open class DataForm: DataFormProtocol {
         public struct Option {
             
             public static func from(element el: Element) -> [Option] {
-                return el.mapChildren(transform: Option.init(element:));
+                return el.compactMapChildren(Option.init(element:));
             }
             
             public let label: String?;
@@ -104,10 +104,10 @@ open class DataForm: DataFormProtocol {
             }
             
             public init?(element el: Element) {
-                guard el.name == "option", let value = el.findChild(name: "value")?.value else {
+                guard el.name == "option", let value = el.firstChild(name: "value")?.value else {
                     return nil;
                 }
-                self.init(value: value, label: el.getAttribute("label"));
+                self.init(value: value, label: el.attribute("label"));
             }
         }
 
@@ -117,7 +117,7 @@ open class DataForm: DataFormProtocol {
                 return nil;
             }
             
-            let type = Field.FieldType(string: el.getAttribute("type")) ?? .textSingle;
+            let type = Field.FieldType(string: el.attribute("type")) ?? .textSingle;
             switch type {
             case .boolean:
                 return .Boolean(element: el);
@@ -162,15 +162,15 @@ open class DataForm: DataFormProtocol {
         }
         
         public init?(element el: Element) {
-            guard let v = el.getAttribute("var") else {
+            guard let v = el.attribute("var") else {
                 return nil;
             }
 
             self.var = v;
-            self.type = FieldType(string: el.getAttribute("type"));
+            self.type = FieldType(string: el.attribute("type"));
             self.isRequired = el.hasChild(name: "required");
-            self.label = el.getAttribute("label");
-            self.desc = el.findChild(name: "desc")?.value;
+            self.label = el.attribute("label");
+            self.desc = el.firstChild(name: "desc")?.value;
             self.media = Media.from(element: el);
         }
         
@@ -185,10 +185,10 @@ open class DataForm: DataFormProtocol {
         
         open func element(formType: FormType) -> Element {
             let elem = Element(name: "field");
-            elem.setAttribute("var", value: self.var);
-            elem.setAttribute("type", value: type?.rawValue);
+            elem.attribute("var", newValue: self.var);
+            elem.attribute("type", newValue: type?.rawValue);
             if formType != .submit {
-                elem.setAttribute("label", value: label);
+                elem.attribute("label", newValue: label);
                 if desc != nil {
                     elem.addChild(Element(name: "desc", cdata: desc));
                 }
@@ -220,11 +220,11 @@ open class DataForm: DataFormProtocol {
             return nil;
         }
 
-        guard let typeStr = form.getAttribute("type"), let type = FormType(rawValue: typeStr) else {
+        guard let typeStr = form.attribute("type"), let type = FormType(rawValue: typeStr) else {
             return nil;
         }
 
-        self.init(type: type, title: form.findChild(name: "title")?.value, instructions: form.getChildren(name: "instructions").map({ $0.value ?? "" }), fields: form.getChildren(name: "field").compactMap(Field.parse(element:)), reported: Reported.from(formElement: form), layout: form.getChildren(name: "page", xmlns: "http://jabber.org/protocol/xdata-layout").compactMap(Page.init(element:)));
+        self.init(type: type, title: form.firstChild(name: "title")?.value, instructions: form.filterChildren(name: "instructions").map({ $0.value ?? "" }), fields: form.filterChildren(name: "field").compactMap(Field.parse(element:)), reported: Reported.from(formElement: form), layout: form.filterChildren(name: "page", xmlns: "http://jabber.org/protocol/xdata-layout").compactMap(Page.init(element:)));
     }
 
     public init(type: FormType, title: String? = nil, instructions: [String] = [], fields: [Field] = [], reported: [Reported] = [], layout: [Page] = []) {
@@ -341,7 +341,7 @@ open class DataForm: DataFormProtocol {
     
     open func element(type: FormType, onlyModified: Bool) -> Element {
         let elem = Element(name: "x", xmlns: "jabber:x:data");
-        elem.setAttribute("type", value: type.rawValue);
+        elem.attribute("type", newValue: type.rawValue);
         let fields = onlyModified ? self.fields.filter({ $0.shouldSubmit }) : self.fields;
         for field in fields {
             elem.addChild(field.element(formType: type));

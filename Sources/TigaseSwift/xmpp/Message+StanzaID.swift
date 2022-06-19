@@ -25,12 +25,12 @@ extension Message {
     
     public var originId: String? {
         get {
-            return findChild(name: "origin-id", xmlns: "urn:xmpp:sid:0")?.getAttribute("id");
+            return firstChild(name: "origin-id", xmlns: "urn:xmpp:sid:0")?.attribute("id");
         }
         set {
-            if let el = findChild(name: "origin-id", xmlns: "urn:xmpp:sid:0") {
+            if let el = firstChild(name: "origin-id", xmlns: "urn:xmpp:sid:0") {
                 if let value = newValue {
-                    el.setAttribute("id", value: value);
+                    el.attribute("id", newValue: value);
                 } else {
                     removeChild(el);
                 }
@@ -41,12 +41,12 @@ extension Message {
     }
     
     public var stanzaId: [BareJID:String]? {
-        return Dictionary(getChildren(name: "stanza-id", xmlns: "urn:xmpp:sid:0").map({ el -> (BareJID, String)? in
-            guard let jid = JID(el.getAttribute("by"))?.bareJid, let id = el.getAttribute("id") else {
+        return Dictionary(filterChildren(name: "stanza-id", xmlns: "urn:xmpp:sid:0").compactMap({ el -> (BareJID, String)? in
+            guard let jid = JID(el.attribute("by"))?.bareJid, let id = el.attribute("id") else {
                 return nil;
             }
             return (jid, id);
-        }).filter({ $0 != nil }).map({ $0! }), uniquingKeysWith: { (first, _) in first });
+        }), uniquingKeysWith: { (first, _) in first });
     }
     
 }

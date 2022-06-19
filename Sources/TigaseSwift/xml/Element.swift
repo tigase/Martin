@@ -68,7 +68,7 @@ public enum Node: CustomStringConvertible, Equatable {
 /**
  Class representing parsed XML element
  */
-open class Element : CustomStringConvertible, CustomDebugStringConvertible, ElementProtocol, StringValue {
+open class Element : CustomStringConvertible, CustomDebugStringConvertible, ElementProtocol {
     /// Element name
     public let name:String
     var _defxmlns:String?

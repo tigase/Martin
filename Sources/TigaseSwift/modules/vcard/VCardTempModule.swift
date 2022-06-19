@@ -101,7 +101,7 @@ open class VCardTempModule: XmppModuleBase, XmppModule, VCardModuleProtocol {
     open func retrieveVCard(from jid: JID?, completionHandler: @escaping (Result<VCard, XMPPError>) -> Void) {
         retrieveVCard(from: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.map({ stanza in
-                if let vcardEl = stanza.findChild(name: "vCard", xmlns: VCardTempModule.VCARD_XMLNS), let vcard = VCard(vcardTemp: vcardEl) {
+                if let vcardEl = stanza.firstChild(name: "vCard", xmlns: VCardTempModule.VCARD_XMLNS), let vcard = VCard(vcardTemp: vcardEl) {
                     return vcard;
                 } else {
                     return VCard();
@@ -114,121 +114,110 @@ open class VCardTempModule: XmppModuleBase, XmppModule, VCardModuleProtocol {
 
 extension VCard {
     
-    public convenience init?(vcardTemp: Element?) {
-        guard vcardTemp != nil && vcardTemp!.name == "vCard" && vcardTemp!.xmlns == "vcard-temp" else {
+    public convenience init?(vcardTemp el: Element?) {
+        guard let vcardTemp = el, vcardTemp.name == "vCard" && vcardTemp.xmlns == "vcard-temp" else {
             return nil;
         }
         self.init();
         
-        self.bday = vcardTemp!.findChild(name: "BDAY")?.value;
-        self.fn = vcardTemp!.findChild(name: "FN")?.value;
+        self.bday = vcardTemp.firstChild(name: "BDAY")?.value;
+        self.fn = vcardTemp.firstChild(name: "FN")?.value;
         
-        if let n = vcardTemp!.findChild(name: "N") {
-            self.surname = n.findChild(name: "FAMILY")?.value;
-            self.givenName = n.findChild(name: "GIVEN")?.value;
-            if let middleName = n.findChild(name: "MIDDLE")?.value {
+        if let n = vcardTemp.firstChild(name: "N") {
+            self.surname = n.firstChild(name: "FAMILY")?.value;
+            self.givenName = n.firstChild(name: "GIVEN")?.value;
+            if let middleName = n.firstChild(name: "MIDDLE")?.value {
                 self.additionalName.append(middleName);
             }
-            self.namePrefixes = n.mapChildren(transform: {(el) in
-                return el.value;
-            }, filter: {(el) -> Bool in
-                return el.name == "PREFIX" && el.value != nil;
-            });
-            self.nameSuffixes = n.mapChildren(transform: {(el) in
-                return el.value;
-            }, filter: {(el) -> Bool in
-                return el.name == "SUFFIX" && el.value != nil;
-            });
+            self.namePrefixes = n.filterChildren(name: "PREFIX").compactMap({ $0.value });
+            self.nameSuffixes = n.filterChildren(name: "SUFFIX").compactMap({ $0.value });
         }
         
-        self.nicknames = vcardTemp!.mapChildren(transform: {(el) in
-            return el.value!;
-        }, filter: { (el) -> Bool in
-            return el.name == "NICKNAME" && el.value != nil;
-        });
+        self.nicknames = vcardTemp.filterChildren(name: "NICKNAME").compactMap({ $0.value });
         
-        self.title = vcardTemp!.findChild(name: "TITLE")?.value;
-        self.role = vcardTemp!.findChild(name: "ROLE")?.value;
-        self.note = vcardTemp!.findChild(name: "DESC")?.value;
+        self.title = vcardTemp.firstChild(name: "TITLE")?.value;
+        self.role = vcardTemp.firstChild(name: "ROLE")?.value;
+        self.note = vcardTemp.firstChild(name: "DESC")?.value;
         
-        self.addresses = vcardTemp!.mapChildren(transform: {(el)->Address in
+        self.addresses = vcardTemp.filterChildren(name: "ADR").map({ el -> Address in
             let addr = Address();
-            if el.findChild(name: "WORK") != nil {
+            if el.hasChild(name: "WORK") {
                 addr.types.append(.work);
             }
-            if el.findChild(name: "HOME") != nil {
+            if el.hasChild(name: "HOME") {
                 addr.types.append(.home);
             }
-            
-            addr.street = el.findChild(name: "STREET")?.value;
-            addr.locality = el.findChild(name: "LOCALITY")?.value;
-            addr.postalCode = el.findChild(name: "PCODE")?.value;
-            addr.country = el.findChild(name: "CTRY")?.value;
-            addr.region = el.findChild(name: "REGION")?.value;
+            addr.street = el.firstChild(name: "STREET")?.value;
+            addr.locality = el.firstChild(name: "LOCALITY")?.value;
+            addr.postalCode = el.firstChild(name: "PCODE")?.value;
+            addr.country = el.firstChild(name: "CTRY")?.value;
+            addr.region = el.firstChild(name: "REGION")?.value;
             return addr;
-        }, filter: {(el)->Bool in
-            return el.name == "ADR";
         });
         
-        vcardTemp!.forEachChild(name: "EMAIL") { (el) in
-            if let address = el.findChild(name: "USERID")?.value {
-                let email = Email(address: address);
-                if el.findChild(name: "WORK") != nil {
-                    email.types.append(.work);
-                }
-                if el.findChild(name: "HOME") != nil {
-                    email.types.append(.home);
-                }
-                
-                self.emails.append(email);
+        self.emails = vcardTemp.filterChildren(name: "EMAIL").compactMap({ el -> Email? in
+            guard let address = el.firstChild(name: "USERID")?.value else {
+                return nil;
             }
-        }
+            let email = Email(address: address);
+            if el.hasChild(name: "WORK") {
+                email.types.append(.work);
+            }
+            if el.hasChild(name: "HOME") {
+                email.types.append(.home);
+            }
+            return email;
+        })
         
-        self.impps = vcardTemp!.mapChildren(transform: {(el)->IMPP in
-            return IMPP(uri: "xmpp:\(el.value!)");
-        }, filter: { (el) -> Bool in
-            return el.name == "JABBERID" && el.value != nil;
+        self.impps = vcardTemp.filterChildren(name: "JABBERID").compactMap({ el -> IMPP? in
+            guard let val = el.value else {
+                return nil;
+            }
+            return IMPP(uri: "xmpp:\(val)");
         });
         
-        vcardTemp!.forEachChild(name: "ORG") { (el) in
-            if let orgname = el.findChild(name: "ORGNAME")?.value {
-                self.organizations.append(Organization(name: orgname));
+        self.organizations = vcardTemp.filterChildren(name: "ORG").compactMap({ el -> Organization? in
+            guard let orgname = el.firstChild(name: "ORGNAME")?.value else {
+                return nil;
             }
-        }
+            return Organization(name: orgname);
+        })
         
-        vcardTemp!.forEachChild(name: "PHOTO") { (el) in
-            if let binval = el.findChild(name: "BINVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
-                self.photos.append(Photo(type: el.findChild(name: "TYPE")?.value, binval: binval));
+        self.photos = vcardTemp.filterChildren(name: "PHOTO").compactMap({ el -> Photo? in
+            if let binval = el.firstChild(name: "BINVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
+                return Photo(type: el.firstChild(name: "TYPE")?.value, binval: binval);
             }
-            if let extval = el.findChild(name: "EXTVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
-                self.photos.append(Photo(uri: extval));
+            if let extval = el.firstChild(name: "EXTVAL")?.value?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "") {
+                return Photo(uri: extval);
             }
-        }
+            return nil;
+        });
         
-        vcardTemp!.forEachChild(name: "TEL") { (el) in
-            if let number = el.findChild(name: "NUMBER")?.value {
-                let phone = Telephone(number: number);
-                if el.findChild(name: "WORK") != nil {
-                    phone.types.append(.work);
-                }
-                if el.findChild(name: "HOME") != nil {
-                    phone.types.append(.home);
-                }
-                if el.findChild(name: "FAX") != nil {
-                    phone.kinds.append(.fax);
-                }
-                if el.findChild(name: "MGS") != nil {
-                    phone.kinds.append(.msg);
-                }
-                if el.findChild(name: "VOICE") != nil {
-                    phone.kinds.append(.voice);
-                }
-                if el.findChild(name: "CELL") != nil {
-                    phone.kinds.append(.cell);
-                }
-                self.telephones.append(phone);
+        self.telephones = vcardTemp.filterChildren(name: "TEL").compactMap({ el -> Telephone? in
+            guard let number = el.firstChild(name: "NUMBER")?.value else {
+                return nil;
             }
-        }
+            let phone = Telephone(number: number);
+            if el.hasChild(name: "WORK") {
+                phone.types.append(.work);
+            }
+            if el.hasChild(name: "HOME") {
+                phone.types.append(.home);
+            }
+            if el.hasChild(name: "FAX") {
+                phone.kinds.append(.fax);
+            }
+            if el.hasChild(name: "MGS") {
+                phone.kinds.append(.msg);
+            }
+            if el.hasChild(name: "VOICE") {
+                phone.kinds.append(.voice);
+            }
+            if el.hasChild(name: "CELL") {
+                phone.kinds.append(.cell);
+            }
+            return phone;
+        })
     }
     
     open func toVCardTemp() -> Element {
@@ -355,7 +344,7 @@ extension Presence {
     /// Hash of photo embedded in vcard-temp
     public var vcardTempPhoto:String? {
         get {
-            guard let photoId = self.findChild(name: "x", xmlns: "vcard-temp:x:update")?.findChild(name: "photo")?.value else {
+            guard let photoId = self.firstChild(name: "x", xmlns: "vcard-temp:x:update")?.firstChild(name: "photo")?.value else {
                 return nil;
             }
             guard Presence.sha1Regex.numberOfMatches(in: photoId, options: [], range: NSRange(location: 0, length: photoId.count)) == 1 else {
@@ -364,8 +353,8 @@ extension Presence {
             return photoId;
         }
         set {
-            var x = self.findChild(name: "x", xmlns: "vcard-temp:x:update");
-            var photo = x?.findChild(name: "photo");
+            var x = self.firstChild(name: "x", xmlns: "vcard-temp:x:update");
+            var photo = x?.firstChild(name: "photo");
             if newValue == nil {
                 if photo != nil {
                     x!.removeChild(photo!);

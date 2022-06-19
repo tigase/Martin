@@ -28,21 +28,21 @@ extension LogMessageInterpolation {
         Method adds supoprt for logging Context as a bare JID or domain if bare JID is not set
      */
     public mutating func appendInterpolation(_ supplier: @autoclosure @escaping ()->Context, privacy: LogPrivacy = .auto(mask: .hash)) {
-        append(supplier: { supplier().userBareJid.stringValue }, privacy: privacy);
+        append(supplier: { supplier().userBareJid.description }, privacy: privacy);
     }
 
     /**
         Method adds supoprt for logging BareJID? (uses privacy .auto: mask: .hash) by default
      */
     public mutating func appendInterpolation(_ supplier: @autoclosure @escaping ()->BareJID?, privacy: LogPrivacy = .auto(mask: .hash)) {
-        append(supplier: { supplier()?.stringValue ?? "--" }, privacy: privacy);
+        append(supplier: { supplier()?.description ?? "--" }, privacy: privacy);
     }
 
     /**
         Method adds supoprt for logging JID? (uses privacy .auto: mask: .hash) by default
      */
     public mutating func appendInterpolation(_ supplier: @autoclosure @escaping ()->JID?, privacy: LogPrivacy = .auto(mask: .hash)) {
-        append(supplier: { supplier()?.stringValue ?? "--" }, privacy: privacy);
+        append(supplier: { supplier()?.description ?? "--" }, privacy: privacy);
     }
 
 }

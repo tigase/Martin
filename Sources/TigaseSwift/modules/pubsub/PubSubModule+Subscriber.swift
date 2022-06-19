@@ -40,21 +40,21 @@ extension PubSubModule {
         iq.addChild(pubsub);
 
         let subscribe = Element(name: "subscribe");
-        subscribe.setAttribute("node", value: nodeName);
-        subscribe.setAttribute("jid", value: subscriber.stringValue);
+        subscribe.attribute("node", newValue: nodeName);
+        subscribe.attribute("jid", newValue: subscriber.description);
         pubsub.addChild(subscribe);
         
         if let options = options?.element(type: .submit, onlyModified: false) {
             let optionsEl = Element(name: "options");
-            optionsEl.setAttribute("jid", value: subscriber.stringValue);
-            optionsEl.setAttribute("node", value: nodeName);
+            optionsEl.attribute("jid", newValue: subscriber.description);
+            optionsEl.attribute("node", newValue: nodeName);
             optionsEl.addChild(options);
             pubsub.addChild(optionsEl);
         }
         
         write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler?(result.flatMap({ response in
-                guard let subscriptionEl = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "subscription"), let subscription = PubSubSubscriptionElement(from: subscriptionEl) else {
+                guard let subscriptionEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "subscription"), let subscription = PubSubSubscriptionElement(from: subscriptionEl) else {
                     return .failure(.undefined_condition);
                 }
                 return .success(subscription);
@@ -92,8 +92,8 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let unsubscribe = Element(name: "unsubscribe");
-        unsubscribe.setAttribute("node", value: nodeName);
-        unsubscribe.setAttribute("jid", value: subscriber.stringValue);
+        unsubscribe.attribute("node", newValue: nodeName);
+        unsubscribe.attribute("jid", newValue: subscriber.description);
         pubsub.addChild(unsubscribe);
         
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
@@ -116,8 +116,8 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let optionsEl = Element(name: "options");
-        optionsEl.setAttribute("jid", value: subscriber.stringValue);
-        optionsEl.setAttribute("node", value: nodeName);
+        optionsEl.attribute("jid", newValue: subscriber.description);
+        optionsEl.attribute("node", newValue: nodeName);
         optionsEl.addChild(options.element(type: .submit, onlyModified: false));
         pubsub.addChild(optionsEl);
         
@@ -141,12 +141,12 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let optionsEl = Element(name: "default");
-        optionsEl.setAttribute("node", value: nodeName);
+        optionsEl.attribute("node", newValue: nodeName);
         pubsub.addChild(optionsEl);
         
         write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler?(result.flatMap({ stanza in
-                if let defaultEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "default"), let x = defaultEl.findChild(name: "x", xmlns: "jabber:x:data"), let defaults = PubSubSubscribeOptions(element: x) {
+                if let defaultEl = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "default"), let x = defaultEl.firstChild(name: "x", xmlns: "jabber:x:data"), let defaults = PubSubSubscribeOptions(element: x) {
                     return .success(defaults);
                 }
                 return .failure(.undefined_condition);
@@ -170,13 +170,13 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let optionsEl = Element(name: "options");
-        optionsEl.setAttribute("jid", value: subscriber.stringValue);
-        optionsEl.setAttribute("node", value: nodeName);
+        optionsEl.attribute("jid", newValue: subscriber.description);
+        optionsEl.attribute("node", newValue: nodeName);
         pubsub.addChild(optionsEl);
         
         write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler?(result.flatMap({ stanza in
-                guard let optionsEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "options"), let x = optionsEl.findChild(name: "x", xmlns: "jabber:x:data"), let options = PubSubSubscribeOptions(element: x) else {
+                guard let optionsEl = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "options"), let x = optionsEl.firstChild(name: "x", xmlns: "jabber:x:data"), let options = PubSubSubscribeOptions(element: x) else {
                     return .failure(.undefined_condition);
                 }
                 return .success(options);
@@ -194,17 +194,17 @@ extension PubSubModule {
     public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, limit: QueryLimit = .none, completionHandler: @escaping (PubSubRetrieveItemsResult)->Void) {
         retrieveItems(from: pubSubJid, for: nodeName, limit: limit, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
-                guard let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS), let itemsEl = pubsubEl.findChild(name: "items") else {
+                guard let pubsubEl = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS), let itemsEl = pubsubEl.firstChild(name: "items") else {
                     return .failure(.undefined_condition);
                 }
                 var items = Array<PubSubModule.Item>();
-                itemsEl.forEachChild { (elem) in
-                    if let id = elem.getAttribute("id") {
-                        items.append(PubSubModule.Item(id: id, payload: elem.firstChild()));
+                for elem in itemsEl.children {
+                    if let id = elem.attribute("id") {
+                        items.append(PubSubModule.Item(id: id, payload: elem.children.first));
                     }
                 }
-                let rsm = RSM.Result(from: pubsubEl.findChild(name: "set", xmlns: RSM.XMLNS));
-                return .success(RetrievedItems(node: itemsEl.getAttribute("node") ?? nodeName, items: items, rsm: rsm));
+                let rsm = RSM.Result(from: pubsubEl.firstChild(name: "set", xmlns: RSM.XMLNS));
+                return .success(RetrievedItems(node: itemsEl.attribute("node") ?? nodeName, items: items, rsm: rsm));
             }))
         });
     }
@@ -233,7 +233,7 @@ extension PubSubModule {
         iq.addChild(pubsub);
 
         let items = Element(name: "items");
-        items.setAttribute("node", value: nodeName);
+        items.attribute("node", newValue: nodeName);
         pubsub.addChild(items);
         
         switch limit {
@@ -242,13 +242,13 @@ extension PubSubModule {
         case .items(let itemIds):
             itemIds.forEach { (itemId) in
                 let item = Element(name: "item");
-                item.setAttribute("id", value: itemId);
+                item.attribute("id", newValue: itemId);
                 items.addChild(item);
             }
         case .rsm(let rsm):
             pubsub.addChild(rsm.element());
         case .lastItems(let maxItems):
-            items.setAttribute("max_items", value: String(maxItems));
+            items.attribute("max_items", newValue: String(maxItems));
         }
         
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);

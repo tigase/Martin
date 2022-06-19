@@ -112,7 +112,7 @@ public struct StreamFeatures {
         public func check(in element: Element) -> Bool {
             var elem = element;
             for node in path {
-                guard let subelem = elem.findChild(name: node.name, xmlns: node.xmlns) else {
+                guard let subelem = elem.firstChild(name: node.name, xmlns: node.xmlns) else {
                     return false;
                 }
                 if node.value != nil {

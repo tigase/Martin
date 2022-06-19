@@ -115,16 +115,16 @@ open class JingleModule: XmppModuleBase, XmppModule {
             throw XMPPError.bad_request("All messages should be of type 'set'");
         }
         
-        let jingle = stanza.findChild(name: "jingle", xmlns: JingleModule.XMLNS)!;
+        let jingle = stanza.firstChild(name: "jingle", xmlns: JingleModule.XMLNS)!;
         
-        guard let action = Jingle.Action(rawValue: jingle.getAttribute("action") ?? ""), let from = stanza.from else {
+        guard let action = Jingle.Action(rawValue: jingle.attribute("action") ?? ""), let from = stanza.from else {
             throw XMPPError.bad_request("Missing or invalid action attribute");
         }
         
-        guard let sid = jingle.getAttribute("sid") else {
+        guard let sid = jingle.attribute("sid") else {
             throw XMPPError.bad_request("Missing sid attributed")
         }
-        guard let initiator = JID(jingle.getAttribute("initiator")) ?? stanza.from else {
+        guard let initiator = JID(jingle.attribute("initiator")) ?? stanza.from else {
             throw XMPPError.bad_request("Missing initiator attribute");
         }
         
@@ -150,7 +150,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
             }
             try self.sessionManager.contentModified(for: context, with: from, sid: sid, action: contentAction, contents: contents, bundle: bundle);
         case .sessionInfo:
-            let infos = jingle.getChildren(name: nil, xmlns: Jingle.SessionInfo.XMLNS).compactMap(Jingle.SessionInfo.from(element:));
+            let infos = jingle.filterChildren(xmlns: Jingle.SessionInfo.XMLNS).compactMap(Jingle.SessionInfo.from(element:));
             try self.sessionManager.sessionInfo(for: context, with: from, sid: sid, info: infos);
         default:
             throw XMPPError.feature_not_implemented;
@@ -160,15 +160,11 @@ open class JingleModule: XmppModuleBase, XmppModule {
     }
         
     open func bundle(from jingle: Element) -> [String]? {
-        return jingle.findChild(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0")?.mapChildren(transform: { (el) -> String? in
-            return el.getAttribute("name");
-        }, filter: { (el) -> Bool in
-            return el.name == "content" && el.getAttribute("name") != nil;
-        });
+        return jingle.firstChild(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0")?.filterChildren(name: "content").compactMap({ $0.attribute("name" )});
     }
     
     open func contents(from jingle: Element) -> [Jingle.Content] {
-        return jingle.getChildren(name: "content").compactMap({ contentEl in
+        return jingle.filterChildren(name: "content").compactMap({ contentEl in
             return Jingle.Content(from: contentEl, knownDescriptions: self.supportedDescriptions.map({ (desc, features) in
                 return desc;
             }), knownTransports: self.supportedTransports.map({ (trans, features) in
@@ -231,9 +227,9 @@ open class JingleModule: XmppModuleBase, XmppModule {
         iq.type = StanzaType.set;
         
         let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.setAttribute("action", value: "session-initiate");
-        jingle.setAttribute("sid", value: sid);
-        jingle.setAttribute("initiator", value: initiatior.stringValue);
+        jingle.attribute("action", newValue: "session-initiate");
+        jingle.attribute("sid", newValue: sid);
+        jingle.attribute("initiator", newValue: initiatior.description);
     
         iq.addChild(jingle);
         
@@ -243,7 +239,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         if bundle != nil {
             let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
-            group.setAttribute("semantics", value: "BUNDLE");
+            group.attribute("semantics", newValue: "BUNDLE");
             bundle?.forEach({ (name) in
                 group.addChild(Element(name: "content", attributes: ["name": name]));
             })
@@ -265,9 +261,9 @@ open class JingleModule: XmppModuleBase, XmppModule {
         iq.type = StanzaType.set;
         
         let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.setAttribute("action", value: "session-accept");
-        jingle.setAttribute("sid", value: sid);
-        jingle.setAttribute("responder", value: responder.stringValue);
+        jingle.attribute("action", newValue: "session-accept");
+        jingle.attribute("sid", newValue: sid);
+        jingle.attribute("responder", newValue: responder.description);
         
         iq.addChild(jingle);
         
@@ -277,7 +273,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         if bundle != nil {
             let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
-            group.setAttribute("semantics", value: "BUNDLE");
+            group.attribute("semantics", newValue: "BUNDLE");
             bundle?.forEach({ (name) in
                 group.addChild(Element(name: "content", attributes: ["name": name]));
             })
@@ -299,8 +295,8 @@ open class JingleModule: XmppModuleBase, XmppModule {
         iq.type = StanzaType.set;
         
         let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.setAttribute("action", value: "session-info");
-        jingle.setAttribute("sid", value: sid);
+        jingle.attribute("action", newValue: "session-info");
+        jingle.attribute("sid", newValue: sid);
 
         actions.map({ it in it.element(creatorProvider: creatorProvider)}).forEach(jingle.addChild(_:));
         
@@ -317,8 +313,8 @@ open class JingleModule: XmppModuleBase, XmppModule {
         iq.type = StanzaType.set;
         
         let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.setAttribute("action", value: "session-terminate");
-        jingle.setAttribute("sid", value: sid);
+        jingle.attribute("action", newValue: "session-terminate");
+        jingle.attribute("sid", newValue: sid);
         
         iq.addChild(jingle);
 
@@ -335,8 +331,8 @@ open class JingleModule: XmppModuleBase, XmppModule {
         iq.type = StanzaType.set;
         
         let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.setAttribute("action", value: "transport-info");
-        jingle.setAttribute("sid", value: sid);
+        jingle.attribute("action", newValue: "transport-info");
+        jingle.attribute("sid", newValue: sid);
         
         contents.forEach { content in
             jingle.addChild(content.toElement());
@@ -356,8 +352,8 @@ open class JingleModule: XmppModuleBase, XmppModule {
             iq.type = StanzaType.set;
             
             let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-            jingle.setAttribute("action", value: action.jingleAction.rawValue);
-            jingle.setAttribute("sid", value: sid);
+            jingle.attribute("action", newValue: action.jingleAction.rawValue);
+            jingle.attribute("sid", newValue: sid);
         
             iq.addChild(jingle);
             
@@ -367,7 +363,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
             
             if bundle != nil {
                 let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
-                group.setAttribute("semantics", value: "BUNDLE");
+                group.attribute("semantics", newValue: "BUNDLE");
                 bundle?.forEach({ (name) in
                     group.addChild(Element(name: "content", attributes: ["name": name]));
                 })

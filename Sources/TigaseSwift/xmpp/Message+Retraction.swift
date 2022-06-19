@@ -25,10 +25,10 @@ extension Message {
     
     open var messageRetractionId: String? {
         get {
-            guard let el = self.element.findChild(name: "apply-to", xmlns: "urn:xmpp:fasten:0"), let id = el.getAttribute("id") else {
+            guard let el = self.element.firstChild(name: "apply-to", xmlns: "urn:xmpp:fasten:0"), let id = el.attribute("id") else {
                 return nil;
             }
-            guard el.findChild(name: "retract", xmlns: "urn:xmpp:message-retract:0") != nil else {
+            guard el.firstChild(name: "retract", xmlns: "urn:xmpp:message-retract:0") != nil else {
                 return nil;
             }
             return id;
@@ -37,7 +37,7 @@ extension Message {
             self.element.removeChildren(name: "apply-to", xmlns: "urn:xmpp:fasten:0");
             if let val = newValue {
                 let applyTo = Element(name: "apply-to", xmlns: "urn:xmpp:fasten:0");
-                applyTo.setAttribute("id", value: val);
+                applyTo.attribute("id", newValue: val);
                 applyTo.addChild(Element(name: "retract", xmlns: "urn:xmpp:message-retract:0"));
                 self.element.addChild(applyTo);
             }

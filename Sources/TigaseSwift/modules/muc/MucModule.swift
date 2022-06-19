@@ -97,7 +97,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             
             let decline = Element(name: "decline");
             if let inviter = invitation.inviter {
-                decline.setAttribute("to", value: inviter.stringValue)
+                decline.attribute("to", newValue: inviter.description)
             }
             if reason != nil {
                 decline.addChild(Element(name: "reason", cdata: reason));
@@ -123,7 +123,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
         write(iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
-                guard let formEl = stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.findChild(name: "x", xmlns: "jabber:x:data"), let data = RoomConfig(element: formEl) else {
+                guard let formEl = stanza.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.firstChild(name: "x", xmlns: "jabber:x:data"), let data = RoomConfig(element: formEl) else {
                     return .failure(.undefined_condition);
                 }
                 
@@ -170,9 +170,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         
         write(iq, completionHandler: { result in
             completionHandler(result.map({ stanza in
-                return stanza.findChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.mapChildren(transform: { el in
-                    return RoomAffiliation(from: el);
-                }, filter: { el -> Bool in return el.name == "item"}) ?? [];
+                return stanza.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.compactMapChildren(RoomAffiliation.init(from:)) ?? [];
             }))
         });
     }
@@ -192,8 +190,8 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         iq.addChild(query);
         query.addChildren(affiliations.map({ aff -> Element in
             let el = Element(name: "item");
-            el.setAttribute("jid", value: aff.jid.stringValue);
-            el.setAttribute("affiliation", value: aff.affiliation.rawValue);
+            el.attribute("jid", newValue: aff.jid.description);
+            el.attribute("affiliation", newValue: aff.affiliation.rawValue);
             return el;
         }));
         
@@ -284,12 +282,12 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
                 break;
             case .from(let date):
                 let history = Element(name: "history");
-                history.setAttribute("since", value: TimestampHelper.format(date: date));
+                history.attribute("since", newValue: TimestampHelper.format(date: date));
                 x.addChild(history);
             case .skip:
                 let history = Element(name: "history");
-                history.setAttribute("maxchars", value: "0");
-                history.setAttribute("maxstanzas", value: "0");
+                history.attribute("maxchars", newValue: "0");
+                history.attribute("maxstanzas", newValue: "0");
                 x.addChild(history);
             }
             
@@ -450,23 +448,23 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     func processDirectInvitationMessage(_ message: Message) {
-        let x = message.findChild(name: "x", xmlns: "jabber:x:conference");
-        let contStr = x?.getAttribute("continue");
+        let x = message.firstChild(name: "x", xmlns: "jabber:x:conference");
+        let contStr = x?.attribute("continue");
         let cont = contStr == "true" || contStr == "1";
         
         if let context = self.context {
-            let invitation = DirectInvitation(context: context, message: message, roomJid: BareJID(x!.getAttribute("jid")!), inviter: message.from!, reason: x?.getAttribute("reason"), password: x?.getAttribute("password"), threadId: x?.getAttribute("thread"), continueFlag: cont);
+            let invitation = DirectInvitation(context: context, message: message, roomJid: BareJID(x!.attribute("jid")!), inviter: message.from!, reason: x?.attribute("reason"), password: x?.attribute("password"), threadId: x?.attribute("thread"), continueFlag: cont);
         
             self.inivitationsPublisher.send(invitation);
         }
     }
     
     func processMediatedInvitationMessage(_ message: Message) {
-        let x = message.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
-        let invite = x?.findChild(name: "invite");
+        let x = message.firstChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
+        let invite = x?.firstChild(name: "invite");
                 
         if let context = self.context {
-            let invitation = MediatedInvitation(context: context, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.getAttribute("from")), reason: invite?.getAttribute("reason"), password: x?.getAttribute("password"));
+            let invitation = MediatedInvitation(context: context, message: message, roomJid: message.from!.bareJid, inviter: JID(invite?.attribute("from")), reason: invite?.attribute("reason"), password: x?.attribute("password"));
             
             self.inivitationsPublisher.send(invitation);
         }
@@ -478,9 +476,9 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             return;
         }
         
-        let decline = message.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user")?.findChild(name: "decline");
-        let reason = decline?.findChild(name: "reason")?.description;
-        let invitee = decline?.getAttribute("from");
+        let decline = message.firstChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user")?.firstChild(name: "decline");
+        let reason = decline?.firstChild(name: "reason")?.description;
+        let invitee = decline?.attribute("from");
         
         if let inviteeJid = JID(invitee) {
             let declined = DeclinedInvitation(context: context, message: message, roomJid: from, invitee: inviteeJid, reason: reason);
@@ -591,7 +589,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             }
         }
     }
-    
+    //TODO: Maybe this should be struct?
     open class RoomAffiliation {
         
         public let jid: JID;
@@ -600,10 +598,13 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         public let role: MucRole?;
         
         public convenience init?(from el: Element) {
-            guard let jid = JID(el.getAttribute("jid")), let affiliation = MucAffiliation(rawValue: el.getAttribute("affiliation") ?? "") else {
+            guard el.name == "item" else {
                 return nil;
             }
-            self.init(jid: jid, affiliation: affiliation, nickname: el.getAttribute("nick"), role: MucRole(rawValue: el.getAttribute("role") ?? ""));
+            guard let jid = JID(el.attribute("jid")), let affiliation = MucAffiliation(rawValue: el.attribute("affiliation") ?? "") else {
+                return nil;
+            }
+            self.init(jid: jid, affiliation: affiliation, nickname: el.attribute("nick"), role: MucRole(rawValue: el.attribute("role") ?? ""));
         }
         
         public init(jid: JID, affiliation: MucAffiliation, nickname: String? = nil, role: MucRole? = nil) {

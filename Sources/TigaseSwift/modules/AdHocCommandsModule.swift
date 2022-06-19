@@ -51,7 +51,7 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
         iq.to = to;
         
         let command = Element(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS);
-        command.setAttribute("node", value: node);
+        command.attribute("node", newValue: node);
         
         if let data = data {
             command.addChild(data.element(type: .submit, onlyModified: false));
@@ -61,14 +61,14 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
         
         write(iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
-                guard let command = stanza.findChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
+                guard let command = stanza.firstChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
                     return .failure(.undefined_condition);
                 }
                 
-                let form = DataForm(element: command.findChild(name: "x", xmlns: "jabber:x:data"));
-                let actions = command.findChild(name: "actions")?.mapChildren(transform: { Action(rawValue: $0.name) }) ?? [];
-                let notes = command.mapChildren(transform: { Note.from(element: $0) });
-                let status = Status(rawValue: command.getAttribute("status") ?? "") ?? Status.completed;
+                let form = DataForm(element: command.firstChild(name: "x", xmlns: "jabber:x:data"));
+                let actions = command.firstChild(name: "actions")?.children.compactMap({ Action(rawValue: $0.name) }) ?? [];
+                let notes = command.children.compactMap(Note.from(element:));
+                let status = Status(rawValue: command.attribute("status") ?? "") ?? Status.completed;
                 
                 return .success(Response(status: status, form: form, actions: actions, notes: notes));
             }))
@@ -98,7 +98,7 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
             guard element.name == "note" else {
                 return nil;
             }
-            switch element.getAttribute("type") ?? "info" {
+            switch element.attribute("type") ?? "info" {
             case "warn":
                 return .warn(message: element.value ?? "");
             case "error":

@@ -121,10 +121,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         self.enablingHandler = completionHandler;
         let enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS);
         if resumption {
-            enable.setAttribute("resume", value: "true");
-            let timeout = maxResumptionTimeout ?? self.maxResumptionTimeout;
-            if timeout != nil {
-                enable.setAttribute("max", value: String(timeout!));
+            enable.attribute("resume", newValue: "true");
+            if let timeout = maxResumptionTimeout ?? self.maxResumptionTimeout {
+                enable.attribute("max", newValue: String(timeout));
             }
         }
         
@@ -145,7 +144,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         
     open func process(stanza: Stanza) throws {
         // all requests should be processed already
-        throw ErrorCondition.undefined_condition;
+        throw XMPPError.undefined_condition;
     }
     
     /**
@@ -261,9 +260,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         self.resumptionHandler = completionHandler;
         let resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
         queue.sync {
-            resume.setAttribute("h", value: String(ackH.incomingCounter));
+            resume.attribute("h", newValue: String(ackH.incomingCounter));
         }
-        resume.setAttribute("previd", value: resumptionId);
+        resume.attribute("previd", newValue: resumptionId);
         
         write(resume);
     }
@@ -292,13 +291,13 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         lastSentH = value;
         
         let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
-        a.setAttribute("h", value: String(value));
+        a.attribute("h", newValue: String(value));
         return a;
     }
     
     /// Process ACK from server
     func processAckAnswer(_ stanza: Stanza) {
-        guard let attr = stanza.getAttribute("h") else {
+        guard let attr = stanza.attribute("h") else {
             return;
         }
         let newH = UInt32(attr) ?? 0;
@@ -334,7 +333,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     }
     
     func processResumed(_ stanza: Stanza) {
-        let newH = UInt32(stanza.getAttribute("h")!) ?? 0;
+        let newH = UInt32(stanza.attribute("h")!) ?? 0;
         _ackEnabled = true;
         queue.sync {
             let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
@@ -357,11 +356,11 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     }
     
     func processEnabled(_ stanza: Stanza) {
-        let id = stanza.getAttribute("id");
-        let r = stanza.getAttribute("resume");
-        let mx = stanza.getAttribute("max");
+        let id = stanza.attribute("id");
+        let r = stanza.attribute("resume");
+        let mx = stanza.attribute("max");
         //let resume = (r == "true" || r == "1") && id != nil;
-        _resumptionLocation = (self.context as? XMPPClient)?.connector?.prepareEndpoint(withResumptionLocation: stanza.getAttribute("location"))
+        _resumptionLocation = (self.context as? XMPPClient)?.connector?.prepareEndpoint(withResumptionLocation: stanza.attribute("location"))
         
         resumptionId = id;
         _ackEnabled = true;

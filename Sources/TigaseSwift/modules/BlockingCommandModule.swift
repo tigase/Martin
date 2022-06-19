@@ -78,14 +78,14 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
     }
         
     open func process(stanza: Stanza) throws {
-        guard let actionEl = stanza.findChild(xmlns: BlockingCommandModule.BC_XMLNS) else {
+        guard let actionEl = stanza.firstChild(xmlns: BlockingCommandModule.BC_XMLNS) else {
             throw XMPPError.feature_not_implemented;
         }
         
         switch actionEl.name {
         case "block":
             if var blocked = self.blockedJids {
-                let newJids = actionEl.mapChildren(transform: { JID($0.getAttribute("jid")) }, filter: { $0.name == "item" }).filter({ jid in !blocked.contains(jid) });
+                let newJids = actionEl.filterChildren(name: "item").compactMap({ JID($0.attribute("jid")) }).filter({ jid in !blocked.contains(jid) });
                 guard !newJids.isEmpty else {
                     return;
                 }
@@ -94,7 +94,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
             }
         case "unblock":
             if let blocked = self.blockedJids {
-                let newJids = actionEl.mapChildren(transform: { JID($0.getAttribute("jid")) }, filter: { $0.name == "item" }).filter({ jid in blocked.contains(jid) });
+                let newJids = actionEl.filterChildren(name: "item").compactMap({ JID($0.attribute("jid")) }).filter({ jid in blocked.contains(jid) });
                 guard !newJids.isEmpty else {
                     return;
                 }
@@ -126,12 +126,12 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         let iq = Iq();
         iq.type = StanzaType.set;
         let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS);
-        let item =  Element(name: "item", attributes: ["jid": jid.stringValue]);
+        let item =  Element(name: "item", attributes: ["jid": jid.description]);
         if let report = report {
             let reportEl = Element(name: "report", xmlns: BlockingCommandModule.REPORTING_XMLNS);
-            reportEl.setAttribute("reason", value: report.cause.rawValue)
+            reportEl.attribute("reason", newValue: report.cause.rawValue)
             for stanza in report.stanzas {
-                reportEl.addChild(Element(name: "stanza-id", attributes: ["by": stanza.by.stringValue, "id": stanza.id]));
+                reportEl.addChild(Element(name: "stanza-id", attributes: ["by": stanza.by.description, "id": stanza.id]));
             }
             if let text = report.text {
                 reportEl.addChild(Element(name: "text", cdata: text));
@@ -157,7 +157,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         
         let iq = Iq();
         iq.type = StanzaType.set;
-        let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
+        let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
         iq.addChild(block);
         write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
@@ -180,7 +180,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         
         let iq = Iq();
         iq.type = StanzaType.set;
-        let unblock = Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.stringValue])}));
+        let unblock = Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
         iq.addChild(unblock);
         write(iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
@@ -197,9 +197,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
             write(iq, completionHandler: { result in
                 switch result {
                 case .success(let iq):
-                    let blockedJids = iq.findChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.mapChildren(transform: { (el) -> JID? in
-                        return JID(el.getAttribute("jid"));
-                    }) ?? [];
+                    let blockedJids = iq.firstChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.children.compactMap({ JID($0.attribute("jid")) }) ?? [];
                     self.blockedJids = blockedJids;
                     completionHandler?(.success(blockedJids));
                 case .failure(let error):

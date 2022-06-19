@@ -51,7 +51,7 @@ public protocol ElementProtocol: CustomStringConvertible, CustomDebugStringConve
      - returns: array of matching child elements
      */
     func filterChildren(where: (Element)->Bool) -> Array<Element>
-
+    
     /**
      Get value for attribute
      - parameter key: attribute
@@ -90,6 +90,10 @@ extension ElementProtocol {
         return firstChild(name: name, xmlns: xmlns) != nil;
     }
     
+    public func compactMapChildren<T>(_ transform: (Element)->T?) -> Array<T> {
+        return children.compactMap(transform);
+    }
+
     /**
      Find child element with matching name and xmlns
      - parameter name: name of element to find
@@ -114,8 +118,17 @@ extension ElementProtocol {
      - parameter xmlns: xmlns of element
      - returns: array of matching child elements
      */
-    public func filterChildren(name: String, xmlns: String?) -> Array<Element> {
+    public func filterChildren(name: String, xmlns: String? = nil) -> Array<Element> {
         filterChildren(where: { $0.name == name && (xmlns == nil || $0.xmlns == xmlns) });
+    }
+    
+    /**
+     Find child elements matching name and xmlns
+     - parameter xmlns: xmlns of element
+     - returns: array of matching child elements
+     */
+    public func filterChildren(xmlns: String) -> Array<Element> {
+        filterChildren(where: { $0.xmlns == xmlns });
     }
     
     /**

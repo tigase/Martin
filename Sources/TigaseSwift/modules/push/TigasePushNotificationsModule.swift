@@ -184,7 +184,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         public func apply(to enableEl: Element) {
             let encryptEl = Element(name: "encrypt", cdata: key.base64EncodedString(), attributes: ["xmlns": Encryption.XMLNS, "alg": algorithm]);
             if let maxSize = maxPayloadSize {
-                encryptEl.setAttribute("max-size", value: String(maxSize));
+                encryptEl.attribute("max-size", newValue: String(maxSize));
             }
             enableEl.addChild(encryptEl);
         }
@@ -219,11 +219,11 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             for rule in rules {
                 switch rule {
                 case .always(let room):
-                    muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "allow": "always"]));
+                    muc.addChild(Element(name: "room", attributes: ["jid": room.description, "allow": "always"]));
                 case .never(_):
                     break;
                 case .mentioned(let room, let nickname):
-                    muc.addChild(Element(name: "room", attributes: ["jid": room.stringValue, "allow": "mentioned", "nick": nickname]));
+                    muc.addChild(Element(name: "room", attributes: ["jid": room.description, "allow": "mentioned", "nick": nickname]));
                 }
             }
             
@@ -264,7 +264,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                 return;
             }
             let muted = Element(name: "muted", xmlns: Muted.XMLNS, children: jids.map({ (jid) -> Element in
-                return Element(name: "item", attributes: ["jid": jid.stringValue]);
+                return Element(name: "item", attributes: ["jid": jid.description]);
             }));
             enableEl.addChild(muted);
         }
@@ -277,7 +277,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         public init() {}
         
         public func apply(to enableEl: Element) {
-            enableEl.setAttribute("away", value: "true");
+            enableEl.attribute("away", newValue: "true");
         }
         
     }

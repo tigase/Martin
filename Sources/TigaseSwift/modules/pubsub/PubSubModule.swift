@@ -75,16 +75,16 @@ open class PubSubModule: XmppModuleBase, XmppModule {
      - parameter message: message to process
      */
     open func process(message: Message) throws {
-        guard message.type != StanzaType.error, let event = message.findChild(name: "event", xmlns: PubSubModule.PUBSUB_EVENT_XMLNS) else {
+        guard message.type != StanzaType.error, let event = message.firstChild(name: "event", xmlns: PubSubModule.PUBSUB_EVENT_XMLNS) else {
             return;
         }
 
         let timestamp = message.delay?.stamp ?? Date();
         
-        if let itemsElem = event.findChild(name: "items"), let nodeName = itemsElem.getAttribute("node") {
-            for item in itemsElem.getChildren() {
-                if let itemId = item.getAttribute("id") {
-                    let payload = item.firstChild();
+        if let itemsElem = event.firstChild(name: "items"), let nodeName = itemsElem.attribute("node") {
+            for item in itemsElem.children {
+                if let itemId = item.attribute("id") {
+                    let payload = item.children.first;
                 
                     switch item.name {
                     case "item":
@@ -98,9 +98,9 @@ open class PubSubModule: XmppModuleBase, XmppModule {
             }
         }
         
-        if let collectionElem = event.findChild(name: "collection"), let nodeName = collectionElem.getAttribute("node") {
-            for el in collectionElem.getChildren() {
-                if let childNode = el.getAttribute("node") {
+        if let collectionElem = event.firstChild(name: "collection"), let nodeName = collectionElem.attribute("node") {
+            for el in collectionElem.children {
+                if let childNode = el.attribute("node") {
                     switch el.name {
                     case "associate":
                         nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .childAssociated(childNode)))
@@ -113,7 +113,7 @@ open class PubSubModule: XmppModuleBase, XmppModule {
             }
         }
         
-        if let deleteElem = event.findChild(name: "delete"), let nodeName = deleteElem.getAttribute("node") {
+        if let deleteElem = event.firstChild(name: "delete"), let nodeName = deleteElem.attribute("node") {
             nodesEventsSender.send(.init(message: message, node: nodeName, timestamp: timestamp, action: .deleted));
         }
         

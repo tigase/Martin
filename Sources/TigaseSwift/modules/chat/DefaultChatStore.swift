@@ -27,26 +27,26 @@ open class DefaultChatStore: ChatStore {
     
     private var chats = [BareJID: Chat]();
     
-    public let dispatcher: QueueDispatcher = QueueDispatcher(label: "DefaultChatStoreQueue");
+    public let queue = DispatchQueue(label: "DefaultChatStoreQueue");
     
     public init() {
         
     }
     
     public func chats(for: Context) -> [Chat] {
-        return dispatcher.sync {
+        return queue.sync {
             return chats.values.compactMap({ $0 });
         }
     }
     
     public func chat(for: Context, with jid: BareJID) -> Chat? {
-        return dispatcher.sync {
+        return queue.sync {
             return chats[jid];
         }
     }
     
     public func createChat(for context: Context, with jid: BareJID) -> ConversationCreateResult<Chat> {
-        return dispatcher.sync {
+        return queue.sync {
             guard let chat = chat(for: context, with: jid) else {
                 let chat = Chat(context: context, jid: jid);
                 chats[jid] = chat;
@@ -57,7 +57,7 @@ open class DefaultChatStore: ChatStore {
     }
     
     public func close(chat: Chat) -> Bool {
-        return dispatcher.sync {
+        return queue.sync {
             return chats.removeValue(forKey: chat.jid) != nil;
         }
     }

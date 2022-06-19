@@ -35,14 +35,14 @@ extension DataForm {
                 case "text":
                     return .text(element.value ?? "")
                 case "fieldref":
-                    guard let ref = element.getAttribute("var") else {
+                    guard let ref = element.attribute("var") else {
                         return nil;
                     }
                     return .fieldref(ref);
                 case "reportedref":
                     return .reportedref
                 case "section":
-                    return .section(element.mapChildren(transform: Item.from(element:)));
+                    return .section(element.compactMapChildren(Item.from(element:)));
                 default:
                     return nil;
                 }
@@ -54,7 +54,7 @@ extension DataForm {
                     return Element(name: "text", cdata: text);
                 case .fieldref(let ref):
                     let el = Element(name: "fieldref");
-                    el.setAttribute("var", value: ref);
+                    el.attribute("var", newValue: ref);
                     return el;
                 case .reportedref:
                     return Element(name: "reportedref");
@@ -73,7 +73,7 @@ extension DataForm {
                 return nil;
             }
             
-            self.items = element.mapChildren(transform: Item.from(element:));
+            self.items = element.compactMapChildren(Item.from(element:));
         }
         
         public init(items: [Item]) {

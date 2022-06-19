@@ -26,7 +26,7 @@ extension DataForm {
     public struct Reported {
         
         public static func from(formElement: Element) -> [Reported] {
-            return formElement.getChildren(name: "reported").compactMap({ Reported(element: $0, formElement: formElement) });
+            return formElement.filterChildren(name: "reported").compactMap({ Reported(element: $0, formElement: formElement) });
         }
         
         public let fields: [Field];
@@ -37,10 +37,10 @@ extension DataForm {
                 return nil;
             }
             
-            let fields = el.mapChildren(transform: Field.parse(element:));
+            let fields = el.compactMapChildren(Field.parse(element:));
             self.fields = fields;
             
-            var children = formElement.getChildren().drop(while: { $0 !== el }).dropFirst();
+            var children = formElement.children.drop(while: { $0 !== el }).dropFirst();
             if let endIdx = children.firstIndex(where: { $0.name == "reported" }) {
                 children = children[0..<endIdx];
             }
@@ -63,7 +63,7 @@ extension DataForm {
             public let fields: [FieldValue];
             
             public init?(element: Element) {
-                fields = element.getChildren(name: "field").compactMap(FieldValue.init(element:));
+                fields = element.filterChildren(name: "field").compactMap(FieldValue.init(element:));
             }
             
             public init(fields: [FieldValue]) {
@@ -81,11 +81,11 @@ extension DataForm {
                 public let values: [String];
                 
                 public init?(element el: Element) {
-                    guard let `var` = el.getAttribute("var") else {
+                    guard let `var` = el.attribute("var") else {
                         return nil;
                     }
                     self.var = `var`;
-                    self.values = el.getChildren(name: "value").compactMap({ $0.value });
+                    self.values = el.filterChildren(name: "value").compactMap({ $0.value });
                 }
                 
                 public init(`var`: String, values: [String]) {
@@ -95,7 +95,7 @@ extension DataForm {
                 
                 public func element() -> Element {
                     let el = Element(name: "field");
-                    el.setAttribute("var", value: self.var);
+                    el.attribute("var", newValue: self.var);
                     el.addChildren(values.map({ Element(name: "value", cdata: $0) }));
                     return el;
                 }

@@ -25,7 +25,7 @@ extension Message {
     
     /// Returns information about MIX (nickname, sender jid, etc.)
     open var mix:Mix? {
-        if let mixEl = element.findChild(name: "mix", xmlns: MixModule.CORE_XMLNS) {
+        if let mixEl = element.firstChild(name: "mix", xmlns: MixModule.CORE_XMLNS) {
             return Mix(element: mixEl);
         }
         return nil;
@@ -41,7 +41,7 @@ extension Message {
         }
         
         public convenience init(element: Element) {
-            self.init(nickname: element.findChild(name: "nick")?.value, jid: BareJID(element.findChild(name: "jid")?.value));
+            self.init(nickname: element.firstChild(name: "nick")?.value, jid: BareJID(element.firstChild(name: "jid")?.value));
         }
     }
     

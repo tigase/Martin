@@ -40,7 +40,7 @@ extension PubSubModule {
         
         let create = Element(name: "create");
         if nodeName != nil {
-            create.setAttribute("node", value: nodeName);
+            create.attribute("node", newValue: nodeName);
         }
         pubsub.addChild(create);
         
@@ -52,7 +52,7 @@ extension PubSubModule {
         
         write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ response in
-                if let node = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "create")?.getAttribute("node") ?? nodeName {
+                if let node = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "create")?.attribute("node") ?? nodeName {
                     return .success(node);
                 } else {
                     return .failure(.undefined_condition);
@@ -79,7 +79,7 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let configure = Element(name: "configure");
-        configure.setAttribute("node", value: nodeName);
+        configure.attribute("node", newValue: nodeName);
         configure.addChild(configuration.element(type: .submit, onlyModified: true));
         pubsub.addChild(configure);
         
@@ -105,7 +105,7 @@ extension PubSubModule {
         
         write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
-                guard let defaultConfigElem = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "default")?.findChild(name: "x", xmlns: "jabber:x:data"), let config = PubSubNodeConfig(element: defaultConfigElem) else {
+                guard let defaultConfigElem = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.firstChild(name: "default")?.firstChild(name: "x", xmlns: "jabber:x:data"), let config = PubSubNodeConfig(element: defaultConfigElem) else {
                     return .failure(.undefined_condition)
                 }
                 return .success(config);
@@ -128,7 +128,7 @@ extension PubSubModule {
         
         let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS);
         let configure = Element(name: "configure");
-        configure.setAttribute("node", value: node);
+        configure.attribute("node", newValue: node);
         pubsub.addChild(configure);
         iq.addChild(pubsub);
         
@@ -136,7 +136,7 @@ extension PubSubModule {
         
         write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ response in
-                if let formElem = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.findChild(name: "configure")?.findChild(name: "x", xmlns: "jabber:x:data"), let config = PubSubNodeConfig(element: formElem) {
+                if let formElem = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_OWNER_XMLNS)?.firstChild(name: "configure")?.firstChild(name: "x", xmlns: "jabber:x:data"), let config = PubSubNodeConfig(element: formElem) {
                     return .success(config);
                 } else {
                     return .failure(.undefined_condition);
@@ -178,7 +178,7 @@ extension PubSubModule {
         iq.addChild(pubsub);
 
         let delete = Element(name: "delete");
-        delete.setAttribute("node", value: nodeName);
+        delete.attribute("node", newValue: nodeName);
         pubsub.addChild(delete);
         
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
@@ -212,7 +212,7 @@ extension PubSubModule {
         iq.addChild(pubsub);
 
         let purge = Element(name: "purge");
-        purge.setAttribute("node", value: nodeName)
+        purge.attribute("node", newValue: nodeName)
         pubsub.addChild(purge);
         
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
@@ -227,7 +227,7 @@ extension PubSubModule {
     public func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String = PubSubModule.PUBSUB_OWNER_XMLNS, completionHandler: @escaping (PubSubResult<[PubSubSubscriptionElement]>)->Void) {
         self.retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: xmlns, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.map({ response in
-                return response.findChild(name: "pubsub", xmlns: xmlns)?.findChild(name: "subscriptions")?.mapChildren(transform: PubSubSubscriptionElement.init(from: )) ?? [];
+                return response.firstChild(name: "pubsub", xmlns: xmlns)?.firstChild(name: "subscriptions")?.compactMapChildren(PubSubSubscriptionElement.init(from: )) ?? [];
             }))
         });
     }
@@ -248,7 +248,7 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let subscriptions = Element(name: "subscriptions");
-        subscriptions.setAttribute("node", value: nodeName)
+        subscriptions.attribute("node", newValue: nodeName)
         pubsub.addChild(subscriptions);
         
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
@@ -284,7 +284,7 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let subscriptions = Element(name: "subscriptions");
-        subscriptions.setAttribute("node", value: nodeName)
+        subscriptions.attribute("node", newValue: nodeName)
         pubsub.addChild(subscriptions);
         
         values.forEach { (v) in
@@ -299,12 +299,12 @@ extension PubSubModule {
         let affiliations = Element(name: "affiliations");
         switch source {
         case .node(let node):
-            affiliations.setAttribute("node", value: node);
+            affiliations.attribute("node", newValue: node);
             pubsubEl.xmlns = "http://jabber.org/protocol/pubsub#owner";
         case .own(let node):
             pubsubEl.xmlns = "http://jabber.org/protocol/pubsub"
             if node != nil {
-                affiliations.setAttribute("node", value: node);
+                affiliations.attribute("node", newValue: node);
             }
         }
         pubsubEl.addChild(affiliations);
@@ -342,16 +342,16 @@ extension PubSubModule {
         
         write(iq, errorDecoder: PubSubError.from(stanza: ), completionHandler: { result in
             completionHandler(result.flatMap({ response in
-                guard let affiliationsEl = response.findChild(name: "pubsub", xmlns: xmlns)?.findChild(name: "affiliations") else {
+                guard let affiliationsEl = response.firstChild(name: "pubsub", xmlns: xmlns)?.firstChild(name: "affiliations") else {
                     return .failure(.undefined_condition);
                 }
                 switch source {
                 case .node(let node):
-                    let affiliations = affiliationsEl.mapChildren(transform: { el in PubSubAffiliationItem(from: el, node: node) });
+                    let affiliations = affiliationsEl.compactMapChildren({ el in PubSubAffiliationItem(from: el, node: node) });
                     return .success(affiliations);
                 case .own:
                     let jid = response.to!.withoutResource;
-                    let affiliations = affiliationsEl.mapChildren(transform: { el in PubSubAffiliationItem(from: el, jid: jid) });
+                    let affiliations = affiliationsEl.compactMapChildren({ el in PubSubAffiliationItem(from: el, jid: jid) });
                     return .success(affiliations);
                 }
             }));
@@ -374,7 +374,7 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let affiliations = Element(name: "affiliations");
-        affiliations.setAttribute("node", value: nodeName);
+        affiliations.attribute("node", newValue: nodeName);
         pubsub.addChild(affiliations);
         
         values.forEach { (v) in

@@ -21,46 +21,48 @@
 
 import Foundation
 
+//TODO: Verify this should not be a struct
 /// Class holds additional information about occupant which are sent in presence from MUC room
 open class XMucUserElement {
     
     public static func extract(from stanza: Stanza?) -> XMucUserElement? {
-        let elem = stanza?.findChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
+        let elem = stanza?.firstChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         return elem == nil ? nil : XMucUserElement(element: elem!);
     }
     
     var element: Element;
 
     open var affiliation: MucAffiliation {
-        if let affiliationVal = element.findChild(name: "item")?.getAttribute("affiliation") {
+        if let affiliationVal = element.firstChild(name: "item")?.attribute("affiliation") {
             return MucAffiliation(rawValue: affiliationVal) ?? .none;
         }
         return .none;
     }
     
     open var jid: JID? {
-        if let jidVal = element.findChild(name: "item")?.getAttribute("jid") {
+        if let jidVal = element.firstChild(name: "item")?.attribute("jid") {
             return JID(jidVal);
         }
         return nil;
     }
     
     open var nick: String? {
-        return element.findChild(name: "item")?.getAttribute("nick");
+        return element.firstChild(name: "item")?.attribute("nick");
     }
     
     open var role: MucRole {
-        if let roleVal = element.findChild(name: "item")?.getAttribute("role") {
+        if let roleVal = element.firstChild(name: "item")?.attribute("role") {
             return MucRole(rawValue: roleVal) ?? .none;
         }
         return .none;
     }
     
     open var statuses: [Int] {
-        return element.mapChildren(transform: { (el) -> Int? in
-            return Int(el.getAttribute("code")!);
-            }, filter: {(el) -> Bool in
-            return el.name == "status" && el.getAttribute("code") != nil;
+        return element.filterChildren(name: "status").compactMap({ el -> Int? in
+            guard let val = el.attribute("code") else {
+                return nil;
+            }
+            return Int(val);
         });
     }
     

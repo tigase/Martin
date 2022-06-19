@@ -21,7 +21,7 @@
 import Foundation
 import Combine
 
-public protocol Connector: class {
+public protocol Connector: AnyObject {
     
     static var supportedProtocols: [ConnectorProtocol] { get }
     

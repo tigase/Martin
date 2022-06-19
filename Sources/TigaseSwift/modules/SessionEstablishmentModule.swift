@@ -52,8 +52,8 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     }
     
     public static func isSessionEstablishmentRequired(streamFeatures: StreamFeatures) -> Bool {
-        if let session = streamFeatures.element?.findChild(name: "session", xmlns: SESSION_XMLNS) {
-            return session.findChild(name: "optional") == nil;
+        if let session = streamFeatures.element?.firstChild(name: "session", xmlns: SESSION_XMLNS) {
+            return session.firstChild(name: "optional") == nil;
         }
         return false;
     }
@@ -66,7 +66,7 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     
     /// Method should not be called due to empty `criteria`
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+        throw XMPPError.bad_request(nil);
     }
     
     /// Method called to start session establishemnt

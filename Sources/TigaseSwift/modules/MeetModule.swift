@@ -65,32 +65,32 @@ open class MeetModule: XmppModuleBase, XmppModule {
     
     public func process(stanza: Stanza) throws {
         guard let from = stanza.from else {
-            throw ErrorCondition.bad_request;
+            throw XMPPError.bad_request(nil);
         }
         switch stanza {
         case let iq as Iq:
-            for action in iq.getChildren(xmlns: MeetModule.ID) {
+            for action in iq.filterChildren(xmlns: MeetModule.ID) {
                 switch action.name {
                 case "joined":
-                    for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
+                    for publisher in action.filterChildren(name: "publisher").compactMap(Publisher.from(element:)) {
                         eventsPublisher.send(.publisherJoined(from.bareJid, publisher));
                     }
                 case "left":
-                    for publisher in action.getChildren(name: "publisher").compactMap(Publisher.from(element:)) {
+                    for publisher in action.filterChildren(name: "publisher").compactMap(Publisher.from(element:)) {
                         eventsPublisher.send(.publisherLeft(from.bareJid, publisher));
                     }
                 default:
-                    throw ErrorCondition.bad_request;
+                    throw XMPPError.bad_request(nil);
                 }
             }
             write(iq.makeResult(type: .result));
         case let message as Message:
             guard let action = message.meetMessageInitiationAction else {
-                throw ErrorCondition.bad_request;
+                throw XMPPError.bad_request(nil);
             }
             eventsPublisher.send(.inivitation(action, from));
         default:
-            throw ErrorCondition.bad_request;
+            throw XMPPError.bad_request(nil);
         }
     }
     
@@ -99,10 +99,10 @@ open class MeetModule: XmppModuleBase, XmppModule {
         public let streams: [String];
         
         public static func from(element: Element) -> Publisher? {
-            guard element.name == "publisher", let jid = BareJID(element.getAttribute("jid")) else {
+            guard element.name == "publisher", let jid = BareJID(element.attribute("jid")) else {
                 return nil;
             }
-            return .init(jid: jid, streams: element.getChildren(name: "stream").compactMap({ $0.getAttribute("mid") }));
+            return .init(jid: jid, streams: element.filterChildren(name: "stream").compactMap({ $0.attribute("mid") }));
         }
     }
 
@@ -159,14 +159,14 @@ open class MeetModule: XmppModuleBase, XmppModule {
         }
         
         for participant in participants {
-            createEl.addChild(Element(name: "participant", cdata: participant.stringValue));
+            createEl.addChild(Element(name: "participant", cdata: participant.description));
         }
         
         iq.addChild(createEl);
         
         write(iq, completionHandler: { result in
             completionHandler(result.flatMap({ iq in
-                guard let id = iq.findChild(name: "create", xmlns: MeetModule.ID)?.getAttribute("id") else {
+                guard let id = iq.firstChild(name: "create", xmlns: MeetModule.ID)?.attribute("id") else {
                     return .failure(.undefined_condition);
                 }
                 return .success(JID(BareJID(localPart: id, domain: jid.domain)));
@@ -187,7 +187,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
         let allowEl = Element(name: "allow", xmlns: MeetModule.ID);
         
         for participant in jids {
-            allowEl.addChild(Element(name: "participant", cdata: participant.stringValue));
+            allowEl.addChild(Element(name: "participant", cdata: participant.description));
         }
         
         iq.addChild(allowEl);
@@ -210,7 +210,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
         let allowEl = Element(name: "deny", xmlns: MeetModule.ID);
         
         for participant in jids {
-            allowEl.addChild(Element(name: "participant", cdata: participant.stringValue));
+            allowEl.addChild(Element(name: "participant", cdata: participant.description));
         }
         
         iq.addChild(allowEl);
@@ -273,15 +273,15 @@ open class MeetModule: XmppModuleBase, XmppModule {
         case reject(id: String)
         
         public static func from(element actionEl: Element) -> MessageInitiationAction? {
-            guard let id = actionEl.getAttribute("id") else {
+            guard let id = actionEl.attribute("id") else {
                 return nil;
             }
             switch actionEl.name {
             case "accept":
                 return .accept(id: id);
             case "propose":
-                let media = actionEl.getChildren(name: "media").compactMap({ $0.getAttribute("type") }).compactMap({ Media(rawValue: $0) });
-                guard !media.isEmpty, let meetJidStr = actionEl.getAttribute("jid") else {
+                let media = actionEl.filterChildren(name: "media").compactMap({ $0.attribute("type") }).compactMap({ Media(rawValue: $0) });
+                guard !media.isEmpty, let meetJidStr = actionEl.attribute("jid") else {
                     return nil;
                 }
                 return .propose(id: id, meetJid: JID(meetJidStr), media: media);
@@ -324,7 +324,7 @@ extension Message {
     
     var meetMessageInitiationAction: MeetModule.MessageInitiationAction? {
         get {
-            guard let actionEl = element.findChild(xmlns: MeetModule.ID) else {
+            guard let actionEl = element.firstChild(xmlns: MeetModule.ID) else {
                 return nil;
             }
             return MeetModule.MessageInitiationAction.from(element: actionEl);
@@ -333,10 +333,10 @@ extension Message {
             element.removeChildren(where: { $0.xmlns == MeetModule.ID });
             if let value = newValue {
                 let actionEl = Element(name: value.actionName, xmlns: MeetModule.ID);
-                actionEl.setAttribute("id", value: value.id);
+                actionEl.attribute("id", newValue: value.id);
                 switch value {
                 case .propose(_, let meetJid, let media):
-                    actionEl.setAttribute("jid", value: meetJid.stringValue);
+                    actionEl.attribute("jid", newValue: meetJid.description);
                     for m in media {
                         actionEl.addChild(Element(name: "media", attributes: ["type": m.rawValue]));
                     }

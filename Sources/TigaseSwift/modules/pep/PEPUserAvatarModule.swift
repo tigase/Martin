@@ -203,7 +203,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, limit: limit, completionHandler: { result in
             switch result {
             case .success(let items):
-                guard let item = items.items.first, let info = item.payload?.mapChildren(transform: { Info(payload: $0)}).first else {
+                guard let item = items.items.first, let info = item.payload?.compactMapChildren(Info.init(payload:)).first else {
                     completionHandler(.failure(.item_not_found));
                     return;
                 }
@@ -228,9 +228,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     }
     
     open func onAvatarChangeNotification(context: Context, from: JID, itemId: String, payload: Element?) {
-        guard let info: [Info] = payload?.mapChildren(transform: Info.init(payload: ), filter: { (elem) -> Bool in
-            return elem.name == "info";
-        }) else {
+        guard let info: [Info] = payload?.compactMapChildren(Info.init(payload:)) else {
             return;
         }
         
@@ -251,10 +249,10 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         public let width: Int?;
         
         public init?(payload: Element?) {
-            guard let elem = payload, let sizeStr = elem.getAttribute("bytes"), let size = Int(sizeStr), let id = elem.getAttribute("id"), let type = elem.getAttribute("type") else {
+            guard let elem = payload, elem.name == "info", let sizeStr = elem.attribute("bytes"), let size = Int(sizeStr), let id = elem.attribute("id"), let type = elem.attribute("type") else {
                 return nil;
             }
-            self.init(id: id, size: size, mimeType: type, url: elem.getAttribute("url"), height: Int(elem.getAttribute("height") ?? ""), width: Int(elem.getAttribute("width") ?? ""));
+            self.init(id: id, size: size, mimeType: type, url: elem.attribute("url"), height: Int(elem.attribute("height") ?? ""), width: Int(elem.attribute("width") ?? ""));
         }
         
         public init(id: String, size: Int, mimeType: String, url: String? = nil, height: Int? = nil, width: Int? = nil) {
@@ -268,17 +266,17 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         
         public func toElement() -> Element {
             let info = Element(name: "info");
-            info.setAttribute("id", value: id);
-            info.setAttribute("bytes", value: String(size));
-            info.setAttribute("type", value: mimeType);
+            info.attribute("id", newValue: id);
+            info.attribute("bytes", newValue: String(size));
+            info.attribute("type", newValue: mimeType);
             if width != nil {
-                info.setAttribute("width", value: String(width!));
+                info.attribute("width", newValue: String(width!));
             }
             if height != nil {
-                info.setAttribute("height", value: String(height!));
+                info.attribute("height", newValue: String(height!));
             }
             if url != nil {
-                info.setAttribute("url", value: url);
+                info.attribute("url", newValue: url);
             }
 
             return info;

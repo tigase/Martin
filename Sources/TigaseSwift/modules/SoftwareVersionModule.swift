@@ -84,10 +84,10 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
     open func checkSoftwareVersion(for jid:JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
         self.checkSoftwareVersion(for: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
-                guard let query = stanza.findChild(name: "query", xmlns: "jabber:iq:version"), let name = query.findChild(name: "name")?.value, let version = query.findChild(name: "version")?.value else {
+                guard let query = stanza.firstChild(name: "query", xmlns: "jabber:iq:version"), let name = query.firstChild(name: "name")?.value, let version = query.firstChild(name: "version")?.value else {
                     return .failure(.undefined_condition);
                 }
-                let os = query.findChild(name: "os")?.value;
+                let os = query.firstChild(name: "os")?.value;
                 return .success(SoftwareVersion(name: name, version: version, os: os));
             }))
         });
@@ -113,6 +113,6 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw ErrorCondition.not_allowed;
+        throw XMPPError.not_allowed(nil);
     }
 }

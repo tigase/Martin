@@ -33,7 +33,7 @@ open class MixParticipant {
         guard let payload = item.payload, payload.name == "participant" && payload.xmlns == MixModule.CORE_XMLNS else {
             return nil;
         }
-        self.init(id: item.id, nickname: payload.findChild(name: "nick")?.value, jid: BareJID(payload.findChild(name: "jid")?.value), channel: channel);
+        self.init(id: item.id, nickname: payload.firstChild(name: "nick")?.value, jid: BareJID(payload.firstChild(name: "jid")?.value), channel: channel);
     }
     
     public init(id: String, nickname: String?, jid: BareJID?, channel: ChannelProtocol) {

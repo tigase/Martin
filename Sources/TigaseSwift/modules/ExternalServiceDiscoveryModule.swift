@@ -48,7 +48,7 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
     }
     
     public func process(stanza: Stanza) throws {
-        throw ErrorCondition.feature_not_implemented;
+        throw XMPPError.feature_not_implemented;
     }
     
     public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],XMPPError>)->Void) {
@@ -61,13 +61,13 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
         iq.type = .get;
         let servicesEl = Element(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS);
         if type != nil {
-            servicesEl.setAttribute("type", value: type);
+            servicesEl.attribute("type", newValue: type);
         }
         iq.addChild(servicesEl);
         
         write(iq, completionHandler: { result in
             completionHandler(result.map { response in
-                return response.findChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.mapChildren(transform: Service.parse(_:)) ?? [];
+                return response.firstChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.compactMapChildren(Service.parse(_:)) ?? [];
             })
         })
     }
@@ -102,14 +102,14 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
         }
         
         public static func parse(_ el: Element) -> Service? {
-            guard el.name == "service", let type = el.getAttribute("type"), let host = el.getAttribute("host") else {
+            guard el.name == "service", let type = el.attribute("type"), let host = el.attribute("host") else {
                 return nil;
             }
             
-            let portStr = el.getAttribute("port");
-            let transportStr = el.getAttribute("transport")?.lowercased();
-            let restrictedStr = el.getAttribute("restricted");
-            return Service(type: type, host: host, port: portStr == nil ? nil : UInt16(portStr!), transport: transportStr == nil ? nil : Transport(rawValue: transportStr!), name: el.getAttribute("name"), restricted: "1" == restrictedStr || "true" == restrictedStr, username: el.getAttribute("username"), password: el.getAttribute("password"), expires: TimestampHelper.parse(timestamp: el.getAttribute("expires")));
+            let portStr = el.attribute("port");
+            let transportStr = el.attribute("transport")?.lowercased();
+            let restrictedStr = el.attribute("restricted");
+            return Service(type: type, host: host, port: portStr == nil ? nil : UInt16(portStr!), transport: transportStr == nil ? nil : Transport(rawValue: transportStr!), name: el.attribute("name"), restricted: "1" == restrictedStr || "true" == restrictedStr, username: el.attribute("username"), password: el.attribute("password"), expires: TimestampHelper.parse(timestamp: el.attribute("expires")));
         }
     }
     

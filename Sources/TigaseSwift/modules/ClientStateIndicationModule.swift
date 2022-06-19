@@ -69,7 +69,7 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.feature_not_implemented;
+        throw XMPPError.feature_not_implemented;
     }
     
     /**

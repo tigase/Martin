@@ -45,8 +45,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     open override var context: Context? {
         didSet {
             store(
-                context?.module(.streamFeatures).$streamFeatures.map({ $0.element?.mapChildren(transform: { Mode.from(element: $0)
-                }) ?? [] }).assign(to: \.availableModes, on: self));
+                context?.module(.streamFeatures).$streamFeatures.map({ $0.element?.compactMapChildren(Mode.from(element:)) ?? [] }).assign(to: \.availableModes, on: self));
         }
     }
     
@@ -60,7 +59,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     }
         
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.feature_not_implemented;
+        throw XMPPError.feature_not_implemented;
     }
     
     /**
@@ -98,7 +97,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
             let iq = Iq();
             iq.type = StanzaType.set;
             let mobile = Element(name: "mobile", xmlns: mode!.rawValue);
-            mobile.setAttribute("enable", value: state ? "true" : "false");
+            mobile.attribute("enable", newValue: state ? "true" : "false");
             iq.addChild(mobile);
             write(iq);
             return true;

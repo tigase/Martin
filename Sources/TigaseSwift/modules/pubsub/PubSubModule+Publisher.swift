@@ -45,11 +45,11 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let publish = Element(name: "publish");
-        publish.setAttribute("node", value: nodeName);
+        publish.attribute("node", newValue: nodeName);
         pubsub.addChild(publish);
         
         let item = Element(name: "item");
-        item.setAttribute("id", value: itemId);
+        item.attribute("id", newValue: itemId);
         publish.addChild(item);
         
         if let payload = payload {
@@ -64,7 +64,7 @@ extension PubSubModule {
         
         write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap({ response in
-                guard let publishEl = response.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.findChild(name: "publish"), let id = publishEl.findChild(name: "item")?.getAttribute("id") else {
+                guard let publishEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "publish"), let id = publishEl.firstChild(name: "item")?.attribute("id") else {
                     if let id = itemId {
                         return .success(id);
                     } else {
@@ -108,11 +108,11 @@ extension PubSubModule {
         iq.addChild(pubsub);
         
         let retract = Element(name: "retract");
-        retract.setAttribute("node", value: nodeName);
+        retract.attribute("node", newValue: nodeName);
         pubsub.addChild(retract);
         
         let item = Element(name: "item");
-        item.setAttribute("id", value: itemId);
+        item.attribute("id", newValue: itemId);
         retract.addChild(item);
         
         write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);

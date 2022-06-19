@@ -61,9 +61,9 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
         write(iq);
     }
     
-    open func ping(_ jid: JID, completionHandler: (Result<Void,ErrorCondition>)->Void) {
+    open func ping(_ jid: JID, completionHandler: (Result<Void,XMPPError>)->Void) {
         ping(jid, callback: { stanza in
-            let error = stanza?.errorCondition ?? .feature_not_implemented;
+            let error = stanza?.error ?? .feature_not_implemented;
             if error == .feature_not_implemented {
                 completionHandler(.success(Void()));
             } else {
@@ -81,6 +81,6 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw ErrorCondition.not_allowed;
+        throw XMPPError.not_allowed(nil);
     }
 }

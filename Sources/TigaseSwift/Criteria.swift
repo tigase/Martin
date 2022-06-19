@@ -118,7 +118,7 @@ open class Criteria {
             return defValue;
         }
         var result = false;
-        for child in elem.getChildren() {
+        for child in elem.children {
             if (nextCriteria!.match(child)) {
                 result = true;
                 break;
@@ -154,21 +154,21 @@ open class Criteria {
                 match = match && (xmlns == elem.xmlns);
             }
             if (types != nil) {
-                let type = elem.getAttribute("type");
+                let type = elem.attribute("type");
                 match = match && (types?.firstIndex(where: { (v: String?) -> Bool in
                     return v == type;
                 }) != nil);
             }
             if (attributes != nil) {
                 for (k,v) in self.attributes! {
-                    match = match && (v == elem.getAttribute(k));
+                    match = match && (v == elem.attribute(k));
                     if (!match) {
                         return false;
                     }
                 }
             }
             if (containsAttribute != nil) {
-                match = match && elem.getAttribute(containsAttribute!) != nil;
+                match = match && elem.attribute(containsAttribute!) != nil;
             }
             return match && super.match(elem);
         }

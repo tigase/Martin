@@ -46,7 +46,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     
     public let features = [String]();
 
-    private let dispatcher = QueueDispatcher(label: "MAMQueries");
+    private let queue = DispatchQueue(label: "MAMQueries");
     private var queries: [String: Query] = [:];
         
     open var isAvailable: Bool {
@@ -69,24 +69,20 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     public override init() {}
     
     open func reset(scopes: Set<ResetableScope>) {
-        self.dispatcher.async {
+        self.queue.async {
             self.queries.removeAll();
         }
     }
         
     open func process(stanza: Stanza) throws {
-        for result in stanza.element.getChildren() {
+        for result in stanza.element.children {
             guard Version.isSupported(xmlns: result.xmlns) else {
                 return;
             }
-            guard let messageId = result.getAttribute("id"), let queryId = result.getAttribute("queryid"), let forwardedEl = result.findChild(name: "forwarded", xmlns: "urn:xmpp:forward:0"), let query = dispatcher.sync(execute: { return self.queries[queryId]; }) else {
+            guard let messageId = result.attribute("id"), let queryId = result.attribute("queryid"), let forwardedEl = result.firstChild(name: "forwarded", xmlns: "urn:xmpp:forward:0"), let query = queue.sync(execute: { return self.queries[queryId]; }) else {
                 return;
             }
-            guard let message: Message = forwardedEl.mapChildren(transform: { (el) -> Message in
-                return Stanza.from(element: el) as! Message;
-            }, filter: { (el)->Bool in
-                return el.name == "message";
-            }).first, let delayEl = forwardedEl.findChild(name: "delay", xmlns: "urn:xmpp:delay") else {
+            guard let messageEl = forwardedEl.firstChild(name: "message"), let message = Stanza.from(element: messageEl) as? Message, let delayEl = forwardedEl.firstChild(name: "delay", xmlns: "urn:xmpp:delay") else {
                 return;
             }
             guard let timestamp = Delay(element: delayEl).stamp else {
@@ -174,8 +170,8 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
         
-        queryEl.setAttribute("queryid", value: queryId);
-        queryEl.setAttribute("node", value: node);
+        queryEl.attribute("queryid", newValue: queryId);
+        queryEl.attribute("node", newValue: node);
         
         queryEl.addChild(query.element(type: .submit, onlyModified: false));
         
@@ -183,19 +179,19 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
             queryEl.addChild(rsm.element());
         }
         
-        self.dispatcher.async {
+        self.queue.async {
             self.queries[queryId] = Query(id: queryId, version: version);
         }
 
         write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap { response in
-                guard let fin = response.findChild(name: "fin", xmlns: version.rawValue) else {
+                guard let fin = response.firstChild(name: "fin", xmlns: version.rawValue) else {
                     return .failure(.undefined_condition);
                 }
                 
-                let rsmResult = RSM.Result(from: fin.findChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
+                let rsmResult = RSM.Result(from: fin.firstChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
     
-                let complete = ("true" == fin.getAttribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
+                let complete = ("true" == fin.attribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
                 return .success(QueryResult(queryId: queryId, complete: complete, rsm: rsmResult));
             })
         });
@@ -237,7 +233,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      
         write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             resultHandler(result.flatMap { stanza in
-                guard let query = stanza.findChild(name: "query", xmlns: version.rawValue), let x = query.findChild(name: "x", xmlns: "jabber:x:data"), let form = DataForm(element: x) else {
+                guard let query = stanza.firstChild(name: "query", xmlns: version.rawValue), let x = query.firstChild(name: "x", xmlns: "jabber:x:data"), let form = DataForm(element: x) else {
                     return .failure(.undefined_condition);
                 }
                 return .success(MAMQueryForm(form: form));
@@ -305,16 +301,16 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         let iq = Iq();
         iq.type = StanzaType.set;
         let prefs = Element(name: "prefs", xmlns: version.rawValue);
-        prefs.setAttribute("default", value: settings.defaultValue.rawValue);
+        prefs.attribute("default", newValue: settings.defaultValue.rawValue);
         iq.addChild(prefs);
         if !settings.always.isEmpty {
             let alwaysEl = Element(name: "always");
-            alwaysEl.addChildren(settings.always.map({ (jid) -> Element in Element(name: "jid", cdata: jid.stringValue) }));
+            alwaysEl.addChildren(settings.always.map({ (jid) -> Element in Element(name: "jid", cdata: jid.description) }));
             prefs.addChild(alwaysEl);
         }
         if !settings.never.isEmpty {
             let neverEl = Element(name: "always");
-            neverEl.addChildren(settings.never.map({ (jid) -> Element in Element(name: "jid", cdata: jid.stringValue) }));
+            neverEl.addChildren(settings.never.map({ (jid) -> Element in Element(name: "jid", cdata: jid.description) }));
             prefs.addChild(neverEl);
         }
         
@@ -322,14 +318,10 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     }
     
     private static func parseSettings(fromIq stanza: Iq, version: Version) -> Result<Settings,XMPPError> {
-        if let prefs = stanza.findChild(name: "prefs", xmlns: version.rawValue) {
-            let defValue = DefaultValue(rawValue: prefs.getAttribute("default") ?? "always") ?? DefaultValue.always;
-            let always: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
-                return JID(elem.value);
-            }) ?? [JID]();
-            let never: [JID] = prefs.findChild(name: "always")?.mapChildren(transform: { (elem)->JID? in
-                return JID(elem.value);
-            }) ?? [JID]();
+        if let prefs = stanza.firstChild(name: "prefs", xmlns: version.rawValue) {
+            let defValue = DefaultValue(rawValue: prefs.attribute("default") ?? "always") ?? DefaultValue.always;
+            let always: [JID] = prefs.firstChild(name: "always")?.compactMapChildren({ JID($0.value) }) ?? [];
+            let never: [JID] = prefs.firstChild(name: "always")?.compactMapChildren({ JID($0.value) }) ?? [];
             return .success(Settings(defaultValue: defValue, always: always, never: never));
         } else {
             return .failure(.from(stanza: stanza));

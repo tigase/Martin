@@ -62,7 +62,7 @@ public struct PubSubError: LocalizedError, CustomStringConvertible {
             return .undefined_condition;
         }
         
-        if let conditionName = stanza.findChild(name: "error")?.findChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS)?.name, let condition = PubSubErrorCondition(rawValue: conditionName) {
+        if let conditionName = stanza.firstChild(name: "error")?.firstChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS)?.name, let condition = PubSubErrorCondition(rawValue: conditionName) {
             return PubSubError(error: error, pubsubErrorCondition: condition);
         } else {
             return PubSubError(error: error, pubsubErrorCondition: nil);

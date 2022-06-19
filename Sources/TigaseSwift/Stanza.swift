@@ -59,7 +59,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     
     /// Returns information about delay in delivery of stanza
     open var delay:Delay? {
-        if let delayEl = element.findChild(name: "delay", xmlns: "urn:xmpp:delay") {
+        if let delayEl = element.firstChild(name: "delay", xmlns: "urn:xmpp:delay") {
             return Delay(element: delayEl);
         }
         return nil;
@@ -82,7 +82,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     open var from:JID? {
         get {
             withLock({
-                if from_ == nil, let jidStr = element.getAttribute("from") {
+                if from_ == nil, let jidStr = element.attribute("from") {
                     from_ = JID(jidStr);
                 }
                 return from_;
@@ -91,7 +91,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         set {
             withLock({
                 from_ = newValue;
-                element.setAttribute("from", value: newValue?.stringValue);
+                element.attribute("from", newValue: newValue?.description);
             })
         }
     }
@@ -106,7 +106,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     open var to:JID? {
         get {
             withLock({
-                if to_ == nil, let jidStr = element.getAttribute("to") {
+                if to_ == nil, let jidStr = element.attribute("to") {
                     to_ = JID(jidStr);
                 }
                 return to_;
@@ -115,7 +115,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         set {
             withLock({
                 to_ = newValue;
-                element.setAttribute("to", value:newValue?.stringValue);
+                element.attribute("to", newValue: newValue?.description);
             })
         }
     }
@@ -123,10 +123,10 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     /// Stanza id
     open var id:String? {
         get {
-            return element.getAttribute("id");
+            return element.attribute("id");
         }
         set {
-            element.setAttribute("id", value: newValue);
+            element.attribute("id", newValue: newValue);
         }
     }
     
@@ -134,13 +134,13 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     /// Stanza type
     open var type:StanzaType? {
         get {
-            if let type = element.getAttribute("type") {
+            if let type = element.attribute("type") {
                 return StanzaType(rawValue: type);
             }
             return nil;
         }
         set {
-            element.setAttribute("type", value: newValue?.rawValue);
+            element.attribute("type", newValue: newValue?.rawValue);
         }
     }
     
@@ -283,7 +283,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         response.from = self.to;
         
         let errorEl = Element(name: "error");
-        errorEl.setAttribute("type", value: errorType);
+        errorEl.attribute("type", newValue: errorType);
         
         let conditon = Element(name: errorCondition);
         conditon.xmlns = xmlns;
@@ -311,8 +311,8 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     }
     
     /// Returns value of matching element
-    func getElementValue(name:String?, xmlns:String? = nil) -> String? {
-        return findChild(name: name, xmlns: xmlns)?.value;
+    func getElementValue(name:String, xmlns:String? = nil) -> String? {
+        return firstChild(name: name, xmlns: xmlns)?.value;
     }
     
     /// Creates new subelement with following name, xmlns and value. It will replace any other subelement with same name and xmlns
@@ -395,7 +395,7 @@ open class Message: Stanza {
     /// Message OOB url
     open var oob: String? {
         get {
-            return findChild(name: "x", xmlns: "jabber:x:oob")?.findChild(name: "url")?.value;
+            return firstChild(name: "x", xmlns: "jabber:x:oob")?.firstChild(name: "url")?.value;
         }
         set {
             element.removeChildren(name: "x", xmlns: "jabber:x:oob");
@@ -473,7 +473,7 @@ open class Message: Stanza {
         }
                 
         public static func from(message: Message) -> [ProcessingHint] {
-            return message.element.mapChildren(transform: ProcessingHint.from(element:));
+            return message.element.children.compactMap(ProcessingHint.from(element:));
         }
     }
 }
@@ -529,7 +529,7 @@ open class Presence: Stanza {
     /// Priority of presence and resource connection
     open var priority:Int! {
         get {
-            let x = findChild(name: "priority")?.value;
+            let x = firstChild(name: "priority")?.value;
             if x != nil {
                 return Int(x!) ?? 0;
             }
@@ -550,7 +550,7 @@ open class Presence: Stanza {
      */
     open var show:Show? {
         get {
-            let x = findChild(name: "show")?.value;
+            let x = firstChild(name: "show")?.value;
             let type = self.type;
             guard type != StanzaType.error && type != StanzaType.unavailable else {
                 return nil;
@@ -575,7 +575,7 @@ open class Presence: Stanza {
     /// Text with additional description - mainly for human use
     open var status:String? {
         get {
-            return findChild(name: "status")?.value;
+            return firstChild(name: "status")?.value;
         }
         set {
             element.removeChildren(name: "status");

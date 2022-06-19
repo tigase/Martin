@@ -244,7 +244,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
         
     private func onStreamError(_ streamErrorEl: Element) -> Bool {
-        if let seeOtherHostEl = streamErrorEl.findChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value) {
+        if let seeOtherHostEl = streamErrorEl.firstChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value) {
             if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
                 streamFeaturesWithPipelining.connectionRestarted();
             }
@@ -290,16 +290,13 @@ open class SocketSessionLogic: XmppSessionLogic {
                     }
                 } else {
                     self.logger.debug("\(self.userJid) - feature-not-implemented \(stanza, privacy: .public)");
-                    throw ErrorCondition.feature_not_implemented;
+                    throw XMPPError.feature_not_implemented;
                 }
             } catch let error as XMPPError {
                 let errorStanza = error.createResponse(stanza);
                 self.sendingOutgoingStanza(errorStanza);
-            } catch let error as ErrorCondition {
-                let errorStanza = error.createResponse(stanza);
-                self.sendingOutgoingStanza(errorStanza);
             } catch {
-                let errorStanza = ErrorCondition.undefined_condition.createResponse(stanza);
+                let errorStanza = XMPPError.undefined_condition.createResponse(stanza);
                 self.sendingOutgoingStanza(errorStanza);
                 self.logger.debug("\(self.userJid) - unknown unhandled exception \(error)")
             }
@@ -435,7 +432,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         let domain = userJid.domain
         var attributes: [String: String] = ["to": domain];
         if self.connectionConfiguration.useSeeOtherHost && userJid.localPart != nil {
-            attributes["from"] = userJid.stringValue;
+            attributes["from"] = userJid.description;
         }
         self.connector.send(.streamOpen(attributes: attributes));
         

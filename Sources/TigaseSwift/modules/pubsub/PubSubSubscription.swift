@@ -21,6 +21,7 @@
 
 import Foundation
 
+// TODO: Verify if this should not be struct and if should contain element!
 /// Represents subscription item
 open class PubSubSubscriptionElement {
     /// instance of received element
@@ -28,25 +29,25 @@ open class PubSubSubscriptionElement {
     
     /// Subscriber JID
     var jid: JID? {
-        return JID(element.getAttribute("jid"));
+        return JID(element.attribute("jid"));
     }
     
     /// Subscription state
     var subscription: PubSubSubscription {
         get {
-            guard let state = element.getAttribute("subscription") else {
+            guard let state = element.attribute("subscription") else {
                 return .none;
             }
             return PubSubSubscription(rawValue: state)!;
         }
         set {
-            element.setAttribute("subscription", value: newValue.rawValue);
+            element.attribute("subscription", newValue: newValue.rawValue);
         }
     }
     
     /// Subscription id
     var subId: String? {
-        return element.getAttribute("subid");
+        return element.attribute("subid");
     }
     
     /**
@@ -67,7 +68,7 @@ open class PubSubSubscriptionElement {
      */
     public convenience init(jid: JID) {
         let elem = Element(name: "subscription");
-        elem.setAttribute("jid", value: jid.stringValue);
+        elem.attribute("jid", newValue: jid.description);
         self.init(from: elem)!;
     }
     

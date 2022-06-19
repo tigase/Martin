@@ -93,7 +93,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     }
     
     open func updateCaps(in presence: Presence) {
-        if let oldC = presence.findChild(name: "c", xmlns: "http://jabber.org/protocol/caps") {
+        if let oldC = presence.firstChild(name: "c", xmlns: "http://jabber.org/protocol/caps") {
             presence.removeChild(oldC);
         }
 
@@ -104,9 +104,9 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
         }
             
         let c = Element(name: "c", xmlns: "http://jabber.org/protocol/caps");
-        c.setAttribute("hash", value: "sha-1");
-        c.setAttribute("node", value: nodeName);
-        c.setAttribute("ver", value: ver);
+        c.attribute("hash", newValue: "sha-1");
+        c.attribute("node", newValue: nodeName);
+        c.attribute("ver", newValue: ver);
     
         presence.addChild(c);
     }
@@ -316,10 +316,10 @@ public protocol CapabilitiesCache {
 extension Presence {
     open var capsNode: String? {
         get {
-            guard let c = element.findChild(name: "c", xmlns: "http://jabber.org/protocol/caps") else {
+            guard let c = element.firstChild(name: "c", xmlns: "http://jabber.org/protocol/caps") else {
                 return nil;
             }
-            guard let node = c.getAttribute("node"), let ver = c.getAttribute("ver") else {
+            guard let node = c.attribute("node"), let ver = c.attribute("ver") else {
                 return nil;
             }
             return node + "#" + ver;

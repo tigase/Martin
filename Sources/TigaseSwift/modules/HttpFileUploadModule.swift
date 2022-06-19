@@ -61,7 +61,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
     }
     
     open func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+        throw XMPPError.bad_request(nil);
     }
     
     open func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], XMPPError>)->Void) {
@@ -114,10 +114,10 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
         iq.to = componentJid;
         
         let requestEl = Element(name: "request", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS);
-        requestEl.setAttribute("filename", value: filename);
-        requestEl.setAttribute("size", value: size.description);
+        requestEl.attribute("filename", newValue: filename);
+        requestEl.attribute("size", newValue: size.description);
         if contentType != nil {
-            requestEl.setAttribute("content-type", value: contentType);
+            requestEl.attribute("content-type", newValue: contentType);
         }
         iq.addChild(requestEl);
         
@@ -127,18 +127,16 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
     open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {
         requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.flatMap { response in
-                guard let slotEl = response.findChild(name: "slot", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS), let getUri = slotEl.findChild(name: "get")?.getAttribute("url"), let putUri = slotEl.findChild(name: "put")?.getAttribute("url") else {
+                guard let slotEl = response.firstChild(name: "slot", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS), let getUri = slotEl.firstChild(name: "get")?.attribute("url"), let putUri = slotEl.firstChild(name: "put")?.attribute("url") else {
                     return .failure(.undefined_condition);
                 }
                 
                 var putHeaders: [String:String] = [:];
-                slotEl.findChild(name: "put")?.forEachChild(name: "header", fn: { (header) in
-                    let name = header.getAttribute("name");
-                    let value = header.value;
-                    if name != nil && value != nil {
-                        putHeaders[name!] = value!;
+                for header in slotEl.firstChild(name: "put")?.filterChildren(name: "header") ?? [] {
+                    if let name = header.attribute("name"), let value = header.value {
+                        putHeaders[name] = value;
                     }
-                })
+                }
                 
                 if let slot = Slot(getUri: getUri, putUri: putUri, putHeaders: putHeaders) {
                     return .success(slot);

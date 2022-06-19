@@ -67,19 +67,14 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     }
     
     open func process(stanza message: Stanza) throws {
-        var error: ErrorCondition? = nil;
-        message.element.forEachChild(xmlns: MessageCarbonsModule.MC_XMLNS) { (carb) in
-            let action = Action(rawValue: carb.name);
-            guard action != nil else {
-                error = ErrorCondition.bad_request;
+        var error: XMPPError? = nil;
+        for carb in message.filterChildren(xmlns: MessageCarbonsModule.MC_XMLNS) {
+            guard let action = Action(rawValue: carb.name), let forwarded = getEncapsulatedMessage(carb) else {
+                error = XMPPError.bad_request(nil);
                 return;
             }
 
-            if let forwardedMessages = self.getEncapsulatedMessages(carb) {
-                for forwarded in forwardedMessages {
-                    self.processForwaredMessage(forwarded, action: action!);
-                }
-            }
+            self.processForwaredMessage(forwarded, action: action);
         }
         if error != nil {
             throw error!;
@@ -121,12 +116,11 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
      - parameter carb: element to process
      - returns: array of forwarded Messsages
      */
-    func getEncapsulatedMessages(_ carb: Element) -> [Message]? {
-        return carb.findChild(name: "forwarded", xmlns: MessageCarbonsModule.SF_XMLNS)?.mapChildren(transform: { (messageEl) -> Message in
-            return Stanza.from(element: messageEl) as! Message;
-        }, filter: { (el) -> Bool in
-            return el.name == "message";
-        });
+    func getEncapsulatedMessage(_ carb: Element) -> Message? {
+        guard let messageEl = carb.firstChild(name: "forwarded", xmlns: MessageCarbonsModule.SF_XMLNS)?.firstChild(name: "message") else {
+            return nil;
+        }
+        return Stanza.from(element: messageEl) as? Message;
     }
     
     func processForwaredMessage(_ forwarded: Message, action: Action) {

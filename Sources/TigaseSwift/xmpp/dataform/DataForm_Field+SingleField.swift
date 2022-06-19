@@ -51,7 +51,7 @@ extension DataForm.Field {
         }
 
         public required init?(element el: Element) {
-            super.init(element: el, value: el.findChild(name: "value")?.value);
+            super.init(element: el, value: el.firstChild(name: "value")?.value);
         }
 
         public init(`var`: String, type: FieldType? = .textSingle, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: String? = nil) {
@@ -86,7 +86,7 @@ extension DataForm.Field {
         }
 
         public required init?(element el: Element) {
-            super.init(element: el, value: JID(el.findChild(name: "value")?.value));
+            super.init(element: el, value: JID(el.firstChild(name: "value")?.value));
         }
 
         public init(`var`: String, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: JID? = nil) {
@@ -103,7 +103,7 @@ extension DataForm.Field {
 
         open override func element(formType: DataForm.FormType) -> Element {
             let el = super.element(formType: formType);
-            if let value = currentValue?.stringValue {
+            if let value = currentValue?.description {
                 el.addChild(Element(name: "value", cdata: value));
             }
             return el;
@@ -114,7 +114,7 @@ extension DataForm.Field {
     open class Boolean: SingleField<Bool> {
 
         public required init?(element el: Element) {
-            let val = el.findChild(name: "value")?.value;
+            let val = el.firstChild(name: "value")?.value;
             super.init(element: el, value: "1" == val || "true" == val);
         }
 

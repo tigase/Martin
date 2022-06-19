@@ -29,13 +29,13 @@ public struct BobData {
     public let data: Data?;
     
     public init?(from el: Element) {
-        guard el.name == "data" && el.xmlns == "urn:xmpp:bob", let cid = el.getAttribute("cid") else {
+        guard el.name == "data" && el.xmlns == "urn:xmpp:bob", let cid = el.attribute("cid") else {
             return nil;
         }
         
         self.cid = cid;
-        self.type = el.getAttribute("type");
-        if let maxAge = el.getAttribute("max-age"), let val = UInt(maxAge) {
+        self.type = el.attribute("type");
+        if let maxAge = el.attribute("max-age"), let val = UInt(maxAge) {
             self.maxAge = val;
         } else {
             self.maxAge = nil;
@@ -56,10 +56,10 @@ public struct BobData {
     
     public func toElement() -> Element {
         let el = Element(name: "data", xmlns: "urn:xmpp:bob");
-        el.setAttribute("cid", value: cid);
-        el.setAttribute("type", value: type);
+        el.attribute("cid", newValue: cid);
+        el.attribute("type", newValue: type);
         if let maxAge = self.maxAge {
-            el.setAttribute("max-age", value: String(maxAge));
+            el.attribute("max-age", newValue: String(maxAge));
         }
         el.value = data?.base64EncodedString();
         return el;

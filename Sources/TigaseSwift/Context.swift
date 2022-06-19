@@ -30,7 +30,7 @@ open class Context: CustomStringConvertible, Resetable {
     let queue = DispatchQueue(label: "context_queue");
     
     open var description: String {
-        return connectionConfiguration.userJid.stringValue;
+        return connectionConfiguration.userJid.description;
     }
     
     public var userBareJid: BareJID {

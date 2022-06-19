@@ -25,12 +25,12 @@ open class Bookmarks {
     
     open var items: [Item];
     
-    public init?(from el: Element?) {
-        guard el?.name == "storage" && el?.xmlns == "storage:bookmarks" else {
+    public init?(from elem: Element?) {
+        guard let el = elem, el.name == "storage" && el.xmlns == "storage:bookmarks" else {
             return nil;
         }
         
-        self.items = el!.mapChildren(transform: { child -> Item? in
+        self.items = el.children.compactMap({ child -> Item? in
             switch child.name {
             case "url":
                 return Url(from: child);
@@ -106,7 +106,7 @@ open class Bookmarks {
         open func toElement() -> Element {
             let el = Element(name: type.rawValue);
             if name != nil {
-                el.setAttribute("name", value: name);
+                el.attribute("name", newValue: name);
             }
             return el;
         }
@@ -119,13 +119,13 @@ open class Bookmarks {
         public let password: String?;
         
         convenience public init?(from el: Element?) {
-            guard el?.name == "conference", let jid = JID(el?.getAttribute("jid")) else {
+            guard el?.name == "conference", let jid = JID(el?.attribute("jid")) else {
                 return nil;
             }
             
-            let joinStr = el?.getAttribute("autojoin") ?? "false";
+            let joinStr = el?.attribute("autojoin") ?? "false";
 
-            self.init(name: el?.getAttribute("name"), jid: jid, autojoin: joinStr == "true" || joinStr == "1", nick: el?.getAttribute("nick") ?? el?.findChild(name: "nick")?.value, password: el?.getAttribute("password"));
+            self.init(name: el?.attribute("name"), jid: jid, autojoin: joinStr == "true" || joinStr == "1", nick: el?.attribute("nick") ?? el?.firstChild(name: "nick")?.value, password: el?.attribute("password"));
         }
         
         public init(name: String?, jid: JID, autojoin: Bool, nick: String? = nil, password: String? = nil) {
@@ -138,14 +138,14 @@ open class Bookmarks {
         
         open override func toElement() -> Element {
             let el = super.toElement();
-            el.setAttribute("jid", value: jid.stringValue);
+            el.attribute("jid", newValue: jid.description);
             if autojoin {
-                el.setAttribute("autojoin", value: "true");
+                el.attribute("autojoin", newValue: "true");
             }
             if let nick = self.nick {
                 el.addChild(Element(name: "nick", cdata: nick));
             }
-            el.setAttribute("password", value: password);
+            el.attribute("password", newValue: password);
             return el;
         }
         
@@ -162,10 +162,10 @@ open class Bookmarks {
         public let url: String;
         
         convenience public init?(from el: Element?) {
-            guard el?.name == "url", let url = el?.getAttribute("url") else {
+            guard el?.name == "url", let url = el?.attribute("url") else {
                 return nil;
             }
-            self.init(name: el?.getAttribute("name"), url: url);
+            self.init(name: el?.attribute("name"), url: url);
         }
         
         public init(name: String?, url: String) {
@@ -175,7 +175,7 @@ open class Bookmarks {
         
         open override func toElement() -> Element {
             let el = super.toElement();
-            el.setAttribute("url", value: url);
+            el.attribute("url", newValue: url);
             return el;
         }
     }

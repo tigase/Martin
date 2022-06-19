@@ -77,7 +77,7 @@ open class MessageModule: XmppModuleBase, XmppModule {
     
     private func chat(forMessage message: Message, interlocutorJid: JID, context: Context) -> ChatProtocol? {
         // do not process 1-1 chats for MUCs
-        guard message.findChild(name: "x", xmlns: "jabber:x:conference") == nil || context.moduleOrNil(.muc) == nil else {
+        guard message.firstChild(name: "x", xmlns: "jabber:x:conference") == nil || context.moduleOrNil(.muc) == nil else {
             return nil;
         }
         

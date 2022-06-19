@@ -168,7 +168,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
         do {
             let auth = Stanza(name: "auth");
             auth.element.xmlns = SaslModule.SASL_XMLNS;
-            auth.element.setAttribute("mechanism", value: mechanism.name);
+            auth.element.attribute("mechanism", newValue: mechanism.name);
             auth.element.value = try mechanism.evaluateChallenge(nil, context: context!);
         
             if state != .inProgress {
@@ -204,7 +204,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     
     func processFailure(_ stanza: Stanza) throws {
         self.mechanismInUse = nil;
-        let errorName = stanza.findChild()?.name;
+        let errorName = stanza.children.first?.name;
         let error = errorName == nil ? nil : SaslError(rawValue: errorName!);
         logger.error("Authentication failed with error: \(error), \(errorName)");
         self.state = .error(error ?? SaslError.not_authorized);
@@ -231,7 +231,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     static func supportedMechanisms(streamFeatures: StreamFeatures) -> [String] {
-        return streamFeatures.element?.findChild(name: "mechanisms")?.mapChildren(transform: { $0.value }, filter: { $0.name == "mechanism" }) ?? [];
+        return streamFeatures.element?.firstChild(name: "mechanisms")?.filterChildren(name: "mechanism").compactMap({ $0.value }) ?? [];
     }
     
     func guessSaslMechanism() -> SaslMechanism? {

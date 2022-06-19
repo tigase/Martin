@@ -34,8 +34,8 @@ public struct Delay {
     public let from:JID?;
     
     public init(element:Element) {
-        stamp = TimestampHelper.parse(timestamp: element.getAttribute("stamp"));
-        if let fromStr = element.getAttribute("from") {
+        stamp = TimestampHelper.parse(timestamp: element.attribute("stamp"));
+        if let fromStr = element.attribute("from") {
             from = JID(fromStr);
         } else {
             from = nil

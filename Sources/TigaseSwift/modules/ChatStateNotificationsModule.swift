@@ -39,7 +39,7 @@ open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
     public var features: [String] = [XMLNS];
     
     public func process(stanza: Stanza) throws {
-        throw ErrorCondition.bad_request;
+        throw XMPPError.bad_request(nil);
     }
     
     public override weak var context: Context? {
@@ -92,7 +92,7 @@ extension Message {
     
     open var chatState: ChatState? {
         get {
-            return ChatState(from: self.element.findChild(name: nil, xmlns: ChatStateNotificationsModule.XMLNS)?.name);
+            return ChatState(from: self.element.firstChild(xmlns: ChatStateNotificationsModule.XMLNS)?.name);
         }
         set {
             self.element.removeChildren { (el) -> Bool in

@@ -93,27 +93,23 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
             throw XMPPError.not_allowed("You are not allowed to send this to me!");
         }
         
-        if let query = stanza.findChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
-            for item in query.getChildren(name: "item") {
+        if let query = stanza.firstChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
+            for item in query.filterChildren(name: "item") {
                 _ = self.processRosterItem(item, context: context);
             }
             
-            rosterManager.set(version: query.getAttribute("ver"), for: context);
+            rosterManager.set(version: query.attribute("ver"), for: context);
         }
     }
     
     private func processRosterItem(_ item:Element, context: Context) -> JID? {
-        guard let jid = JID(item.getAttribute("jid")) else {
+        guard let jid = JID(item.attribute("jid")) else {
             return nil;
         }
-        let name = item.getAttribute("name");
-        let subscription: RosterItemSubscription = item.getAttribute("subscription") == nil ? .none : RosterItemSubscription(rawValue: item.getAttribute("subscription")!)!;
-        let ask = item.getAttribute("ask") == "subscribe";
-        let groups:[String] = item.mapChildren(transform: {(g:Element) -> String in
-                return g.value!;
-            }, filter: {(e:Element) -> Bool in
-                return e.name == "group" && e.value != nil;
-            });
+        let name = item.attribute("name");
+        let subscription: RosterItemSubscription = RosterItemSubscription(item.attribute("subscription")) ?? .none;
+        let ask = item.attribute("ask") == "subscribe";
+        let groups:[String] = item.filterChildren(name: "group").compactMap({ $0.value });
         
         let annotations: [RosterItemAnnotation] = processRosterItemForAnnotations(item: item);
 
@@ -159,16 +155,16 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         
         if isRosterVersioningAvailable, let context = self.context {
             let x = rosterManager.version(for: context) ?? "";
-            query.setAttribute("ver", value: x);
+            query.attribute("ver", newValue: x);
         }
         iq.addChild(query);
         
         write(iq, completionHandler: { result in
             switch result {
             case .success(let iq):
-                if let query = iq.findChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
+                if let query = iq.firstChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
                     let oldJids = self.rosterManager.items(for: context).map({ $0.jid });
-                    let newJids: Set<JID> = Set(query.getChildren(name: "item").compactMap({ item in
+                    let newJids: Set<JID> = Set(query.filterChildren(name: "item").compactMap({ item in
                         return self.processRosterItem(item, context: context);
                     }));
                     
@@ -179,7 +175,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
                         }
                     }
                     
-                    self.rosterManager.set(version: query.getAttribute("ver"), for: context);
+                    self.rosterManager.set(version: query.attribute("ver"), for: context);
                 }
             default:
                 break;
@@ -200,9 +196,9 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         iq.addChild(query);
         
         let item = Element(name: "item");
-        item.setAttribute("jid", value: jid.stringValue);
+            item.attribute("jid", newValue: jid.description);
         if !(name?.isEmpty ?? true) {
-            item.setAttribute("name", value: name);
+            item.attribute("name", newValue: name);
         }
         groups.forEach({(group:String)->Void in
             item.addChild(Element(name:"group", cdata:group));
@@ -221,8 +217,8 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         iq.addChild(query);
         
         let item = Element(name: "item");
-        item.setAttribute("jid", value: jid.stringValue);
-        item.setAttribute("subscription", value: "remove");
+        item.attribute("jid", newValue: jid.description);
+        item.attribute("subscription", newValue: "remove");
 
         query.addChild(item);
         

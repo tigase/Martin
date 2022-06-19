@@ -140,7 +140,7 @@ extension RoomProtocol {
         
         let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         let invite = Element(name: "invite");
-        invite.setAttribute("to", value: invitee.stringValue);
+        invite.attribute("to", newValue: invitee.description);
         if (reason != nil) {
             invite.addChild(Element(name: "reason", cdata: reason!));
         }
@@ -173,14 +173,14 @@ extension RoomProtocol {
         message.to = invitee;
         
         let x = Element(name: "x", xmlns: "jabber:x:conference");
-        x.setAttribute("jid", value: jid.stringValue);
+        x.attribute("jid", newValue: jid.description);
         
-        x.setAttribute("password", value: password);
-        x.setAttribute("reason", value: reason);
+        x.attribute("password", newValue: password);
+        x.attribute("reason", newValue: reason);
         
         if threadId != nil {
-            x.setAttribute("thread", value: threadId);
-            x.setAttribute("continue", value: "true");
+            x.attribute("thread", newValue: threadId);
+            x.attribute("continue", newValue: "true");
         }
         
         return message;

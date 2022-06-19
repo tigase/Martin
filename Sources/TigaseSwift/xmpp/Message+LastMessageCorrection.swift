@@ -25,18 +25,14 @@ extension Message {
     
     open var lastMessageCorrectionId: String? {
         get {
-            return element.findChild(name: "replace", xmlns: "urn:xmpp:message-correct:0")?.getAttribute("id");
+            return element.firstChild(name: "replace", xmlns: "urn:xmpp:message-correct:0")?.attribute("id");
         }
         set {
-            var el = element.findChild(name: "replace", xmlns: "urn:xmpp:message-correct:0");
+            element.removeChildren(name: "replace", xmlns: "urn:xmpp:message-correct:0");
             if let val = newValue {
-                if el == nil {
-                    el = Element(name: "replace", xmlns: "urn:xmpp:message-correct:0");
-                    element.addChild(el!);
-                }
-                el?.setAttribute("id", value: val)
-            } else if el != nil {
-                element.removeChild(el!);
+                let el = Element(name: "replace", xmlns: "urn:xmpp:message-correct:0");
+                el.attribute("id", newValue: val)
+                element.addChild(el);
             }
         }
     }

@@ -59,11 +59,11 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     }
     
     open func processGet(stanza: Stanza) throws {
-        throw ErrorCondition.not_allowed;
+        throw XMPPError.not_allowed(nil);
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw ErrorCondition.not_allowed;
+        throw XMPPError.not_allowed(nil);
     }
     
     /** 
@@ -123,21 +123,21 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         iq.addChild(query);
         write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
             completionHandler(result.map { response in
-                if let query = response.findChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.findChild(name: "x", xmlns: "jabber:x:data")) {
-                    return FormResult(type: .dataForm, form: form, bob: query.mapChildren(transform: BobData.init(from: )));
+                if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.firstChild(name: "x", xmlns: "jabber:x:data")) {
+                    return FormResult(type: .dataForm, form: form, bob: query.compactMapChildren(BobData.init(from:)));
                 } else {
                     let form = DataForm(type: .form);
-                    if let query = response.findChild(name: "query", xmlns: "jabber:iq:register") {
-                        if let instructions = query.findChild(name: "instructions")?.value {
+                    if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register") {
+                        if let instructions = query.firstChild(name: "instructions")?.value {
                             form.instructions = [instructions];
                         }
-                        if query.findChild(name: "username") != nil {
+                        if query.firstChild(name: "username") != nil {
                             form.add(field: .TextSingle(var: "username", required: true));
                         }
-                        if query.findChild(name: "password") != nil {
+                        if query.firstChild(name: "password") != nil {
                             form.add(field: .TextPrivate(var: "password", required: true));
                         }
-                        if query.findChild(name: "email") != nil {
+                        if query.firstChild(name: "email") != nil {
                             form.add(field: .TextSingle(var: "email", required: true));
                         }
                     }
@@ -362,7 +362,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                     if self.formToSubmit == nil {
                         self.onForm?(formResult.form, formResult.bob, self);
                     } else {
-                        var oldFields = self.formToSubmit?.fields ?? [];
+                        let oldFields = self.formToSubmit?.fields ?? [];
                         var sameForm = !oldFields.isEmpty;
                         var labelsChanged = false;
                         for oldField in oldFields  {

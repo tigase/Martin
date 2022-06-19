@@ -34,26 +34,23 @@ public class Jingle {
         public let transports: [JingleTransport];
         
         public required convenience init?(from el: Element, knownDescriptions: [JingleDescription.Type], knownTransports: [JingleTransport.Type]) {
-            guard el.name == "content", let name = el.getAttribute("name"), let creator = Creator(rawValue: el.getAttribute("creator") ?? "") else {
+            guard el.name == "content", let name = el.attribute("name"), let creator = Creator(rawValue: el.attribute("creator") ?? "") else {
                 return nil;
             }
             
             var senders: Senders? = nil;
-            if let sendersStr = el.getAttribute("senders") {
+            if let sendersStr = el.attribute("senders") {
                 senders = Senders(rawValue: sendersStr);
             }
             
-            let descEl = el.findChild(name: "description");
+            let descEl = el.firstChild(name: "description");
             let description = descEl == nil ? nil : knownDescriptions.map({ (desc) -> JingleDescription? in
                 return desc.init(from: descEl!);
             }).filter({ desc -> Bool in return desc != nil}).map({ desc -> JingleDescription in return desc! }).first;
             
-            let foundTransports = el.mapChildren(transform: { (child) -> JingleTransport? in
-                let transports = knownTransports.map({ (type) -> JingleTransport? in
-                    let transport = type.init(from: child);
-                    return transport;
-                });
-                return transports.filter({ transport -> Bool in return transport != nil }).map({ transport -> JingleTransport in return transport!}).first;
+            let foundTransports = el.compactMapChildren({ child -> JingleTransport? in
+                let transports = knownTransports.compactMap({ $0.init(from: child) });
+                return transports.first;
             });
             
             self.init(name: name, creator: creator, senders: senders, description: description, transports: foundTransports);
@@ -73,10 +70,10 @@ public class Jingle {
         
         public func toElement() -> Element {
             let el = Element(name: "content");
-            el.setAttribute("creator", value: creator.rawValue);
-            el.setAttribute("name", value: name);
+            el.attribute("creator", newValue: creator.rawValue);
+            el.attribute("name", newValue: name);
             if let senders = self.senders {
-                el.setAttribute("senders", value: senders.rawValue);
+                el.attribute("senders", newValue: senders.rawValue);
             }
             
             if description != nil {
@@ -209,9 +206,9 @@ extension Jingle {
             case "unhold":
                 return .unhold;
             case "mute":
-                return .mute(contentName: el.getAttribute("name"));
+                return .mute(contentName: el.attribute("name"));
             case "unmute":
-                return .unmute(contentName: el.getAttribute("name"));
+                return .unmute(contentName: el.attribute("name"));
             case "ringing":
                 return ringing;
             default:
@@ -241,13 +238,13 @@ extension Jingle {
             switch self {
             case .mute(let cname):
                 if let contentName = cname {
-                    el.setAttribute("creator", value: creatorProvider(contentName).rawValue);
-                    el.setAttribute("name", value: contentName);
+                    el.attribute("creator", newValue: creatorProvider(contentName).rawValue);
+                    el.attribute("name", newValue: contentName);
                 }
             case .unmute(let cname):
                 if let contentName = cname {
-                    el.setAttribute("creator", value: creatorProvider(contentName).rawValue);
-                    el.setAttribute("name", value: contentName);
+                    el.attribute("creator", newValue: creatorProvider(contentName).rawValue);
+                    el.attribute("name", newValue: contentName);
                 }
             default:
                 break
@@ -275,14 +272,10 @@ extension Jingle {
                 guard el.name == "transport" && el.xmlns == ICEUDPTransport.XMLNS else {
                     return nil;
                 }
-                let pwd = el.getAttribute("pwd");
-                let ufrag = el.getAttribute("ufrag");
+                let pwd = el.attribute("pwd");
+                let ufrag = el.attribute("ufrag");
                 
-                self.init(pwd: pwd, ufrag: ufrag, candidates: el.mapChildren(transform: { (child) -> Candidate? in
-                    return Candidate(from: child);
-                }, filter: { el -> Bool in
-                    return el.name == "candidate";
-                }), fingerprint: Fingerprint(from: el.findChild(name: "fingerprint", xmlns: "urn:xmpp:jingle:apps:dtls:0")));
+                self.init(pwd: pwd, ufrag: ufrag, candidates: el.filterChildren(name: "candidate").compactMap(Candidate.init(from:)), fingerprint: Fingerprint(from: el.firstChild(name: "fingerprint", xmlns: "urn:xmpp:jingle:apps:dtls:0")));
             }
             
             public init(pwd: String?, ufrag: String?, candidates: [Candidate], fingerprint: Fingerprint? = nil) {
@@ -300,8 +293,8 @@ extension Jingle {
                 self.candidates.forEach { (candidate) in
                     el.addChild(candidate.toElement());
                 }
-                el.setAttribute("ufrag", value: self.ufrag);
-                el.setAttribute("pwd", value: self.pwd);
+                el.attribute("ufrag", newValue: self.ufrag);
+                el.attribute("pwd", newValue: self.pwd);
                 return el;
             }
             
@@ -314,7 +307,7 @@ extension Jingle {
                     guard let el = elem else {
                         return nil;
                     }
-                    guard let hash = el.getAttribute("hash"), let value = el.value, let setup = Setup(rawValue: el.getAttribute("setup") ?? "") else {
+                    guard let hash = el.attribute("hash"), let value = el.value, let setup = Setup(rawValue: el.attribute("setup") ?? "") else {
                         return nil;
                     }
                     self.init(hash: hash, value: value, setup: setup);
@@ -328,8 +321,8 @@ extension Jingle {
                 
                 public func toElement() -> Element {
                     let fingerprintEl = Element(name: "fingerprint", cdata: value, xmlns: "urn:xmpp:jingle:apps:dtls:0");
-                    fingerprintEl.setAttribute("hash", value: hash);
-                    fingerprintEl.setAttribute("setup", value: setup.rawValue);
+                    fingerprintEl.attribute("hash", newValue: hash);
+                    fingerprintEl.attribute("setup", newValue: setup.rawValue);
                     return fingerprintEl;
                 }
                 
@@ -356,16 +349,16 @@ extension Jingle {
                 public let tcpType: String?;
                 
                 public convenience init?(from el: Element) {
-                    let generation = UInt8(el.getAttribute("generation") ?? "") ?? 0;
+                    let generation = UInt8(el.attribute("generation") ?? "") ?? 0;
                     // workaround for Movim!
-                    let id = el.getAttribute("id") ?? UUID().uuidString;
+                    let id = el.attribute("id") ?? UUID().uuidString;
                     
-                    guard el.name == "candidate", let foundation = UInt(el.getAttribute("foundation") ?? ""), let component = UInt8(el.getAttribute("component") ?? ""), let ip = el.getAttribute("ip"), let port = UInt16(el.getAttribute("port") ?? ""), let priority = UInt(el.getAttribute("priority") ?? "0"), let proto = ProtocolType(rawValue: el.getAttribute("protocol") ?? "") else {
+                    guard el.name == "candidate", let foundation = UInt(el.attribute("foundation") ?? ""), let component = UInt8(el.attribute("component") ?? ""), let ip = el.attribute("ip"), let port = UInt16(el.attribute("port") ?? ""), let priority = UInt(el.attribute("priority") ?? "0"), let proto = ProtocolType(rawValue: el.attribute("protocol") ?? "") else {
                         return nil;
                     }
                     
-                    let type = CandidateType(rawValue: el.getAttribute("type") ?? "");
-                    self.init(component: component, foundation: foundation, generation: generation, id: id, ip: ip, network: 0, port: port, priority: priority, protocolType: proto, type: type, tcpType: el.getAttribute("tcptype"));
+                    let type = CandidateType(rawValue: el.attribute("type") ?? "");
+                    self.init(component: component, foundation: foundation, generation: generation, id: id, ip: ip, network: 0, port: port, priority: priority, protocolType: proto, type: type, tcpType: el.attribute("tcptype"));
                 }
                 
                 public init(component: UInt8, foundation: UInt, generation: UInt8, id: String, ip: String, network: UInt8 = 0, port: UInt16, priority: UInt, protocolType: ProtocolType, relAddr: String? = nil, relPort: UInt16? = nil, type: CandidateType?, tcpType: String?) {
@@ -387,23 +380,23 @@ extension Jingle {
                 public func toElement() -> Element {
                     let el = Element(name: "candidate");
                     
-                    el.setAttribute("component", value: String(component));
-                    el.setAttribute("foundation", value: String(foundation));
-                    el.setAttribute("generation", value: String(generation));
-                    el.setAttribute("id", value: id);
-                    el.setAttribute("ip", value: ip);
-                    el.setAttribute("network", value: String(network));
-                    el.setAttribute("port", value: String(port));
-                    el.setAttribute("protocol", value: protocolType.rawValue);
-                    el.setAttribute("priority", value: String(priority));
+                    el.attribute("component", newValue: String(component));
+                    el.attribute("foundation", newValue: String(foundation));
+                    el.attribute("generation", newValue: String(generation));
+                    el.attribute("id", newValue: id);
+                    el.attribute("ip", newValue: ip);
+                    el.attribute("network", newValue: String(network));
+                    el.attribute("port", newValue: String(port));
+                    el.attribute("protocol", newValue: protocolType.rawValue);
+                    el.attribute("priority", newValue: String(priority));
                     if relAddr != nil {
-                        el.setAttribute("rel-addr", value: relAddr);
+                        el.attribute("rel-addr", newValue: relAddr);
                     }
                     if relPort != nil {
-                        el.setAttribute("rel-port", value: String(relPort!));
+                        el.attribute("rel-port", newValue: String(relPort!));
                     }
-                    el.setAttribute("type", value: type?.rawValue);
-                    el.setAttribute("tcptype", value: tcpType);
+                    el.attribute("type", newValue: type?.rawValue);
+                    el.attribute("tcptype", newValue: tcpType);
                     return el;
                 }
                 
@@ -435,9 +428,7 @@ extension Jingle {
                     return nil;
                 }
                 
-                self.init(candidates: el.mapChildren(transform: { (child) -> Candidate? in
-                    return Candidate(from: child);
-                }));
+                self.init(candidates: el.compactMapChildren(Candidate.init(from:)));
             }
             
             public init(candidates: [Candidate]) {
@@ -461,11 +452,11 @@ extension Jingle {
                 public let type: CandidateType?;
                 
                 public convenience init?(from el: Element) {
-                    guard el.name == "candidate", let component = UInt8(el.getAttribute("component") ?? ""), let generation = UInt8(el.getAttribute("generation") ?? ""), let id = el.getAttribute("id"), let ip = el.getAttribute("ip"), let port = UInt16(el.getAttribute("port") ?? "") else {
+                    guard el.name == "candidate", let component = UInt8(el.attribute("component") ?? ""), let generation = UInt8(el.attribute("generation") ?? ""), let id = el.attribute("id"), let ip = el.attribute("ip"), let port = UInt16(el.attribute("port") ?? "") else {
                         return nil;
                     }
                     
-                    let type = CandidateType(rawValue: el.getAttribute("type") ?? "");
+                    let type = CandidateType(rawValue: el.attribute("type") ?? "");
                     self.init(component: component, generation: generation, id: id, ip: ip, port: port, type: type);
                 }
                 
@@ -481,12 +472,12 @@ extension Jingle {
                 public func toElement() -> Element {
                     let el = Element(name: "candidate");
                     
-                    el.setAttribute("component", value: String(component));
-                    el.setAttribute("generation", value: String(generation));
-                    el.setAttribute("id", value: id);
-                    el.setAttribute("ip", value: ip);
-                    el.setAttribute("port", value: String(port));
-                    el.setAttribute("type", value: type?.rawValue);
+                    el.attribute("component", newValue: String(component));
+                    el.attribute("generation", newValue: String(generation));
+                    el.attribute("id", newValue: id);
+                    el.attribute("ip", newValue: ip);
+                    el.attribute("port", newValue: String(port));
+                    el.attribute("type", newValue: type?.rawValue);
                     
                     return el;
                 }
@@ -522,22 +513,18 @@ extension Jingle {
                 guard el.name == "description" && el.xmlns == "urn:xmpp:jingle:apps:rtp:1" else {
                     return nil;
                 }
-                guard let media = el.getAttribute("media") else {
+                guard let media = el.attribute("media") else {
                     return nil;
                 }
                 
-                let payloads = el.mapChildren(transform: { e1 in return Payload(from: e1) });
-                let encryption: [Encryption] = Jingle.supportCryptoAttribute ? (el.findChild(name: "encryption")?.mapChildren(transform: { e1 in return Encryption(from: e1) }) ?? []) : [];
+                let payloads = el.compactMapChildren(Payload.init(from:));
+                let encryption: [Encryption] = Jingle.supportCryptoAttribute ? (el.firstChild(name: "encryption")?.compactMapChildren(Encryption.init(from:)) ?? []) : [];
                 
-                let ssrcs = el.mapChildren(transform: { (source) -> SSRC? in
-                    return SSRC(from: source);
-                });
-                let ssrcGroups = el.mapChildren(transform: { (group) -> SSRCGroup? in
-                    return SSRCGroup(from: group);
-                });
-                let hdrExts = el.mapChildren(transform: { HdrExt(from: $0 )});
+                let ssrcs = el.compactMapChildren(SSRC.init(from:));
+                let ssrcGroups = el.compactMapChildren(SSRCGroup.init(from:));
+                let hdrExts = el.compactMapChildren(HdrExt.init(from:));
                 
-                self.init(media: media, ssrc: el.getAttribute("ssrc"), payloads: payloads, bandwidth: el.findChild(name: "bandwidth")?.getAttribute("type"), encryption: encryption, rtcpMux: el.findChild(name: "rtcp-mux") != nil, ssrcs: ssrcs, ssrcGroups: ssrcGroups, hdrExts: hdrExts);
+                self.init(media: media, ssrc: el.attribute("ssrc"), payloads: payloads, bandwidth: el.firstChild(name: "bandwidth")?.attribute("type"), encryption: encryption, rtcpMux: el.firstChild(name: "rtcp-mux") != nil, ssrcs: ssrcs, ssrcGroups: ssrcGroups, hdrExts: hdrExts);
             }
             
             public init(media: String, ssrc: String? = nil, payloads: [Payload], bandwidth: String? = nil, encryption: [Encryption] = [], rtcpMux: Bool = false, ssrcs: [SSRC], ssrcGroups: [SSRCGroup], hdrExts: [HdrExt]) {
@@ -554,8 +541,8 @@ extension Jingle {
             
             public func toElement() -> Element {
                 let el = Element(name: "description", xmlns: "urn:xmpp:jingle:apps:rtp:1");
-                el.setAttribute("media", value: media);
-                el.setAttribute("ssrc", value: ssrc);
+                el.attribute("media", newValue: media);
+                el.attribute("ssrc", newValue: ssrc);
                 
                 payloads.forEach { (payload) in
                     el.addChild(payload.toElement());
@@ -598,17 +585,13 @@ extension Jingle {
                 public let rtcpFeedbacks: [RtcpFeedback]?;
                 
                 public convenience init?(from el: Element) {
-                    guard el.name == "payload-type", let idStr = el.getAttribute("id"), let id = UInt8(idStr) else {
+                    guard el.name == "payload-type", let idStr = el.attribute("id"), let id = UInt8(idStr) else {
                         return nil;
                     }
-                    let parameters = el.mapChildren(transform: { (el) -> Parameter? in
-                        return Parameter(from: el);
-                    });
-                    let rtcpFb = el.mapChildren(transform: { (el) -> RtcpFeedback? in
-                        return RtcpFeedback(from: el);
-                    });
-                    let channels = Int(el.getAttribute("channels") ?? "") ?? 1;
-                    self.init(id: id, name: el.getAttribute("name"), clockrate: UInt(el.getAttribute("clockrate") ?? ""), channels: channels, ptime: UInt(el.getAttribute("ptime") ?? ""), maxptime: UInt(el.getAttribute("maxptime") ?? ""), parameters: parameters, rtcpFeedbacks: rtcpFb);
+                    let parameters = el.compactMapChildren(Parameter.init(from:));
+                    let rtcpFb = el.compactMapChildren(RtcpFeedback.init(from:));
+                    let channels = Int(el.attribute("channels") ?? "") ?? 1;
+                    self.init(id: id, name: el.attribute("name"), clockrate: UInt(el.attribute("clockrate") ?? ""), channels: channels, ptime: UInt(el.attribute("ptime") ?? ""), maxptime: UInt(el.attribute("maxptime") ?? ""), parameters: parameters, rtcpFeedbacks: rtcpFb);
                 }
                 
                 public init(id: UInt8, name: String? = nil, clockrate: UInt? = nil, channels: Int = 1, ptime: UInt? = nil, maxptime: UInt? = nil, parameters: [Parameter]?, rtcpFeedbacks: [RtcpFeedback]?) {
@@ -625,22 +608,22 @@ extension Jingle {
                 public func toElement() -> Element {
                     let el = Element(name: "payload-type");
                     
-                    el.setAttribute("id", value: String(id));
+                    el.attribute("id", newValue: String(id));
                     if channels != 1 {
-                        el.setAttribute("channels", value: String(channels));
+                        el.attribute("channels", newValue: String(channels));
                     }
                     
-                    el.setAttribute("name", value: name);
+                    el.attribute("name", newValue: name);
                     
                     if let clockrate = self.clockrate {
-                        el.setAttribute("clockrate", value: String(clockrate));
+                        el.attribute("clockrate", newValue: String(clockrate));
                     }
                     
                     if let ptime = self.ptime {
-                        el.setAttribute("ptime", value: String(ptime));
+                        el.attribute("ptime", newValue: String(ptime));
                     }
                     if let maxptime = self.maxptime {
-                        el.setAttribute("maxptime", value: String(maxptime));
+                        el.attribute("maxptime", newValue: String(maxptime));
                     }
                     
                     parameters?.forEach { param in
@@ -649,7 +632,7 @@ extension Jingle {
                     rtcpFeedbacks?.forEach({ (rtcpFb) in
                         let rtcpFbEl = rtcpFb.toElement();
                         // workaround for Movim!
-                        rtcpFbEl.setAttribute("id", value: String(id));
+                        rtcpFbEl.attribute("id", newValue: String(id));
                         el.addChild(rtcpFbEl);
                     })
                     
@@ -662,7 +645,7 @@ extension Jingle {
                     public let value: String;
                     
                     public convenience init?(from el: Element) {
-                        guard el.name == "parameter" &&  (el.xmlns == "urn:xmpp:jingle:apps:rtp:1" || el.xmlns == nil), let name = el.getAttribute("name"), let value = el.getAttribute("value") else {
+                        guard el.name == "parameter" &&  (el.xmlns == "urn:xmpp:jingle:apps:rtp:1" || el.xmlns == nil), let name = el.attribute("name"), let value = el.attribute("value") else {
                             return nil;
                         }
                         self.init(name: name, value: value);
@@ -684,10 +667,10 @@ extension Jingle {
                     public let subtype: String?;
                     
                     public convenience init?(from el: Element) {
-                        guard el.name == "rtcp-fb" && el.xmlns == "urn:xmpp:jingle:apps:rtp:rtcp-fb:0", let type = el.getAttribute("type") else {
+                        guard el.name == "rtcp-fb" && el.xmlns == "urn:xmpp:jingle:apps:rtp:rtcp-fb:0", let type = el.attribute("type") else {
                             return nil;
                         }
-                        self.init(type: type, subtype: el.getAttribute("subtype"));
+                        self.init(type: type, subtype: el.attribute("subtype"));
                     }
                     
                     public init(type: String, subtype: String? = nil) {
@@ -697,8 +680,8 @@ extension Jingle {
                     
                     public func toElement() -> Element {
                         let el = Element(name: "rtcp-fb", xmlns: "urn:xmpp:jingle:apps:rtp:rtcp-fb:0");
-                        el.setAttribute("type", value: type);
-                        el.setAttribute("subtype", value: subtype);
+                        el.attribute("type", newValue: type);
+                        el.attribute("subtype", newValue: subtype);
                         return el;
                     }
                 }
@@ -712,11 +695,11 @@ extension Jingle {
                 public let tag: String;
                 
                 public convenience init?(from el: Element) {
-                    guard let cryptoSuite = el.getAttribute("crypto-suite"), let keyParams = el.getAttribute("key-params"), let tag = el.getAttribute("tag") else {
+                    guard let cryptoSuite = el.attribute("crypto-suite"), let keyParams = el.attribute("key-params"), let tag = el.attribute("tag") else {
                         return nil;
                     }
                     
-                    self.init(cryptoSuite: cryptoSuite, keyParams: keyParams, tag: tag, sessionParams: el.getAttribute("session-params"));
+                    self.init(cryptoSuite: cryptoSuite, keyParams: keyParams, tag: tag, sessionParams: el.attribute("session-params"));
                 }
                 
                 public init(cryptoSuite: String, keyParams: String, tag: String, sessionParams: String? = nil) {
@@ -728,10 +711,10 @@ extension Jingle {
                 
                 public func toElement() -> Element {
                     let el = Element(name: "crypto");
-                    el.setAttribute("crypto-suite", value: cryptoSuite);
-                    el.setAttribute("key-params", value: keyParams);
-                    el.setAttribute("session-params", value: sessionParams);
-                    el.setAttribute("tag", value: tag);
+                    el.attribute("crypto-suite", newValue: cryptoSuite);
+                    el.attribute("key-params", newValue: keyParams);
+                    el.attribute("session-params", newValue: sessionParams);
+                    el.attribute("tag", newValue: tag);
                     return el;
                 }
                 
@@ -744,10 +727,10 @@ extension Jingle {
                 public let senders: Senders;
                 
                 public convenience init?(from el: Element) {
-                    guard el.name == "rtp-hdrext" && el.xmlns == "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0", let id = el.getAttribute("id"), let uri = el.getAttribute("uri") else {
+                    guard el.name == "rtp-hdrext" && el.xmlns == "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0", let id = el.attribute("id"), let uri = el.attribute("uri") else {
                         return nil;
                     }
-                    let senders = Senders(rawValue: el.getAttribute("senders") ?? "") ?? .both;
+                    let senders = Senders(rawValue: el.attribute("senders") ?? "") ?? .both;
                     guard senders == .both else {
                         return nil;
                     }
@@ -762,15 +745,15 @@ extension Jingle {
                 
                 public func toElement() -> Element {
                     let el = Element(name: "rtp-hdrext", xmlns: "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0");
-                    el.setAttribute("id", value: id);
-                    el.setAttribute("uri", value: uri);
+                    el.attribute("id", newValue: id);
+                    el.attribute("uri", newValue: uri);
                     switch senders {
                     case .both:
                         break;
                     case .initiator:
-                        el.setAttribute("senders", value: "initiator");
+                        el.attribute("senders", newValue: "initiator");
                     case .responder:
-                        el.setAttribute("senders", value: "responder");
+                        el.attribute("senders", newValue: "responder");
                     }
                     return el;
                 }
@@ -787,13 +770,11 @@ extension Jingle {
                 public let sources: [String];
                 
                 public convenience init?(from el: Element) {
-                    guard el.name == "ssrc-group", el.xmlns == "urn:xmpp:jingle:apps:rtp:ssma:0", let semantics = el.getAttribute("semantics") else {
+                    guard el.name == "ssrc-group", el.xmlns == "urn:xmpp:jingle:apps:rtp:ssma:0", let semantics = el.attribute("semantics") else {
                         return nil;
                     }
                     
-                    let sources = el.mapChildren(transform: { (s) -> String? in
-                        return s.name == "source" ? s.getAttribute("ssrc") : nil;
-                    });
+                    let sources = el.filterChildren(name: "source").compactMap({ $0.attribute("ssrc") });
                     guard !sources.isEmpty else {
                         return nil;
                     }
@@ -807,10 +788,10 @@ extension Jingle {
                 
                 public func toElement() -> Element {
                     let el = Element(name: "ssrc-group", xmlns: "urn:xmpp:jingle:apps:rtp:ssma:0");
-                    el.setAttribute("semantics", value: semantics);
-                    sources.forEach { (source) in
+                    el.attribute("semantics", newValue: semantics);
+                    for source in sources {
                         let sel = Element(name: "source");
-                        sel.setAttribute("ssrc", value: source);
+                        sel.attribute("ssrc", newValue: source);
                         el.addChild(sel);
                     }
                     return el;
@@ -823,15 +804,15 @@ extension Jingle {
                 public let parameters: [Parameter];
                 
                 public init?(from el: Element) {
-                    guard el.name == "source" && el.xmlns == "urn:xmpp:jingle:apps:rtp:ssma:0", let ssrc = el.getAttribute("ssrc") ?? el.getAttribute("id") else {
+                    guard el.name == "source" && el.xmlns == "urn:xmpp:jingle:apps:rtp:ssma:0", let ssrc = el.attribute("ssrc") ?? el.attribute("id") else {
                         return nil;
                     }
                     self.ssrc = ssrc;
-                    self.parameters = el.mapChildren(transform: { (p) -> Parameter? in
-                        guard p.name == "parameter", let key = p.getAttribute("name") else {
+                    self.parameters = el.filterChildren(name: "parameter").compactMap({ p -> Parameter? in
+                        guard let key = p.attribute("name") else {
                             return nil;
                         }
-                        return Parameter(key: key, value: p.getAttribute("value"));
+                        return Parameter(key: key, value: p.attribute("value"));
                     });
                 }
                 
@@ -842,13 +823,13 @@ extension Jingle {
                 
                 public func toElement() -> Element {
                     let el = Element(name: "source", xmlns: "urn:xmpp:jingle:apps:rtp:ssma:0");
-                    el.setAttribute("ssrc", value: ssrc);
-                    el.setAttribute("id", value: ssrc);
-                    parameters.forEach { (param) in
+                    el.attribute("ssrc", newValue: ssrc);
+                    el.attribute("id", newValue: ssrc);
+                    for param in parameters {
                         let p = Element(name: "parameter");
-                        p.setAttribute("name", value: param.key);
+                        p.attribute("name", newValue: param.key);
                         if param.value != nil {
-                            p.setAttribute("value", value: param.value);
+                            p.attribute("value", newValue: param.value);
                         }
                         el.addChild(p);
                     }

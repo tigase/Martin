@@ -21,6 +21,7 @@
 
 import Foundation
 
+// check if this could not be a struct
 open class PubSubAffiliationItem: Equatable {
     public static func == (lhs: PubSubAffiliationItem, rhs: PubSubAffiliationItem) -> Bool {
         return lhs.affiliation == rhs.affiliation && lhs.jid == rhs.jid && lhs.node == rhs.node;
@@ -32,14 +33,14 @@ open class PubSubAffiliationItem: Equatable {
     public let node: String;
     
     public convenience init?(from element: Element?, jid: JID) {
-        guard let el = element, el.name == "affiliation", let node = el.getAttribute("node"), let aff = PubSubAffiliation(rawValue: el.getAttribute("affiliation") ?? "") else {
+        guard let el = element, el.name == "affiliation", let node = el.attribute("node"), let aff = PubSubAffiliation(rawValue: el.attribute("affiliation") ?? "") else {
             return nil;
         }
         self.init(affiliation: aff, jid: jid, node: node);
     }
     
     public convenience init?(from element: Element?, node: String) {
-        guard let el = element, el.name == "affiliation", let jid = JID(el.getAttribute("jid")), let aff = PubSubAffiliation(rawValue: el.getAttribute("affiliation") ?? "") else {
+        guard let el = element, el.name == "affiliation", let jid = JID(el.attribute("jid")), let aff = PubSubAffiliation(rawValue: el.attribute("affiliation") ?? "") else {
             return nil;
         }
         self.init(affiliation: aff, jid: jid, node: node);
@@ -53,9 +54,9 @@ open class PubSubAffiliationItem: Equatable {
     
     public func element() -> Element {
         let elem = Element(name: "affiliation");
-        elem.setAttribute("jid", value: jid.stringValue);
-        elem.setAttribute("node", value: node);
-        elem.setAttribute("affiliation", value: affiliation.rawValue);
+        elem.attribute("jid", newValue: jid.description);
+        elem.attribute("node", newValue: node);
+        elem.attribute("affiliation", newValue: affiliation.rawValue);
         return elem;
     }
 }

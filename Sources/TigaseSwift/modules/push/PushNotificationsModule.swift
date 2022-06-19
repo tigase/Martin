@@ -86,13 +86,13 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         guard let context = context else {
             return;
         }
-        guard let from = stanza.from, let pubsubEl = stanza.findChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS) else {
+        guard let from = stanza.from, let pubsubEl = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS) else {
             return;
         }
-        guard let affiliationEl = pubsubEl.findChild(name: "affiliation"), let node = pubsubEl.getAttribute("node") else {
+        guard let affiliationEl = pubsubEl.firstChild(name: "affiliation"), let node = pubsubEl.attribute("node") else {
             return;
         }
-        guard let jid = BareJID(affiliationEl.getAttribute("jid")), let affiliation = affiliationEl.getAttribute("affiliation") else {
+        guard let jid = BareJID(affiliationEl.attribute("jid")), let affiliation = affiliationEl.attribute("affiliation") else {
             return;
         }
         guard jid == context.userBareJid && affiliation == "none" else {
@@ -106,8 +106,8 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         let iq = Iq();
         iq.type = StanzaType.set;
         let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
-        enable.setAttribute("jid", value: serviceJid.stringValue);
-        enable.setAttribute("node", value: node);
+        enable.attribute("jid", newValue: serviceJid.description);
+        enable.attribute("node", newValue: node);
         for ext in extensions {
             ext.apply(to: enable);
         }
@@ -122,8 +122,8 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         let iq = Iq();
         iq.type = StanzaType.set;
         let disable = Element(name: "disable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
-        disable.setAttribute("jid", value: serviceJid.stringValue);
-        disable.setAttribute("node", value: node);
+        disable.attribute("jid", newValue: serviceJid.description);
+        disable.attribute("node", newValue: node);
         iq.addChild(disable);
         
         write(iq, completionHandler: completionHandler);

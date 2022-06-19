@@ -122,12 +122,12 @@ extension Message {
     
     open var messageDelivery: MessageDeliveryReceiptEnum? {
         get {
-            if let el = element.findChild(xmlns: MessageDeliveryReceiptsModule.XMLNS) {
+            if let el = element.firstChild(xmlns: MessageDeliveryReceiptsModule.XMLNS) {
                 switch el.name {
                 case "request":
                     return MessageDeliveryReceiptEnum.request;
                 case "received":
-                    if let id = el.getAttribute("id") {
+                    if let id = el.attribute("id") {
                         return MessageDeliveryReceiptEnum.received(id: id);
                     }
                 default:
@@ -137,7 +137,7 @@ extension Message {
             return nil;
         }
         set {
-            element.getChildren(xmlns: MessageDeliveryReceiptsModule.XMLNS).forEach { (el) in
+            for el in element.filterChildren(xmlns: MessageDeliveryReceiptsModule.XMLNS) {
                 element.removeChild(el);
             }
             if newValue != nil {
@@ -149,7 +149,7 @@ extension Message {
                     element.addChild(Element(name: "request", xmlns: MessageDeliveryReceiptsModule.XMLNS));
                 case .received(let id):
                     let el = Element(name: "received", xmlns: MessageDeliveryReceiptsModule.XMLNS);
-                    el.setAttribute("id", value: id);
+                    el.attribute("id", newValue: id);
                     element.addChild(el);
                 }
             }
