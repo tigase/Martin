@@ -68,7 +68,7 @@ public enum Node: CustomStringConvertible, Equatable {
 /**
  Class representing parsed XML element
  */
-open class Element : CustomStringConvertible, CustomDebugStringConvertible, ElementProtocol {
+public final class Element : CustomStringConvertible, CustomDebugStringConvertible, ElementProtocol {
     /// Element name
     public let name:String
     var _defxmlns:String?
@@ -77,7 +77,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
     private var _lock = os_unfair_lock();
     
     /// XMLNS of element
-    open var xmlns:String? {
+    public var xmlns:String? {
         get {
             return withLock({
                 return _attributes["xmlns"] ?? _defxmlns;
@@ -111,7 +111,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
         });
     }
         
-    open var description: String {
+    public var description: String {
         return withLock({
             var result = "<\(self.name)"
             for (k,v) in _attributes {
@@ -131,32 +131,32 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
         })
     }
     
-    open var debugDescription: String {
+    public var debugDescription: String {
         return prettyString(secure: true);
     }
     
     /// Attributes of XML element
-    open var attributes: [String:String] {
+    public var attributes: [String:String] {
         withLock({
             return self._attributes;
         })
     }
     
-    open var children: [Element] {
+    public var children: [Element] {
         return withLock({
             return _children;
         })
     }
     
     /// Check if element contains subelements
-    open var hasChildren:Bool {
+    public var hasChildren:Bool {
         return withLock({
             return !_nodes.isEmpty && !_children.isEmpty;
         })
     }
     
     /// Value of cdata of this element
-    open var value:String? {
+    public var value:String? {
         get {
             withLock({ () -> String? in
                 let cdata: [String] = _nodes.compactMap({ node in
@@ -176,10 +176,6 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
                 }
             })
         }
-    }
-    
-    open var stringValue: String {
-        return description;
     }
         
     public convenience init(name: String, xmlns: String? = nil, children: [Element]) {
@@ -244,7 +240,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      Add subelement
      - parameter child: element to add as subelement
      */
-    open func addChild(_ child: Element) {
+    public func addChild(_ child: Element) {
         self.addNode(.element(child));
     }
     
@@ -252,13 +248,13 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      Add subelements
      - parameter children: array of elements to add as subelements
      */
-    open func addChildren(_ children: [Element]) {
+    public func addChildren(_ children: [Element]) {
         withLock({
             self._nodes.append(contentsOf: children.map({ .element($0) }));
         })
     }
     
-    open func addNode(_ child: Node) {
+    public func addNode(_ child: Node) {
         withLock({
             self._nodes.append(child)
         })
@@ -269,7 +265,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      - parameter where: element matcher
      - returns: first element which matches
      */
-    open func firstChild(where body: (Element)->Bool) -> Element? {
+    public func firstChild(where body: (Element)->Bool) -> Element? {
         return children.first(where: body);
     }
     
@@ -278,7 +274,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      - parameter where: matcher closure
      - returns: array of matching elements
      */
-    open func filterChildren(where body: (Element)->Bool) -> Array<Element> {
+    public func filterChildren(where body: (Element)->Bool) -> Array<Element> {
         withLock({
             return _children.filter(body);
         })
@@ -289,7 +285,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      - parameter key: attribute name
      - returns: value for attribute
      */
-    open func attribute(_ key: String) -> String? {
+    public func attribute(_ key: String) -> String? {
         return withLock({
             return _attributes[key];
         })
@@ -300,7 +296,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      - parameter key: attribute to set
      - parameter newValue: value to set
      */
-    open func attribute(_ key: String, newValue: String?) {
+    public func attribute(_ key: String, newValue: String?) {
         if let value = newValue {
             withLock({
                 _ = self._attributes[key] = value;
@@ -310,7 +306,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
         }
     }
     
-    open func removeAttribute(_ key: String) {
+    public func removeAttribute(_ key: String) {
         withLock({
             _ = self._attributes.removeValue(forKey: key);
         })
@@ -322,7 +318,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      **WARNING:** only the same instance of Element will be removed!
      - parameter child: element to remove
      */
-    open func removeChild(_ child: Element) {
+    public func removeChild(_ child: Element) {
         return withLock({
             self._nodes.removeAll(where: { node in
                 guard case let .element(el) = node else {
@@ -337,7 +333,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
      Remove mathing elements from child elements
      - parameter where: matcher closure
      */
-    open func removeChildren(where body: (Element)->Bool) {
+    public func removeChildren(where body: (Element)->Bool) {
         return withLock({
             self._nodes.removeAll(where: { node in
                 guard case let .element(el) = node else {
@@ -351,7 +347,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
     /**
      Removes node from children
      */
-    open func removeNode(_ child: Node) {
+    public func removeNode(_ child: Node) {
         return withLock({
             self._nodes.removeAll(where: { $0 == child })
         })
@@ -363,7 +359,7 @@ open class Element : CustomStringConvertible, CustomDebugStringConvertible, Elem
         })
     }
     
-    open func prettyString(secure: Bool) -> String {
+    public func prettyString(secure: Bool) -> String {
         withLock({
             var result = "<\(self.name)"
             for (k,v) in _attributes {
@@ -434,7 +430,7 @@ extension Element {
     }
     
     @available(*, deprecated, renamed: "firstChild")
-    open func findChild(name: String? = nil, xmlns: String? = nil) -> Element? {
+    public func findChild(name: String? = nil, xmlns: String? = nil) -> Element? {
         guard let name = name else {
             guard let xmlns = xmlns else {
                 return firstChild();
@@ -445,12 +441,12 @@ extension Element {
     }
 
     @available(*, deprecated, renamed: "firstChild")
-    open func findChild(where body: (Element)->Bool) -> Element? {
+    public func findChild(where body: (Element)->Bool) -> Element? {
         return firstChild(where: body);
     }
     
     @available(*, deprecated, message: "Removed, use children.first")
-    open func firstChild() -> Element? {
+    public func firstChild() -> Element? {
         return children.first;
     }
     
@@ -461,7 +457,7 @@ extension Element {
      - parameter fn: closure to execute
      */
     @available(*, deprecated, message: "Method removed, use children.filter(where:).map(_:)")
-    open func forEachChild(name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
+    public func forEachChild(name:String? = nil, xmlns:String? = nil, fn: (Element)->Void) {
         if let name = name {
             filterChildren(name: name, xmlns: xmlns).forEach(fn);
         } else if let xmlns = xmlns {
@@ -483,7 +479,7 @@ extension Element {
      - returns: array of objects returned by transformation closure
      */
     @available(*, deprecated, message: "Method removed, use children.filter(where:).compactMap(_:)")
-    open func mapChildren<U>(transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
+    public func mapChildren<U>(transform: (Element) -> U?, filter: ((Element) -> Bool)? = nil) -> [U] {
         var tmp = children;
         if filter != nil {
             tmp = tmp.filter({ e -> Bool in
@@ -503,12 +499,12 @@ extension Element {
      Finds first index at which this child is found (comparison by reference).
      */
     @available(*, deprecated, message: "Method removed")
-    open func firstIndex(ofChild child: Element) -> Int? {
+    public func firstIndex(ofChild child: Element) -> Int? {
         return children.firstIndex(where: { $0 === child });
     }
     
     @available(*, deprecated, renamed: "filterChildren")
-    open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+    public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         guard let name = name else {
             return children.filter({ xmlns == nil || $0.xmlns == xmlns });
         }
@@ -522,12 +518,12 @@ extension Element {
      - returns: array of matching elements
      */
     @available(*, deprecated, message: "Method removed, use children.filter(where:)")
-    open func getChildren(where body: (Element)->Bool) -> Array<Element> {
+    public func getChildren(where body: (Element)->Bool) -> Array<Element> {
         return children;
     }
     
     @available(*, deprecated, renamed: "attribute(_:)")
-    open func getAttribute(_ key:String) -> String? {
+    public func getAttribute(_ key:String) -> String? {
         return withLock({
             return _attributes[key];
         })
@@ -539,7 +535,7 @@ extension Element {
      - parameter value: value to set
      */
     @available(*, deprecated, renamed: "attribute(_:newValue:)")
-    open func setAttribute(_ key:String, value:String?) {
+    public func setAttribute(_ key:String, value:String?) {
         withLock({
             if (value == nil) {
                 _attributes.removeValue(forKey: key);
