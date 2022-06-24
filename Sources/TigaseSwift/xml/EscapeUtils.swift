@@ -24,9 +24,9 @@ import Foundation
 /**
  Helper class for escaping/unescaping XML entries
  */
-open class EscapeUtils {
+public struct EscapeUtils {
     
-    fileprivate static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"], ["'", "&apos;", "&#39;"] ];
+    private static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"], ["'", "&apos;", "&#39;"] ];
     
     /**
      Unescape string

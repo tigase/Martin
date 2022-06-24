@@ -86,6 +86,10 @@ public protocol ElementProtocol: CustomStringConvertible, CustomDebugStringConve
 
 extension ElementProtocol {
     
+    public func hasChild(where body: (Element)->Bool) -> Bool {
+        return firstChild(where: body) != nil;
+    }
+    
     public func hasChild(name: String, xmlns: String? = nil) -> Bool {
         return firstChild(name: name, xmlns: xmlns) != nil;
     }

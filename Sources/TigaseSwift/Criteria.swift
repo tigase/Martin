@@ -22,175 +22,177 @@
 import Foundation
 
 /**
- Instance of this class are used to build `Element` matching mechanism which is used 
+ This enum is used to build `Element` matching mechanism which is used
  ie. by `XmppModulesManager` to select `XmppModule` instances which should process 
  particular element.
  */
-open class Criteria {
+public enum Criteria: CustomDebugStringConvertible {
+    /// Always returns flase
+    case `false`
+    /**
+     Check that all conditions are met
+     - parameter predicates: Conditions to check
+     */
+    case and([Criteria])
+    /**
+     Check that at least 1 condition is met
+     - parameter predicates: Conditions to check
+     */
+    case or([Criteria])
+    /**
+     Check if element name matches passed value
+     - parameter value: Element name
+     */
+    case name(String)
+    /**
+     Check if element XMLNS matches passed value
+     - parameter xmlns: Element XMLNS
+     */
+    case xmlns(String)
+    /**
+     Check if stanza types matches passed value
+     - parameter stanzaType: Value to compare
+     */
+    case stanzaType(StanzaType?)
+    /**
+     Check if element has attribute
+     - parameter name: Name of the attribute
+     */
+    case hasAttribute(String)
+    /**
+     Check if any child matches
+     - parameter criteria: Condition to check
+     */
+    indirect case then(Criteria)
     
-    /// Creates empty criteria - will never match
-    public static func empty() -> Criteria {
-        return Criteria(defValue:false);
+    public var debugDescription: String {
+        switch self {
+        case .false:
+            return "false"
+        case .and(let predicates):
+            return "(\(predicates.map({ "\($0.debugDescription)" }).joined(separator: " and ")))";
+        case .or(let predicates):
+            return "(\(predicates.map({ "\($0.debugDescription)" }).joined(separator: " or ")))";
+        case .name(let name):
+            return "name=\(name)";
+        case .xmlns(let xmlns):
+            return "xmlns=\(xmlns)";
+        case .stanzaType(let type):
+            return "stanzaType=\(type?.rawValue ?? "nil")";
+        case .hasAttribute(let name):
+            return "hasAttribute(\(name))"
+        case .then(let criteria):
+            return "child(\(criteria.debugDescription))";
+        }
     }
     
-    /// Creates criteria which will match if any of passed criterias will match
-    public static func or(_ criteria: Criteria...) -> Criteria {
-        return OrImpl(criteria: criteria);
+    public func match(_ elem: Element) -> Bool {
+        switch self {
+        case .false:
+            return false;
+        case .and(let array):
+            return array.allSatisfy({ $0.match(elem) })
+        case .or(let array):
+            return array.contains(where: { $0.match(elem) })
+        case .name(let name):
+            return elem.name == name;
+        case .xmlns(let xmlns):
+            return elem.xmlns == xmlns;
+        case .stanzaType(let type):
+            return elem.attribute("type") == type?.rawValue;
+        case .hasAttribute(let name):
+            return elem.attribute(name) != nil;
+        case .then(let criteria):
+            return elem.hasChild(where: criteria.match(_:));
+        }
+    }
+}
+
+
+// Helper functions for criteria
+extension Criteria {
+    
+    public static func empty() -> Criteria {
+        return .false;
     }
     
     /**
-     Creates criteria which will match element if every passed attribute matches with 
-     element. If parameter is nil then it will always match.
-     - parameter name: name of element
-     - parameter xmlns: xmlns of element
-     - parameter types: list of allowed values for `type` attribute
-     - parameter containsAttribute: checks if passed attribute is set
+      Check that all conditions are met
+     - parameter predicates: Conditions to check
      */
-    public static func name(_ name: String, xmlns: String? = nil, types:[String?]? = nil, containsAttribute: String? = nil) -> Criteria {
-        return ElementCriteria(name: name, xmlns: xmlns, types: types, attributes: nil, containsAttribute: containsAttribute);
+    public static func and(_ predicates: Criteria...) -> Criteria {
+        return .and(predicates);
     }
 
     /**
-     Creates criteria which will match element if every passed attribute matches with
-     element. If parameter is nil then it will always match.
-     - parameter name: name of element
-     - parameter xmlns: xmlns of element
-     - parameter types: list of allowed values for `type` attribute
-     - parameter containsAttribute: checks if passed attribute is set
+      Check that at least on of conditions is met
+     - parameter predicates: Conditions to check
      */
-    public static func name(_ name: String, xmlns: String? = nil, types:[StanzaType?], containsAttribute: String? = nil) -> Criteria {
-        let typesStr = types.map { (type) -> String? in
-            return type?.rawValue;
+    public static func or(_ predicates: Criteria...) -> Criteria {
+        return .or(predicates);
+    }
+
+    /**
+      Create condition matching passed parameters
+     - parameter name: Element name
+     - parameter xmlns: Element XMLNS
+     - parameter types: List of accepted stanza types
+     - parameter containsAttributes: Name of attribute which element has to contain
+     */
+    public static func name(_ name: String, xmlns: String, types:[StanzaType?] = [], containsAttribute: String? = nil) -> Criteria {
+        var predicates: [Criteria] = [.name(name), .xmlns(xmlns)];
+        
+        if !types.isEmpty {
+            predicates.append(.or(types.map({ .stanzaType($0) })));
         }
-        return ElementCriteria(name: name, xmlns: xmlns, types: typesStr, attributes: nil, containsAttribute: containsAttribute);
+        
+        if let attribute = containsAttribute {
+            predicates.append(.hasAttribute(attribute));
+        }
+        
+        if predicates.count == 1 {
+            return predicates[0];
+        }
+        return .and(predicates);
     }
     
     /**
-     Creates criteria which will match element if every passed attribute matches with
-     element. If parameter is nil then it will always match.
-     - parameter name: name of element
-     - parameter attributes: dictionary of attributes and values which needs to match
+      Create condition matching passed parameters
+     - parameter name: Element name
+     - parameter types: List of accepted stanza types
+     - parameter containsAttributes: Name of attribute which element has to contain
      */
-    public static func name(_ name:String?, attributes:[String:String]) -> Criteria {
-        return ElementCriteria(name: name, attributes: attributes);
+    public static func name(_ name: String, types:[StanzaType?], containsAttribute: String? = nil) -> Criteria {
+        var predicates: [Criteria] = [.name(name), .or(types.map({ .stanzaType($0) }))];
+        if let attribute = containsAttribute {
+            predicates.append(.hasAttribute(attribute));
+        }
+        return .and(predicates);
     }
     
     /**
-     Creates criteria which will match element if every passed attribute matches with
-     element. If parameter is nil then it will always match.
-     - parameter xmlns: xmlns of element
-     - parameter containsAttribute: checks if passed attribute is set
+      Create condition matching passed parameters
+     - parameter name: Element name
+     - parameter containsAttributes: Name of attribute which element has to contain
      */
-    public static func xmlns(_ xmlns:String, containsAttribute: String? = nil) -> Criteria {
-        return ElementCriteria(xmlns: xmlns, attributes: nil, containsAttribute: containsAttribute);
+    public static func name(_ name: String, containsAttribute: String) -> Criteria {
+        return .and([.name(name), .hasAttribute(containsAttribute)]);
     }
     
-    fileprivate var nextCriteria:Criteria?;
-    
-    fileprivate let defValue:Bool;
-    
-    fileprivate init() {
-        defValue = true;
+    /**
+      Create condition checking child elements
+     - parameter criteria: Condition to check agaist children
+     */
+    public func then(_ criteria: Criteria) -> Criteria {
+        return .and([self, .then(criteria)]);
     }
-    
-    fileprivate init(defValue:Bool) {
-        self.defValue = defValue;
-    }
-    
+
     /**
      Added additional criterial to check on subelements
+     - parameter criteria: Condition to check agaist children
      */
-    open func add(_ crit:Criteria) -> Criteria {
-        if (nextCriteria == nil) {
-            nextCriteria = crit;
-        } else {
-            _ = nextCriteria?.add(crit);
-        }
-        return self;
+    public func add(_ criteria: Criteria) -> Criteria {
+        return .and([self, .then(criteria)]);
     }
     
-    /**
-     Checks if element matches (checks subelements if additional criteria are added)
-     - returns: true - if element matches
-     */
-    open func match(_ elem:Element) -> Bool {
-        if (nextCriteria == nil) {
-            return defValue;
-        }
-        var result = false;
-        for child in elem.children {
-            if (nextCriteria!.match(child)) {
-                result = true;
-                break;
-            }
-        }
-        return result;
-    }
-    
-    /// Internal implementation used to match elements
-    class ElementCriteria: Criteria {
-        
-        let name:String?;
-        let xmlns:String?;
-        let attributes:[String:String]?;
-        let types:[String?]?;
-        let containsAttribute: String?;
-        
-        init(name: String? = nil, xmlns: String? = nil, types:[String?]? = nil, attributes:[String:String]?, containsAttribute: String? = nil) {
-            self.name = name;
-            self.xmlns = xmlns;
-            self.types = types;
-            self.attributes = attributes;
-            self.containsAttribute = containsAttribute;
-            super.init();
-        }
-        
-        override func match(_ elem: Element) -> Bool {
-            var match = true;
-            if (name != nil) {
-                match = match && (name == elem.name);
-            }
-            if (xmlns != nil) {
-                match = match && (xmlns == elem.xmlns);
-            }
-            if (types != nil) {
-                let type = elem.attribute("type");
-                match = match && (types?.firstIndex(where: { (v: String?) -> Bool in
-                    return v == type;
-                }) != nil);
-            }
-            if (attributes != nil) {
-                for (k,v) in self.attributes! {
-                    match = match && (v == elem.attribute(k));
-                    if (!match) {
-                        return false;
-                    }
-                }
-            }
-            if (containsAttribute != nil) {
-                match = match && elem.attribute(containsAttribute!) != nil;
-            }
-            return match && super.match(elem);
-        }
-        
-    }
-    
-    /// Internal implementation used for 'or' matching
-    class OrImpl: Criteria {
-        let criteria:Array<Criteria>!;
-        
-        init(criteria:Array<Criteria>) {
-            self.criteria = criteria;
-            super.init(defValue: false);
-        }
-        
-        override func match(_ elem: Element) -> Bool {
-            for crit in self.criteria {
-                if (crit.match(elem)) {
-                    return true;
-                }
-            }
-            return super.match(elem);
-        }
-    }
 }

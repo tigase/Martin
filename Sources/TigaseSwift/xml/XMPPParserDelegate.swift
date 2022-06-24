@@ -40,10 +40,10 @@ public enum XMPPParserEvent {
  */
 open class XMPPParserDelegate: XMLParserDelegate {
     
-    var xmlnss = [String:String]();
-    open weak var delegate:XMPPParserDelegateDelegate?;
-    var el_stack = [Element]()
-    var all_roots = [Element]()
+    private var xmlnss = [String:String]();
+    open weak var delegate: XMPPParserDelegateDelegate?;
+    private var el_stack = [Element]()
+    private var all_roots = [Element]()
     
     public var parsed: [Element] {
         return all_roots;
