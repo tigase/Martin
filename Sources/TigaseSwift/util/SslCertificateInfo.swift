@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 open class SslCertificateInfo: NSObject, NSCoding {
     
@@ -28,7 +29,7 @@ open class SslCertificateInfo: NSObject, NSCoding {
     
     public static func calculateSha1Fingerprint(certificate: SecCertificate) -> String? {
         let data = SecCertificateCopyData(certificate) as Data;
-        return Digest.sha1.digest(toHex: data);
+        return Insecure.SHA1.hash(toHex: data);
     }
     
     public required init?(coder aDecoder: NSCoder) {

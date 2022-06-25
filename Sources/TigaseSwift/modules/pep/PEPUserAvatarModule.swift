@@ -21,6 +21,7 @@
 
 import Foundation
 import Combine
+import CryptoKit
 
 extension XmppModuleIdentifier {
     public static var pepUserAvatar: XmppModuleIdentifier<PEPUserAvatarModule> {
@@ -71,7 +72,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         
         public init(data: Data, mimeType: String, width: Int? = nil, height: Int? = nil) {
             self.data = data;
-            self.info = Info(id: Digest.sha1.digest(toHex: data)!, size: data.count, mimeType: mimeType, height: height, width: width);
+            self.info = Info(id: Insecure.SHA1.hash(toHex: data), size: data.count, mimeType: mimeType, height: height, width: width);
         }
         
         public init(id: String, url: String, size: Int, mimeType: String, width: Int? = nil, height: Int? = nil) {

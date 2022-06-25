@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 /**
  Protocol for a class providing implementation of a caching functionality for salted version
@@ -34,7 +35,7 @@ public protocol ScramSaltedPasswordCacheProtocol {
      - parameter for: instance of `Context`
      - parameter id: id of a salted password generated using `generateId()` method
      */
-    func getSaltedPassword(for: Context, id: String) -> [UInt8]?;
+    func getSaltedPassword(for: Context, id: String) -> Data?;
     
     /**
      Store salted version of a password for future usage
@@ -45,7 +46,7 @@ public protocol ScramSaltedPasswordCacheProtocol {
      - Node:
      This method should clear any other salted password values stored for passed instance of a `SessionObject`.
     */
-    func store(for: Context, id: String, saltedPassword: [UInt8]);
+    func store(for: Context, id: String, saltedPassword: Data);
     
     /**
      Clear all cached salted passwords for particular session object
@@ -57,9 +58,9 @@ public protocol ScramSaltedPasswordCacheProtocol {
 
 extension ScramSaltedPasswordCacheProtocol {
     
-    func generateId(algorithm: Digest, salt: Foundation.Data, iterations: Int) -> String {
+    func generateId(algorithm: ScramAlgorithm, salt: Foundation.Data, iterations: Int) -> String {
         let tmp = algorithm.name.data(using: .utf8)! + String(iterations).data(using: .utf8)! + salt;
-        return Digest.sha1.digest(toHex: tmp)!;
+        return Insecure.SHA1.hash(toHex: tmp);
     }
     
 }
@@ -74,7 +75,7 @@ open class DefaultScramSaltedPasswordCache: ScramSaltedPasswordCacheProtocol {
     public init() {
     }
     
-    public func getSaltedPassword(for context: Context, id: String) -> [UInt8]? {
+    public func getSaltedPassword(for context: Context, id: String) -> Data? {
         guard let entry = cache[context.userBareJid] else {
             return nil;
         }
@@ -85,7 +86,7 @@ open class DefaultScramSaltedPasswordCache: ScramSaltedPasswordCacheProtocol {
         return entry.saltedPassword;
     }
     
-    public func store(for context: Context, id: String, saltedPassword: [UInt8]) {
+    public func store(for context: Context, id: String, saltedPassword: Data) {
         cache[context.userBareJid] = Entry(id: id, saltedPassword: saltedPassword);
     }
     
@@ -95,9 +96,9 @@ open class DefaultScramSaltedPasswordCache: ScramSaltedPasswordCacheProtocol {
     
     class Entry {
         let id: String;
-        let saltedPassword: [UInt8];
+        let saltedPassword: Data;
         
-        init(id: String, saltedPassword: [UInt8]) {
+        init(id: String, saltedPassword: Data) {
             self.id = id;
             self.saltedPassword = saltedPassword;
         }

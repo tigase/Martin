@@ -158,20 +158,6 @@ open class SocketSessionLogic: XmppSessionLogic {
             }
         }).store(in: &socketSubscriptions);
     }
-    
-    deinit {
-        for subscription in socketSubscriptions {
-            subscription.cancel();
-        }
-        for subscription in moduleSubscriptions {
-            subscription.cancel();
-        }
-        self.queue.sync {
-            if state != .disconnected() {
-                state = .disconnected();
-            }
-        }
-    }
         
     open func bind() {
         context?.moduleOrNil(.auth)?.$state.receive(on: queue).sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }).store(in: &moduleSubscriptions);
@@ -205,6 +191,9 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
     
     open func unbind() {
+        for subscription in socketSubscriptions {
+            subscription.cancel();
+        }
         for subscription in moduleSubscriptions {
             subscription.cancel();
         }

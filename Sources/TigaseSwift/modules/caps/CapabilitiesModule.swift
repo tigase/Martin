@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import CryptoKit
 import TigaseLogging
 
 extension XmppModuleIdentifier {
@@ -199,18 +200,8 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
      - returns: verification string
      */
     func generateVerificationString(_ identities: [String], features availableFeatures: [String]) -> String? {
-        let features = availableFeatures.sorted();
-        var string: String = "";
-        
-        for identity in identities {
-            string += identity + "<";
-        }
-        
-        for feature in features {
-            string += feature + "<";
-        }
-        
-        return Digest.sha1.digest(toBase64: string.data(using: String.Encoding.utf8));
+        let string = (identities + availableFeatures.sorted()).joined(separator: "<");
+        return Insecure.SHA1.hash(toBase64: string, using: .utf8);
     }
         
     public enum FeatureSupported {
