@@ -275,3 +275,56 @@ protocol RosterAnnotationAwareProtocol {
     func process(rosterItemElem el: Element) -> RosterItemAnnotation?;
     
 }
+
+// async-await support
+extension RosterModule {
+    
+    open func requestRoster() async throws {
+        _ = try await withUnsafeThrowingContinuation { continuation in
+            requestRoster(completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func addItem(jid: JID, name: String?, groups:[String]) async throws -> Iq {
+        return try await self.updateItem(jid: jid, name: name, groups: groups);
+    }
+    
+    public func updateItem(jid: JID, name: String?, groups:[String]) async throws -> Iq {
+        let iq = Iq();
+        iq.type = .set;
+        
+        let query = Element(name:"query", xmlns:"jabber:iq:roster");
+        iq.addChild(query);
+        
+        let item = Element(name: "item");
+        item.setAttribute("jid", value: jid.stringValue);
+        if !(name?.isEmpty ?? true) {
+            item.setAttribute("name", value: name);
+        }
+        groups.forEach({(group:String)->Void in
+            item.addChild(Element(name:"group", cdata:group));
+        });
+
+        query.addChild(item);
+        
+        return try await write(iq: iq);
+    }
+
+    public func removeItem(jid: JID) async throws -> Iq {
+        let iq = Iq();
+        iq.type = .set;
+        
+        let query = Element(name:"query", xmlns:"jabber:iq:roster");
+        iq.addChild(query);
+        
+        let item = Element(name: "item");
+        item.setAttribute("jid", value: jid.stringValue);
+        item.setAttribute("subscription", value: "remove");
+
+        query.addChild(item);
+        
+        return try await write(iq: iq);
+    }
+}

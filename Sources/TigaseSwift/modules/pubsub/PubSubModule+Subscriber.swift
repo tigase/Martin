@@ -341,3 +341,72 @@ extension PubSubModule {
 }
 
 public typealias PubSubRetrieveItemsResult = Result<PubSubModule.RetrievedItems,PubSubError>
+
+// async-await support
+extension PubSubModule {
+    
+    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: JabberDataElement? = nil) async throws -> PubSubSubscriptionElement {
+        return try await withUnsafeThrowingContinuation { continuation in
+            subscribe(at: pubSubJid, to: nodeName, subscriber: subscriber, with: options, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func unsubscribe(at pubSubJid: BareJID, from nodeName: String, subscriber: JID, completionHandler: ((PubSubResult<Void>)->Void)?) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            unsubscribe(at: pubSubJid, from: nodeName, subscriber: subscriber, completionHandler: {  result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: JabberDataElement) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            configureSubscription(at: pubSubJid, for: nodeName, subscriber: subscriber, with: options, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?) async throws -> JabberDataElement {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveDefaultSubscriptionConfiguration(from: pubSubJid, for: nodeName, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID) async throws -> JabberDataElement {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveSubscriptionConfiguration(from: pubSubJid, for: nodeName, subscriber: subscriber, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, limit: QueryLimit = .none) async throws -> PubSubModule.RetrievedItems {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveItems(from: pubSubJid, for: nodeName, limit: limit, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retrieveOwnSubscriptions(from pubSubJid: BareJID, for nodeName: String) async throws -> [PubSubSubscriptionElement] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveOwnSubscriptions(from: pubSubJid, for: nodeName, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String?) async throws -> [PubSubAffiliationItem] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveOwnAffiliations(from: pubSubJid, for: nodeName, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

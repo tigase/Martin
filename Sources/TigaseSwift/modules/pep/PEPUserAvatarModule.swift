@@ -320,3 +320,47 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
 
     }
 }
+
+// async-await support
+extension PEPUserAvatarModule {
+    
+    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar]) async throws -> String {
+        return try await withUnsafeThrowingContinuation { continuation in
+            publishAvatar(at: at, avatar: avatars, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retractAvatar(from: BareJID? = nil) async throws -> String {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retractAvatar(from: from, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info]) async throws -> String {
+        return try await withUnsafeThrowingContinuation { continuation in
+            publishAvatarMetaData(at: at, id: id, metadata: infos, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveAvatar(from jid: BareJID, itemId: String) async throws -> (String,Data) {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveAvatar(from: jid, itemId: itemId, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true) async throws -> Info {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveAvatarMetadata(from: jid, itemId: itemId, fireEvents: fireEvents, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+}

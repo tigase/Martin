@@ -178,3 +178,24 @@ extension PushNotificationsModuleExtension {
     }
     
 }
+
+// async-await support
+extension PushNotificationsModule {
+    
+    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: JabberDataElement? = nil) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            enable(serviceJid: serviceJid, node: node, extensions: extensions, publishOptions: publishOptions, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func disable(serviceJid: JID, node: String) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            disable(serviceJid: serviceJid, node: node, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

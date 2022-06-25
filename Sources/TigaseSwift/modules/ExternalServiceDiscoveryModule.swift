@@ -114,3 +114,16 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
     }
     
 }
+
+// async-await support
+extension ExternalServiceDiscoveryModule {
+    
+    public func discover(from jid: JID?, type: String?) async throws -> [Service] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            discover(from: jid, type: type, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

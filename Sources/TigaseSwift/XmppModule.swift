@@ -90,3 +90,25 @@ open class XmppModuleBase: ContextAware, PacketWriter {
         context?.eventBus.fire(event);
     }
 }
+
+// async-await support
+extension XmppModuleBase {
+    
+    @discardableResult
+    public func write(iq: Iq, timeout: TimeInterval = 30.0, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            write(iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func write(stanza: Stanza) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            write(stanza, writeCompleted: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

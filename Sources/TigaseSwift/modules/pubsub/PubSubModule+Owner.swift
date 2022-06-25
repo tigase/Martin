@@ -444,3 +444,89 @@ public typealias PubSubNodeCreationResult = PubSubResult<String>;
 public typealias PubSubNodeDeletionResult = PubSubResult<String>;
 public typealias PubSubNodeConfigurationResult = PubSubResult<Void>;
 public typealias PubSubRetrieveNodeConfigurationResult = PubSubResult<JabberDataElement>;
+
+// async-await support
+extension PubSubModule {
+    
+    public func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: JabberDataElement? = nil) async throws -> String {
+        return try await withUnsafeThrowingContinuation { continuation in
+            createNode(at: pubSubJid, node: nodeName, with: configuration, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func configureNode(at pubSubJid: BareJID?, node nodeName: String, with configuration: JabberDataElement, errorDecoder: @escaping PacketErrorDecoder<Error> = PubSubError.from(stanza:)) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            configureNode(at: pubSubJid, node: nodeName, with: configuration, errorDecoder: errorDecoder, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func requestDefaultNodeConfiguration(from pubSubJid: BareJID) async throws -> JabberDataElement {
+        return try await withUnsafeThrowingContinuation { continuation in
+            requestDefaultNodeConfiguration(from: pubSubJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    public func retrieveNodeConfiguration(from pubSubJid: BareJID?, node: String) async throws -> JabberDataElement {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveNodeConfiguration(from: pubSubJid, node: node, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func deleteNode(from pubSubJid: BareJID, node nodeName: String) async throws -> String {
+        return try await withUnsafeThrowingContinuation { continuation in
+            deleteNode(from: pubSubJid, node: nodeName, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func purgeItems(at pubSubJid: BareJID, from nodeName: String) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            purgeItems(at: pubSubJid, from: nodeName, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retrieveSubscriptions(from pubSubJid: BareJID, for nodeName: String, xmlns: String = PubSubModule.PUBSUB_OWNER_XMLNS) async throws -> [PubSubSubscriptionElement] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: xmlns, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func setSubscriptions(at pubSubJid: BareJID, for nodeName: String, subscriptions values: [PubSubSubscriptionElement]) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            setSubscriptions(at: pubSubJid, for: nodeName, subscriptions: values, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+        
+    public func retrieveAffiliations(from pubSubJid: BareJID, for nodeName: String) async throws -> [PubSubAffiliationItem] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveAffiliations(from: pubSubJid, for: nodeName, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func setAffiliations(at pubSubJid: BareJID, for nodeName: String, affiliations values: [PubSubAffiliationItem]) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            setAffiliations(at: pubSubJid, for: nodeName, affiliations: values, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}
+

@@ -294,3 +294,52 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         }
     }
 }
+
+// async-await support
+extension TigasePushNotificationsModule {
+    
+    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil) async throws -> RegistrationResult {
+        return try await withUnsafeThrowingContinuation { continuation in
+            registerDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId, pushkitDeviceId: pushkitDeviceId, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            unregisterDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func findPushComponents(requiredFeatures: [String]) async throws -> [JID] {
+        guard let disco = self.context?.module(.disco) else {
+            throw XMPPError.unexpected_request("No context!")
+        }
+        
+        let components = try await disco.serverComponents().items.map({ $0.jid });
+        return await withTaskGroup(of: JID?.self, body: { group in
+            for componentJid in components {
+                group.addTask {
+                    guard let info = try? await disco.info(for: componentJid), info.identities.contains(where: { $0.category == "pubsub" && $0.type == "push" }), Set(requiredFeatures).isSubset(of: info.features) else {
+                        return nil;
+                    }
+
+                    return componentJid;
+                }
+            }
+            
+            var result: [JID] = [];
+            for await component in group {
+                if let comp = component {
+                    result.append(comp);
+                }
+            }
+            
+            return result;
+        });
+    }
+    
+}

@@ -24,6 +24,7 @@ import Foundation
 /**
  Module provides support for Tigase Mobile Optimizations feature
  */
+@available(*, deprecated, message: "This custom extension implementation module should be replaced by use of ClientStateIndicationModule")
 open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     
     /// Base part of namespace used by Mobile Optimizations

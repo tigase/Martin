@@ -186,3 +186,35 @@ extension RoomProtocol {
         return message;
     }
 }
+
+// async-await support
+extension RoomProtocol {
+    
+    public func rejoin(fetchHistory: RoomHistoryFetch) async throws -> RoomJoinResult {
+        guard let context = self.context else {
+            throw XMPPError.undefined_condition;
+        }
+        
+        return try await context.module(.muc).join(room: self, fetchHistory: fetchHistory);
+    }
+    
+    public func invite(_ invitee: JID, reason: String?) async throws {
+        guard let context = self.context else {
+            throw XMPPError.undefined_condition;
+        }
+        
+        let message = self.createInvitation(invitee, reason: reason);
+        
+        try await context.writer.write(stanza: message);
+    }
+    
+    public func inviteDirectly(_ invitee: JID, reason: String?, threadId: String?) async throws {
+        guard let context = self.context else {
+            throw XMPPError.undefined_condition;
+        }
+        
+        let message = createDirectInvitation(invitee, reason: reason, threadId: threadId);
+        try await context.writer.write(stanza: message);
+    }
+    
+}

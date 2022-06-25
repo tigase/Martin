@@ -133,3 +133,16 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
         }
     }
 }
+
+// async-await support
+extension SessionEstablishmentModule {
+    
+    open func establish() async throws {
+        _ = try await withUnsafeThrowingContinuation { continuation in
+            establish(completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

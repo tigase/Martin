@@ -66,7 +66,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         return sessionObject.context!.module(.presence).store;
     }
     
-    private var presence: Presence = Presence();
+    fileprivate var presence: Presence = Presence();
     
     public let presencePublisher = PassthroughSubject<ContactPresenceChange,Never>();
     public let subscriptionPublisher = PassthroughSubject<SubscriptionChange,Never>();
@@ -327,4 +327,88 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         public let availabilityChanged: Bool;
         
     }
+}
+
+// async-await support
+extension PresenceModule {
+    
+    open func sendInitialPresence() async throws {
+        try await write(stanza: presence);
+    }
+    
+    open func sendPresence() async throws {
+        try await write(stanza: presence);
+    }
+    
+    open func setPresence(show:Presence.Show?, status:String?, priority:Int?, additionalElements: [Element]? = nil) async throws {
+        let presence = Presence();
+        presence.show = show;
+        presence.status = status;
+        presence.priority = priority;
+        
+        if let nick: String = context?.connectionConfiguration.nickname {
+            presence.nickname = nick;
+        }
+        
+        if let addons = additionalElements {
+            presence.addChildren(addons);
+        }
+        if let context = context {
+            fire(BeforePresenceSendEvent(context: context, presence: presence));
+        }
+        
+        self.presence = presence;
+        if context?.state == .connected() {
+            try await write(stanza: presence);
+        }
+    }
+    
+    open func subscribe(to jid:JID, preauth: String? = nil) async throws {
+        let presence = Presence();
+        presence.to = jid;
+        presence.type = StanzaType.subscribe;
+        if preauth != nil {
+            presence.addChild(Element(name: "preauth", attributes: ["xmlns": "urn:xmpp:pars:0", "token": preauth!]));
+        }
+        
+        try await write(stanza: presence);
+    }
+
+    /**
+     Subscribed to JID
+     - parameter by: jid which is being subscribed
+     */
+    open func subscribed(by jid:JID) async throws {
+        let presence = Presence();
+        presence.to = jid;
+        presence.type = StanzaType.subscribed;
+        
+        try await write(stanza: presence);
+    }
+
+    /**
+     Unsubscribe from jid
+     - parameter from: jid to unsubscribe from
+     */
+    open func unsubscribe(from jid:JID) async throws {
+        let presence = Presence();
+        presence.to = jid;
+        presence.type = StanzaType.unsubscribe;
+        
+        try await write(stanza: presence);
+    }
+    
+    /**
+     Unsubscribed from JID
+     - parameter by: jid which is being unsubscribed
+     */
+    open func unsubscribed(by jid:JID) async throws {
+        let presence = Presence();
+        presence.to = jid;
+        presence.type = StanzaType.unsubscribed;
+        
+        try await write(stanza: presence);
+    }
+
+    
 }

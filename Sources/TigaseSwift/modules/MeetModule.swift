@@ -349,3 +349,75 @@ extension Message {
     }
     
 }
+
+// async-await support
+extension MeetModule {
+    
+    open func findMeetComponents() async throws -> [MeetComponent] {
+        guard let disco = self.context?.module(.disco) else {
+            throw XMPPError.unexpected_request("No context!")
+        }
+        
+        let components = try await disco.serverComponents().items.map({ $0.jid });
+        return await withTaskGroup(of: MeetComponent?.self, body: { group in
+            for componentJid in components {
+                group.addTask {
+                    guard let info = try? await disco.info(for: componentJid), info.features.contains(MeetModule.ID) else {
+                        return nil;
+                    }
+                    
+                    return MeetComponent(jid: componentJid, features: info.features)
+                }
+            }
+            
+            var result: [MeetComponent] = [];
+            for await component in group {
+                if let comp = component {
+                    result.append(comp);
+                }
+            }
+            
+            return result;
+        })
+    }
+    
+    open func createMeet(at jid: JID, media: [Media], participants: [BareJID] = []) async throws -> JID {
+        return try await withUnsafeThrowingContinuation { continuation in
+            createMeet(at: jid, media: media, participants: participants, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func allow(jids: [BareJID], in meetJid: JID) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            allow(jids: jids, in: meetJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func deny(jids: [BareJID], in meetJid: JID) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            deny(jids: jids, in: meetJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func destroy(meetJid: JID) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            destroy(meetJid: meetJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func sendMessageInitiation(action: MessageInitiationAction, to jid: JID) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            sendMessageInitiation(action: action, to: jid, writeCompleted: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+}

@@ -199,3 +199,25 @@ public enum MessageDeliveryReceiptEnum {
         }
     }
 }
+
+// async-await support
+extension MessageDeliveryReceiptsModule {
+    
+    open func sendReceived(for message: Message) async throws {
+        guard let id = message.id, message.type != .groupchat, let jid = message.from else {
+            return;
+        }
+        // need to send response/ack
+        try await sendReceived(to: jid, forStanzaId: id, type: message.type)
+    }
+    
+    open func sendReceived(to jid: JID, forStanzaId id: String, type: StanzaType?) async throws {
+        let response = Message();
+        response.type = type;
+        response.to = jid;
+        response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
+        response.hints = [.store];
+        try await write(stanza: response);
+    }
+    
+}
