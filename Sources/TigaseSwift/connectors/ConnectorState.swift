@@ -88,7 +88,7 @@ extension XMPPClient {
             }
         }
         
-        public enum DisconnectionReason {
+        public enum DisconnectionReason: Error, LocalizedError {
             case none
             case timeout
             case sslCertError(SecTrust)
@@ -96,6 +96,25 @@ extension XMPPClient {
             case streamError(Element)
             case authenticationFailure(Error)
             case noRouteToServer
+            
+            public var errorDescription: String? {
+                switch self {
+                case .timeout:
+                    return "Timeout"
+                case .sslCertError(_):
+                    return "SSL certificate error"
+                case .xmlError(let msg):
+                    return "XML error: \(String(describing: msg))"
+                case .streamError(_):
+                    return "XMPP Stream error"
+                case .authenticationFailure(let err):
+                    return "Authentication failure: \(err.localizedDescription)"
+                case .noRouteToServer:
+                    return "No route to server"
+                case .none:
+                    return "No error!";
+                }
+            }
         }
     }
     

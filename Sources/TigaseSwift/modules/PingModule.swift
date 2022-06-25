@@ -84,3 +84,16 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
         throw XMPPError.not_allowed(nil);
     }
 }
+
+// async-await support
+extension PingModule {
+    
+    open func ping(_ jid: JID) async throws {
+        let iq = Iq();
+        iq.type = StanzaType.get;
+        iq.to = jid;
+        iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
+        
+        try await write(iq: iq);
+    }
+}

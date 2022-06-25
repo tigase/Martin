@@ -173,3 +173,45 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
         
     }
 }
+
+// async-await support
+extension HttpFileUploadModule {
+    
+    open func findHttpUploadComponents() async throws -> [HttpFileUploadModule.UploadComponent] {
+        guard let disco = self.context?.module(.disco) else {
+            throw XMPPError.unexpected_request("No context!")
+        }
+        
+        let components = try await disco.serverComponents().items.map({ $0.jid });
+        return await withTaskGroup(of: UploadComponent?.self, body: { group in
+            for componentJid in components {
+                group.addTask {
+                    guard let info = try? await disco.info(for: componentJid), info.features.contains(HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS) else {
+                        return nil;
+                    }
+                    
+                    let maxSize: Int = info.form?.value(for: "max-file-size", type: Int.self) ?? Int.max;
+                    return UploadComponent(jid: componentJid, maxSize: maxSize);
+                }
+            }
+            
+            var result: [UploadComponent] = [];
+            for await component in group {
+                if let comp = component {
+                    result.append(comp);
+                }
+            }
+            
+            return result;
+        });
+    }
+    
+    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?) async throws -> Slot {
+        return try await withUnsafeThrowingContinuation { continuation in
+            requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

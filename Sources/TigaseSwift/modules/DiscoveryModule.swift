@@ -394,3 +394,44 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         }
     }
 }
+
+// async-await support
+extension DiscoveryModule {
+    
+    open func serverFeatures() async throws -> DiscoveryInfoResult {
+        guard let boundJid = context?.boundJid, let serverJid = JID(boundJid.domain) else {
+            throw XMPPError.unexpected_request("Resournce not bound yet!")
+        }
+        return try await info(for: serverJid);
+    }
+    
+    open func accountFeatures() async throws -> DiscoveryInfoResult {
+        guard let accountJid = context?.boundJid?.withoutResource else {
+            throw XMPPError.unexpected_request("Resournce not bound yet!")
+        }
+        return try await info(for: accountJid);
+    }
+    
+    open func info(for jid: JID, node: String? = nil) async throws -> DiscoveryInfoResult {
+        return try await withUnsafeThrowingContinuation { continuation in
+            getInfo(for: jid, node: node, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func items(for jid: JID, node requestedNode: String? = nil) async throws -> DiscoveryItemsResult {
+        return try await withUnsafeThrowingContinuation { continuation in
+            getItems(for: jid, node: requestedNode, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func serverComponents() async throws -> DiscoveryItemsResult {
+        guard let boundJid = context?.boundJid, let serverJid = JID(boundJid.domain) else {
+            throw XMPPError.unexpected_request("Resournce not bound yet!")
+        }
+        return try await items(for: serverJid);
+    }
+}

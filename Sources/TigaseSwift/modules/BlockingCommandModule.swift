@@ -211,3 +211,30 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
  
 }
 
+// async-await support
+extension BlockingCommandModule {
+    
+    open func block(jids: [JID]) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            block(jids: jids, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func unblock(jids: [JID]) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            unblock(jids: jids, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveBlockedJids() async throws -> [JID] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveBlockedJids(completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+}

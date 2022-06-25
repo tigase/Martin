@@ -47,3 +47,23 @@ public extension VCardModuleProtocol {
     }
     
 }
+
+// async-await support
+extension VCardModuleProtocol {
+    
+    public func publish(vcard: VCard, to jid: BareJID?, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            publishVCard(vcard, to: jid, errorDecoder: errorDecoder, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retrieveVCard(from jid: JID?) async throws -> VCard {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveVCard(from: jid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+}

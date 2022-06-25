@@ -211,6 +211,82 @@ open class JingleSession: CustomDebugStringConvertible {
     }
 }
 
+// async-await support
+extension JingleSession {
+    
+    open func initiate(contents: [Jingle.Content], bundle: [String]?) async throws {
+        updateCreators(of: contents);
+        return try await withUnsafeThrowingContinuation { continuation in
+            guard let jingleModule = self.jingleModule else {
+                self.terminate(reason: .failedApplication);
+                continuation.resume(throwing: XMPPError.undefined_condition);
+                return;
+            }
+            
+            jingleModule.initiateSession(to: self.jid, sid: self.sid, contents: contents, bundle: bundle, completionHandler: { result in
+                switch result {
+                case .success(_):
+                    break;
+                case .failure(_):
+                    self.terminate();
+                }
+                continuation.resume(with: result.map({ _ in Void() }))
+            })
+        }
+    }
+    
+    open func initiate(descriptions: [Jingle.MessageInitiationAction.Description]) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            guard let jingleModule = self.jingleModule else {
+                self.terminate(reason: .failedApplication);
+                continuation.resume(throwing: XMPPError.undefined_condition);
+                return;
+            }
+        
+            jingleModule.sendMessageInitiation(action: .propose(id: self.sid, descriptions: descriptions), to: self.jid,    writeCompleted: { result in
+                switch result {
+                case .success(_):
+                    break;
+                case .failure(_):
+                    self.state = .terminated;
+                }
+                continuation.resume(with: result.map({ _ in Void() }));
+            });
+        }
+    }
+    
+    open func accept(contents: [Jingle.Content], bundle: [String]?) async throws {
+        updateCreators(of: contents);
+        return try await withUnsafeThrowingContinuation({ continuation in
+            guard let jingleModule = self.jingleModule else {
+                self.terminate(reason: .failedApplication);
+                continuation.resume(throwing: XMPPError.undefined_condition);
+                return;
+            }
+        
+            jingleModule.acceptSession(with: self.jid, sid: self.sid, contents: contents, bundle: bundle) { (result) in
+                switch result {
+                case .success(_):
+                    self.state = .accepted;
+                case .failure(_):
+                    self.terminate();
+                    break;
+
+                }
+                continuation.resume(with: result.map({ _ in Void() }));
+            }
+        });
+    }
+    
+    open func contentModify(action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) async throws {
+        guard let jingleModule = self.jingleModule else {
+            throw XMPPError.undefined_condition;
+        }
+        
+        return try await jingleModule.contentModify(with: jid, sid: sid, action: action, contents: contents, bundle: bundle);
+    }
+}
+
 extension JingleSession {
     public func terminate() {
         self.terminate(reason: .success);

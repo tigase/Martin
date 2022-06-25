@@ -73,7 +73,7 @@ extension RoomWithPushSupportProtocol {
                                 }
                             })
                         } else {
-                            regModule.unregister(from: JID(self.jid), completionHander: { result in
+                            regModule.unregister(from: JID(self.jid), completionHandler: { result in
                                 switch result {
                                 case .success(_):
                                     completionHandler(.success(value));

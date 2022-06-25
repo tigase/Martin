@@ -465,3 +465,22 @@ public class Queue<T> {
     }
 }
 
+// async-await support
+extension StreamManagementModule {
+    
+    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) async throws {
+        _ = try await withUnsafeThrowingContinuation { continuation in
+            enable(resumption: resumption, maxResumptionTimeout: maxResumptionTimeout, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func resume() async throws {
+        _ = try await withUnsafeThrowingContinuation { continuation in
+            resume(completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+}

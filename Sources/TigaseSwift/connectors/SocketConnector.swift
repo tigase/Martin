@@ -262,39 +262,37 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         }
     }
         
-    public func stop(force: Bool) -> Future<Void,Never> {
-        return Future({ promise in
-            self.queue.async {
-                guard !force else {
-                    self.closeSocket(newState: State.disconnected(.none));
-                    promise(.success(Void()));
-                    return;
-                }
-                switch self.state {
-                case .disconnected(_), .disconnecting:
-                    self.logger.debug("\(self.userJid) - not connected or already disconnecting");
-                    promise(.success(Void()));
-                    return;
-                case .connected:
-                    self.state = State.disconnecting;
-                    self.logger.debug("\(self.userJid) - closing XMPP stream");
-                    
-        //            self.streamEvents.send(.streamClose())
-                    // TODO: I'm not sure about that!!
-                    self.queue.async {
-                        self.sendSync("</stream:stream>", completion: .written({ result in
-                            self.closeSocket(newState: State.disconnected(.none));
-                            promise(.success(Void()));
-                        }));
-                    }
-                case .connecting:
-                    self.state = State.disconnecting;
-                    self.logger.debug("\(self.userJid) - closing TCP connection");
-                    self.closeSocket(newState: State.disconnected(.timeout));
-                    promise(.success(Void()));
-                }
+    public func stop(force: Bool, completionHandler: @escaping ()->Void) {
+        self.queue.async {
+            guard !force else {
+                self.closeSocket(newState: State.disconnected(.none));
+                completionHandler()
+                return;
             }
-        })
+            switch self.state {
+            case .disconnected(_), .disconnecting:
+                self.logger.debug("\(self.userJid) - not connected or already disconnecting");
+                completionHandler();
+                return;
+            case .connected:
+                self.state = State.disconnecting;
+                self.logger.debug("\(self.userJid) - closing XMPP stream");
+                
+    //            self.streamEvents.send(.streamClose())
+                // TODO: I'm not sure about that!!
+                self.queue.async {
+                    self.sendSync("</stream:stream>", completion: .written({ result in
+                        self.closeSocket(newState: State.disconnected(.none));
+                        completionHandler();
+                    }));
+                }
+            case .connecting:
+                self.state = State.disconnecting;
+                self.logger.debug("\(self.userJid) - closing TCP connection");
+                self.closeSocket(newState: State.disconnected(.timeout));
+                completionHandler();
+            }
+        }
     }
     
     /**

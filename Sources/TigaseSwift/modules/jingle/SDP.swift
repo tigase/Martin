@@ -82,7 +82,7 @@ open class SDP {
             var contents = self.contents;
             for diffed in diff.contents {
                 if let idx = contents.firstIndex(where: { $0.name == diffed.name }) {
-                    print("setting content \(diffed.name) from \(contents[idx].senders) to \(diffed.senders)")
+                    print("setting content \(diffed.name) from \(String(describing: contents[idx].senders)) to \(diffed.senders)")
                     contents[idx] = contents[idx].with(senders: diffed.senders, description: diffed.description);
                 }
             }

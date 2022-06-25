@@ -42,7 +42,7 @@ public protocol Connector: AnyObject {
     
     func start(endpoint: ConnectorEndpoint?);
     
-    func stop(force: Bool) -> Future<Void,Never>;
+    func stop(force: Bool, completionHandler: @escaping ()->Void);
     
     func restartStream();
     
@@ -62,6 +62,14 @@ public protocol ConnectorEndpoint {
 
 extension Connector {
     
+    public func stop(force: Bool) -> Future<Void,Never> {
+        return Future { promise in
+            self.stop(force: force, completionHandler: {
+                promise(.success(Void()));
+            })
+        }
+    }
+    
     public func stop() -> Future<Void,Never> {
         return stop(force: false);
     }
@@ -69,4 +77,17 @@ extension Connector {
     public func send(_ data: StreamEvent) {
         self.send(data, completion: .none);
     }
+}
+
+// async-await support
+extension Connector {
+    
+    public func stop(force: Bool = false) async {
+        await withUnsafeContinuation { continuation in
+            stop(force: force, completionHandler: {
+                continuation.resume();
+            });
+        }
+    }
+    
 }

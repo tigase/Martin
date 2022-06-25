@@ -119,3 +119,24 @@ extension PubSubModule {
     }
     
 }
+
+// async-await support
+extension PubSubModule {
+    
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: PubSubNodeConfig? = nil) async throws -> String {
+        return try await withUnsafeThrowingContinuation { continuation in
+            publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String) async throws -> String {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retractItem(at: pubSubJid, from: nodeName, itemId: itemId, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

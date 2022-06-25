@@ -88,3 +88,16 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     }
     
 }
+
+// async-await support
+extension ResourceBinderModule {
+    
+    open func bind() async throws -> JID {
+        return try await withUnsafeThrowingContinuation { continuation in
+            bind(completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

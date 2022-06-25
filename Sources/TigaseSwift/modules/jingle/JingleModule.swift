@@ -345,37 +345,77 @@ open class JingleModule: XmppModuleBase, XmppModule {
         });
     }
     
+    public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        let iq = Iq();
+        iq.to = jid;
+        iq.type = StanzaType.set;
+        
+        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
+        jingle.attribute("action", newValue: action.jingleAction.rawValue);
+        jingle.attribute("sid", newValue: sid);
+    
+        iq.addChild(jingle);
+        
+        contents.forEach { (content) in
+            jingle.addChild(content.toElement());
+        }
+        
+        if bundle != nil {
+            let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
+            group.attribute("semantics", newValue: "BUNDLE");
+            bundle?.forEach({ (name) in
+                group.addChild(Element(name: "content", attributes: ["name": name]));
+            })
+            jingle.addChild(group);
+        }
+        
+        self.write(iq, completionHandler: completionHandler);
+    }
+    
     public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) -> Future<Void, XMPPError> {
         return Future({ promise in
-            let iq = Iq();
-            iq.to = jid;
-            iq.type = StanzaType.set;
-            
-            let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-            jingle.attribute("action", newValue: action.jingleAction.rawValue);
-            jingle.attribute("sid", newValue: sid);
-        
-            iq.addChild(jingle);
-            
-            contents.forEach { (content) in
-                jingle.addChild(content.toElement());
-            }
-            
-            if bundle != nil {
-                let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
-                group.attribute("semantics", newValue: "BUNDLE");
-                bundle?.forEach({ (name) in
-                    group.addChild(Element(name: "content", attributes: ["name": name]));
-                })
-                jingle.addChild(group);
-            }
-            
-            self.write(iq, completionHandler: { result in
+            self.contentModify(with: jid, sid: sid, action: action, contents: contents, bundle: bundle, completionHandler: { result in
                 promise(result.map({ _ in Void() }));
-            });
+            })
         });
     }
         
+}
+
+// async-await support
+extension JingleModule {
+    
+    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            sendMessageInitiation(action: action, to: jid, writeCompleted: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            initiateSession(to: jid, sid: sid, contents: contents, bundle: bundle, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            acceptSession(with: jid, sid: sid, contents: contents, bundle: bundle, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) async throws {
+        try await withUnsafeThrowingContinuation { continuation in
+            contentModify(with: jid, sid: sid, action: action, contents: contents, bundle: bundle, completionHandler: { result in
+                continuation.resume(with: result.map({ _ in Void() }))
+            })
+        }
+    }
 }
 
 public enum JingleSessionTerminateReason: String {

@@ -54,6 +54,19 @@ extension ConversationProtocol {
     
 }
 
+// async-await support
+extension ConversationProtocol {
+    
+    public func send(message: Message) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            send(message: message, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}
+
 public protocol LastMessageTimestampAware {
     
     var lastMessageTimestamp: Date? { get }

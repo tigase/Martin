@@ -51,6 +51,8 @@ public protocol XmppSessionLogic: AnyObject {
     /// Called to send data to keep connection open
     func keepalive();
 
+    // async-await support
+    func stop(force: Bool) async;
 }
 
 extension XmppSessionLogic {
@@ -210,6 +212,11 @@ open class SocketSessionLogic: XmppSessionLogic {
         return connector.stop(force: force);
     }
     
+    // async-await support
+    open func stop(force: Bool) async {
+        await connector.stop(force: force);
+    }
+    
     open func serverToConnectDetails() -> ConnectorEndpoint? {
         if let redirect = self.seeOtherHost {
             defer {
@@ -365,6 +372,9 @@ open class SocketSessionLogic: XmppSessionLogic {
                     self.logger.debug("\(self.userJid) - skipping authentication as it is already in progress!");
                     self.streamAuthenticated();
                 }
+            } else if modulesManager.moduleOrNil(.inBandRegistration) != nil {
+                self.logger.debug("\(self.userJid) - marking client as connected and ready for registration")
+                self.state = .connected(resumed: false);
             }
         } else if authorized {
             self.streamAuthenticated();

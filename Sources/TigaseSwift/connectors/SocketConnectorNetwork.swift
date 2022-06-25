@@ -216,38 +216,36 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         })
     }
     
-    public func stop(force: Bool) -> Future<Void, Never> {
-        return Future({ promise in
-            guard !force else {
-                self.connection?.forceCancel();
-                promise(.success(Void()));
-                return;
+    public func stop(force: Bool, completionHandler: @escaping ()->Void) {
+        guard !force else {
+            self.connection?.forceCancel();
+            completionHandler();
+            return;
+        }
+        switch self.state {
+        case .disconnected(_), .disconnecting:
+            self.logger.debug("\(self.userJid) - not connected or already disconnecting");
+            completionHandler();
+            return;
+        case .connected:
+            self.state = .disconnecting;
+            self.logger.debug("\(self.userJid) - closing XMPP stream");
+            
+//            self.streamEvents.send(.streamClose())
+            // TODO: I'm not sure about that!!
+            self.queue.async {
+                self.sendSync("</stream:stream>", completion: .written({ result in
+                    self.connection?.cancel();
+                    completionHandler();
+                }));
             }
-            switch self.state {
-            case .disconnected(_), .disconnecting:
-                self.logger.debug("\(self.userJid) - not connected or already disconnecting");
-                promise(.success(Void()));
-                return;
-            case .connected:
-                self.state = .disconnecting;
-                self.logger.debug("\(self.userJid) - closing XMPP stream");
-                
-    //            self.streamEvents.send(.streamClose())
-                // TODO: I'm not sure about that!!
-                self.queue.async {
-                    self.sendSync("</stream:stream>", completion: .written({ result in
-                        self.connection?.cancel();
-                        promise(.success(Void()));
-                    }));
-                }
-            case .connecting:
-                self.state = .disconnecting;
-                self.logger.debug("\(self.userJid) - closing TCP connection");
-                self.state = .disconnected(.timeout);
-                self.connection?.cancel();
-                promise(.success(Void()));
-            }
-        })
+        case .connecting:
+            self.state = .disconnecting;
+            self.logger.debug("\(self.userJid) - closing TCP connection");
+            self.state = .disconnected(.timeout);
+            self.connection?.cancel();
+            completionHandler();
+        }
     }
     
     public func restartStream() {

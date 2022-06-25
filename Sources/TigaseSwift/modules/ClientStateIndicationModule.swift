@@ -105,3 +105,36 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
     }
     
 }
+
+// async-await support
+extension ClientStateIndicationModule {
+    
+    public enum ClientState: String {
+        case active
+        case inactive
+        
+        var value: Bool {
+            switch self {
+            case .active:
+                return true;
+            case .inactive:
+                return false;
+            }
+        }
+    }
+    
+    open func setState(_ state: ClientState) async throws -> Bool {
+        guard self.available else {
+            throw XMPPError.feature_not_implemented;
+        }
+        guard state != state else {
+            return false;
+        }
+        self.state = state.value;
+        let stanza = Stanza(name: state.rawValue);
+        stanza.element.xmlns = ClientStateIndicationModule.CSI_XMLNS;
+        try await write(stanza: stanza);
+        return true;
+    }
+    
+}

@@ -116,3 +116,14 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
         throw XMPPError.not_allowed(nil);
     }
 }
+
+// async-await support
+extension SoftwareVersionModule {
+    open func checkSoftwareVersion(for jid:JID) async throws -> SoftwareVersion {
+        return try await withUnsafeThrowingContinuation { continuation in
+            checkSoftwareVersion(for: jid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+}

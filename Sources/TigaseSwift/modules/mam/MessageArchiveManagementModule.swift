@@ -219,7 +219,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      - parameter componentJid: jid of an archiving component
      - parameter completionHandler: called with result
      */
-    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, resultHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
+    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler resultHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
         guard let version = version ?? availableVersions.first else {
             resultHandler(.failure(.feature_not_implemented));
             return;
@@ -378,5 +378,50 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
             self.endedAt = date;
         }
         
+    }
+}
+
+// async-await support
+extension MessageArchiveManagementModule {
+    
+    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil) async throws -> QueryResult {
+        return try await withUnsafeThrowingContinuation { continuation in
+            queryItems(version: version, componentJid: componentJid, node: node, with: with, start: start, end: end, queryId: queryId, rsm: rsm, completionHandler: { result in
+                continuation.resume(with: result);
+            });
+        }
+    }
+    
+    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil) async throws -> QueryResult
+    {
+        return try await withUnsafeThrowingContinuation { continuation in
+            queryItems(version: version, componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil) async throws -> MAMQueryForm {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveForm(version: version, componentJid: componentJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveSettings(version: Version? = nil) async throws -> Settings {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveSettings(version: version, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func updateSettings(version: Version, settings: Settings) async throws -> Settings {
+        return try await withUnsafeThrowingContinuation { continuation in
+            updateSettings(version: version, settings: settings, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
     }
 }

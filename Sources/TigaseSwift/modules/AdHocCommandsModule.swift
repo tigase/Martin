@@ -116,3 +116,16 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
         public let notes: [AdHocCommandsModule.Note];
     }
 }
+
+// async-await support
+extension AdHocCommandsModule {
+    
+    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?) async throws -> AdHocCommandsModule.Response {
+        return try await withUnsafeThrowingContinuation { continuation in
+            execute(on: to, command: node, action: action, data: data, completionHandler: { reuslt in
+                continuation.resume(with: reuslt);
+            })
+        }
+    }
+    
+}

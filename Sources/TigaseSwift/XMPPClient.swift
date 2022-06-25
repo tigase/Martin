@@ -240,3 +240,40 @@ open class XMPPClient: Context {
     }
     
 }
+
+
+// async-await support
+extension XMPPClient {
+    
+    open func loginAndWait(lastSeeOtherHost: ConnectorEndpoint? = nil) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            self.login(lastSeeOtherHost: lastSeeOtherHost);
+            var cancellable: AnyCancellable?;
+            cancellable = self.$state.dropFirst().sink(receiveValue: { state in
+                switch state {
+                case .disconnected(let err):
+                    continuation.resume(throwing: err);
+                    cancellable = nil;
+                case .connected:
+                    continuation.resume(returning: Void());
+                    cancellable = nil;
+                default:
+                    break;
+                }
+            });
+        }
+    }
+    
+    open func disconnect(force: Bool = false) async throws {
+        guard self.state == .connected() || self.state == .connecting, let sessionLogic = self.sessionLogic else {
+            self.logger.debug("XMPP in state: \(self.state), - not stopping connection");
+            throw XMPPError.undefined_condition;
+        }
+        
+        self.keepaliveTimer?.invalidate();
+        self.keepaliveTimer = nil;
+        
+        await sessionLogic.stop(force: force);
+    }
+    
+}

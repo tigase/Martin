@@ -780,3 +780,132 @@ extension Message {
         }
     }
 }
+
+// async-await support
+extension MixModule {
+    open func create(channel: String?, at componentJid: BareJID) async throws -> BareJID {
+        return try await withUnsafeThrowingContinuation { continuation in
+            create(channel: channel, at: componentJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            join(channel: channelJid, withNick: nick, subscribeNodes: nodes, presenceSubscription: presenceSubscription, invitation: invitation, messageSyncLimit: messageSyncLimit, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func leave(channel: ChannelProtocol, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            leave(channel: channel, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveAffiliations(for channel: ChannelProtocol) async throws -> [ChannelPermission] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveAffiliations(for: channel, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func publishInfo(for channelJid: BareJID, info: ChannelInfo) async throws {
+        _ = try await withUnsafeThrowingContinuation { continuation in
+            publishInfo(for: channelJid, info: info, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveInfo(for channelJid: BareJID) async throws -> ChannelInfo {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveInfo(for: channelJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    open func retrieveConfig(for channelJid: BareJID) async throws -> MixChannelConfig {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveConfig(for: channelJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func updateConfig(for channelJid: BareJID, config: MixChannelConfig) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            updateConfig(for: channelJid, config: config, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            allowAccess(to: channelJid, for: jid, value: value, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            denyAccess(to: channelJid, for: jid, value: value, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool) async throws {
+        return try await withUnsafeThrowingContinuation { continuation in
+            changeAccessPolicy(of: channelJid, isPrivate: isPrivate, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func checkAccessPolicy(of channelJid: BareJID) async throws -> Bool {
+        return try await withUnsafeThrowingContinuation { continuation in
+            checkAccessPolicy(of: channelJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveAllowed(for channelJid: BareJID) async throws -> [BareJID] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveAllowed(for: channelJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func retrieveBanned(for channelJid: BareJID) async throws -> [BareJID] {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveBanned(for: channelJid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    open func retrieveHistory(fromChannel jid: BareJID, start: Date?, rsm: RSM.Query) async throws -> MessageArchiveManagementModule.QueryResult {
+        let queryId = UUID().uuidString;
+        // should we query MIX messages node? or just MAM at MIX channel without a node?
+        return try await mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: "urn:xmpp:mix:nodes:messages", start: nil, queryId: queryId, rsm: rsm);
+    }
+    
+    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) async throws -> PEPUserAvatarModule.Info {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveAvatar(for: jid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+}

@@ -147,7 +147,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         });
     }
 
-    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         guard let context = context else {
             completionHandler(.failure(.undefined_condition));
             return;
@@ -160,16 +160,14 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         query.addChild(form.element(type: .submit, onlyModified: false));
         
         iq.addChild(query);
-        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }))
-        });
+        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: completionHandler);
     }
 
     /**
      Unregisters currently connected and authenticated user
      - parameter callback: called when user is unregistrated
      */
-    open func unregister<Failure: Error>(from: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    open func unregister(from: JID? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.to = from;
@@ -178,15 +176,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         query.addChild(Element(name: "remove"));
         iq.addChild(query);
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: completionHandler);
     }
-    
-    open func unregister(from: JID? = nil, completionHander: @escaping (Result<Void,XMPPError>)->Void) {
-        unregister(from: from, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
-            completionHander(result.map { _ in Void() });
-        })
-    }
-    
+        
     open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String, XMPPError>)->Void) {
         changePassword(for: serviceJid, newPassword: newPassword, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
             completionHandler(result.map { _ in newPassword});
@@ -475,4 +467,111 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     }
 
     public typealias RetrieveFormResult<Failure: Error> = Result<FormResult, Failure>
+}
+
+
+// async-await support
+extension InBandRegistrationModule {
+
+    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            register(jid, username: username, password: password, email: email, errorDecoder: errorDecoder, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    open func retrieveRegistrationForm(from jid: JID? = nil) async throws -> FormResult {
+        return try await withUnsafeThrowingContinuation { continuation in
+            retrieveRegistrationForm(from: jid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            submitRegistrationForm(to: jid, form: form, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    open func unregister(from: JID? = nil) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            unregister(from: from, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+        return try await withUnsafeThrowingContinuation { continuation in
+            changePassword(for: serviceJid, newPassword: newPassword, errorDecoder: errorDecoder, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+
+    @discardableResult
+    open func submitPreAuth(token: String) async throws -> Iq {
+        let iq = Iq();
+        iq.type = .set;
+        let domain: String = context!.userBareJid.domain
+        iq.to = JID(domain);
+        iq.addChild(Element(name: "preauth", attributes: ["token": token, "xmlns": "urn:xmpp:pars:0"]));
+        return try await self.write(iq: iq);
+    }
+
+    open class AccountRegistrationAsyncTask {
+
+        private let client: XMPPClient;
+        var inBandRegistrationModule: InBandRegistrationModule!;
+        open var preauthToken: String?;
+        var usesDataForm = false;
+
+        public init(client: XMPPClient = XMPPClient(), domainName: String, preauth: String? = nil) {
+            _ = client.modulesManager.register(StreamFeaturesModule());
+            self.client = client;
+
+            self.inBandRegistrationModule = client.modulesManager.register(InBandRegistrationModule());
+            self.preauthToken = preauth;
+
+            self.client.connectionConfiguration.userJid = BareJID(domainName);
+        }
+
+        private func ensureConnected() async throws {
+            if !client.isConnected {
+                try await client.loginAndWait();
+                if let token = preauthToken {
+                    try await inBandRegistrationModule.submitPreAuth(token: token);
+                }
+
+            }
+        }
+
+        open func retrieveForm() async throws -> InBandRegistrationModule.FormResult {
+            try await ensureConnected();
+            let result = try await inBandRegistrationModule.retrieveRegistrationForm();
+            usesDataForm = result.type == .dataForm;
+            return result;
+        }
+
+        open func submit(form: DataForm) async throws -> Iq {
+            try await ensureConnected();
+            if usesDataForm {
+                return try await inBandRegistrationModule.submitRegistrationForm(form: form)
+            } else {
+                let username = form.value(for: "username", type: String.self);
+                let password = form.value(for: "password", type: String.self);
+                let email = form.value(for: "email", type: String.self);
+                return try await inBandRegistrationModule.register(username: username, password: password, email: email);
+            }
+        }
+
+        open func cancel() async throws {
+            try await self.client.disconnect();
+        }
+
+    }
 }

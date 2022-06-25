@@ -36,3 +36,16 @@ public enum DNSError: Error {
     case internalError
     case unknownError
 }
+
+// async-await support
+extension DNSSrvResolver {
+    
+    public func resolve(domain: String, for jid: BareJID) async throws -> XMPPSrvResult {
+        return try await withUnsafeThrowingContinuation { continuation in
+            resolve(domain: domain, for: jid, completionHandler: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+}

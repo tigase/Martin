@@ -151,3 +151,23 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     }
     
 }
+
+// async-await support
+extension MessageCarbonsModule {
+    
+    open func setState(_ state: Bool) async throws {
+        _ = try await withUnsafeThrowingContinuation { continuation in
+            setState(state, callback: { result in
+                continuation.resume(with: result);
+            })
+        }
+    }
+    
+    open func enable() async throws {
+        try await setState(true);
+    }
+ 
+    open func disable() async throws {
+        try await setState(false);
+    }
+}
