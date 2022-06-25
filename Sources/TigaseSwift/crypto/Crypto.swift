@@ -59,3 +59,35 @@ extension HashFunction {
     }
     
 }
+
+extension SymmetricKey {
+    
+    public func data() -> Data {
+        return self.withUnsafeBytes({ ptr in
+            return Data(buffer: ptr.bindMemory(to: UInt8.self));
+        })
+    }
+    
+}
+
+extension Data {
+    
+    public init<S: StringProtocol>(hex: S) {
+        let len = hex.count / 2;
+        self.init(capacity: len);
+        var buffer: UInt8? = nil;
+        for c in hex {
+            let v = UInt8(c.hexDigitValue ?? 0);
+            if let b = buffer {
+                self.append(b << 4 | v);
+                buffer = nil;
+            } else {
+                buffer = v;
+            }
+        }
+    }
+
+    public func hex() -> String {
+        self.map({ String(format: "%02x", $0) }).joined();
+    }
+}

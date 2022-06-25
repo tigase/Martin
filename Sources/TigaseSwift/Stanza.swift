@@ -182,11 +182,10 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
         }
     }
         
-    init(name: String, xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
+    init(name: String, xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil) {
         self.element = Element(name: name, xmlns: xmlns);
-        if let type = type {
-            self.element.attribute("type", newValue: type.rawValue);
-        }
+        self.type = type;
+        self.to = toJid;
         if let id = id {
             self.element.attribute("id", newValue: id);
         }
@@ -423,8 +422,8 @@ open class Message: Stanza {
         return String("Message : \(element)")
     }
     
-    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
-        super.init(name: "message", xmlns: xmlns, type: type, id: id);
+    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil) {
+        super.init(name: "message", xmlns: xmlns, type: type, id: id, to: toJid);
     }
     
     public override init(elem: Element) {
@@ -585,8 +584,8 @@ open class Presence: Stanza {
         }
     }
     
-    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
-        super.init(name: "presence", xmlns: xmlns, type: type, id: id);
+    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil) {
+        super.init(name: "presence", xmlns: xmlns, type: type, id: id, to: toJid);
     }
     
     public override init(elem: Element) {
@@ -602,8 +601,8 @@ open class Iq: Stanza {
         return String("Iq : \(element)")
     }
     
-    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil) {
-        super.init(name: "iq", xmlns: xmlns, type: type, id: id);
+    public init(xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil) {
+        super.init(name: "iq", xmlns: xmlns, type: type, id: id, to: toJid);
     }
     
     public override init(elem: Element) {
