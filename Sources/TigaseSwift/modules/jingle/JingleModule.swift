@@ -100,36 +100,36 @@ open class JingleModule: XmppModuleBase, XmppModule {
                 guard message.type != .error else {
                     return;
                 }
-                throw XMPPError.feature_not_implemented;
+                throw XMPPError(condition: .feature_not_implemented);
             }
             try process(message: message);
         case let iq as Iq:
             try process(iq: iq);
         default:
-            throw XMPPError.feature_not_implemented;
+            throw XMPPError(condition: .feature_not_implemented);
         }
     }
     
     open func process(iq stanza: Iq) throws {
         guard stanza.type ?? StanzaType.get == .set else {
-            throw XMPPError.bad_request("All messages should be of type 'set'");
+            throw XMPPError(condition: .bad_request, message: "All messages should be of type 'set'");
         }
         
         let jingle = stanza.firstChild(name: "jingle", xmlns: JingleModule.XMLNS)!;
         
         guard let action = Jingle.Action(rawValue: jingle.attribute("action") ?? ""), let from = stanza.from else {
-            throw XMPPError.bad_request("Missing or invalid action attribute");
+            throw XMPPError(condition: .bad_request, message: "Missing or invalid action attribute");
         }
         
         guard let sid = jingle.attribute("sid") else {
-            throw XMPPError.bad_request("Missing sid attributed")
+            throw XMPPError(condition: .bad_request, message: "Missing sid attributed")
         }
         guard let initiator = JID(jingle.attribute("initiator")) ?? stanza.from else {
-            throw XMPPError.bad_request("Missing initiator attribute");
+            throw XMPPError(condition: .bad_request, message: "Missing initiator attribute");
         }
         
         guard let context = self.context else {
-            throw XMPPError.resource_constraint(nil);
+            throw XMPPError(condition: .resource_constraint);
         }
         
         let contents = self.contents(from: jingle);
@@ -146,17 +146,17 @@ open class JingleModule: XmppModuleBase, XmppModule {
             try self.sessionManager.transportInfo(for: context, with: from, sid: sid, contents: contents);
         case .contentAdd, .contentModify, .contentRemove:
             guard let contentAction = Jingle.ContentAction.from(action) else {
-                throw XMPPError.bad_request("Invalid action");
+                throw XMPPError(condition: .bad_request, message: "Invalid action");
             }
             try self.sessionManager.contentModified(for: context, with: from, sid: sid, action: contentAction, contents: contents, bundle: bundle);
         case .sessionInfo:
             let infos = jingle.filterChildren(xmlns: Jingle.SessionInfo.XMLNS).compactMap(Jingle.SessionInfo.from(element:));
             try self.sessionManager.sessionInfo(for: context, with: from, sid: sid, info: infos);
         default:
-            throw XMPPError.feature_not_implemented;
+            throw XMPPError(condition: .feature_not_implemented);
         }
         
-        write(stanza.makeResult(type: .result));
+        write(stanza: stanza.makeResult(type: .result));
     }
         
     open func bundle(from jingle: Element) -> [String]? {
@@ -214,7 +214,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         response.type = .chat;
         response.to = jid;
         response.jingleMessageInitiationAction = action;
-        write(response, writeCompleted: writeCompleted);
+        write(stanza: response, completionHandler: writeCompleted);
     }
 
     public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
@@ -246,7 +246,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
             jingle.addChild(group);
         }
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -280,7 +280,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
             jingle.addChild(group);
         }
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -302,7 +302,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         iq.addChild(jingle);
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             print("session info sent and answer received", result);
         });
     }
@@ -320,7 +320,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
 
         jingle.addChild(reason.toReasonElement());
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             print("session terminated and answer received", result);
         });
     }
@@ -340,7 +340,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         iq.addChild(jingle);
         
-        write(iq, completionHandler: { response in
+        write(iq: iq, completionHandler: { response in
             print("session transport-info response received:", response as Any);
         });
     }
@@ -369,7 +369,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
             jingle.addChild(group);
         }
         
-        self.write(iq, completionHandler: completionHandler);
+        self.write(iq: iq, completionHandler: completionHandler);
     }
     
     public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) -> Future<Void, XMPPError> {

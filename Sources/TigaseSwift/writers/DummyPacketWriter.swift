@@ -23,12 +23,12 @@ import Foundation
 
 public struct DummyPacketWriter: PacketWriter {
     
-    public func write<Failure>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) where Failure : Error {
-        completionHandler?(.failure(errorDecoder(nil) as! Failure));
+    public func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void) {
+        completionHandler(.failure(XMPPError.remote_server_timeout));
     }
     
-    public func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
-        writeCompleted?(.failure(XMPPError.remote_server_timeout));
+    public func write(stanza: Stanza, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
+        completionHandler?(.failure(XMPPError.remote_server_timeout));
     }
 
 }

@@ -49,14 +49,14 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
         let timestamp: Date?;
     }
         
-    open func getEntityTime(from jid: JID, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
+    open func entityTime(from jid: JID, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
         let iq = Iq();
         iq.to = jid;
         iq.type = StanzaType.get;
         
         iq.addChild(Element(name: "time", xmlns: EntityTimeModule.XMLNS));
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map { response in
                 let timeEl = response.firstChild(name: "time", xmlns: EntityTimeModule.XMLNS);
                 var date: Date? = nil;
@@ -90,11 +90,11 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
         
         iq.addChild(timeEl);
         
-        write(iq);
+        write(stanza: iq);
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw XMPPError.bad_request(nil);
+        throw XMPPError(condition: .bad_request);
     }
     
 }

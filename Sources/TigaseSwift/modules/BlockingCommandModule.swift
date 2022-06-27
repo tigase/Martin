@@ -79,7 +79,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         
     open func process(stanza: Stanza) throws {
         guard let actionEl = stanza.firstChild(xmlns: BlockingCommandModule.BC_XMLNS) else {
-            throw XMPPError.feature_not_implemented;
+            throw XMPPError(condition: .feature_not_implemented);
         }
         
         switch actionEl.name {
@@ -101,7 +101,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
                 self.blockedJids = blocked.filter({ jid in !newJids.contains(jid)});
             }
         default:
-            throw XMPPError.feature_not_implemented;
+            throw XMPPError(condition: .feature_not_implemented);
         }
     }
     
@@ -140,7 +140,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         }
         block.addChild(item);
         iq.addChild(block);
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
     }
@@ -159,7 +159,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         iq.type = StanzaType.set;
         let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
         iq.addChild(block);
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
     }
@@ -182,7 +182,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         iq.type = StanzaType.set;
         let unblock = Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
         iq.addChild(unblock);
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })
     }
@@ -194,7 +194,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
             let list = Element(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS);
             iq.addChild(list);
 
-            write(iq, completionHandler: { result in
+            write(iq: iq, completionHandler: { result in
                 switch result {
                 case .success(let iq):
                     let blockedJids = iq.firstChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.children.compactMap({ JID($0.attribute("jid")) }) ?? [];

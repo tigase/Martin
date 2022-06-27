@@ -21,8 +21,6 @@
 
 import Foundation
 
-public typealias PubSubPublishItemResult = Result<String,PubSubError>;
-
 extension PubSubModule {
         
     /**
@@ -34,7 +32,7 @@ extension PubSubModule {
      - parameter publishOptions: publish options
      - parameter completionHandler: called on completion
      */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: PubSubNodeConfig? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: PubSubNodeConfig? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         if pubSubJid != nil {
@@ -62,13 +60,13 @@ extension PubSubModule {
             pubsub.addChild(publishOptionsEl);
         }
         
-        write(iq, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap({ response in
                 guard let publishEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "publish"), let id = publishEl.firstChild(name: "item")?.attribute("id") else {
                     if let id = itemId {
                         return .success(id);
                     } else {
-                        return .failure(.undefined_condition);
+                        return .failure(XMPPError(condition: .undefined_condition, stanza: response));
                     }
                 }
                 return .success(id);
@@ -83,21 +81,7 @@ extension PubSubModule {
      - parameter itemId: id of item
      - parameter completionHandler: called when result is available
      */
-    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
-        self.retractItem(at: pubSubJid, from: nodeName, itemId: itemId, errorDecoder: PubSubError.from(stanza:), completionHandler: { result in
-                completionHandler(result.map({ _ in itemId }))
-        });
-    }
-    
-    /**
-     Retract item from PubSub node
-     - parameter at: jid of PubSub service
-     - parameter from: node name
-     - parameter itemId: id of item
-     - parameter errorDecoder: functon called to preprocess received stanza when error occurred
-     - parameter completionHandler: called when result is available
-     */
-    public func retractItem<Failure: Error>(at pubSubJid: BareJID?, from nodeName: String, itemId: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         if pubSubJid != nil {
@@ -114,8 +98,9 @@ extension PubSubModule {
         let item = Element(name: "item");
         item.attribute("id", newValue: itemId);
         retract.addChild(item);
-        
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: { result in
+            completionHandler(result.map({ _ in itemId }))
+        });
     }
     
 }

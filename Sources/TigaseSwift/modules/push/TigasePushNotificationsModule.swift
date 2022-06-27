@@ -74,7 +74,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             completionHandler(.failure(.remote_server_timeout));
             return;
         }
-        discoModule.getItems(for: JID(context.userBareJid.domain), node: nil, completionHandler: { result in
+        discoModule.items(for: JID(context.userBareJid.domain), node: nil, completionHandler: { result in
             switch result {
             case .success(let items):
                 var found: [JID] = [];
@@ -82,7 +82,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                 group.enter();
                 for item in items.items {
                     group.enter();
-                    self.discoModule.getInfo(for: item.jid, node: item.node, completionHandler: { result in
+                    self.discoModule.info(for: item.jid, node: item.node, completionHandler: { result in
                         switch result {
                         case .success(let info):
                             if (!info.identities.filter({ (identity) -> Bool in
@@ -103,7 +103,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
                     if let jid = found.first {
                         completionHandler(.success(jid));
                     } else {
-                        completionHandler(.failure(.item_not_found));
+                        completionHandler(.failure(XMPPError(condition: .item_not_found)));
                     }
                 })
             case .failure(let error):
@@ -316,7 +316,7 @@ extension TigasePushNotificationsModule {
     
     open func findPushComponents(requiredFeatures: [String]) async throws -> [JID] {
         guard let disco = self.context?.module(.disco) else {
-            throw XMPPError.unexpected_request("No context!")
+            throw XMPPError(condition: .unexpected_request, message: "No context!")
         }
         
         let components = try await disco.serverComponents().items.map({ $0.jid });

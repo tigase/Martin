@@ -115,10 +115,10 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
             enable.addChild(publishOptions.element(type: .submit, onlyModified: false));
         }
         iq.addChild(enable);
-        write(iq, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: completionHandler);
     }
 
-    open func disable(serviceJid: JID, node: String, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+    open func disable(serviceJid: JID, node: String, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.set;
         let disable = Element(name: "disable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
@@ -126,7 +126,7 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         disable.attribute("node", newValue: node);
         iq.addChild(disable);
         
-        write(iq, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: completionHandler);
     }
     
 }

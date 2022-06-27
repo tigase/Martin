@@ -65,7 +65,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
     
     public func process(stanza: Stanza) throws {
         guard let from = stanza.from else {
-            throw XMPPError.bad_request(nil);
+            throw XMPPError(condition: .bad_request);
         }
         switch stanza {
         case let iq as Iq:
@@ -80,17 +80,17 @@ open class MeetModule: XmppModuleBase, XmppModule {
                         eventsPublisher.send(.publisherLeft(from.bareJid, publisher));
                     }
                 default:
-                    throw XMPPError.bad_request(nil);
+                    throw XMPPError(condition: .bad_request);
                 }
             }
-            write(iq.makeResult(type: .result));
+            write(stanza: iq.makeResult(type: .result));
         case let message as Message:
             guard let action = message.meetMessageInitiationAction else {
-                throw XMPPError.bad_request(nil);
+                throw XMPPError(condition: .bad_request);
             }
             eventsPublisher.send(.inivitation(action, from));
         default:
-            throw XMPPError.bad_request(nil);
+            throw XMPPError(condition: .bad_request);
         }
     }
     
@@ -112,7 +112,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
             return;
         }
         let serverJid = JID(context.userBareJid.domain);
-        discoModule.getItems(for: serverJid, completionHandler: { result in
+        discoModule.items(for: serverJid, completionHandler: { result in
             switch result {
             case .failure(let error):
                 completionHandler(.failure(error));
@@ -122,7 +122,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
                 group.enter();
                 for item in items.items {
                     group.enter();
-                    discoModule.getInfo(for: item.jid, completionHandler: { result in
+                    discoModule.info(for: item.jid, completionHandler: { result in
                         switch result {
                         case .failure(_):
                             break;
@@ -139,7 +139,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
                 group.leave();
                 group.notify(queue: DispatchQueue.main, execute: {
                     guard !results.isEmpty else {
-                        completionHandler(.failure(.item_not_found));
+                        completionHandler(.failure(XMPPError(condition: .item_not_found)));
                         return;
                     }
                     completionHandler(.success(results));
@@ -164,7 +164,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
         
         iq.addChild(createEl);
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap({ iq in
                 guard let id = iq.firstChild(name: "create", xmlns: MeetModule.ID)?.attribute("id") else {
                     return .failure(.undefined_condition);
@@ -176,7 +176,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
     
     open func allow(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard !jids.isEmpty else {
-            completionHandler(.failure(.unexpected_request("List of allowed JIDs is empty!")));
+            completionHandler(.failure(XMPPError(condition: .unexpected_request, message: "List of allowed JIDs is empty!")));
             return;
         }
         
@@ -192,14 +192,14 @@ open class MeetModule: XmppModuleBase, XmppModule {
         
         iq.addChild(allowEl);
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
         
     open func deny(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         guard !jids.isEmpty else {
-            completionHandler(.failure(.unexpected_request("List of denied JIDs is empty!")));
+            completionHandler(.failure(XMPPError(condition: .unexpected_request, message: "List of denied JIDs is empty!")));
             return;
         }
         
@@ -215,7 +215,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
         
         iq.addChild(allowEl);
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -229,7 +229,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
 
         iq.addChild(destroyEl);
 
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -252,7 +252,7 @@ open class MeetModule: XmppModuleBase, XmppModule {
         response.type = .chat;
         response.to = jid;
         response.meetMessageInitiationAction = action;
-        write(response, writeCompleted: writeCompleted);
+        write(stanza: response, completionHandler: writeCompleted);
     }
     
     public enum Media: String {
@@ -355,7 +355,7 @@ extension MeetModule {
     
     open func findMeetComponents() async throws -> [MeetComponent] {
         guard let disco = self.context?.module(.disco) else {
-            throw XMPPError.unexpected_request("No context!")
+            throw XMPPError(condition: .unexpected_request, message: "No context!")
         }
         
         let components = try await disco.serverComponents().items.map({ $0.jid });

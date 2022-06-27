@@ -42,13 +42,11 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
     }
     
     open func process(stanza: Stanza) throws {
-        throw XMPPError.feature_not_implemented;
+        throw XMPPError(condition: .feature_not_implemented);
     }
     
     open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?, completionHandler: @escaping (Result<AdHocCommandsModule.Response, XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = to;
+        let iq = Iq(type: .set, to: to);
         
         let command = Element(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS);
         command.attribute("node", newValue: node);
@@ -59,10 +57,10 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
         
         iq.addChild(command);
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
                 guard let command = stanza.firstChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
-                    return .failure(.undefined_condition);
+                    return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
                 }
                 
                 let form = DataForm(element: command.firstChild(name: "x", xmlns: "jabber:x:data"));

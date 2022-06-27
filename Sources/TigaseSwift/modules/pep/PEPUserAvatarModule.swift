@@ -63,7 +63,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     }
     
     open func process(stanza: Stanza) throws {
-        throw XMPPError.feature_not_implemented;
+        throw XMPPError(condition: .feature_not_implemented);
     }
     
     public struct Avatar {
@@ -81,17 +81,17 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         }
     }
     
-    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar], completionHandler: @escaping(PubSubPublishItemResult)->Void) {
+    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar], completionHandler: @escaping(Result<String,XMPPError>)->Void) {
         queue.async {
             guard let pubsubModule = self.pubsubModule, let id = avatars.first(where: { $0.info.mimeType == "image/png" })?.info.id else {
-                completionHandler(.failure(.init(error: .not_acceptable("Missing payload in image/png format!"), pubsubErrorCondition: .invalid_payload)));
+                completionHandler(.failure(XMPPError(condition: .not_acceptable, message: "Missing payload in image/png format!", applicationCondition: PubSubErrorCondition.invalid_payload)));
                 return;
             }
             
             let publish: (()->Void) = {
                 let group = DispatchGroup();
                 group.enter();
-                var itemsError: PubSubError? = nil;
+                var itemsError: XMPPError? = nil;
                 for avatar in avatars {
                     if let data = avatar.data {
                         group.enter();
@@ -130,7 +130,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
                             case .success(_):
                                 publish();
                             case .failure(let error):
-                                switch error.error.errorCondition {
+                                switch error.condition {
                                 case .not_acceptable:
                                     // let's try workaround for Openfire
                                     if let field: DataForm.Field = form.field(for: "pubsub#collection") {
@@ -161,22 +161,12 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         }
     }
 
-    @available(*, deprecated, message: "Use publishAvatar(at:, avatar, completionHandler:) instead")
-    open func publishAvatar(at: BareJID? = nil, data: Data, mimeType: String, width: Int? = nil, height: Int? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
-        self.publishAvatar(at: at, avatar: [Avatar(data: data, mimeType: mimeType, width: width, height: height)], completionHandler: completionHandler);
-    }
-
-    open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+    open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
         pubsubModule.publishItem(at: from, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
     }
-
-    @available(*, deprecated, message: "Use publishAvatarMetaData(at:, id:, metadata, completionHandler:) instead")
-    open func publishAvatarMetaData(at: BareJID? = nil, id: String, mimeType: String, size: Int, width: Int? = nil, height: Int? = nil, url: String? = nil, completionHandler: @escaping (PubSubPublishItemResult)->Void) {
-        self.publishAvatarMetaData(at: at, id: id, metadata: [Info(id: id, size: size, mimeType: mimeType, url: url, height: height, width: width)], completionHandler: completionHandler);
-    }
     
-    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info], completionHandler: @escaping (PubSubPublishItemResult)->Void) {
+    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info], completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
         
         metadata.addChildren(infos.map({ $0.toElement() }));
@@ -184,34 +174,28 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, itemId: id, payload: metadata, completionHandler: completionHandler);
     }
     
-    open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<(String,Data),XMPPError>)->Void) {
+    open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<AvatarData,XMPPError>)->Void) {
         pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, limit: .items(withIds: [itemId]), completionHandler: { result in
-            switch result {
-            case .success(let items):
+            completionHandler(result.flatMap({ items in
                 if let item = items.items.first, let cdata = item.payload?.value, let data = Data(base64Encoded: cdata, options: []) {
-                    completionHandler(.success((item.id, data)));
+                    return .success(AvatarData(id: item.id, data: data));
                 } else {
-                    completionHandler(.failure(.item_not_found));
+                    return .failure(XMPPError(condition: .item_not_found));
                 }
-            case .failure:
-                completionHandler(.failure(.item_not_found));
-            }
+            }))
         })
     }
     
     open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,XMPPError>)->Void) {
         let limit: PubSubModule.QueryLimit = itemId == nil ? .lastItems(1) : .items(withIds: [itemId!]);
         pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, limit: limit, completionHandler: { result in
-            switch result {
-            case .success(let items):
-                guard let item = items.items.first, let info = item.payload?.compactMapChildren(Info.init(payload:)).first else {
-                    completionHandler(.failure(.item_not_found));
-                    return;
+            completionHandler(result.flatMap({ items in
+                if let item = items.items.first, let info = item.payload?.compactMapChildren(Info.init(payload:)).first {
+                    return .success(info);
+                } else {
+                    return .failure(XMPPError(condition: .item_not_found));
                 }
-                completionHandler(.success(info));
-            case .failure(let pubsubError):
-                completionHandler(.failure(pubsubError.error));
-            }
+            }))
         });
     }
 
@@ -320,7 +304,7 @@ extension PEPUserAvatarModule {
         }
     }
     
-    open func retrieveAvatar(from jid: BareJID, itemId: String) async throws -> (String,Data) {
+    open func retrieveAvatar(from jid: BareJID, itemId: String) async throws -> AvatarData {
         return try await withUnsafeThrowingContinuation { continuation in
             retrieveAvatar(from: jid, itemId: itemId, completionHandler: { result in
                 continuation.resume(with: result);

@@ -93,16 +93,20 @@ open class ResponseManager {
      - parameter timeout: maximal time for which should wait for response
      - parameter callback: callback to execute on response or timeout
      */
-    open func registerResponseHandler<Failure: Error>(for stanza:Stanza, timeout:TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) -> Cancellable {
+    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) -> Cancellable {
 
         let id = idForStanza(stanza: stanza);
         
         let key = Key(id: id, jid: stanza.to ?? accountJID);
         let entry = Entry(key: key, callback: { response in
-            if let response = response, response.type == .result {
-                completionHandler(.success(response))
+            if let response = response {
+                if response.type == .result {
+                    completionHandler(.success(response))
+                } else {
+                    completionHandler(.failure(XMPPError(response) ?? .undefined_condition));
+                }
             } else {
-                completionHandler(.failure(errorDecoder(response) as! Failure));
+                completionHandler(.failure(.remote_server_timeout));
             }
         }, timeout: timeout);
         queue.async {

@@ -105,7 +105,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             x.addChild(decline);
             
             message.addChild(x);
-            write(message, writeCompleted: completionHandler);
+            write(stanza: message, completionHandler: completionHandler);
         }
     }
     
@@ -115,13 +115,10 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter onSuccess: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func getRoomConfiguration(roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = roomJid;
-        
+    open func roomConfiguration(of roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
+        let iq = Iq(type: .get, to: roomJid);
         iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
                 guard let formEl = stanza.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.firstChild(name: "x", xmlns: "jabber:x:data"), let data = RoomConfig(element: formEl) else {
                     return .failure(.undefined_condition);
@@ -139,24 +136,21 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter onSuccess: called where response with result is received
      - parameter onError: called when received error or request timed out
      */
-    open func setRoomConfiguration(roomJid: JID, configuration: RoomConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = roomJid;
-        
+    open func roomConfiguration(_ configuration: RoomConfig, of roomJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        let iq = Iq(type: .set, to: roomJid);
         let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
         iq.addChild(query);
         query.addChild(configuration.element(type: .submit, onlyModified: true));
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map { _ in Void() });
         });
     }
     
-    open func getRoomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
+    open func roomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
         let userRole = room.occupant(nickname: room.nickname)?.role ?? .none;
         guard userRole == .participant || userRole == .moderator else {
-            completionHandler(.failure(.forbidden("Only participant or moderator can ask for room affiliations!")));
+            completionHandler(.failure(XMPPError(condition: .forbidden, message: "Only participant or moderator can ask for room affiliations!")));
             return;
         };
         
@@ -168,17 +162,17 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         iq.addChild(query);
         query.addChild(Element(name: "item", attributes: ["affiliation": affiliation.rawValue]));
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ stanza in
                 return stanza.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.compactMapChildren(RoomAffiliation.init(from:)) ?? [];
             }))
         });
     }
     
-    open func setRoomAffiliations(to room: RoomProtocol, changedAffiliations affiliations: [RoomAffiliation], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func roomAffiliations(_ affiliations: [RoomAffiliation], to room: RoomProtocol, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         let userAffiliation = room.occupant(nickname: room.nickname)?.affiliation ?? .none;
         guard userAffiliation == .admin || userAffiliation == .owner else {
-            completionHandler(.failure(.forbidden("Only room admin or owner can set room affiliations!")));
+            completionHandler(.failure(XMPPError(condition: .forbidden, message: "Only room admin or owner can set room affiliations!")));
             return;
         };
 
@@ -195,7 +189,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             return el;
         }));
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         });
     }
@@ -209,7 +203,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         if newSubject == nil {
             message.element.addChild(Element(name: "subject"));
         }
-        write(message)
+        write(stanza: message)
     }
     
     
@@ -265,12 +259,6 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
     
-    open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch) -> Future<RoomJoinResult, XMPPError> {
-        return Future({ promise in
-            self.join(room: room, fetchHistory: fetchHistory, completionHandler: promise);
-        });
-    }
-    
     open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch, completionHandler: @escaping (Result<RoomJoinResult,XMPPError>)->Void) {
         guard let context = self.context else {
             completionHandler(.failure(.undefined_condition));
@@ -302,7 +290,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
         
         room.update(state: .requested);
-        self.write(presence, writeCompleted: { result in
+        self.write(stanza: presence, completionHandler: { result in
             guard case .failure(let error) = result else {
                 return;
             }
@@ -323,16 +311,13 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             return false;
         }
         
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = JID(room.jid);
-
+        let iq = Iq(type: .set, to: JID(room.jid));
         let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
         query.addChild(Element(name: "destroy"));
         
         iq.addChild(query);
         
-        write(iq);
+        write(stanza: iq);
         
         roomManager.close(room: room);
         
@@ -351,7 +336,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             let presence = Presence();
             presence.type = StanzaType.unavailable;
             presence.to = room.jid.with(resource: room.nickname);
-            write(presence);
+            write(stanza: presence);
         }
         
         roomManager.close(room: room);
@@ -374,7 +359,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
                 processMessage(m);
             }
         default:
-            throw XMPPError.feature_not_implemented;
+            throw XMPPError(condition: .feature_not_implemented);
         }
     }
     
@@ -578,7 +563,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
         
         public static func from(error: XMPPError) -> RoomError? {
-            switch error {
+            switch error.condition {
             case .not_acceptable:
                 return .nicknameLockedDown;
             case .not_authorized:
@@ -643,7 +628,7 @@ extension MucModule {
     
     open func roomConfiguration(roomJid: JID) async throws -> RoomConfig {
         return try await withUnsafeThrowingContinuation { continuation in
-            getRoomConfiguration(roomJid: roomJid, completionHandler: { result in
+            roomConfiguration(of: roomJid, completionHandler: { result in
                 continuation.resume(with: result);
             })
         }
@@ -651,7 +636,7 @@ extension MucModule {
     
     open func setRoomConfiguration(roomJid: JID, configuration: RoomConfig) async throws {
         return try await withUnsafeThrowingContinuation { continuation in
-            setRoomConfiguration(roomJid: roomJid, configuration: configuration, completionHandler: { result in
+            roomConfiguration(configuration, of: roomJid, completionHandler: { result in
                 continuation.resume(with: result);
             })
         }

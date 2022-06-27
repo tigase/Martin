@@ -69,7 +69,7 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     open func process(stanza: Stanza) throws {
-        throw XMPPError.feature_not_implemented;
+        throw XMPPError(condition: .feature_not_implemented);
     }
     
     /**
@@ -98,7 +98,7 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
             self.state = state;
             let stanza = Stanza(name: state ? "active" : "inactive");
             stanza.element.xmlns = ClientStateIndicationModule.CSI_XMLNS;
-            write(stanza);
+            write(stanza: stanza);
             return true;
         }
         return false;
@@ -125,7 +125,7 @@ extension ClientStateIndicationModule {
     
     open func setState(_ state: ClientState) async throws -> Bool {
         guard self.available else {
-            throw XMPPError.feature_not_implemented;
+            throw XMPPError(condition: .feature_not_implemented);
         }
         guard state != state else {
             return false;

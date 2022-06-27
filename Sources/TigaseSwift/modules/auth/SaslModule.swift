@@ -175,7 +175,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
                 self.state = .inProgress;
             }
             
-            write(auth, writeCompleted: { _ in
+            write(stanza: auth, completionHandler: { _ in
                 if mechanism.status == .completedExpected {
                     self.state = .expectedAuthorization;
                 }
@@ -215,14 +215,14 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
             return;
         }
         if mechanism.status == .completed {
-            throw XMPPError.bad_request("Authentication is already completed!");
+            throw XMPPError(condition: .bad_request, message: "Authentication is already completed!");
         }
         let challenge = stanza.element.value;
         let response = try mechanism.evaluateChallenge(challenge, context: context!);
         let responseEl = Stanza(name: "response");
         responseEl.element.xmlns = SaslModule.SASL_XMLNS;
         responseEl.element.value = response;
-        write(responseEl, writeCompleted: { result in
+        write(stanza: responseEl, completionHandler: { result in
             if mechanism.status == .completedExpected {
                 self.state = .expectedAuthorization;
             }

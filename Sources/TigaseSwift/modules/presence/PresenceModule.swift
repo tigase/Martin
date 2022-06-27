@@ -116,12 +116,12 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     /// Send initial presence
     open func sendInitialPresence() {
         self.presence = presence;
-        write(presence);
+        write(stanza: presence);
     }
     
     open func sendPresence() {
         self.presence = presence;
-        write(presence);
+        write(stanza: presence);
     }
     
     /**
@@ -147,7 +147,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         
         self.presence = presence;
         if context?.state == .connected() {
-            write(presence);
+            write(stanza: presence);
         }
     }
     
@@ -163,7 +163,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
             presence.addChild(Element(name: "preauth", attributes: ["xmlns": "urn:xmpp:pars:0", "token": preauth!]));
         }
         
-        write(presence);
+        write(stanza: presence);
     }
 
     /**
@@ -175,7 +175,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         presence.to = jid;
         presence.type = StanzaType.subscribed;
         
-        write(presence);
+        write(stanza: presence);
     }
 
     /**
@@ -187,7 +187,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         presence.to = jid;
         presence.type = StanzaType.unsubscribe;
         
-        write(presence);
+        write(stanza: presence);
     }
     
     /**
@@ -199,7 +199,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         presence.to = jid;
         presence.type = StanzaType.unsubscribed;
         
-        write(presence);
+        write(stanza: presence);
     }
 
     public struct SubscriptionChange {

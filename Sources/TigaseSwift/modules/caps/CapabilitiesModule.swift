@@ -90,7 +90,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     
     /// Method do noting
     open func process(stanza: Stanza) throws {
-        throw XMPPError.bad_request(nil);
+        throw XMPPError(condition: .bad_request);
     }
     
     open func updateCaps(in presence: Presence) {
@@ -138,7 +138,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
                     }
                     self.inProgress.append(nodeName);
                     self.logger.debug("\(self.context) - caps disco#info send for: \(nodeName, privacy: .public) to: \(from, privacy: .auto(mask: .hash))");
-                    self.discoModule.getInfo(for: from, node: nodeName, completionHandler: { result in
+                    self.discoModule.info(for: from, node: nodeName, completionHandler: { result in
                         self.queue.async {
                             if let idx = self.inProgress.firstIndex(of: nodeName) {
                                 self.inProgress.remove(at: idx);

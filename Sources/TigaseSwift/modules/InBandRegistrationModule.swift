@@ -59,11 +59,11 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     }
     
     open func processGet(stanza: Stanza) throws {
-        throw XMPPError.not_allowed(nil);
+        throw XMPPError(condition: .not_allowed);
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw XMPPError.not_allowed(nil);
+        throw XMPPError(condition: .not_allowed);
     }
     
     /** 
@@ -72,23 +72,15 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
      - parameter username: username to register
      - parameter password: password for username
      - parameter email: email for registration
-     - parameter callback: called on registration response
+     - parameter completionHandler: called on registration response
      */
     open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        register(jid, username: username, password: password, email: email, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
-            completionHandler(result.map { _ in Void() });
-        })
-    }
-    
-    open func register<Failure: Error>(_ jid: JID? = nil, username: String?, password: String?, email: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
         guard let context = context else {
-            completionHandler(.failure(errorDecoder(nil) as! Failure));
+            completionHandler(.failure(.remote_server_timeout));
             return;
         }
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = jid ?? JID((context.boundJid?.bareJid ?? context.userBareJid)?.domain);
         
+        let iq = Iq(type: .set, to: jid ?? JID((context.boundJid?.bareJid ?? context.userBareJid)?.domain));
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         if username != nil && !username!.isEmpty {
             query.addChild(Element(name: "username", cdata: username!));
@@ -101,7 +93,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         }
         iq.addChild(query);
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: { result in
+            completionHandler(result.map { _ in Void() });
+        })
     }
     
     /**
@@ -114,14 +108,11 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
             completionHandler(.failure(.undefined_condition));
             return;
         }
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
-    
+        let iq = Iq(type: .get, to: jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain));
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         
         iq.addChild(query);
-        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map { response in
                 if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.firstChild(name: "x", xmlns: "jabber:x:data")) {
                     return FormResult(type: .dataForm, form: form, bob: query.compactMapChildren(BobData.init(from:)));
@@ -149,18 +140,16 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
 
     open func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         guard let context = context else {
-            completionHandler(.failure(.undefined_condition));
+            completionHandler(.failure(XMPPError(condition: .undefined_condition)));
             return;
         }
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain);
-        
+                              
+        let iq = Iq(type: .set, to: jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain));
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(form.element(type: .submit, onlyModified: false));
         
         iq.addChild(query);
-        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: completionHandler);
+        write(iq: iq, completionHandler: completionHandler);
     }
 
     /**
@@ -168,37 +157,28 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
      - parameter callback: called when user is unregistrated
      */
     open func unregister(from: JID? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = from;
-        
+        let iq = Iq(type: .set, to: from);
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(Element(name: "remove"));
         iq.addChild(query);
         
-        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: completionHandler);
-    }
-        
-    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String, XMPPError>)->Void) {
-        changePassword(for: serviceJid, newPassword: newPassword, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
-            completionHandler(result.map { _ in newPassword});
-        });
+        write(iq: iq, completionHandler: completionHandler);
     }
     
-    open func changePassword<Failure: Error>(for serviceJid: JID? = nil, newPassword: String, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         guard let context = context, let username = context.userBareJid.localPart else {
             return;
         }
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = serviceJid ?? context.boundJid;
         
+        let iq = Iq(type: .set, to: serviceJid ?? context.boundJid);
         let query = Element(name: "query", xmlns: "jabber:iq:register");
         query.addChild(Element(name: "username", cdata: username));
         query.addChild(Element(name: "password", cdata: newPassword));
         iq.addChild(query);
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: { result in
+            completionHandler(result.map { _ in newPassword});
+        });
     }
     
     public private(set) var isRegistrationAvailable = false;
@@ -327,7 +307,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         private func serverDisconnected() {
             self.preauthDone = false;
             if !serverAvailable {
-                onErrorFn(.service_unavailable("Could not connect to the server"));
+                onErrorFn(XMPPError(condition: .service_unavailable, message: "Could not connect to the server"));
             }
         }
         
@@ -427,7 +407,7 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
                 let domain: String = client.context.userBareJid.domain
                 iq.to = JID(domain);
                 iq.addChild(Element(name: "preauth", attributes: ["token": preauth, "xmlns": "urn:xmpp:pars:0"]));
-                client.context.writer.write(iq, completionHandler: { result in
+                client.context.writer.write(iq: iq, completionHandler: { result in
                     switch result {
                     case .success(_):
                         self.preauthDone = true;
@@ -473,9 +453,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
 // async-await support
 extension InBandRegistrationModule {
 
-    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?) async throws {
         return try await withUnsafeThrowingContinuation { continuation in
-            register(jid, username: username, password: password, email: email, errorDecoder: errorDecoder, completionHandler: { result in
+            register(jid, username: username, password: password, email: email, completionHandler: { result in
                 continuation.resume(with: result);
             })
         }
@@ -505,9 +485,9 @@ extension InBandRegistrationModule {
         }
     }
 
-    open func changePassword(for serviceJid: JID? = nil, newPassword: String, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String) async throws -> String {
         return try await withUnsafeThrowingContinuation { continuation in
-            changePassword(for: serviceJid, newPassword: newPassword, errorDecoder: errorDecoder, completionHandler: { result in
+            changePassword(for: serviceJid, newPassword: newPassword, completionHandler: { result in
                 continuation.resume(with: result);
             })
         }
@@ -557,10 +537,10 @@ extension InBandRegistrationModule {
             return result;
         }
 
-        open func submit(form: DataForm) async throws -> Iq {
+        open func submit(form: DataForm) async throws {
             try await ensureConnected();
             if usesDataForm {
-                return try await inBandRegistrationModule.submitRegistrationForm(form: form)
+                _ = try await inBandRegistrationModule.submitRegistrationForm(form: form)
             } else {
                 let username = form.value(for: "username", type: String.self);
                 let password = form.value(for: "password", type: String.self);

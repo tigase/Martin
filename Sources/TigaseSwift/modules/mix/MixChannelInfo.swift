@@ -56,13 +56,13 @@ open class MixChannelInfo: DataFormWrapper {
 
 extension MixModule {
     
-    open func publishInfo(for channelJid: BareJID, info: MixChannelInfo, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
+    open func publishInfo(for channelJid: BareJID, info: MixChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.element(type: .form, onlyModified: false), completionHandler: { response in
             switch response {
             case .success(_):
-                completionHandler?(.success(Void()));
+                completionHandler(.success(Void()));
             case .failure(let error):
-                completionHandler?(.failure(error.error));
+                completionHandler(.failure(XMPPError(condition: .undefined_condition)));
             }
         });
     }
@@ -72,19 +72,19 @@ extension MixModule {
             switch result {
             case .success(let items):
                 guard let item = items.items.sorted(by: { (i1, i2) in return i1.id > i2.id }).first else {
-                    resultHandler(.failure(.item_not_found));
+                    resultHandler(.failure(XMPPError(condition: .item_not_found)));
                     return;
                 }
                 guard let context = self.context, let payload = item.payload, let info = MixChannelInfo(element: payload) else {
-                    resultHandler(.failure(.undefined_condition));
+                    resultHandler(.failure(XMPPError(condition: .undefined_condition)));
                     return;
                 }
                 if let channel = self.channelManager.channel(for: context, with: channelJid) {
                     channel.update(info: info.channelInfo());
                 }
                 resultHandler(.success(info));
-            case .failure(let pubsubError):
-                resultHandler(.failure(pubsubError.error));
+            case .failure(let error):
+                resultHandler(.failure(error));
             }
         });
     }

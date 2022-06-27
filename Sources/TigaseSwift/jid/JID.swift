@@ -60,6 +60,13 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable {
         self.init(try decoder.singleValueContainer().decode(String.self));
     }
     
+    public init?(_ jid: BareJID?) {
+        guard let jid = jid else {
+            return nil;
+        }
+        self.init(jid, resource: nil);
+    }
+    
     /**
      Create instance
      - parameter jid: instance of BareJID

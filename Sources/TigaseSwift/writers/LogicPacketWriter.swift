@@ -34,30 +34,25 @@ public struct LogicPacketWriter: PacketWriter {
         self.responseManager = responseManager;
     }
       
-    public func write<Failure: Error>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) {
-        if let completionHandler = completionHandler {
-            let cancellable = responseManager.registerResponseHandler(for: iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: completionHandler);
+    public func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void) {
+        let cancellable = responseManager.registerResponseHandler(for: iq, timeout: timeout, completionHandler: completionHandler);
         
-            sessionLogic.send(stanza: iq, completionHandler: { result in
-                switch result {
-                case .success(_):
-                    break;
-                case .failure(_):
-                    cancellable.cancel();
-                }
-            });
-        } else {
-            sessionLogic.send(stanza: iq)
-        }
+        sessionLogic.send(stanza: iq, completionHandler: { result in
+            switch result {
+            case .success(_):
+                break;
+            case .failure(_):
+                cancellable.cancel();
+            }
+        });
     }
     
-    public func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
+    public func write(stanza: Stanza, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
         if stanza.name == "iq" && stanza.id == nil {
             stanza.id = UUID().uuidString;
         }
 
-        sessionLogic.send(stanza: stanza);
-        writeCompleted?(.success(Void()));
+        sessionLogic.send(stanza: stanza, completionHandler: completionHandler);
     }
     
 }

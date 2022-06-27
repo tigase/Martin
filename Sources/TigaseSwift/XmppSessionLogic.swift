@@ -286,14 +286,13 @@ open class SocketSessionLogic: XmppSessionLogic {
                     }
                 } else {
                     self.logger.debug("\(self.userJid) - feature-not-implemented \(stanza, privacy: .public)");
-                    throw XMPPError.feature_not_implemented;
+                    throw XMPPError(condition: .feature_not_implemented);
                 }
             } catch let error as XMPPError {
-                let errorStanza = error.createResponse(stanza);
+                let errorStanza = stanza.errorResult(of: error);
                 self.sendingOutgoingStanza(errorStanza);
             } catch {
-                let errorStanza = XMPPError.undefined_condition.createResponse(stanza);
-                self.sendingOutgoingStanza(errorStanza);
+                self.sendingOutgoingStanza(stanza.errorResult(of: .undefined_condition));
                 self.logger.debug("\(self.userJid) - unknown unhandled exception \(error)")
             }
 //        }
@@ -303,7 +302,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         queue.async {
             let state = self.state;
             guard state == .connected() || state == .connecting else {
-                completionHandler?(.failure(.not_authorized("You are not connected to the XMPP server")));
+                completionHandler?(.failure(XMPPError(condition: .not_authorized, message: "You are not connected to the XMPP server")));
                 return;
             }
             
@@ -327,9 +326,14 @@ open class SocketSessionLogic: XmppSessionLogic {
     
     open func keepalive() {
         if let pingModule = modulesManager.moduleOrNil(.ping) {
-            pingModule.ping(JID(userJid), callback: { (stanza) in
-                if stanza == nil {
-                    self.logger.debug("\(self.userJid) - no response on ping packet - possible that connection is broken, reconnecting...");
+            pingModule.ping(JID(userJid), completionHandler: { result in
+                switch result {
+                case .failure(let error):
+                    if error.condition == .remote_server_timeout {
+                        self.logger.debug("\(self.userJid) - no response on ping packet - possible that connection is broken, reconnecting...");
+                    }
+                default:
+                    break;
                 }
             });
         }

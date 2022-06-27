@@ -84,13 +84,13 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
     }
         
     open func processGet(stanza: Stanza) throws {
-        throw XMPPError.feature_not_implemented;
+        throw XMPPError(condition: .feature_not_implemented);
     }
     
     open func processSet(stanza: Stanza) throws {
         let bindedJid = context?.boundJid;
         if (stanza.from != nil && stanza.from != bindedJid && (stanza.from?.bareJid != bindedJid?.bareJid)) {
-            throw XMPPError.not_allowed("You are not allowed to send this to me!");
+            throw XMPPError(condition: .not_allowed, message: "You are not allowed to send this to me!");
         }
         
         if let query = stanza.firstChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
@@ -159,7 +159,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         }
         iq.addChild(query);
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             switch result {
             case .success(let iq):
                 if let query = iq.firstChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
@@ -184,11 +184,11 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         })
     }
     
-    public func addItem(jid: JID, name: String?, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+    public func addItem(jid: JID, name: String?, groups:[String], completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         self.updateItem(jid: jid, name: name, groups: groups, completionHandler: completionHandler);
     }
     
-    public func updateItem(jid: JID, name: String?, groups:[String], completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+    public func updateItem(jid: JID, name: String?, groups:[String], completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = .set;
         
@@ -206,10 +206,10 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
 
         query.addChild(item);
         
-        write(iq, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: completionHandler);
     }
 
-    public func removeItem(jid: JID, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
+    public func removeItem(jid: JID, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         let iq = Iq();
         iq.type = .set;
         
@@ -222,7 +222,7 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
 
         query.addChild(item);
         
-        write(iq, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: completionHandler);
     }
             
     /**

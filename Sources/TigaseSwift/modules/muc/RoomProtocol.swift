@@ -94,15 +94,15 @@ public enum RoomJoinResult {
 
 extension RoomProtocol {
     
-    public func rejoin(fetchHistory: RoomHistoryFetch) -> Future<RoomJoinResult, XMPPError> {
-        return Future({ promise in
-            guard let context = self.context else {
-                promise(.failure(.undefined_condition));
-                return;
-            }
-            context.module(.muc).join(room: self, fetchHistory: fetchHistory).handle(promise);
-        })
-    }
+//    public func rejoin(fetchHistory: RoomHistoryFetch) -> Future<RoomJoinResult, XMPPError> {
+//        return Future({ promise in
+//            guard let context = self.context else {
+//                promise(.failure(.undefined_condition));
+//                return;
+//            }
+//            context.module(.muc).join(room: self, fetchHistory: fetchHistory).handle(promise);
+//        })
+//    }
 
     public func createPrivateMessage(recipientNickname: String) -> Message {
         let msg = createMessage(id: UUID().uuidString, type: .chat);
@@ -125,7 +125,7 @@ extension RoomProtocol {
     public func invite(_ invitee: JID, reason: String?) {
         let message = self.createInvitation(invitee, reason: reason);
         
-        context?.writer.write(message);
+        context?.writer.write(stanza: message);
     }
     
     /**
@@ -158,7 +158,7 @@ extension RoomProtocol {
      */
     public func inviteDirectly(_ invitee: JID, reason: String?, threadId: String?) {
         let message = createDirectInvitation(invitee, reason: reason, threadId: threadId);
-        context?.writer.write(message);
+        context?.writer.write(stanza: message);
     }
     
     /**

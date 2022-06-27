@@ -113,7 +113,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
      */
     open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil, completionHandler: ( (Result<String?,XMPPError>)->Void)?) {
         guard !(ackEnabled || resumptionEnabled) else {
-            completionHandler?(.failure(.unexpected_request()));
+            completionHandler?(.failure(XMPPError(condition: .unexpected_request)));
             return;
         }
         
@@ -127,7 +127,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             }
         }
         
-        write(enable);
+        write(stanza: enable);
     }
     
     open func reset(scopes: Set<ResetableScope>) {
@@ -236,7 +236,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
         
         let r = Stanza(name: "r", xmlns: StreamManagementModule.SM_XMLNS);
-        write(r);
+        write(stanza: r);
         lastRequestTimestamp = Date();
     }
     
@@ -264,7 +264,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
         resume.attribute("previd", newValue: resumptionId);
         
-        write(resume);
+        write(stanza: resume);
     }
     
     /// Send ACK to server
@@ -278,7 +278,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         guard let a = prepareAck(force: false) else {
             return;
         }
-        write(a);
+        write(stanza: a);
     }
     
     // call only from internal queue
@@ -317,7 +317,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             guard let a = self.prepareAck(force: true) else {
                 return;
             }
-            self.write(a);
+            self.write(stanza: a);
         }
     }
     
@@ -328,8 +328,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         
         logger.debug("stream resumption failed");
         
-        resumptionHandler?(.failure(stanza.error ?? .unexpected_request()));
-        enablingHandler?(.failure(stanza.error ?? .unexpected_request()));
+        let error = XMPPError(condition: stanza.firstChild(xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas").map({ ErrorCondition.init(rawValue: $0.name) ?? .undefined_condition }) ?? .undefined_condition);
+        resumptionHandler?(.failure(error));
+        enablingHandler?(.failure(error));
     }
     
     func processResumed(_ stanza: Stanza) {
@@ -345,7 +346,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         let oldOutgoingQueue = outgoingQueue;
         outgoingQueue = Queue<Stanza>();
         while let s = oldOutgoingQueue.poll() {
-            write(s);
+            write(stanza: s);
         }
         
         logger.debug("stream resumed");

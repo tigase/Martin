@@ -66,7 +66,7 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
         iq.element.addChild(bind);
         let resource:String? = context?.connectionConfiguration.resource;
         bind.addChild(Element(name: "resource", cdata:resource));
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             switch result {
             case .success(let stanza):
                 if let name = stanza.firstChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.firstChild(name: "jid")?.value {
@@ -84,7 +84,7 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     
     /// Method should not be called due to empty `criteria` property
     open func process(stanza: Stanza) throws {
-        throw XMPPError.bad_request(nil)
+        throw XMPPError(condition: .bad_request);
     }
     
 }

@@ -48,7 +48,7 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
     }
     
     public func process(stanza: Stanza) throws {
-        throw XMPPError.feature_not_implemented;
+        throw XMPPError(condition: .feature_not_implemented);
     }
     
     public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],XMPPError>)->Void) {
@@ -65,7 +65,7 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
         }
         iq.addChild(servicesEl);
         
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map { response in
                 return response.firstChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.compactMapChildren(Service.parse(_:)) ?? [];
             })

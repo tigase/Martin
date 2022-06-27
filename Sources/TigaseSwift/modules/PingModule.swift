@@ -50,25 +50,21 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
     /**
      Send ping request to jid
      - parameter jid: ping destination
-     - parameter callback: executed when response is received or due to timeout
+     - parameter completionHandler: executed when response is received or due to timeout
      */
-    open func ping(_ jid: JID, callback: (Stanza?)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = jid;
+    open func ping(_ jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        let iq = Iq(type: .get, to: jid);
         iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
         
-        write(iq);
-    }
-    
-    open func ping(_ jid: JID, completionHandler: (Result<Void,XMPPError>)->Void) {
-        ping(jid, callback: { stanza in
-            let error = stanza?.error ?? .feature_not_implemented;
-            if error == .feature_not_implemented {
-                completionHandler(.success(Void()));
-            } else {
-                completionHandler(.failure(error));
-            }
+        write(iq: iq, completionHandler: { result in
+            completionHandler(result.flatMap({ _ in .success(Void()) }).flatMapError({ error in
+                switch error.condition {
+                case .feature_not_implemented:
+                    return .success(Void());
+                default:
+                    return .failure(error);
+                }
+            }));
         })
     }
     
@@ -76,12 +72,12 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
      Processes ping requests and responds properly
      */
     open func processGet(stanza: Stanza) throws {
-        let result = stanza.makeResult(type: StanzaType.result);
-        write(result);
+        let result = stanza.makeResult(type: .result);
+        write(stanza: result);
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw XMPPError.not_allowed(nil);
+        throw XMPPError(condition: .bad_request);
     }
 }
 
@@ -89,9 +85,7 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
 extension PingModule {
     
     open func ping(_ jid: JID) async throws {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = jid;
+        let iq = Iq(type: .get, to: jid);
         iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
         
         try await write(iq: iq);

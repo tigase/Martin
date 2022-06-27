@@ -61,7 +61,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
     }
     
     open func process(stanza: Stanza) throws {
-        throw XMPPError.bad_request(nil);
+        throw XMPPError(condition: .bad_request);
     }
     
     open func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], XMPPError>)->Void) {
@@ -70,7 +70,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
             return;
         }
         let serverJid = JID(context.userBareJid.domain);
-        discoModule.getItems(for: serverJid, completionHandler: { result in
+        discoModule.items(for: serverJid, completionHandler: { result in
             switch result {
             case .failure(let error):
                 completionHandler(.failure(error));
@@ -81,7 +81,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
                 group.enter();
                 for item in items.items {
                     group.enter();
-                    discoModule.getInfo(for: item.jid, node: nil, completionHandler: { result in
+                    discoModule.info(for: item.jid, node: nil, completionHandler: { result in
                         switch result {
                         case .failure(_):
                             break;
@@ -99,7 +99,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
                 group.leave();
                 group.notify(queue: DispatchQueue.main, execute: {
                     guard !results.isEmpty else {
-                        completionHandler(.failure(.item_not_found));
+                        completionHandler(.failure(XMPPError(condition: .item_not_found)));
                         return;
                     }
                     completionHandler(.success(results));
@@ -108,11 +108,8 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
         });
     }
     
-    open func requestUploadSlot<Failure: Error>(componentJid: JID, filename: String, size: Int, contentType: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>)->Void)?) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = componentJid;
-        
+    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {
+        let iq = Iq(type: .get, to: componentJid);
         let requestEl = Element(name: "request", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS);
         requestEl.attribute("filename", newValue: filename);
         requestEl.attribute("size", newValue: size.description);
@@ -121,11 +118,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
         }
         iq.addChild(requestEl);
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-    
-    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {
-        requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap { response in
                 guard let slotEl = response.firstChild(name: "slot", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS), let getUri = slotEl.firstChild(name: "get")?.attribute("url"), let putUri = slotEl.firstChild(name: "put")?.attribute("url") else {
                     return .failure(.undefined_condition);
@@ -179,7 +172,7 @@ extension HttpFileUploadModule {
     
     open func findHttpUploadComponents() async throws -> [HttpFileUploadModule.UploadComponent] {
         guard let disco = self.context?.module(.disco) else {
-            throw XMPPError.unexpected_request("No context!")
+            throw XMPPError(condition: .unexpected_request, message: "No context!")
         }
         
         let components = try await disco.serverComponents().items.map({ $0.jid });

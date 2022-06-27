@@ -60,7 +60,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     }
         
     open func process(stanza: Stanza) throws {
-        throw XMPPError.feature_not_implemented;
+        throw XMPPError(condition: .feature_not_implemented);
     }
     
     /**
@@ -95,12 +95,11 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
         }
         if availableModes.contains(mode!) && (activeMode == nil || activeMode! == mode!) {
             activeMode = mode;
-            let iq = Iq();
-            iq.type = StanzaType.set;
+            let iq = Iq(type: .set);
             let mobile = Element(name: "mobile", xmlns: mode!.rawValue);
             mobile.attribute("enable", newValue: state ? "true" : "false");
             iq.addChild(mobile);
-            write(iq);
+            write(stanza: iq);
             return true;
         }
         return false;

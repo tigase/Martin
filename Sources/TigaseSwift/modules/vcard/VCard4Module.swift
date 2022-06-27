@@ -49,23 +49,7 @@ open class VCard4Module: XmppModuleBase, XmppModule, VCardModuleProtocol {
     }
     
     open func process(stanza: Stanza) throws {
-        throw XMPPError.feature_not_implemented;
-    }
-    
-    /**
-     Publish vcard
-     - parameter vcard: vcard to publish
-     - parameter callback: called on result or failure
-     */
-    open func publishVCard<Failure: Error>(_ vcard: VCard, to jid: BareJID?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>) -> Void)? = nil) {
-        let iq = Iq();
-        if jid != nil {
-            iq.to = JID(jid!);
-        }
-        iq.type = StanzaType.set;
-        iq.addChild(vcard.toVCard4());
-        
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        throw XMPPError(condition: .feature_not_implemented);
     }
     
     /**
@@ -73,33 +57,25 @@ open class VCard4Module: XmppModuleBase, XmppModule, VCardModuleProtocol {
      - parameter vcard: vcard to publish
      - parameter completionHandler: called after publication result is received
      */
-    open func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
-        publishVCard(vcard, to: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
-            completionHandler?(result.map { _ in Void() });
+    open func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: @escaping (Result<Void,XMPPError>) -> Void) {
+        let iq = Iq(type: .set, to: JID(jid));
+        iq.addChild(vcard.toVCard4());
+        
+        write(iq: iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
         });
     }
-    
-    /**
-     Retrieve vcard for JID
-     - parameter from: JID for which vcard should be retrieved
-     - parameter callback: called with result
-     */
-    open func retrieveVCard<Failure: Error>(from jid: JID? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>) -> Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = jid;
-        iq.addChild(Element(name:"vcard", xmlns: VCard4Module.VCARD_XMLNS));
         
-        write(iq, timeout: 10, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-    
     /**
      Retrieve vcard for JID
      - parameter jid: JID for which vcard should be retrieved
      - parameter completionHandler: called  vcard retrieval result is received
      */
     open func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
-        retrieveVCard(from: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+        let iq = Iq(type: .get, to: jid);
+        iq.addChild(Element(name:"vcard", xmlns: VCard4Module.VCARD_XMLNS));
+        
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ response in
                 if let vcardEl = response.firstChild(name: "vcard", xmlns: VCard4Module.VCARD_XMLNS), let vcard = VCard(vcard4: vcardEl) {
                     return vcard;

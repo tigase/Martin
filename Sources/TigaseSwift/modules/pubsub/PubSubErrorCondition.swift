@@ -24,7 +24,8 @@ import Foundation
 /**
  Enum contains values for erros reported by PubSub service
  */
-public enum PubSubErrorCondition: String {
+public enum PubSubErrorCondition: String, ApplicationErrorCondition {
+    
     case closed_node = "closed-node"
     case configuration_required = "configuration-required"
     case conflict
@@ -88,4 +89,18 @@ public enum PubSubErrorCondition: String {
     case unsupported_subscription_notifications = "unsupported-subscription-notifications"
     case unsupported_subscription_options = "unsupported-subscription-options"
     
+    public var description: String {
+        return rawValue;
+    }
+
+    public init?(errorEl: Element) {
+        guard let conditionName = errorEl.firstChild(xmlns: PubSubModule.PUBSUB_ERROR_XMLNS)?.name else {
+            return nil;
+        }
+        self.init(rawValue: conditionName);
+    }
+    
+    public func element() -> Element {
+        return Element(name: rawValue, xmlns: PubSubModule.PUBSUB_ERROR_XMLNS);
+    }
 }

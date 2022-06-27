@@ -66,7 +66,7 @@ open class PubSubModule: XmppModuleBase, XmppModule {
         case let msg as Message:
             try process(message: msg);
         default:
-            throw XMPPError.feature_not_implemented;
+            throw XMPPError(condition: .feature_not_implemented);
         }
     }
     
@@ -176,5 +176,3 @@ open class PubSubModule: XmppModuleBase, XmppModule {
         }
     }
 }
-
-public typealias PubSubResult<T> = Result<T,PubSubError>

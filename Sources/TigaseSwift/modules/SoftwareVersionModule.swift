@@ -50,20 +50,6 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
         self.version = version;
     }
     
-    /**
-     Retrieve version of software used by recipient
-     - parameter for: address for which we want to retrieve software version
-     - parameter callback: called on response or failure
-     */
-    open func checkSoftwareVersion<Failure: Error>(for jid:JID, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.get;
-        iq.addChild(Element(name:"query", xmlns:"jabber:iq:version"));
-
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-    
     public class SoftwareVersion {
         public let name: String;
         public let version: String;
@@ -81,8 +67,11 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
      - parameter for: address for which we want to retrieve software version
      - parameter completionHandler: called when result is available
      */
-    open func checkSoftwareVersion(for jid:JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
-        self.checkSoftwareVersion(for: jid, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+    open func checkSoftwareVersion(for jid: JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
+        let iq = Iq(type: .get, to: jid);
+        iq.addChild(Element(name:"query", xmlns:"jabber:iq:version"));
+
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in
                 guard let query = stanza.firstChild(name: "query", xmlns: "jabber:iq:version"), let name = query.firstChild(name: "name")?.value, let version = query.firstChild(name: "version")?.value else {
                     return .failure(.undefined_condition);
@@ -109,11 +98,11 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
             query.addChild(Element(name: "os", cdata: os));
         }
         
-        write(result);
+        write(stanza: result);
     }
     
     open func processSet(stanza: Stanza) throws {
-        throw XMPPError.not_allowed(nil);
+        throw XMPPError(condition: .not_allowed);
     }
 }
 

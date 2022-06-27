@@ -146,7 +146,7 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
     
     open var error: XMPPError? {
         get {
-            return XMPPError.parse(stanza: self);
+            return XMPPError(self);
         }
     }
     

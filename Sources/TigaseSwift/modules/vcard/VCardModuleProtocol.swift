@@ -22,23 +22,16 @@
 import Foundation
 
 public protocol VCardModuleProtocol {
-    
-    func publishVCard<Failure: Error>(_ vcard: VCard, to jid: BareJID?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>) -> Void)?);
 
-    func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: ((Result<Void,XMPPError>)->Void)?);
-    
-    func retrieveVCard<Failure: Error>(from jid: JID?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>) -> Void);
+    func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: @escaping (Result<Void,XMPPError>)->Void);
     
     func retrieveVCard(from jid: JID?, completionHandler: @escaping (Result<VCard,XMPPError>)->Void)
+
 }
 
 public extension VCardModuleProtocol {
-
-    func publishVCard<Failure: Error>(_ vcard: VCard, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>) -> Void)?) {
-        publishVCard(vcard, to: nil, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
     
-    func publishVCard(_ vcard: VCard, completionHandler: ((Result<Void,XMPPError>) -> Void)?) {
+    func publishVCard(_ vcard: VCard, completionHandler: @escaping (Result<Void,XMPPError>) -> Void) {
         publishVCard(vcard, to: nil, completionHandler: completionHandler);
     }
     
@@ -51,15 +44,15 @@ public extension VCardModuleProtocol {
 // async-await support
 extension VCardModuleProtocol {
     
-    public func publish(vcard: VCard, to jid: BareJID?, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+    public func publish(vcard: VCard, to jid: BareJID? = nil) async throws {
         return try await withUnsafeThrowingContinuation { continuation in
-            publishVCard(vcard, to: jid, errorDecoder: errorDecoder, completionHandler: { result in
+            publishVCard(vcard, to: jid, completionHandler: { result in
                 continuation.resume(with: result);
             })
         }
     }
     
-    public func retrieveVCard(from jid: JID?) async throws -> VCard {
+    public func retrieveVCard(from jid: JID? = nil) async throws -> VCard {
         return try await withUnsafeThrowingContinuation { continuation in
             retrieveVCard(from: jid, completionHandler: { result in
                 continuation.resume(with: result);

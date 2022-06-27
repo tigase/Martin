@@ -109,7 +109,7 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppModule {
         response.to = jid;
         response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
         response.hints = [.store];
-        write(response);
+        write(stanza: response);
     }
     
     public struct Receipt {

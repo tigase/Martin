@@ -70,7 +70,7 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
         var error: XMPPError? = nil;
         for carb in message.filterChildren(xmlns: MessageCarbonsModule.MC_XMLNS) {
             guard let action = Action(rawValue: carb.name), let forwarded = getEncapsulatedMessage(carb) else {
-                error = XMPPError.bad_request(nil);
+                error = XMPPError(condition: .bad_request);
                 return;
             }
 
@@ -106,7 +106,7 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
         let iq = Iq();
         iq.type = StanzaType.set;
         iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             callback?(result.map({ _ in state }));
         });
     }

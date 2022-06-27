@@ -83,7 +83,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      */
     open func discoverServerFeatures(completionHandler: ((Result<DiscoveryInfoResult,XMPPError>)->Void)?) {
         if let jid = context?.boundJid {
-            getInfo(for: JID(jid.domain), completionHandler: { result in
+            info(for: JID(jid.domain), completionHandler: { result in
                 switch result {
                 case .success(let info):
                     self.serverDiscoResult = info;
@@ -102,7 +102,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      */
     open func discoverAccountFeatures(completionHandler:((Result<DiscoveryInfoResult,XMPPError>) -> Void)?) {
         if let jid = context?.boundJid {
-            getInfo(for: jid.withoutResource, completionHandler: { result in
+            info(for: jid.withoutResource, completionHandler: { result in
                 switch result {
                 case .success(let info):
                     self.accountDiscoResult = info;
@@ -118,29 +118,14 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      Method retieves informations about particular XMPP recipient and it's node
      - parameter for: recipient to query
      - parameter node: node to query for informations
-     - parameter callback: called on result or failure
-     */
-    open func getInfo<Failure: Error>(for jid: JID, node: String?, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>) -> Void) {
-        let iq = Iq();
-        iq.to  = jid;
-        iq.type = StanzaType.get;
-        let query = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
-        if node != nil {
-            query.attribute("node", newValue: node);
-        }
-        iq.addChild(query);
-        
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-    
-    /**
-     Method retieves informations about particular XMPP recipient and it's node
-     - parameter for: recipient to query
-     - parameter node: node to query for informations
      - parameter completionHandler: called where result is available
      */
-    open func getInfo(for jid:JID, node requestedNode:String? = nil, completionHandler: @escaping (Result<DiscoveryInfoResult,XMPPError>) -> Void) {
-        getInfo(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
+    open func info(for jid:JID, node: String? = nil, completionHandler: @escaping (Result<DiscoveryInfoResult,XMPPError>) -> Void) {
+        let iq = Iq(type: .get, to: jid);
+        let query = Element(name: "query", xmlns: DiscoveryModule.INFO_XMLNS);
+        query.attribute("node", newValue: node);
+        iq.addChild(query);
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map { stanza in
                 guard let query = stanza.firstChild(name: "query", xmlns: DiscoveryModule.INFO_XMLNS) else {
                     return .empty();
@@ -157,35 +142,20 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      Method retieves items available at particular XMPP recipient and it's node
      - parameter for: recipient to query
      - parameter node: node to query for items
-     - parameter callback: called on result or failure
-     */
-    open func getItems<Failure: Error>(for jid: JID, node: String? = nil, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>) -> Void) {
-        let iq = Iq();
-        iq.to  = jid;
-        iq.type = StanzaType.get;
-        let query = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
-        if node != nil {
-            query.attribute("node", newValue: node);
-        }
-        iq.addChild(query);
-        
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-
-    /**
-     Method retieves items available at particular XMPP recipient and it's node
-     - parameter for: recipient to query
-     - parameter node: node to query for items
      - parameter completionHandler: called where result is available
      */
-    open func getItems(for jid: JID, node requestedNode: String? = nil, completionHandler: @escaping (Result<DiscoveryItemsResult,XMPPError>) -> Void) {
-        getItems(for: jid, node: requestedNode, errorDecoder: XMPPError.from(stanza: ), completionHandler: { result in
+    open func items(for jid: JID, node: String? = nil, completionHandler: @escaping (Result<DiscoveryItemsResult,XMPPError>) -> Void) {
+        let iq = Iq(type: .get, to: jid);
+        let query = Element(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS);
+        query.attribute("node", newValue: node);
+        iq.addChild(query);
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ stanza in
                 guard let query = stanza.firstChild(name: "query", xmlns: DiscoveryModule.ITEMS_XMLNS) else {
-                    return DiscoveryItemsResult(node: requestedNode, items: []);
+                    return DiscoveryItemsResult(node: node, items: []);
                 }
                 let items = query.compactMapChildren(Item.init(_:));
-                return DiscoveryItemsResult(node: query.attribute("node") ?? requestedNode, items: items);
+                return DiscoveryItemsResult(node: query.attribute("node") ?? node, items: items);
             }))
         });
     }
@@ -219,11 +189,11 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
                 case DiscoveryModule.ITEMS_XMLNS:
                     processGetItems(stanza, node, callback);
                 default:
-                    throw XMPPError.bad_request(nil);
+                    throw XMPPError(condition: .bad_request);
                 }
             }
         } else {
-            throw XMPPError.bad_request(nil);
+            throw XMPPError(condition: .bad_request);
         }
     }
 
@@ -231,7 +201,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      Processes stanzas with type equal `set`
      */
     open func processSet(stanza:Stanza) throws {
-        throw XMPPError.not_allowed(nil);
+        throw XMPPError(condition: .not_allowed);
     }
     
     private func processGetInfo(_ stanza: Stanza, _ node: String?, _ nodeDetailsEntry: NodeDetailsEntry) {
@@ -258,7 +228,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             }
         }
         
-        write(result);
+        write(stanza: result);
     }
     
     private func processGetItems(_ stanza:Stanza, _ node:String?, _ nodeDetailsEntry:NodeDetailsEntry) {
@@ -280,7 +250,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
             }
         }
 
-        write(result);
+        write(stanza: result);
     }
  
     public func reset(scopes: Set<ResetableScope>) {
@@ -400,21 +370,21 @@ extension DiscoveryModule {
     
     open func serverFeatures() async throws -> DiscoveryInfoResult {
         guard let boundJid = context?.boundJid, let serverJid = JID(boundJid.domain) else {
-            throw XMPPError.unexpected_request("Resournce not bound yet!")
+            throw XMPPError(condition: .unexpected_request, message: "Resournce not bound yet!")
         }
         return try await info(for: serverJid);
     }
     
     open func accountFeatures() async throws -> DiscoveryInfoResult {
         guard let accountJid = context?.boundJid?.withoutResource else {
-            throw XMPPError.unexpected_request("Resournce not bound yet!")
+            throw XMPPError(condition: .unexpected_request, message: "Resournce not bound yet!")
         }
         return try await info(for: accountJid);
     }
     
     open func info(for jid: JID, node: String? = nil) async throws -> DiscoveryInfoResult {
         return try await withUnsafeThrowingContinuation { continuation in
-            getInfo(for: jid, node: node, completionHandler: { result in
+            info(for: jid, node: node, completionHandler: { result in
                 continuation.resume(with: result);
             })
         }
@@ -422,7 +392,7 @@ extension DiscoveryModule {
     
     open func items(for jid: JID, node requestedNode: String? = nil) async throws -> DiscoveryItemsResult {
         return try await withUnsafeThrowingContinuation { continuation in
-            getItems(for: jid, node: requestedNode, completionHandler: { result in
+            items(for: jid, node: requestedNode, completionHandler: { result in
                 continuation.resume(with: result);
             })
         }
@@ -430,7 +400,7 @@ extension DiscoveryModule {
     
     open func serverComponents() async throws -> DiscoveryItemsResult {
         guard let boundJid = context?.boundJid, let serverJid = JID(boundJid.domain) else {
-            throw XMPPError.unexpected_request("Resournce not bound yet!")
+            throw XMPPError(condition: .unexpected_request, message: "Resournce not bound yet!")
         }
         return try await items(for: serverJid);
     }

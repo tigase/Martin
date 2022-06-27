@@ -76,7 +76,7 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable {
             })
             saslModule.login();
         } else {
-            state = .error(XMPPError.item_not_found);
+            state = .error(XMPPError(condition: .item_not_found));
         }
     }
     

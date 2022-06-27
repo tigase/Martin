@@ -69,7 +69,7 @@ open class ConversationBase: ConversationProtocol {
         if message.to == nil {
             message.to = JID(jid);
         }
-        context.writer.write(message, writeCompleted: completionHandler);
+        context.writer.write(stanza: message, completionHandler: completionHandler);
     }
     
 }

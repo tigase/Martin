@@ -28,25 +28,20 @@ public typealias PacketErrorDecoder<Failure: Error> = (Stanza?) -> Error;
 
 public protocol PacketWriter {
     
-    func write<Failure: Error>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?)
+    func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void)
         
-    func write(_ stanza: Stanza, writeCompleted: ((Result<Void,XMPPError>)->Void)?)
-
+    func write(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?)
     
 }
 
 extension PacketWriter {
 
-    public func write(_ iq: Iq, timeout: TimeInterval = 30.0, completionHandler: ((Result<Iq,XMPPError>)->Void)?) {
-        write(iq, timeout: timeout, errorDecoder: XMPPError.from(stanza: ), completionHandler: completionHandler);
+    public func write(iq: Iq, timeout: TimeInterval = 30.0, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        write(iq: iq, timeout: timeout, completionHandler: completionHandler);
     }
 
-    public func write<Failure: Error>(_ iq: Iq, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq,Failure>)->Void)?) {
-        write(iq, timeout: 30.0, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-
-    public func write(_ stanza: Stanza) {
-        write(stanza, writeCompleted: nil);
+    public func write(stanza: Stanza) {
+        write(stanza: stanza, completionHandler: nil);
     }
     
 }
@@ -56,17 +51,13 @@ extension PacketWriter {
     
     public func write(stanza: Stanza) async throws {
         return try await withUnsafeThrowingContinuation { continuation in
-            write(stanza, writeCompleted: { result in
-                continuation.resume(with: result);
-            })
+            write(stanza: stanza, completionHandler: continuation.resume(with:));
         }
     }
     
-    public func write(iq: Iq, timeout: TimeInterval = 30.0, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+    public func write(iq: Iq, timeout: TimeInterval = 30.0) async throws -> Iq {
         return try await withUnsafeThrowingContinuation({ continuation in
-            write(iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+            write(iq: iq, timeout: timeout, completionHandler: continuation.resume(with:));
         })
     }
 

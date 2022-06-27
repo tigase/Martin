@@ -69,20 +69,20 @@ open class XmppModuleBase: ContextAware, PacketWriter {
         cancellable?.store(in: &cancellables);
     }
     
-    public func write<Failure>(_ iq: Iq, timeout: TimeInterval, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: ((Result<Iq, Failure>) -> Void)?) where Failure : Error {
+    public func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void) {
         guard let writer = context?.writer else {
-            completionHandler?(.failure(errorDecoder(nil) as! Failure));
+            completionHandler(.failure(XMPPError(condition: .remote_server_timeout)));
             return;
         }
-        writer.write(iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        writer.write(iq: iq, timeout: timeout, completionHandler: completionHandler);
     }
     
-    public func write(_ stanza: Stanza, writeCompleted: ((Result<Void, XMPPError>) -> Void)?) {
+    public func write(stanza: Stanza, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
         guard let writer = context?.writer else {
-            writeCompleted?(.failure(.remote_server_timeout));
+            completionHandler?(.failure(.remote_server_timeout));
             return;
         }
-        writer.write(stanza, writeCompleted: writeCompleted);
+        writer.write(stanza: stanza, completionHandler: completionHandler);
     }
 
 }
@@ -91,19 +91,15 @@ open class XmppModuleBase: ContextAware, PacketWriter {
 extension XmppModuleBase {
     
     @discardableResult
-    public func write(iq: Iq, timeout: TimeInterval = 30.0, errorDecoder: @escaping PacketErrorDecoder<Error> = XMPPError.from(stanza:)) async throws -> Iq {
+    public func write(iq: Iq, timeout: TimeInterval = 30.0) async throws -> Iq {
         return try await withUnsafeThrowingContinuation { continuation in
-            write(iq, timeout: timeout, errorDecoder: errorDecoder, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+            write(iq: iq, timeout: timeout, completionHandler: continuation.resume(with:));
         }
     }
     
     public func write(stanza: Stanza) async throws {
         return try await withUnsafeThrowingContinuation { continuation in
-            write(stanza, writeCompleted: { result in
-                continuation.resume(with: result);
-            })
+            write(stanza: stanza, completionHandler: continuation.resume(with:));
         }
     }
     

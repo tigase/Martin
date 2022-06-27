@@ -66,7 +66,7 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     
     /// Method should not be called due to empty `criteria`
     open func process(stanza: Stanza) throws {
-        throw XMPPError.bad_request(nil);
+        throw XMPPError(condition: .bad_request);
     }
     
     /// Method called to start session establishemnt
@@ -81,7 +81,7 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
         session.xmlns = SessionEstablishmentModule.SESSION_XMLNS;
         iq.element.addChild(session);
 
-        write(iq, completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler?(result.map({ _ in Void() }));
         })
     }

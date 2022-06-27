@@ -39,7 +39,7 @@ open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
     public var features: [String] = [XMLNS];
     
     public func process(stanza: Stanza) throws {
-        throw XMPPError.bad_request(nil);
+        throw XMPPError(condition: .bad_request);
     }
     
     public override weak var context: Context? {

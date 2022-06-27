@@ -129,7 +129,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      */
     open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
         guard let version = version ?? self.availableVersions.first else {
-            completionHandler(.failure(.feature_not_implemented));
+            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
             return;
         }
         
@@ -159,7 +159,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
     {
         guard let version = version ?? self.availableVersions.first else {
-            completionHandler(.failure(.feature_not_implemented))
+            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)))
             return;
         }
 
@@ -183,10 +183,10 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
             self.queries[queryId] = Query(id: queryId, version: version);
         }
 
-        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap { response in
                 guard let fin = response.firstChild(name: "fin", xmlns: version.rawValue) else {
-                    return .failure(.undefined_condition);
+                    return .failure(XMPPError(condition: .undefined_condition, stanza: response));
                 }
                 
                 let rsmResult = RSM.Result(from: fin.firstChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
@@ -221,7 +221,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      */
     open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler resultHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
         guard let version = version ?? availableVersions.first else {
-            resultHandler(.failure(.feature_not_implemented));
+            resultHandler(.failure(XMPPError(condition: .feature_not_implemented)));
             return;
         }
         let iq = Iq();
@@ -231,10 +231,10 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
         let queryEl = Element(name: "query", xmlns: version.rawValue);
         iq.addChild(queryEl);
      
-        write(iq, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+        write(iq: iq, completionHandler: { result in
             resultHandler(result.flatMap { stanza in
                 guard let query = stanza.firstChild(name: "query", xmlns: version.rawValue), let x = query.firstChild(name: "x", xmlns: "jabber:x:data"), let form = DataForm(element: x) else {
-                    return .failure(.undefined_condition);
+                    return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
                 }
                 return .success(MAMQueryForm(form: form));
             })
@@ -255,49 +255,35 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     
     /**
      Retrieve message archiving settings
+     - parameter version: version of specification to use
      - parameter completionHandler: called with result
      */
     open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
         guard let version = version ?? availableVersions.first else {
-            completionHandler(.failure(.feature_not_implemented));
+            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
             return;
         }
-        retrieveSettings(version: version, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
+        
+        let iq = Iq();
+        iq.type = StanzaType.get;
+        iq.addChild(Element(name: "prefs", xmlns: version.rawValue));
+        
+        write(iq: iq, completionHandler: { result in
             completionHandler(result.flatMap({ stanza in MessageArchiveManagementModule.parseSettings(fromIq: stanza, version: version) }));
         });
     }
     
     /**
-     Retrieve message archiving settings
-     - parameter callback: called when response is received
-     */
-    open func retrieveSettings<Failure: Error>(version: Version, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.addChild(Element(name: "prefs", xmlns: version.rawValue));
-        
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
-    }
-    
-    /**
+     - parameter version: version of specification to use
      - parameter settings: settings to set on the server
      - parameter completionHandler: called with result
      */
     open func updateSettings(version: Version? = nil, settings: Settings, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
         guard let version = version ?? availableVersions.first else {
-            completionHandler(.failure(.feature_not_implemented));
+            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
             return;
         }
-        updateSettings(version: version, settings: settings, errorDecoder: XMPPError.from(stanza:), completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in MessageArchiveManagementModule.parseSettings(fromIq: stanza, version: version) }));
-        });
-    }
-    
-    /**
-     - parameter settings: settings to set on the server
-     - parameter callback: called when response is received
-     */
-    open func updateSettings<Failure: Error>(version: Version, settings: Settings, errorDecoder: @escaping PacketErrorDecoder<Failure>, completionHandler: @escaping (Result<Iq,Failure>)->Void) {
+        
         let iq = Iq();
         iq.type = StanzaType.set;
         let prefs = Element(name: "prefs", xmlns: version.rawValue);
@@ -314,7 +300,9 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
             prefs.addChild(neverEl);
         }
         
-        write(iq, errorDecoder: errorDecoder, completionHandler: completionHandler);
+        write(iq: iq, completionHandler: { result in
+            completionHandler(result.flatMap({ stanza in MessageArchiveManagementModule.parseSettings(fromIq: stanza, version: version) }));
+        });
     }
     
     private static func parseSettings(fromIq stanza: Iq, version: Version) -> Result<Settings,XMPPError> {
@@ -324,7 +312,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
             let never: [JID] = prefs.firstChild(name: "always")?.compactMapChildren({ JID($0.value) }) ?? [];
             return .success(Settings(defaultValue: defValue, always: always, never: never));
         } else {
-            return .failure(.from(stanza: stanza));
+            return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
         }
     }
         
