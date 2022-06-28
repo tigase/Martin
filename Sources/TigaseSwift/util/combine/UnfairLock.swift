@@ -21,7 +21,7 @@
 
 import Foundation
 
-public class UnfairLock {
+open class UnfairLock {
     
     private var lock_s = os_unfair_lock();
     

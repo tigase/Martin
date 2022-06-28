@@ -30,7 +30,15 @@ extension Sequence {
         }
         return values;
     }
-    
+
+    public func asyncMap<T>(_ transform: (Element) async -> T) async -> [T] {
+        var values = [T]();
+        for element in self {
+            await values.append(transform(element));
+        }
+        return values;
+    }
+
     public func asyncMap<T>(_ transform: (Element) async throws -> T) async rethrows -> [T] {
         var values = [T]();
         for element in self {
@@ -56,6 +64,16 @@ extension Sequence {
         
         return try await tasks.asyncMap({ try await $0.value });
     }
+    
+    public func concurrentMap<T>(_ transform: @escaping (Element) async -> T) async -> [T] {
+        let tasks = map({ element in
+            Task {
+                await transform(element);
+            }
+        });
+        
+        return await tasks.asyncMap({ await $0.value });
+    }
 
     public func concurrentMapReduce<T>(_ transform: @escaping (Element) async throws -> [T]) async throws -> [T] {
         let tasks = map({ element in
@@ -77,4 +95,15 @@ extension Sequence {
         return await tasks.asyncMapReduce({ await $0.value });
     }
 
+    public func concurrentForEach(_ body: @escaping (Element) async -> Void) async {
+        let tasks = map({ element in
+            Task {
+                await body(element);
+            }
+        })
+        
+        for task in tasks {
+            await task.value;
+        }
+    }
 }
