@@ -102,7 +102,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      */
     open func discoverAccountFeatures(completionHandler:((Result<DiscoveryInfoResult,XMPPError>) -> Void)?) {
         if let jid = context?.boundJid {
-            info(for: jid.withoutResource, completionHandler: { result in
+            info(for: jid.withoutResource(), completionHandler: { result in
                 switch result {
                 case .success(let info):
                     self.accountDiscoResult = info;
@@ -376,7 +376,7 @@ extension DiscoveryModule {
     }
     
     open func accountFeatures() async throws -> DiscoveryInfoResult {
-        guard let accountJid = context?.boundJid?.withoutResource else {
+        guard let accountJid = context?.boundJid?.withoutResource() else {
             throw XMPPError(condition: .unexpected_request, message: "Resournce not bound yet!")
         }
         return try await info(for: accountJid);

@@ -45,49 +45,38 @@ private func strFromCUtf8(_ ptr:UnsafePointer<UInt8>?) -> String? {
 
 private let SAX_startElement: startElementNsSAX2Func = { ctx_, localname, prefix_, URI, nb_namespaces, namespaces_, nb_attributes, nb_defaulted, attributes_ in
     
+    let attributesCount = Int(nb_attributes);
     let parser = unsafeBitCast(ctx_, to: XMLParser.self);
     let name = strFromCUtf8(localname);
     let prefix = strFromCUtf8(prefix_);
     var attributes = [String:String]();
     var i=0;
-    if attributes_ != nil {
-        attributes_!.withMemoryRebound(to: attr.self, capacity: Int(nb_attributes)) {
+    if let attributes_ = attributes_ {
+        attributes_.withMemoryRebound(to: attr.self, capacity: attributesCount) {
             var attrsPtr = $0;
-            while i < Int(nb_attributes) {
-                var name = strFromCUtf8(attrsPtr.pointee.name);
-                var prefix = strFromCUtf8(attrsPtr.pointee.prefix);
-                var value = String(data: Data(bytes: UnsafePointer<UInt8>((attrsPtr.pointee.valueBegin)!), count: (attrsPtr.pointee.valueEnd)!-(attrsPtr.pointee.valueBegin)!), encoding: String.Encoding.utf8);
-                if (value != nil) {
-                    value = EscapeUtils.unescape(value!);
-                }
-                if prefix == nil {
-                    attributes[name!] = value;
+            for i in 0..<attributesCount {
+                let name = strFromCUtf8(attrsPtr.pointee.name)!;
+                let value = String(data: Data(bytes: UnsafePointer<UInt8>((attrsPtr.pointee.valueBegin)!), count: (attrsPtr.pointee.valueEnd)!-(attrsPtr.pointee.valueBegin)!), encoding: String.Encoding.utf8)?.xmlUnescaped();
+                if let prefix = strFromCUtf8(attrsPtr.pointee.prefix) {
+                    attributes["\(prefix):\(name)"] = value;
                 } else {
-                    attributes[prefix! + ":" + name!] = value;
+                    attributes[name] = value;
                 }
                 attrsPtr = attrsPtr.successor();
-                i = i + 1;
             }
         }
     }
+    
     var namespaces:[String:String]? = nil;
     if nb_namespaces > 0 {
         namespaces = [String:String]();
         namespaces_!.withMemoryRebound(to: ns.self, capacity: Int(nb_namespaces)) {
             var nsPtr = $0;
-            i = 0;
-            while i < Int(nb_namespaces) {
-                var prefix = strFromCUtf8(nsPtr.pointee.prefix);
-                var uri = strFromCUtf8(nsPtr.pointee.uri);
-                if prefix == nil {
-                    prefix = "";
-                }
-                if (uri != nil) {
-                    uri = EscapeUtils.unescape(uri!);
-                }
-                namespaces![prefix!] = uri;
+            for i in 0..<Int(nb_namespaces) {
+                let prefix = strFromCUtf8(nsPtr.pointee.prefix) ?? "";
+                let uri = strFromCUtf8(nsPtr.pointee.uri)?.xmlUnescaped();
+                namespaces![prefix] = uri;
                 nsPtr = nsPtr.successor();
-                i = i + 1;
             }
         }
     }
@@ -104,7 +93,7 @@ private let SAX_endElement: endElementNsSAX2Func = { ctx_, localname, prefix_, U
 
 private let SAX_charactersFound: charactersSAXFunc = { ctx_, chars_, len_ in
     let parser = unsafeBitCast(ctx_, to: XMLParser.self);
-    let chars = String(data: Data(bytes: UnsafePointer<UInt8>(chars_!), count: Int(len_)), encoding: String.Encoding.utf8);
+    let chars = strFromCUtf8(chars_);
     parser.delegate.charactersFound(chars!);
 }
 

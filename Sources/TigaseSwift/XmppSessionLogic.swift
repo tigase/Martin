@@ -61,6 +61,11 @@ extension XmppSessionLogic {
         send(stanza: stanza, completionHandler: nil);
     }
     
+    public func send(stanza: Stanza) async throws {
+        try await withUnsafeThrowingContinuation({ continuation in
+            send(stanza: stanza, completionHandler: continuation.resume(with:));
+        })
+    }
 }
 
 /** 
@@ -309,8 +314,13 @@ open class SocketSessionLogic: XmppSessionLogic {
             for filter in self.modulesManager.filters {
                 filter.processOutgoing(stanza: stanza);
             }
-            self.connector.send(.stanza(stanza));
-            completionHandler?(.success(Void()));
+            if let completionHandler = completionHandler {
+                self.connector.send(.stanza(stanza), completion: .written({ result in
+                    completionHandler(result.mapError({ _ in XMPPError(condition: .remote_server_timeout) }));
+                }));
+            } else {
+                self.connector.send(.stanza(stanza), completion: .none);
+            }
         }
     }
 

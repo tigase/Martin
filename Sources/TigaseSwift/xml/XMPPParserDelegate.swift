@@ -52,20 +52,20 @@ open class XMPPParserDelegate: XMLParserDelegate {
     public init() {
     }
     
-    open func startElement(name elementName:String, prefix:String?, namespaces:[String:String]?, attributes:[String:String]) {
+    open func startElement(name elementName: String, prefix: String?, namespaces: [String:String]?, attributes: [String:String]) {
         
-        if namespaces != nil {
-            for (k,v) in namespaces! {
+        if let namespaces = namespaces {
+            for (k,v) in namespaces {
                 if !k.isEmpty {
                     xmlnss[k] = v;
                 }
             }
         }
         
-        if (elementName == "stream" && prefix == "stream") {
+        guard elementName != "stream" || prefix != "stream" else {
             var attrs = attributes;
-            if (namespaces != nil) {
-                for (k,v) in namespaces! {
+            if let namespaces = namespaces {
+                for (k,v) in namespaces {
                     attrs[k] = v;
                 }
             }
@@ -75,7 +75,7 @@ open class XMPPParserDelegate: XMLParserDelegate {
         
         let xmlns:String? = (prefix == nil ? nil : xmlnss[prefix!]) ?? namespaces?[""];
         
-        let name = (prefix != nil && xmlns == nil) ? (prefix! + ":" + elementName) : elementName;
+        let name = (prefix != nil && xmlns == nil) ? "\(prefix!):\(elementName)" : elementName;
         
         let elem = Element(name: name, cdata: nil, attributes: attributes)
         if (!el_stack.isEmpty) {
@@ -89,10 +89,11 @@ open class XMPPParserDelegate: XMLParserDelegate {
     }
     
     open func endElement(name elementName: String, prefix: String?) {
-        if (elementName == "stream" && prefix == "stream") {
+        guard elementName != "stream" || prefix != "stream" else {
             self.delegate?.parsed(parserEvent: .streamClosed);
             return
         }
+        
         let elem = el_stack.removeLast()
         if (el_stack.isEmpty) {
             if let delegate = self.delegate {

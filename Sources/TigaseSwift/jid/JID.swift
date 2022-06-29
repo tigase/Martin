@@ -38,11 +38,6 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable {
         return "\(bareJid)/\(resource)"
     }
     
-    /// String representation of JID
-    @available(*, deprecated, renamed: "description")
-    public var stringValue:String {
-        return description;
-    }
     /// Local part
     public var localPart:String? {
         return self.bareJid.localPart;
@@ -50,10 +45,6 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable {
     // Domain part
     public var domain:String! {
         return self.bareJid.domain;
-    }
-    
-    public var withoutResource: JID {
-        return JID(bareJid);
     }
     
     public init(from decoder: Decoder) throws {
@@ -75,16 +66,6 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable {
     public init(_ jid: BareJID, resource: String? = nil) {
         self.bareJid = jid;
         self.resource = resource;
-    }
-    
-    /**
-     Creates new instance with same values
-     - parameter jid: instance of JID
-     */
-    @available(*, deprecated, message: "Removed as this is a struct and it doesn't need copy creation constructor")
-    public init(_ jid: JID) {
-        self.bareJid = jid.bareJid;
-        self.resource = jid.resource;
     }
     
     /**
@@ -121,6 +102,11 @@ public struct JID : LosslessStringConvertible, Hashable, Equatable, Codable {
     public func with(resource: String) -> JID {
         return JID(bareJid, resource: resource);
     }
+    
+    public func withoutResource() -> JID {
+        return JID(bareJid, resource: nil);
+    }
+
 }
 
 public func ==(lhs: JID, rhs: JID) -> Bool {
@@ -135,6 +121,14 @@ public func ==(lhs: JID, rhs: JID) -> Bool {
 }
 
 extension BareJID {
+    
+    public func jid(withResource resource: String) -> JID {
+        return JID(self, resource: resource);
+    }
+    
+    public func jid() -> JID {
+        return JID(self, resource: nil);
+    }
     
     public func with(resource: String) -> JID {
         return JID(self, resource: resource);

@@ -146,8 +146,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
                             }
                             switch result {
                             case .success(let info):
-                                let identity = info.identities.first;
-                                self.cache.store(node: nodeName, identity: identity, features: info.features);
+                                self.cache.store(node: nodeName, identities: info.identities, features: info.features);
                             default:
                                 break;
                             }
@@ -221,7 +220,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
         }
         
         let withSupport = presences.filter({ presence in
-            if let capsNode = presence.capsNode, cache.isSupported(for: capsNode, feature: feature) {
+            if let capsNode = presence.capsNode, cache.isSupported(feature: feature, for: capsNode) {
                 return true;
             }
             return false;
@@ -240,7 +239,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
         guard let capsNode = presenceModule.store.presence(for: jid, context: context)?.capsNode else {
             return false;
         }
-        return cache.isSupported(for: capsNode, feature: feature);
+        return cache.isSupported(feature: feature, for: capsNode);
     }
     
     public struct AdditionalFeatures: RawRepresentable {
@@ -263,21 +262,21 @@ public protocol CapabilitiesCache {
      - returns: array of supported features or `nil` if there is not entry in
      cache for this node
      */
-    func getFeatures(for node: String) -> [String]?;
+    func features(for node: String) -> [String]?;
     
     /**
      Retrieve identity of remote client which adverties this node
      - parameter for: node to look for identity
      - returns: XMPP client idenitity or `nil` if no available in cache
      */
-    func getIdentity(for node: String) -> DiscoveryModule.Identity?;
+    func identities(for node: String) -> [DiscoveryModule.Identity]?;
     
     /**
      Retrieves array of nodes which supports feature
      - parameter withFeature: feature which should be supported
      - returns: array of nodes supporting this feature known in cache
      */
-    func getNodes(withFeature feature: String) -> [String];
+    func nodes(withFeature feature: String) -> [String];
     
     /**
      Check if information for node are in cache
@@ -292,7 +291,7 @@ public protocol CapabilitiesCache {
      - parameter feature: feature to check support
      - returns: true if feature is supported by this node
      */
-    func isSupported(for node: String, feature: String) -> Bool;
+    func isSupported(feature: String, for node: String) -> Bool;
     
     /**
      Store data in cache
@@ -300,7 +299,7 @@ public protocol CapabilitiesCache {
      - parameter identitity: XMPP client identity
      - parameter features: array of feature supported by client
      */
-    func store(node: String, identity: DiscoveryModule.Identity?, features: [String]);
+    func store(node: String, identities: [DiscoveryModule.Identity], features: [String]);
     
 }
 

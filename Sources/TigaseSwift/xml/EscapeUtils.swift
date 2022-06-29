@@ -26,7 +26,27 @@ import Foundation
  */
 public struct EscapeUtils {
     
-    private static let ENTITIES = [ [ "&", "&amp;", "&#38;"], ["<", "&lt;", "&#60;"], [">", "&gt;", "&#62;"], ["\"", "&quot;", "&#34;"], ["'", "&apos;", "&#39;"] ];
+    private struct Entity {
+        let unescapedValue: String;
+        let escapedValue: String;
+        let numericReference: String;
+    }
+    
+    private static let ENTITIES: [Entity] = [
+        .init(unescapedValue: "&", escapedValue: "&amp;", numericReference:  "&#38;"),
+        .init(unescapedValue: "<", escapedValue: "&lt;", numericReference: "&#60;"),
+        .init(unescapedValue: ">", escapedValue: "&gt;", numericReference: "&#62;"),
+        .init(unescapedValue: "\"", escapedValue: "&quot;", numericReference: "&#34;"),
+        .init(unescapedValue: "'", escapedValue: "&apos;", numericReference: "&#39;")
+    ]
+        
+    public static func unescape(_ value: String?) -> String? {
+        guard let value = value else {
+            return nil;
+        }
+        
+        return unescape(value);
+    }
     
     /**
      Unescape string
@@ -34,19 +54,27 @@ public struct EscapeUtils {
      - returns: unescaped string
      */
     public static func unescape(_ value:String) -> String {
-        if !value.contains("&") {
+        guard value.contains("&") else {
             return value;
         }
+
         var result = value;
-        var i=ENTITIES.count-1;
-        while i >= 0 {
+        for entity in ENTITIES {
             // this is for libxml2 as it replaces every &amp; with &#38; which in XML both replaces &
-            result = result.replacingOccurrences(of: ENTITIES[i][2], with: ENTITIES[i][0]);
+            result = result.replacingOccurrences(of: entity.numericReference, with: entity.unescapedValue);
             // this is for normal replacement (may not be needed but let's keep it for compatibility
-            result = result.replacingOccurrences(of: ENTITIES[i][1], with: ENTITIES[i][0]);
-            i -= 1;
+            result = result.replacingOccurrences(of: entity.escapedValue, with: entity.unescapedValue);
         }
+        
         return result;
+    }
+    
+    public static func escape(_ value: String?) -> String? {
+        guard let value = value else {
+            return nil;
+        }
+        
+        return escape(value);
     }
     
     /**
@@ -56,12 +84,22 @@ public struct EscapeUtils {
      */
     public static func escape(_ value:String) -> String {
         var result = value;
-        var i=0;
-        while i < ENTITIES.count {
-            result = result.replacingOccurrences(of: ENTITIES[i][0], with: ENTITIES[i][1]);
-            i += 1;
+        for entity in ENTITIES {
+            result = result.replacingOccurrences(of: entity.unescapedValue, with: entity.escapedValue);
         }
         return result;
+    }
+    
+}
+
+extension String {
+    
+    public func xmlEscaped() -> String {
+        return EscapeUtils.escape(self);
+    }
+    
+    public func xmlUnescaped() -> String {
+        return EscapeUtils.unescape(self);
     }
     
 }

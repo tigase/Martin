@@ -89,5 +89,11 @@ extension Connector {
             });
         }
     }
-    
+        
+    public func send(_ data: StreamEvent) async throws {
+        try await withUnsafeThrowingContinuation({ continuation in
+            send(data, completion: .written(continuation.resume(with:)));
+        })
+    }
+
 }

@@ -41,11 +41,6 @@ public struct BareJID : LosslessStringConvertible, Hashable, Equatable, Codable,
         }
         return "\(localPart)@\(domain)";
     }
-    /// String representation
-    @available(*, deprecated, renamed: "description")
-    public var stringValue: String {
-        return description;
-    }
     
     public init(from decoder: Decoder) throws {
         self.init(try decoder.singleValueContainer().decode(String.self));

@@ -50,6 +50,48 @@ extension AnyCancellable {
     
 }
 
+//public protocol AsyncXmppModule: AnyObject {
+//    
+//    static var ID: String { get }
+//    
+//    /// criteria used to match if this module should process particular stanza
+//    var criteria: Criteria { get };
+//    /// list of features supported by this module
+//    var features: [String] { get };
+//    
+//    /**
+//     This method is responsible for actual processing of `Stanza` instance.
+//     - throws: ErrorCondition - if processing resulted in an error
+//     */
+//    func process(stanza: Stanza) async throws
+//    
+//}
+//
+//open class AsyncXmppModuleBase: XmppModuleBase {
+//    
+//    func process(stanza: Stanza) async throws {
+//        
+//    }
+//    
+//    private let actor = ModuleActor();
+//    
+//    func process(stanza: Stanza) throws {
+//        Task {
+//            actor.execute({ try await self.process(stanza: stanza) });
+//        }
+//    }
+//    
+//    private actor ModuleActor {
+//        private var task: Task<Void,Error>?;
+//        
+//        func execute(_ body: () async throws -> Void) {
+//            task = Task {
+//                try await body();
+//            }
+//        }
+//    }
+//}
+
 open class XmppModuleBase: ContextAware, PacketWriter {
         
     open weak var context: Context? {

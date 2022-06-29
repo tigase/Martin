@@ -301,7 +301,7 @@ extension PubSubModule {
                     let affiliations = affiliationsEl.compactMapChildren({ el in PubSubAffiliationItem(from: el, node: node) });
                     return .success(affiliations);
                 case .own:
-                    let jid = response.to!.withoutResource;
+                    let jid = response.to!.withoutResource();
                     let affiliations = affiliationsEl.compactMapChildren({ el in PubSubAffiliationItem(from: el, jid: jid) });
                     return .success(affiliations);
                 }

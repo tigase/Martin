@@ -30,58 +30,61 @@ import Foundation
  */
 open class DefaultCapabilitiesCache: CapabilitiesCache {
     
-    /// Holds array of supported features grouped by node
-    fileprivate var features = [String: [String]]();
+    private class Entry {
+        let identities: [DiscoveryModule.Identity];
+        let features: [String];
+        
+        init(identities: [DiscoveryModule.Identity], features: [String]) {
+            self.identities = identities;
+            self.features = features;
+        }
+    }
+        
+    private var queue = DispatchQueue(label: "capabilities_cache_queue", attributes: DispatchQueue.Attributes.concurrent);
     
-    /// Holds identity for each node
-    fileprivate var identities: [String: DiscoveryModule.Identity] = [:];
-    
-    fileprivate var queue = DispatchQueue(label: "capabilities_cache_queue", attributes: DispatchQueue.Attributes.concurrent);
+    private var entries: [String: Entry] = [:];
     
     public init() {
     }
     
-    open func getFeatures(for node: String) -> [String]? {
-        var result: [String]?;
-        queue.sync {
-            result = self.features[node];
+    open func features(for node: String) -> [String]? {
+        return queue.sync {
+            return self.entries[node]?.features;
         }
-        return result;
     }
     
-    open func getIdentity(for node: String) -> DiscoveryModule.Identity? {
-        var result: DiscoveryModule.Identity?;
-        queue.sync {
-            result = self.identities[node];
+    open func identities(for node: String) -> [DiscoveryModule.Identity]? {
+        return queue.sync {
+            return self.entries[node]?.identities;
         }
-        return result;
     }
     
-    open func getNodes(withFeature feature: String) -> [String] {
-        var result = Set<String>();
-        for (node, features) in self.features {
-            if features.firstIndex(of: feature) != nil {
-                result.insert(node);
+    open func nodes(withFeature feature: String) -> [String] {
+        queue.sync {
+            var result = Set<String>();
+            for (node, entry) in self.entries {
+                if entry.features.firstIndex(of: feature) != nil {
+                    result.insert(node);
+                }
             }
+            return Array(result);
         }
-        return Array(result);
     }
     
     open func isCached(node: String, handler: @escaping (Bool)->Void) {
         queue.async {
-            let result = self.features.index(forKey: node) != nil;
+            let result = self.entries.index(forKey: node) != nil;
             handler(result);
         }
     }
     
-    open func isSupported(for node: String, feature: String) -> Bool {
-        return getFeatures(for: node)?.contains(feature) ?? false;
+    open func isSupported(feature: String, for node: String) -> Bool {
+        return features(for: node)?.contains(feature) ?? false;
     }
     
-    open func store(node: String, identity: DiscoveryModule.Identity?, features: [String]) {
+    open func store(node: String, identities: [DiscoveryModule.Identity], features: [String]) {
         queue.async(flags: .barrier, execute: {
-            self.identities[node] = identity;
-            self.features[node] = features;
-        }) 
+            self.entries[node] = .init(identities: identities, features: features);
+        })
     }
 }
