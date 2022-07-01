@@ -31,13 +31,8 @@ class XMPPErrorTests: XCTestCase {
         let stanza = Stanza.from(element: el);
         let error = stanza.error;
         XCTAssertNotNil(error);
-        XCTAssertEqual(XMPPError.forbidden("Unique test error"), error);
-        switch error! {
-        case .forbidden(let message):
-            XCTAssertEqual("Unique test error", message);
-        default:
-            XCTAssertTrue(false);
-        }
+        XCTAssertEqual(ErrorCondition.forbidden, error?.condition);
+        XCTAssertEqual("Unique test error", error?.message)
     }
 
     func testItemNotFound() {
@@ -46,14 +41,7 @@ class XMPPErrorTests: XCTestCase {
         let stanza = Stanza.from(element: el);
         let error = stanza.error;
         XCTAssertNotNil(error);
-        XCTAssertEqual(XMPPError.item_not_found, error);
-        switch error! {
-        case .item_not_found:
-            //XCTAssertEqual("Unique test error", message);
-            break;
-        default:
-            XCTAssertTrue(false);
-        }
+        XCTAssertEqual(ErrorCondition.item_not_found, error?.condition);
     }
     
     func testWrongErrorXMLNS() {

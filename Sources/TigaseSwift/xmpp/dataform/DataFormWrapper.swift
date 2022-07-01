@@ -22,7 +22,7 @@ import Foundation
 
 
 open class DataFormWrapper: DataFormProtocol {
-
+    
     @propertyWrapper
     public struct Field<Value> {
 
@@ -44,6 +44,8 @@ open class DataFormWrapper: DataFormProtocol {
                     return instance.form.value(for: key, type: Bool.self) as? Value;
                 case is String.Type:
                     return instance.form.value(for: key, type: String.self) as? Value;
+                case is Date.Type:
+                    return TimestampHelper.parse(timestamp: instance.form.value(for: key, type: String.self)) as? Value;
                 case let valueType as LosslessStringConvertible.Type:
                     guard let value = instance.form.value(for: key, type: String.self) else {
                         return nil;
@@ -78,6 +80,9 @@ open class DataFormWrapper: DataFormProtocol {
                     instance.form.add(field: .JIDSingle(var: key, value: newValue as? JID));
                 case is Bool.Type:
                     instance.form.add(field: .Boolean(var: key, value: (newValue as? Bool) ?? false));
+                case is Date.Type:
+                    let date = newValue as? Date;
+                    instance.form.add(field: .TextSingle(var: key, value: date != nil ? TimestampHelper.format(date: date!) : nil ))
                 case is LosslessStringConvertible.Type:
                     if let type = type {
                         switch type {

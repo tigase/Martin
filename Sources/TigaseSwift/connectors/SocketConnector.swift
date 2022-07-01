@@ -254,9 +254,9 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
     public func activate(feature: ConnectorFeature) {
         switch feature {
         case .TLS:
-            self.serialize(.stanza(Stanza(elem: Element(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls"))), completion: .none);
+            self.serialize(.stanza(Stanza(element: Element(name: "starttls", xmlns: "urn:ietf:params:xml:ns:xmpp-tls"))), completion: .none);
         case .ZLIB:
-            self.serialize(.stanza(Stanza(elem: Element(name: "compress", xmlns: "http://jabber.org/protocol/compress", children: [Element(name: "method", cdata: "zlib")]))), completion: .none);
+            self.serialize(.stanza(Stanza(element: Element(name: "compress", xmlns: "http://jabber.org/protocol/compress", children: [Element(name: "method", cdata: "zlib")]))), completion: .none);
         default:
             break;
         }

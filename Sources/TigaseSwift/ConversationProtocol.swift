@@ -28,8 +28,8 @@ public protocol ConversationProtocol: AnyObject {
     var jid: BareJID { get }
     
     var defaultMessageType: StanzaType { get }
-    
-    func send(message: Message, completionHandler: ((Result<Void,XMPPError>)->Void)?);
+        
+    func send(message: Message) async throws;
     
     func createMessage(id: String, type: StanzaType) -> Message;
     
@@ -57,11 +57,13 @@ extension ConversationProtocol {
 // async-await support
 extension ConversationProtocol {
     
-    public func send(message: Message) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            send(message: message, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func send(message: Message, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
+        Task {
+            do {
+                completionHandler?(.success(try await send(message: message)));
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     

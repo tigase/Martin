@@ -229,13 +229,6 @@ public final class Element : CustomStringConvertible, CustomDebugStringConvertib
         self._nodes = nodes;
     }
     
-    public convenience init(element: Element) {
-        let (attrs,nodes) = element.withLock({
-            return (element._attributes, element._nodes);
-        })
-        self.init(name: element.name, attributes: attrs, nodes: nodes);
-    }
-    
     /**
      Add subelement
      - parameter child: element to add as subelement
@@ -381,6 +374,25 @@ public final class Element : CustomStringConvertible, CustomDebugStringConvertib
                 result += "/>"
             }
             return result;
+        })
+    }
+    
+    public func clone(shallow: Bool) -> Self {
+        return withLock({
+            if shallow {
+                return Self.init(name: self.name, attributes: self._attributes, nodes: self._nodes);
+            } else {
+                let clone =  Self.init(name: self.name, attributes: self.attributes);
+                for node in self._nodes {
+                    switch node {
+                    case .element(let el):
+                        clone.addNode(.element(el.clone(shallow: shallow)));
+                    case .cdata(let value):
+                        clone.addNode(.cdata(value));
+                    }
+                }
+                return clone;
+            }
         })
     }
     

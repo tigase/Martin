@@ -113,157 +113,128 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         self.channelManager = channelManager;
     }
     
-    open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,XMPPError>)->Void) {
+    open func create(channel: String?, at componentJid: BareJID) async throws -> BareJID {
         guard componentJid.localPart == nil else {
-            completionHandler(.failure(XMPPError(condition: .bad_request, message: "MIX component JID cannot have local part set!")));
-            return;
+            throw XMPPError(condition: .bad_request, message: "MIX component JID cannot have local part set!");
+        }
+
+        let iq = Iq(type: .set, to: JID(componentJid), {
+            Element(name: "create", xmlns: MixModule.CORE_XMLNS, {
+                Attribute("channel", value: channel)
+            })
+        })
+        
+        let response = try await write(iq: iq);
+        guard let channel = response.firstChild(name: "create", xmlns: MixModule.CORE_XMLNS)?.attribute("channel") else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
         }
         
-        let iq = Iq(type: .set, to: JID(componentJid));
-        let createEl = Element(name: "create", xmlns: MixModule.CORE_XMLNS);
-        if channel != nil {
-            createEl.attribute("channel", newValue: channel);
-        }
-        iq.addChild(createEl);
-        write(iq: iq, completionHandler: { result in
-            switch result {
-            case .success(let response):
-                if let channel = response.firstChild(name: "create", xmlns: MixModule.CORE_XMLNS)?.attribute("channel") {
-                    completionHandler(.success(BareJID(localPart: channel, domain: componentJid.domain)));
-                } else {
-                    completionHandler(.failure(.undefined_condition));
-                }
-            case .failure(let error):
-                completionHandler(.failure(error));
-            }
-        });
+        return BareJID(localPart: channel, domain: componentJid.domain);
     }
-        
-    open func destroy(channel channelJid: BareJID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    
+    open func destroy(channel channelJid: BareJID) async throws {
         guard channelJid.localPart != nil else {
-            completionHandler(.failure(XMPPError(condition: .bad_request, message: "Channel JID must have a local part!")));
-            return;
+            throw XMPPError(condition: .bad_request, message: "MIX component JID cannot have local part set!");
         }
         guard let context = self.context else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+            throw XMPPError.remote_server_timeout;
         }
         
-        let iq = Iq(type: .set, to: JID(channelJid.domain));
-        let destroyEl = Element(name: "destroy", xmlns: MixModule.CORE_XMLNS);
-        destroyEl.attribute("channel", newValue: channelJid.localPart);
-        iq.addChild(destroyEl);
-        write(iq: iq, completionHandler: { result in
-            switch result {
-            case .success(_):
-                if let channel = self.channelManager.channel(for: context, with: channelJid) {
-                    _  = self.channelManager.close(channel: channel);
-                }
-                self.rosterModule?.removeItem(jid: JID(channelJid), completionHandler: { _ in });
-                completionHandler(.success(Void()));
-            case .failure(let error):
-                completionHandler(.failure(error));
-            }
-        });
+        let iq = Iq(type: .set, to: JID(channelJid), {
+            Element(name: "destroy", xmlns: MixModule.CORE_XMLNS, {
+                Attribute("channel", value: channelJid.localPart)
+            })
+        })
+        
+        _ = try await write(iq: iq);
+        if let channel = self.channelManager.channel(for: context, with: channelJid) {
+            _  = self.channelManager.close(channel: channel);
+        }
+        self.rosterModule?.removeItem(jid: JID(channelJid), completionHandler: { _ in });
     }
-    
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
+        
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100) async throws -> Iq {
         guard let context = self.context else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+            throw XMPPError.remote_server_timeout;
         }
+
         if isPAM2SupportAvailable {
-            let iq = Iq();
-            iq.to = JID(context.userBareJid);
-            iq.type = .set;
-            let clientJoin = Element(name: "client-join", xmlns: MixModule.PAM2_XMLNS);
-            clientJoin.attribute("channel", newValue: channelJid.description);
-            clientJoin.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
-            iq.addChild(clientJoin);
+            let iq = Iq(type: .set, to: context.userBareJid.jid(), {
+                Element(name: "client-join", xmlns: MixModule.PAM2_XMLNS, {
+                    Attribute("channel", value: channelJid.description)
+                    createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation)
+                })
+            })
             
-            write(iq: iq, completionHandler: { result in
-                switch result {
-                case .success(let response):
-                    if let joinEl = response.firstChild(name: "client-join", xmlns: MixModule.PAM2_XMLNS)?.firstChild(name: "join", xmlns: MixModule.CORE_XMLNS) {
-                        if let resultJid = joinEl.attribute("jid"), let idx = resultJid.firstIndex(of: "#") {
-                            let participantId = String(resultJid[resultJid.startIndex..<idx]);
-                            let jid = BareJID(String(resultJid[resultJid.index(after: idx)..<resultJid.endIndex]));
-                            _ = self.channelJoined(channelJid: jid, participantId: participantId, nick: joinEl.firstChild(name: "nick")?.value);
-                            
-                            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
-                            if presenceSubscription {
-                                self.presenceModule?.subscribed(by: JID(channelJid));
-                                self.presenceModule?.subscribe(to: JID(channelJid));
-                            }
-                        } else if let participantId = joinEl.attribute("id") {
-                            _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.firstChild(name: "nick")?.value);
-                            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
-                            if presenceSubscription {
-                                self.presenceModule?.subscribed(by: JID(channelJid));
-                                self.presenceModule?.subscribe(to: JID(channelJid));
-                            }
-                        }
-                    }
-                default:
-                    break;
+            let response = try await write(iq: iq);
+            guard let joinEl = response.firstChild(name: "client-join", xmlns: MixModule.PAM2_XMLNS)?.firstChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId: String = participantId(joinElement: joinEl)  else {
+                throw XMPPError(condition: .undefined_condition, stanza: response);
+            }
+            
+            let nick = joinEl.firstChild(name: "nick")?.value;
+            _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: nick);
+            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
+            if presenceSubscription {
+                Task {
+                    try await self.presenceModule?.subscribed(by: JID(channelJid));
                 }
-                completionHandler(result);
-            });
+                Task {
+                    try await self.presenceModule?.subscribe(to: JID(channelJid));
+                }
+            }
+            return response;
         } else {
-            let iq = Iq(type: .set, to: JID(channelJid));
-            iq.addChild(createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation));
-            write(iq: iq, completionHandler: { result in
-                switch result {
-                case .success(let response):
-                    if let joinEl = response.firstChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.attribute("id") {
-                        self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
-                        _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.firstChild(name: "nick")?.value);
-                    }
-                default:
-                    break;
-                }
-                completionHandler(result);
-            });
+            let iq = Iq(type: .set, to: channelJid.jid(), {
+                createJoinEl(withNick: nick, withNodes: nodes, invitation: invitation)
+            })
+            
+            let response = try await write(iq: iq);
+            guard let joinEl = response.firstChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.attribute("id") else {
+                throw XMPPError(condition: .undefined_condition, stanza: response);
+            }
+            
+            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
+            _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.firstChild(name: "nick")?.value);
+            return response;
         }
+        
     }
     
-    open func leave(channel: ChannelProtocol, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    private func participantId(joinElement joinEl: Element) -> String? {
+        guard let id = joinEl.attribute("id") else {
+            guard let jid = joinEl.attribute("jid"), let id = jid.split(separator: "#").first else {
+                return nil;
+            }
+            return String(id)
+        }
+        return id;
+    }
+    
+    open func leave(channel: ChannelProtocol) async throws -> Iq {
         guard let context = context else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+            throw XMPPError.remote_server_timeout;
         }
         if isPAM2SupportAvailable {
-            let iq = Iq(type: .set, to: JID(context.userBareJid));
-            iq.type = .set;
-            let clientLeave = Element(name: "client-leave", xmlns: MixModule.PAM2_XMLNS);
-            clientLeave.attribute("channel", newValue: channel.jid.description);
-            clientLeave.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
-            iq.addChild(clientLeave);
-            
-            write(iq: iq, completionHandler: { result in
-                switch result {
-                case .success(_):
-                    self.channelLeft(channel: channel);
-                default:
-                    break;
-                }
-                completionHandler(result);
+            let iq = Iq(type: .set, to: context.userBareJid.jid(), {
+                Element(name: "client-leave", xmlns: MixModule.PAM2_XMLNS, {
+                    Attribute("channel", value: channel.jid.description)
+                    Element(name: "leave", xmlns: MixModule.CORE_XMLNS)
+                })
             });
+
+            let response = try await write(iq: iq);
+            channelLeft(channel: channel);
+            return response;
         } else {
-            let iq = Iq(type: .set, to: JID(channel.jid));
-            iq.addChild(Element(name: "leave", xmlns: MixModule.CORE_XMLNS));
-            write(iq: iq, completionHandler: { result in
-                switch result {
-                case .success(_):
-                    self.channelLeft(channel: channel);
-                default:
-                    break;
-                }
-                completionHandler(result);
-            });
+            let iq = Iq(type: .set, to: channel.jid.jid(), {
+                Element(name: "leave", xmlns: MixModule.CORE_XMLNS)
+            })
+            let response = try await write(iq: iq);
+            channelLeft(channel: channel);
+            return response;
         }
     }
-    
+        
     open func channelJoined(channelJid: BareJID, participantId: String, nick: String?) -> ChannelProtocol? {
         guard let context = self.context else {
             return nil;
@@ -293,15 +264,15 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
     // we may want to add "status" to the channel, to know if we are in participants or not..
     
     open func createJoinEl(withNick nick: String?, withNodes nodes: [String], invitation: MixInvitation?) -> Element {
-        let joinEl = Element(name: "join", xmlns: MixModule.CORE_XMLNS);
-        joinEl.addChildren(nodes.map({ Element(name: "subscribe", attributes: ["node": $0]) }));
-        if let nick = nick {
-            joinEl.addChild(Element(name: "nick", cdata: nick));
-        }
-        if let invitation = invitation {
-            joinEl.addChild(invitation.element());
-        }
-        return joinEl;
+        return Element(name: "join", xmlns: MixModule.CORE_XMLNS, {
+            for node in nodes {
+                Element(name: "subscribe", attributes: ["node": node])
+            }
+            if let nick = nick {
+                Element(name: "nick", cdata: nick);
+            }
+            invitation?.element()
+        })
     }
     
     open func process(stanza: Stanza) throws {
@@ -319,35 +290,36 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
-    open func retrieveAffiliations(for channel: ChannelProtocol, completionHandler: ((PermissionsResult)->Void)?) {
-        pubsubModule.retrieveOwnAffiliations(from: channel.jid, for: nil, completionHandler: { result in
-            switch result {
-            case .success(let affiliations):
-                let values = Dictionary(affiliations.map({ ($0.node, $0.affiliation) }), uniquingKeysWith: { (first, _) in first });
-                var permissions: Set<ChannelPermission> = [];
-                switch values["urn:xmpp:mix:nodes:info"] ?? .none {
-                case .owner, .publisher:
-                    permissions.insert(.changeInfo);
-                default:
-                    break;
-                }
-                switch values["urn:xmpp:mix:nodes:config"] ?? .none {
-                case .owner, .publisher:
-                    permissions.insert((.changeConfig));
-                default:
-                    break;
-                }
-                switch values["urn:xmpp:avatar:metadata"] ?? .none {
-                case .owner, .publisher:
-                    permissions.insert((.changeAvatar));
-                default:
-                    break;
-                }
-                channel.update(permissions: permissions);
-            case .failure(_):
-                channel.update(permissions: []);
+    open func retrieveAffiliations(for channel: ChannelProtocol) async throws -> Set<ChannelPermission> {
+        do {
+            let affiliations = try await pubsubModule.retrieveOwnAffiliations(from: channel.jid, for: nil);
+            let values = Dictionary(affiliations.map({ ($0.node, $0.affiliation) }), uniquingKeysWith: { (first, _) in first });
+            var permissions: Set<ChannelPermission> = [];
+            switch values["urn:xmpp:mix:nodes:info"] ?? .none {
+            case .owner, .publisher:
+                permissions.insert(.changeInfo);
+            default:
+                break;
             }
-        })
+            switch values["urn:xmpp:mix:nodes:config"] ?? .none {
+            case .owner, .publisher:
+                permissions.insert((.changeConfig));
+            default:
+                break;
+            }
+            switch values["urn:xmpp:avatar:metadata"] ?? .none {
+            case .owner, .publisher:
+                permissions.insert((.changeAvatar));
+            default:
+                break;
+            }
+            
+            channel.update(permissions: permissions)
+            return Set(permissions)
+        } catch {
+            channel.update(permissions: [])
+            throw error;
+        }
     }
     
     open func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
@@ -378,90 +350,59 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         })
     }
     
-    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().element(type: .result, onlyModified: false), completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        });
+    open func publishInfo(_ info: ChannelInfo, for channelJid: BareJID) async throws {
+        _ = try await pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().element(type: .result, onlyModified: false))
     }
     
-    open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,XMPPError>)->Void)?) {
-        pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:info", completionHandler: { result in
-            switch result {
-            case .success(let items):
-                guard let item = items.items.sorted(by: { (i1, i2) in return i1.id > i2.id }).first else {
-                    completionHandler?(.failure(XMPPError(condition: .item_not_found)));
-                    return;
-                }
-                guard let context = self.context, let payload = item.payload, let mixInfo = MixChannelInfo(element: payload) else {
-                    completionHandler?(.failure(XMPPError(condition: .item_not_found)));
-                    return;
-                }
-                let info = mixInfo.channelInfo();
-                if let channel = self.channelManager.channel(for: context, with: channelJid) {
-                    channel.update(info: info);
-                }
-                completionHandler?(.success(info));
-            case .failure(let error):
-                completionHandler?(.failure(error));
+    open func retrieveInfo(for channelJid: BareJID) async throws -> ChannelInfo {
+        let items = try await pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:info");
+        guard let item = items.items.sorted(by: { (i1, i2) in return i1.id > i2.id }).first else {
+            throw XMPPError(condition: .item_not_found);
+        }
+
+        guard let context = self.context, let payload = item.payload, let mixInfo = MixChannelInfo(element: payload) else {
+            throw XMPPError(condition: .item_not_found);
+        }
+
+        let info = mixInfo.channelInfo();
+        if let channel = self.channelManager.channel(for: context, with: channelJid) {
+            channel.update(info: info);
+        }
+
+        return info;
+    }
+    
+    open func retrieveConfig(for channelJid: BareJID) async throws -> MixChannelConfig {
+        let items = try await pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", limit: .lastItems(1));
+        guard let item = items.items.first else {
+            throw XMPPError(condition: .item_not_found);
+        }
+        guard let payload = item.payload, let config = MixChannelConfig(element: payload) else {
+           throw XMPPError(condition: .item_not_found);
+        }
+        return config;
+    }
+    
+    open func updateConfig(_ config: MixChannelConfig, for channelJid: BareJID) async throws {
+        _ = try await pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.element(type: .submit, onlyModified: false));
+    }
+    
+    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true) async throws {
+        try await publishAccessRule(to: channelJid, for: jid, rule: .allow, value: value);
+    }
+    
+    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true) async throws {
+        do {
+            try await publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value);
+        } catch let error as XMPPError {
+            guard error.condition == .item_not_found, let pubsubModule = pubsubModule else {
+                throw error;
             }
-        });
+            _ = try await pubsubModule.createNode(at: channelJid, node: AccessRule.deny.node);
+            try await publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value);
+        }
     }
 
-    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<MixChannelConfig,XMPPError>)->Void) {
-        pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", limit: .lastItems(1), completionHandler: { result in
-            switch result {
-            case .success(let items):
-                guard let item = items.items.first else {
-                    completionHandler(.failure(XMPPError(condition: .item_not_found)));
-                    return;
-                }
-                guard let payload = item.payload, let config = MixChannelConfig(element: payload) else {
-                    completionHandler(.failure(XMPPError(condition: .item_not_found)));
-                    return;
-                }
-                completionHandler(.success(config));
-            case .failure(let error):
-                completionHandler(.failure(error));
-            }
-        });
-    }
-    
-    open func updateConfig(for channelJid: BareJID, config: MixChannelConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.element(type: .submit, onlyModified: false), completionHandler: { response in
-            switch response {
-            case .success(_):
-                completionHandler(.success(Void()));
-            case .failure(let error):
-                completionHandler(.failure(error));
-            }
-        });
-    }
-    
-    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        publishAccessRule(to: channelJid, for: jid, rule: .allow, value: value, completionHandler: completionHandler);
-    }
-    
-    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: { result in
-            switch result {
-            case.success(let r):
-                completionHandler(.success(r));
-            case .failure(let error):
-                guard error.condition == .item_not_found, let pubsubModule = self.pubsubModule else {
-                    completionHandler(.failure(error));
-                    return;
-                }
-                pubsubModule.createNode(at: channelJid, node: AccessRule.deny.node, completionHandler: { result in
-                    switch result {
-                    case .success(_):
-                        self.publishAccessRule(to: channelJid, for: jid, rule: .deny, value: value, completionHandler: completionHandler);
-                    case .failure(let error):
-                        completionHandler(.failure(error));
-                    }
-                })
-            }
-        });
-    }
     
     open func createInvitation(_ invitation: MixInvitation, message body: String?) -> Message {
         let message = Message();
@@ -473,68 +414,49 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         return message;
     }
     
-    private func publishAccessRule(to channelJid: BareJID, for jid: BareJID, rule: AccessRule, value: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    private func publishAccessRule(to channelJid: BareJID, for jid: BareJID, rule: AccessRule, value: Bool) async throws {
         if value {
-            pubsubModule.publishItem(at: channelJid, to: rule.node, itemId: jid.description, payload: nil, completionHandler: { result in
-                completionHandler(result.map({ _ in Void() }))
-            })
+            _ = try await pubsubModule.publishItem(at: channelJid, to: rule.node, itemId: jid.description, payload: nil);
         } else {
-            pubsubModule.retractItem(at: channelJid, from: rule.node, itemId: jid.description, completionHandler: { result in
-                completionHandler(result.map({ _ in Void() }))
-            })
+            _ = try await pubsubModule.retractItem(at: channelJid, from: rule.node, itemId: jid.description);
         }
     }
     
-    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool) async throws {
         guard let jid = context?.userBareJid else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+           throw XMPPError.remote_server_timeout;
         }
         if isPrivate {
-            pubsubModule.createNode(at: channelJid, node: AccessRule.allow.node, completionHandler: { result in
-                switch result {
-                case .success(_):
-                    self.allowAccess(to: channelJid, for: jid, completionHandler: completionHandler);
-                case .failure(let error):
-                    completionHandler(.failure(error));
-                }
-            })
+            _ = try await pubsubModule.createNode(at: channelJid, node: AccessRule.allow.node);
+            try await allowAccess(to: channelJid, for: jid);
         } else {
-            pubsubModule.deleteNode(from: channelJid, node: AccessRule.allow.node, completionHandler: { result in
-                completionHandler(result.map({ _ in Void() }))
-            })
+            _ = try await pubsubModule.deleteNode(from: channelJid, node: AccessRule.allow.node);
         }
     }
     
-    open func checkAccessPolicy(of channelJid: BareJID, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
-        self.retrieveAccessRules(for: channelJid, rule: .allow, completionHandler: { result in
-            switch result {
-            case .success(_):
-                completionHandler(.success(true));
-            case .failure(let error):
-                if error.condition == .item_not_found {
-                    completionHandler(.success(false));
-                } else {
-                    completionHandler(.failure(error));
-                }
+    open func checkAccessPolicy(of channelJid: BareJID) async throws -> Bool {
+        do {
+            _ = try await retrieveAccessRules(for: channelJid, rule: .allow);
+            return true;
+        } catch let error as XMPPError {
+            guard error.condition == .item_not_found else {
+                throw error;
             }
-        });
+            return false;
+        }
     }
     
-    open func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
-        self.retrieveAccessRules(for: channelJid, rule: .allow, completionHandler: completionHandler);
+    open func retrieveAllowed(for channelJid: BareJID) async throws -> [BareJID] {
+        return try await retrieveAccessRules(for: channelJid, rule: .allow);
     }
     
-    open func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
-        self.retrieveAccessRules(for: channelJid, rule: .deny, completionHandler: completionHandler);
+    open func retrieveBanned(for channelJid: BareJID) async throws -> [BareJID] {
+        return try await retrieveAccessRules(for: channelJid, rule: .deny);
     }
     
-    private func retrieveAccessRules(for channelJid: BareJID, rule: AccessRule, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
-        pubsubModule.retrieveItems(from: channelJid, for: rule.node, completionHandler: { result in
-            completionHandler(result.map({ items in
-                return items.items.map({ BareJID($0.id) })
-            }))
-        })
+    private func retrieveAccessRules(for channelJid: BareJID, rule: AccessRule) async throws -> [BareJID] {
+        let items = try await pubsubModule.retrieveItems(from: channelJid, for: rule.node);
+        return items.items.map({ BareJID($0.id) });
     }
         
     public enum AccessRule {
@@ -665,31 +587,25 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             self.channelLeft(channel: channel);
         }
     }
-
-    open func retrieveHistory(fromChannel jid: BareJID, start: Date? = nil, rsm: RSM.Query) {
-        let queryId = UUID().uuidString;
-        // should we query MIX messages node? or just MAM at MIX channel without a node?
-        mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: "urn:xmpp:mix:nodes:messages", start: nil, queryId: queryId, rsm: rsm, completionHandler: { result in
-            switch result {
-            case .success(let queryResult):
-                guard !queryResult.complete, let rsmQuery = queryResult.rsm?.next() else {
-                    return;
-                }
-                self.retrieveHistory(fromChannel: jid, start: start, rsm: rsmQuery);
-            case .failure(_):
-                break;
-            }
-        });
+    
+    open func retrieveAllHistory(fromChannel jid: BareJID, start: Date?, rsm: RSM.Query) async throws {
+        let result = try await retrieveHistory(fromChannel: jid, start: start, rsm: rsm);
+        if !result.complete, let nextRsm = result.rsm?.next() {
+            try await retrieveAllHistory(fromChannel: jid, start: start, rsm: nextRsm);
+        }
     }
     
-    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) {
-        avatarModule.retrieveAvatarMetadata(from: jid, itemId: nil, fireEvents: true, completionHandler: { result in
-            completionHandler?(result);
-        });
+    open func retrieveHistory(fromChannel jid: BareJID, start: Date?, rsm: RSM.Query) async throws -> MessageArchiveManagementModule.QueryResult {
+        let queryId = UUID().uuidString;
+        // should we query MIX messages node? or just MAM at MIX channel without a node?
+        return try await mamModule.queryItems(MAMQueryForm(version: .MAM2, start: start), at: JID(jid), node: "urn:xmpp:mix:nodes:messages", queryId: queryId, rsm: rsm);
+    }
+    
+    open func retrieveAvatar(for jid: BareJID) async throws -> PEPUserAvatarModule.Info {
+        return try await avatarModule.retrieveAvatarMetadata(from: jid);
     }
 
     public typealias ParticipantsResult = Result<[MixParticipant],XMPPError>
-    public typealias PermissionsResult = Result<[ChannelPermission],XMPPError>
     
     public enum ParticipantEvent {
         case joined(MixParticipant);
@@ -751,129 +667,171 @@ extension Message {
 
 // async-await support
 extension MixModule {
-    open func create(channel: String?, at componentJid: BareJID) async throws -> BareJID {
-        return try await withUnsafeThrowingContinuation { continuation in
-            create(channel: channel, at: componentJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    
+    open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await create(channel: channel, at: componentJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation { continuation in
-            join(channel: channelJid, withNick: nick, subscribeNodes: nodes, presenceSubscription: presenceSubscription, invitation: invitation, messageSyncLimit: messageSyncLimit, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func destroy(channel channelJid: BareJID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await destroy(channel: channelJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func leave(channel: ChannelProtocol, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation { continuation in
-            leave(channel: channel, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
+        Task {
+            do {
+                completionHandler(.success(try await join(channel: channelJid, withNick: nick, subscribeNodes: nodes, presenceSubscription: presenceSubscription, invitation: invitation, messageSyncLimit: messageSyncLimit)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func retrieveAffiliations(for channel: ChannelProtocol) async throws -> [ChannelPermission] {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveAffiliations(for: channel, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func leave(channel: ChannelProtocol, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await leave(channel: channel)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func publishInfo(for channelJid: BareJID, info: ChannelInfo) async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            publishInfo(for: channelJid, info: info, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveAffiliations(for channel: ChannelProtocol, completionHandler: ((Result<Set<ChannelPermission>,XMPPError>)->Void)?) {
+        Task {
+            do {
+                completionHandler?(.success(try await retrieveAffiliations(for: channel)));
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
+            }
         }
     }
     
-    open func retrieveInfo(for channelJid: BareJID) async throws -> ChannelInfo {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveInfo(for: channelJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await publishInfo(info, for: channelJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
+    }
+    
+    open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,XMPPError>)->Void)?) {
+        Task {
+            do {
+                completionHandler?(.success(try await retrieveInfo(for: channelJid)));
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
+    }
+    
+    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<MixChannelConfig,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveConfig(for: channelJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
+    }
+    
+    open func updateConfig(for channelJid: BareJID, config: MixChannelConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await updateConfig(config, for: channelJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
+    }
+    
+    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await allowAccess(to: channelJid, for: jid, value: value)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+    
+    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await denyAccess(to: channelJid, for: jid, value: value)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+        
+    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await changeAccessPolicy(of: channelJid, isPrivate: isPrivate)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+    
+    open func checkAccessPolicy(of channelJid: BareJID, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await checkAccessPolicy(of: channelJid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
 
-    open func retrieveConfig(for channelJid: BareJID) async throws -> MixChannelConfig {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveConfig(for: channelJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveAllowed(for: channelJid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func updateConfig(for channelJid: BareJID, config: MixChannelConfig) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            updateConfig(for: channelJid, config: config, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveBanned(for: channelJid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            allowAccess(to: channelJid, for: jid, value: value, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveHistory(fromChannel jid: BareJID, start: Date? = nil, rsm: RSM.Query) {
+        Task {
+            try await retrieveAllHistory(fromChannel: jid, start: start, rsm: rsm);
         }
     }
     
-    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            denyAccess(to: channelJid, for: jid, value: value, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            changeAccessPolicy(of: channelJid, isPrivate: isPrivate, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    open func checkAccessPolicy(of channelJid: BareJID) async throws -> Bool {
-        return try await withUnsafeThrowingContinuation { continuation in
-            checkAccessPolicy(of: channelJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    open func retrieveAllowed(for channelJid: BareJID) async throws -> [BareJID] {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveAllowed(for: channelJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    open func retrieveBanned(for channelJid: BareJID) async throws -> [BareJID] {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveBanned(for: channelJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) {
+        Task {
+            do {
+                completionHandler?(.success(try await retrieveAvatar(for: jid)))
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
 
-    open func retrieveHistory(fromChannel jid: BareJID, start: Date?, rsm: RSM.Query) async throws -> MessageArchiveManagementModule.QueryResult {
-        let queryId = UUID().uuidString;
-        // should we query MIX messages node? or just MAM at MIX channel without a node?
-        return try await mamModule.queryItems(version: .MAM2, componentJid: JID(jid), node: "urn:xmpp:mix:nodes:messages", start: nil, queryId: queryId, rsm: rsm);
-    }
-    
-    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) async throws -> PEPUserAvatarModule.Info {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveAvatar(for: jid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
 }

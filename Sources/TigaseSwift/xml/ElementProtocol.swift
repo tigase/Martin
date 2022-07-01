@@ -82,9 +82,16 @@ public protocol ElementProtocol: CustomStringConvertible, CustomDebugStringConve
      */
     func removeChildren(where: (Element)->Bool);
     
+    func addChildren(_ children: [Element]);
+    
+    func clone(shallow: Bool) -> Self;
 }
 
 extension ElementProtocol {
+
+    public func clone() -> Self {
+        return clone(shallow: true);
+    }
     
     public func hasChild(where body: (Element)->Bool) -> Bool {
         return firstChild(where: body) != nil;

@@ -118,83 +118,51 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
 
     /**
      Query archived messages
-     - parameter componentJid: jid of an archiving component
-     - parameter node: PubSub node to query (if querying PubSub component)
-     - parameter with: chat participant
-     - parameter start: start date of a querying period
-     - parameter end: end date of a querying period
-     - parameter queryId: id of a query
-     - parameter rsm: instance defining result set Management
-     - parameter completionHandler: callback called when query results
-     */
-    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
-        guard let version = version ?? self.availableVersions.first else {
-            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
-            return;
-        }
-        
-        let query = MAMQueryForm(version: version);
-        if with != nil {
-            query.with = nil;
-        }
-        if start != nil {
-            query.start = TimestampHelper.format(date: start!);
-        }
-        if end != nil {
-            query.end = TimestampHelper.format(date: end!);
-        }
-
-        self.queryItems(version: version, componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, completionHandler: completionHandler);
-    }
-    
-    /**
-     Query archived messages
-     - parameter componentJid: jid of an archiving component
-     - parameter node: PubSub node to query (if querying PubSub component)
      - parameter query: instace of `JabberDataElement` with a query form
+     - parameter at componentJid: jid of an archiving component
+     - parameter node: PubSub node to query (if querying PubSub component)
      - parameter queryId: id of a query
      - parameter rsm: instance defining result set Management
      - parameter completionHandler: callback called when query results
      */
-    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
-    {
-        guard let version = version ?? self.availableVersions.first else {
-            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)))
-            return;
+    open func queryItems(_ query: MAMQueryForm, at componentJid: JID? = nil, node: String? = nil, queryId: String, rsm: RSM.Query? = nil) async throws -> QueryResult {
+        
+        guard let version = availableVersions.first(where: { $0.rawValue == query.FORM_TYPE }) else {
+            throw XMPPError(condition: .feature_not_implemented);
         }
-
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = componentJid;
         
-        let queryEl = Element(name: "query", xmlns: version.rawValue);
-        iq.addChild(queryEl);
-        
-        queryEl.attribute("queryid", newValue: queryId);
-        queryEl.attribute("node", newValue: node);
-        
-        queryEl.addChild(query.element(type: .submit, onlyModified: false));
-        
-        if let rsm = rsm {
-            queryEl.addChild(rsm.element());
-        }
+        let iq = Iq(type: .set, to: componentJid, {
+            Element(name: "query", xmlns: version.rawValue, {
+                Attribute("queryid", value: queryId)
+                Attribute("node", value: node)
+                query.element(type: .submit, onlyModified: false)
+                rsm?.element()
+            });
+        });
         
         self.queue.async {
             self.queries[queryId] = Query(id: queryId, version: version);
         }
 
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap { response in
-                guard let fin = response.firstChild(name: "fin", xmlns: version.rawValue) else {
-                    return .failure(XMPPError(condition: .undefined_condition, stanza: response));
-                }
-                
-                let rsmResult = RSM.Result(from: fin.firstChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
-    
-                let complete = ("true" == fin.attribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
-                return .success(QueryResult(queryId: queryId, complete: complete, rsm: rsmResult));
-            })
-        });
+        do {
+            let response = try await write(iq: iq);
+            guard let fin = response.firstChild(name: "fin", xmlns: version.rawValue) else {
+                throw XMPPError(condition: .undefined_condition, stanza: response);
+            }
+            
+            let rsmResult = RSM.Result(from: fin.firstChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
+
+            let complete = ("true" == fin.attribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
+            self.queue.asyncAfter(deadline: .now() + 10.0) {
+                self.queries.removeValue(forKey: queryId);
+            }
+            return QueryResult(queryId: queryId, complete: complete, rsm: rsmResult);
+        } catch {
+            self.queue.async {
+                self.queries.removeValue(forKey: queryId);
+            }
+            throw error;
+        }
     }
     
     static func isComplete(rsm result: RSM.Result?) -> Bool {
@@ -216,31 +184,23 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
 
     /**
      Retrieve query form a for querying archvived messages
-     - parameter componentJid: jid of an archiving component
-     - parameter completionHandler: called with result
+     - parameter from componentJid: jid of an archiving component
      */
-    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler resultHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
+    open func retrieveForm(version: Version? = nil, from componentJid: JID? = nil) async throws -> MAMQueryForm {
         guard let version = version ?? availableVersions.first else {
-            resultHandler(.failure(XMPPError(condition: .feature_not_implemented)));
-            return;
+            throw XMPPError(condition: .feature_not_implemented);
         }
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = componentJid;
-        
-        let queryEl = Element(name: "query", xmlns: version.rawValue);
-        iq.addChild(queryEl);
-     
-        write(iq: iq, completionHandler: { result in
-            resultHandler(result.flatMap { stanza in
-                guard let query = stanza.firstChild(name: "query", xmlns: version.rawValue), let x = query.firstChild(name: "x", xmlns: "jabber:x:data"), let form = DataForm(element: x) else {
-                    return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
-                }
-                return .success(MAMQueryForm(form: form));
-            })
+        let iq = Iq(type: .get, to: componentJid, {
+            Element(name: "query", xmlns: version.rawValue)
         });
+        
+        let response = try await write(iq: iq);
+        guard let query = response.firstChild(name: "query", xmlns: version.rawValue), let x = query.firstChild(name: "x", xmlns: "jabber:x:data"), let form = DataForm(element: x) else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
+        }
+        return MAMQueryForm(form: form);
     }
-    
+        
     public struct Settings {
         public var defaultValue: DefaultValue;
         public var always: [JID];
@@ -256,68 +216,62 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     /**
      Retrieve message archiving settings
      - parameter version: version of specification to use
-     - parameter completionHandler: called with result
      */
-    open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
+    open func settings(version: Version? = nil) async throws -> Settings {
         guard let version = version ?? availableVersions.first else {
-            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
-            return;
+           throw XMPPError(condition: .feature_not_implemented);
         }
         
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.addChild(Element(name: "prefs", xmlns: version.rawValue));
+        let iq = Iq(type: .get, {
+            Element(name: "prefs", xmlns: version.rawValue)
+        })
         
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in MessageArchiveManagementModule.parseSettings(fromIq: stanza, version: version) }));
-        });
+        let response = try await write(iq: iq);
+        return try MessageArchiveManagementModule.parseSettings(fromIq: response, version: version);
     }
     
     /**
      - parameter version: version of specification to use
      - parameter settings: settings to set on the server
-     - parameter completionHandler: called with result
      */
-    open func updateSettings(version: Version? = nil, settings: Settings, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
+    open func settings(_ settings: Settings, version: Version? = nil) async throws -> Settings {
         guard let version = version ?? availableVersions.first else {
-            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
-            return;
+           throw XMPPError(condition: .feature_not_implemented);
         }
         
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        let prefs = Element(name: "prefs", xmlns: version.rawValue);
-        prefs.attribute("default", newValue: settings.defaultValue.rawValue);
-        iq.addChild(prefs);
-        if !settings.always.isEmpty {
-            let alwaysEl = Element(name: "always");
-            alwaysEl.addChildren(settings.always.map({ (jid) -> Element in Element(name: "jid", cdata: jid.description) }));
-            prefs.addChild(alwaysEl);
-        }
-        if !settings.never.isEmpty {
-            let neverEl = Element(name: "always");
-            neverEl.addChildren(settings.never.map({ (jid) -> Element in Element(name: "jid", cdata: jid.description) }));
-            prefs.addChild(neverEl);
-        }
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in MessageArchiveManagementModule.parseSettings(fromIq: stanza, version: version) }));
-        });
+        let iq = Iq(type: .set, {
+            Element(name: "prefs", xmlns: version.rawValue, {
+                Attribute("default", value: settings.defaultValue.rawValue)
+                if !settings.always.isEmpty {
+                    Element(name: "always", {
+                        for jid in settings.always {
+                            Element(name: "jid", cdata: jid.description)
+                        }
+                    })
+                }
+                if !settings.never.isEmpty {
+                    Element(name: "never", {
+                        for jid in settings.never {
+                            Element(name: "jid", cdata: jid.description)
+                        }
+                    })
+                }
+            })
+        })
+
+        let response = try await write(iq: iq);
+        return try MessageArchiveManagementModule.parseSettings(fromIq: response, version: version);
     }
     
-    private static func parseSettings(fromIq stanza: Iq, version: Version) -> Result<Settings,XMPPError> {
+    private static func parseSettings(fromIq stanza: Iq, version: Version) throws -> Settings {
         if let prefs = stanza.firstChild(name: "prefs", xmlns: version.rawValue) {
             let defValue = DefaultValue(rawValue: prefs.attribute("default") ?? "always") ?? DefaultValue.always;
             let always: [JID] = prefs.firstChild(name: "always")?.compactMapChildren({ JID($0.value) }) ?? [];
             let never: [JID] = prefs.firstChild(name: "always")?.compactMapChildren({ JID($0.value) }) ?? [];
-            return .success(Settings(defaultValue: defValue, always: always, never: never));
+            return Settings(defaultValue: defValue, always: always, never: never);
         } else {
-            return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
+            throw XMPPError(condition: .undefined_condition, stanza: stanza);
         }
-    }
-        
-    fileprivate func mapElemValueToJid(elem: Element) -> JID? {
-        return JID(elem.value);
     }
     
     /// Enum defines possible values for default archiving of messages
@@ -372,36 +326,53 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
 // async-await support
 extension MessageArchiveManagementModule {
     
-    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil) async throws -> QueryResult {
-        return try await withUnsafeThrowingContinuation { continuation in
-            queryItems(version: version, componentJid: componentJid, node: node, with: with, start: start, end: end, queryId: queryId, rsm: rsm, completionHandler: { result in
-                continuation.resume(with: result);
-            });
+    @available(*, deprecated, message: "use queryItems(componentJid:node:query:queryId:rsm:completionHandler:)")
+    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
+        guard let version = version ?? availableVersions.first else {
+            completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
+            return;
         }
+        queryItems(componentJid: componentJid, node: node, query: .init(version: version, with: with, start: start, end: end), queryId: queryId, rsm: rsm, completionHandler: completionHandler);
     }
     
-    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil) async throws -> QueryResult
+    open func queryItems(componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
     {
-        return try await withUnsafeThrowingContinuation { continuation in
-            queryItems(version: version, componentJid: componentJid, node: node, query: query, queryId: queryId, rsm: rsm, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+        Task {
+            do {
+                completionHandler(.success(try await queryItems(query, at: componentJid, node: node, queryId: queryId, rsm: rsm)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil) async throws -> MAMQueryForm {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveForm(version: version, componentJid: componentJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveForm(version: version, from: componentJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await settings(version: version)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func retrieveSettings(version: Version? = nil) async throws -> Settings {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveSettings(version: version, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func updateSettings(version: Version? = nil, settings: Settings, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await self.settings(settings, version: version)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     

@@ -56,59 +56,54 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
         
     }
     
-    open func addOrUpdate(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    open func addOrUpdate(bookmark item: Bookmarks.Item) async throws {
         if let updated = currentBookmarks.updateOrAdd(bookmark: item) {
-            self.publish(bookmarks: updated, completionHandler: completionHandler);
+            _ = try await self.publish(bookmarks: updated);
         }
     }
     
-    open func remove(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    open func remove(bookmark item: Bookmarks.Item) async throws {
         if let updated = currentBookmarks.remove(bookmark: item) {
-            self.publish(bookmarks: updated, completionHandler: completionHandler);
+            _ = try await self.publish(bookmarks: updated);
         }
     }
     
-    open func setConferenceAutojoin(_ value: Bool, for jid: JID, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    open func setConferenceAutojoin(_ value: Bool, for jid: JID) async throws {
         guard let conference = self.currentBookmarks.conference(for: jid), conference.autojoin != value else {
-            return;
+            throw XMPPError(condition: .item_not_found);
         }
-        addOrUpdate(bookmark: conference.with(autojoin: value), completionHandler: completionHandler);
+        try await addOrUpdate(bookmark: conference.with(autojoin: value));
     }
-    
+        
     public func process(stanza: Stanza) throws {
         throw XMPPError(condition: .feature_not_implemented);
     }
     
-    public func publish(bookmarks: Bookmarks, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    
+    public func publish(bookmarks: Bookmarks) async throws -> String {
         guard let context = context else {
-            completionHandler(.failure(XMPPError(condition: .undefined_condition)));
-            return;
+            throw XMPPError(condition: .undefined_condition);
         }
-        let pepJID = JID(context.userBareJid);
-        discoModule.info(for: pepJID, node: PEPBookmarksModule.ID, completionHandler: { result in
-            switch result {
-            case .success(_):
-                self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), completionHandler: completionHandler);
-            case .failure(let error):
-                switch error.condition {
-                case .item_not_found:
-                    let config = PubSubNodeConfig();
-                    config.FORM_TYPE = "http://jabber.org/protocol/pubsub#node_config";
-                    config.persistItems = true;
-                    config.accessModel = .whitelist;
-                    self.pubsubModule.createNode(at: pepJID.bareJid, node: PEPBookmarksModule.ID, with: config, completionHandler: { result in
-                        switch result {
-                        case .success(_):
-                            self.pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), completionHandler: completionHandler);
-                        case .failure(let err):
-                            completionHandler(.failure(err));
-                        }
-                    });
-                default:
-                    completionHandler(.failure(error));
+
+        let pepJID = context.userBareJid;
+        let config = PubSubNodeConfig();
+        config.FORM_TYPE = "http://jabber.org/protocol/pubsub#node_config";
+        config.persistItems = true;
+        config.accessModel = .whitelist;
+
+        do {
+            return try await pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), publishOptions: config)
+        } catch let error as XMPPError {
+            guard error.condition == .conflict else {
+                guard error.condition == .item_not_found else {
+                    throw error;
                 }
+                _ = try await pubsubModule.createNode(at: pepJID, node: PEPBookmarksModule.ID, with: config);
+                return try await pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), publishOptions: config)
             }
-        });
+            try await pubsubModule.configureNode(at: pepJID, node: PEPBookmarksModule.ID, with: config);
+            return try await pubsubModule.publishItem(at: nil, to: PEPBookmarksModule.ID, payload: bookmarks.toElement(), publishOptions: config)
+        }
     }
     
     private func serverInfoChanged(_ info: DiscoveryModule.DiscoveryInfoResult) {
@@ -160,35 +155,43 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
 // async-await support
 extension PEPBookmarksModule {
     
-    open func addOrUpdate(bookmark item: Bookmarks.Item) async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            addOrUpdate(bookmark: item, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func addOrUpdate(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await addOrUpdate(bookmark: item)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func remove(bookmark item: Bookmarks.Item) async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            remove(bookmark: item, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func remove(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await remove(bookmark: item)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func setConferenceAutojoin(_ value: Bool, for jid: JID) async throws {
-        guard let conference = self.currentBookmarks.conference(for: jid), conference.autojoin != value else {
-            throw XMPPError(condition: .item_not_found);
-        }
-        try await addOrUpdate(bookmark: conference.with(autojoin: value));
-    }
-    
-    public func publish(bookmarks: Bookmarks) async throws -> String {
-        return try await withUnsafeThrowingContinuation { continuation in
-            publish(bookmarks: bookmarks, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func setConferenceAutojoin(_ value: Bool, for jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await setConferenceAutojoin(value, for: jid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
-    
+
+    public func publish(bookmarks: Bookmarks, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await publish(bookmarks: bookmarks)));
+            } catch {
+                
+            }
+        }
+    }
 }

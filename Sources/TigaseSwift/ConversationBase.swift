@@ -61,15 +61,14 @@ open class ConversationBase: ConversationProtocol {
         }
     }
     
-    open func send(message: Message, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
+    public func send(message: Message) async throws {
         guard let context = self.context else {
-            completionHandler?(.failure(.remote_server_timeout));
-            return;
+            throw XMPPError(condition: .undefined_condition, message: "No context!");
         }
         if message.to == nil {
-            message.to = JID(jid);
+            message.to = jid.jid();
         }
-        context.writer.write(stanza: message, completionHandler: completionHandler);
+        try await context.writer.write(stanza: message);
     }
     
 }

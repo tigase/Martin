@@ -88,63 +88,53 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter invitation: initation to decline
      - parameter reason: reason why it was declined
      */
-    open func decline(invitation: Invitation, reason: String?, completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
+    open func decline(invitation: Invitation, reason: String?) async throws {
         if invitation is MediatedInvitation {
-            let message = Message();
-            message.to = JID(invitation.roomJid);
-            
-            let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
-            
-            let decline = Element(name: "decline");
-            if let inviter = invitation.inviter {
-                decline.attribute("to", newValue: inviter.description)
-            }
-            if reason != nil {
-                decline.addChild(Element(name: "reason", cdata: reason));
-            }
-            x.addChild(decline);
-            
-            message.addChild(x);
-            write(stanza: message, completionHandler: completionHandler);
+            let message = Message(to: invitation.roomJid.jid(), {
+                Element(name: "x", xmlns: "http://jabber.org/protocol/muc#user", {
+                    Element(name: "decline", {
+                        Attribute("to", value: invitation.inviter?.description)
+                        if let reason = reason {
+                            Element(name: "reason", cdata: reason)
+                        }
+                    })
+                })
+            })
+            try await write(stanza: message);
+        } else {
+            throw XMPPError(condition: .bad_request)
         }
     }
     
     /**
      Retrieve configuration of MUC room (only room owner is allowed to do so)
-     - parameter roomJid: jid of MUC room
-     - parameter onSuccess: called where response with result is received
-     - parameter onError: called when received error or request timed out
+     - parameter of roomJid: jid of MUC room
      */
-    open func roomConfiguration(of roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
-        let iq = Iq(type: .get, to: roomJid);
-        iq.addChild(Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner"));
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                guard let formEl = stanza.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.firstChild(name: "x", xmlns: "jabber:x:data"), let data = RoomConfig(element: formEl) else {
-                    return .failure(.undefined_condition);
-                }
-                
-                return .success(data);
-            }))
-        });
+    open func roomConfiguration(of roomJid: JID) async throws -> RoomConfig {
+        let iq = Iq(type: .get, to: roomJid, {
+            Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")
+        })
+        
+        let response = try await write(iq: iq);
+        guard let formEl = response.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#owner")?.firstChild(name: "x", xmlns: "jabber:x:data"), let data = RoomConfig(element: formEl) else {
+            throw XMPPError.undefined_condition;
+        }
+        
+        return data;
     }
     
     /**
      Set configuration of MUC room (only room owner is allowed to do so)
-     - parameter roomJid: jid of MUC room
      - parameter configuration: room configuration
-     - parameter onSuccess: called where response with result is received
-     - parameter onError: called when received error or request timed out
+     - parameter of roomJid: jid of MUC room
      */
-    open func roomConfiguration(_ configuration: RoomConfig, of roomJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let iq = Iq(type: .set, to: roomJid);
-        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
-        iq.addChild(query);
-        query.addChild(configuration.element(type: .submit, onlyModified: true));
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { _ in Void() });
-        });
+    open func roomConfiguration(_ configuration: RoomConfig, of roomJid: JID) async throws {
+        let iq = Iq(type: .set, to: roomJid, {
+            Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner", {
+                configuration.element(type: .submit, onlyModified: true)
+            })
+        })
+        try await write(iq: iq);
     }
     
     open func roomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
@@ -194,18 +184,12 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         });
     }
     
-    open func setRoomSubject(roomJid: BareJID, newSubject: String?) {
-        let message = Message();
-        message.id = UUID().uuidString;
-        message.to = JID(roomJid);
-        message.type = .groupchat;
-        message.subject = newSubject;
-        if newSubject == nil {
-            message.element.addChild(Element(name: "subject"));
-        }
-        write(stanza: message)
+    open func setRoomSubject(roomJid: BareJID, newSubject: String?) async throws {
+        let message = Message(type: .groupchat, id: UUID().uuidString, to: roomJid.jid(), {
+            Element(name: "subject", cdata: newSubject)
+        });
+        try await write(stanza: message)
     }
-    
     
     /**
      Invite user to MUC room
@@ -213,10 +197,10 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter invitee: user to invite
      - parameter reason: reason for invitation
      */
-    open func invite(to room: RoomProtocol, invitee: JID, reason: String?) {
-        room.invite(invitee, reason: reason);
+    open func invite(to room: RoomProtocol, invitee: JID, reason: String?) async throws {
+        try await room.invite(invitee, reason: reason);
     }
-    
+        
     /**
      Invite user directly to MUC room
      - parameter room: room for invitation
@@ -224,8 +208,8 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter reason: reason for invitation
      - parameter theadId: thread id for invitation
      */
-    open func inviteDirectly(to room: RoomProtocol, invitee: JID, reason: String?, threadId: String?) {
-        room.inviteDirectly(invitee, reason: reason, threadId: threadId);
+    open func inviteDirectly(to room: RoomProtocol, invitee: JID, reason: String?, threadId: String?) async throws {
+        try await room.inviteDirectly(invitee, reason: reason, threadId: threadId);
     }
     
     private var joinPromises: [BareJID: (Result<RoomJoinResult,XMPPError>)->Void] = [:];
@@ -238,24 +222,25 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      - parameter password: password for room if needed
      - returns: instance of Room
      */
-    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil) -> Future<RoomJoinResult, XMPPError> {
-        return Future({ promise in
-            self.join(roomName: roomName, mucServer: mucServer, nickname: nickname, password: password, completionHandler: promise);
-        });
-    }
-    
-    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, completionHandler: @escaping (Result<RoomJoinResult,XMPPError>)->Void) {
+    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil) async throws -> RoomJoinResult {
         let roomJid = BareJID(localPart: roomName, domain: mucServer);
         
         guard let context = self.context else {
-            completionHandler(.failure(.undefined_condition));
-            return;
+            throw XMPPError.undefined_condition;
         }
         
-        if let result = self.roomManager.createRoom(for: context, with: roomJid, nickname: nickname, password: password) {
-            self.join(room: result, fetchHistory: .initial, completionHandler: completionHandler);
-        } else {
-            completionHandler(.failure(.undefined_condition));
+        guard let result = self.roomManager.createRoom(for: context, with: roomJid, nickname: nickname, password: password) else {
+            throw XMPPError(condition: .undefined_condition);
+        }
+        
+        return try await join(room: result, fetchHistory: .initial);
+    }
+    
+    open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch) async throws -> RoomJoinResult {
+        return try await withUnsafeThrowingContinuation { continuation in
+            self.join(room: room, fetchHistory: fetchHistory, completionHandler: { result in
+                continuation.resume(with: result);
+            });
         }
     }
     
@@ -264,30 +249,16 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             completionHandler(.failure(.undefined_condition));
             return;
         }
-        context.queue.async {
-            self.joinPromises[room.jid] = completionHandler;
-        }
-        let presence = Presence();
-        presence.to = room.jid.with(resource: room.nickname);
-        let x = Element(name: "x", xmlns: "http://jabber.org/protocol/muc");
-        presence.addChild(x);
-        if let password = room.password {
-            x.addChild(Element(name: "password", cdata: password));
-        }
         
-        switch fetchHistory {
-        case .initial:
-            break;
-        case .from(let date):
-            let history = Element(name: "history");
-            history.attribute("since", newValue: TimestampHelper.format(date: date));
-            x.addChild(history);
-        case .skip:
-            let history = Element(name: "history");
-            history.attribute("maxchars", newValue: "0");
-            history.attribute("maxstanzas", newValue: "0");
-            x.addChild(history);
-        }
+        
+        let presence = Presence(to: room.jid.with(resource: room.nickname), {
+            Element(name: "x", xmlns: "http://jabber.org/protocol/muc", {
+                if let password = room.password {
+                    Element(name: "password", cdata: password)
+                }
+                fetchHistory.element()
+            })
+        })
         
         room.update(state: .requested);
         self.write(stanza: presence, completionHandler: { result in
@@ -305,45 +276,41 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
      Destroy MUC room
      - parameter room: room to destroy
      */
-    @discardableResult
-    open func destroy(room: RoomProtocol) -> Bool {
+    open func destroy(room: RoomProtocol) async throws {
         guard room.state == .joined && room.occupant(nickname: room.nickname)?.affiliation == .owner else {
-            return false;
+            throw XMPPError.undefined_condition;
         }
         
-        let iq = Iq(type: .set, to: JID(room.jid));
-        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
-        query.addChild(Element(name: "destroy"));
-        
-        iq.addChild(query);
-        
-        write(stanza: iq);
+        let iq = Iq(type: .set, to: room.jid.jid(), {
+            Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner", {
+                Element(name: "destroy")
+            })
+        })
+
+        try await write(iq: iq);
         
         roomManager.close(room: room);
         
         room.update(state: .destroyed);
-        return true;
     }
     
     /**
      Leave MUC room
      - parameter room: room to leave
      */
-    open func leave(room: RoomProtocol) {
+    open func leave(room: RoomProtocol) async throws {
         if room.state == .joined {
             room.update(state: .not_joined());
             
-            let presence = Presence();
-            presence.type = StanzaType.unavailable;
-            presence.to = room.jid.with(resource: room.nickname);
-            write(stanza: presence);
+            let presence = Presence(type: .unavailable, to: room.jid.with(resource: room.nickname));
+            try await write(stanza: presence);
         }
         
         roomManager.close(room: room);
         
         room.update(state: .destroyed);
     }
-    
+        
     open func process(stanza: Stanza) throws {
         switch stanza {
         case let p as Presence:
@@ -363,7 +330,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
     
-    func processPresence(_ presence: Presence) throws {
+    private func processPresence(_ presence: Presence) throws {
         let from = presence.from!;
         let roomJid = from.bareJid;
         let type = presence.type;
@@ -426,7 +393,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
     
-    func processMessage(_ message: Message) {
+    private func processMessage(_ message: Message) {
         let from = message.from!;
         let roomJid = from.bareJid;
         
@@ -441,7 +408,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         messagesPublisher.send(.init(room: room, message: message));
     }
     
-    func processDirectInvitationMessage(_ message: Message) {
+    private func processDirectInvitationMessage(_ message: Message) {
         let x = message.firstChild(name: "x", xmlns: "jabber:x:conference");
         let contStr = x?.attribute("continue");
         let cont = contStr == "true" || contStr == "1";
@@ -453,7 +420,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
     
-    func processMediatedInvitationMessage(_ message: Message) {
+    private func processMediatedInvitationMessage(_ message: Message) {
         let x = message.firstChild(name: "x", xmlns: "http://jabber.org/protocol/muc#user");
         let invite = x?.firstChild(name: "invite");
                 
@@ -464,7 +431,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
     
-    func processInvitationDeclinedMessage(_ message: Message) {
+    private func processInvitationDeclinedMessage(_ message: Message) {
         let from = message.from!.bareJid;
         guard let context = self.context else {
             return;
@@ -480,7 +447,7 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
 
-    fileprivate func markRoomsAsNotJoined() {
+    private func markRoomsAsNotJoined() {
         if let context = self.context {
             for room in roomManager.rooms(for: context) {
                 room.update(state: .not_joined());
@@ -618,113 +585,93 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
 // async-await support
 extension MucModule {
     
-    open func decline(invitation: Invitation, reason: String?) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            decline(invitation: invitation, reason: reason, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func decline(invitation: Invitation, reason: String?, completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
+        Task {
+            do {
+                completionHandler?(.success(try await decline(invitation: invitation, reason: reason)));
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
+    }
+                                   
+    open func roomConfiguration(of roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await roomConfiguration(of: roomJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
+            }
         }
     }
     
-    open func roomConfiguration(roomJid: JID) async throws -> RoomConfig {
-        return try await withUnsafeThrowingContinuation { continuation in
-            roomConfiguration(of: roomJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func roomConfiguration(_ configuration: RoomConfig, of roomJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await roomConfiguration(configuration, of: roomJid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
+            }
         }
     }
     
-    open func setRoomConfiguration(roomJid: JID, configuration: RoomConfig) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            roomConfiguration(configuration, of: roomJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func setRoomSubject(roomJid: BareJID, newSubject: String?) {
+        Task {
+            try await setRoomSubject(roomJid: roomJid, newSubject: newSubject);
         }
     }
     
-    open func setRoomSubject(roomJid: BareJID, newSubject: String?) async throws {
-        let message = Message();
-        message.id = UUID().uuidString;
-        message.to = JID(roomJid);
-        message.type = .groupchat;
-        message.subject = newSubject;
-        if newSubject == nil {
-            message.element.addChild(Element(name: "subject"));
-        }
-        try await write(stanza: message)
+    open func invite(to room: RoomProtocol, invitee: JID, reason: String?) {
+        room.invite(invitee, reason: reason);
     }
     
-    
-    /**
-     Invite user to MUC room
-     - parameter room: room for invitation
-     - parameter invitee: user to invite
-     - parameter reason: reason for invitation
-     */
-    open func invite(to room: RoomProtocol, invitee: JID, reason: String?) async throws {
-        try await room.invite(invitee, reason: reason);
+    open func inviteDirectly(to room: RoomProtocol, invitee: JID, reason: String?, threadId: String?) {
+        room.inviteDirectly(invitee, reason: reason, threadId: threadId);
     }
     
-    /**
-     Invite user directly to MUC room
-     - parameter room: room for invitation
-     - parameter invitee: user to invite
-     - parameter reason: reason for invitation
-     - parameter theadId: thread id for invitation
-     */
-    open func inviteDirectly(to room: RoomProtocol, invitee: JID, reason: String?, threadId: String?) async throws {
-        try await room.inviteDirectly(invitee, reason: reason, threadId: threadId);
-    }
-    
-    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil) async throws -> RoomJoinResult {
-        return try await withUnsafeThrowingContinuation { continuation in
-            self.join(roomName: roomName, mucServer: mucServer, nickname: nickname, password: password, completionHandler: { result in
-                continuation.resume(with: result);
-            });
+    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, completionHandler: @escaping (Result<RoomJoinResult,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await join(roomName: roomName, mucServer: mucServer, nickname: nickname, password: password)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
-    
-    open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch) async throws -> RoomJoinResult {
-        return try await withUnsafeThrowingContinuation { continuation in
-            self.join(room: room, fetchHistory: fetchHistory, completionHandler: { result in
-                continuation.resume(with: result);
-            });
-        }
-    }
-    
-    open func destroy(room: RoomProtocol) async throws {
+
+    @discardableResult
+    open func destroy(room: RoomProtocol) -> Bool {
         guard room.state == .joined && room.occupant(nickname: room.nickname)?.affiliation == .owner else {
-            throw XMPPError.undefined_condition;
+            return false;
         }
         
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = JID(room.jid);
-
+        let iq = Iq(type: .set, to: JID(room.jid));
         let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#owner");
         query.addChild(Element(name: "destroy"));
         
         iq.addChild(query);
         
-        try await write(iq: iq);
+        write(stanza: iq);
         
         roomManager.close(room: room);
         
         room.update(state: .destroyed);
+        return true;
     }
-    
-    open func leave(room: RoomProtocol) async throws {
+ 
+    open func leave(room: RoomProtocol) {
         if room.state == .joined {
             room.update(state: .not_joined());
             
             let presence = Presence();
             presence.type = StanzaType.unavailable;
             presence.to = room.jid.with(resource: room.nickname);
-            try await write(stanza: presence);
+            write(stanza: presence);
         }
         
         roomManager.close(room: room);
         
         room.update(state: .destroyed);
     }
+
 }

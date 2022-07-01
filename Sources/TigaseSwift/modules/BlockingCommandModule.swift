@@ -180,8 +180,11 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         
         let iq = Iq();
         iq.type = StanzaType.set;
-        let unblock = Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
-        iq.addChild(unblock);
+        iq.addChild(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS) { unblock in
+            unblock.addChildren(jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
+        }
+//        let unblock = );
+//        iq.addChild(unblock);
         write(iq: iq, completionHandler: { result in
             completionHandler(result.map({ _ in Void() }));
         })

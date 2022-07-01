@@ -105,54 +105,37 @@ open class MeetModule: XmppModuleBase, XmppModule {
             return .init(jid: jid, streams: element.filterChildren(name: "stream").compactMap({ $0.attribute("mid") }));
         }
     }
-
-    open func findMeetComponent(completionHandler: @escaping (Result<[MeetComponent],XMPPError>) -> Void) {
-        guard let context = self.context, let discoModule = self.discoModule else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+    
+    open func findMeetComponents() async throws -> [MeetComponent] {
+        guard let disco = self.context?.module(.disco) else {
+            throw XMPPError(condition: .unexpected_request, message: "No context!")
         }
-        let serverJid = JID(context.userBareJid.domain);
-        discoModule.items(for: serverJid, completionHandler: { result in
-            switch result {
-            case .failure(let error):
-                completionHandler(.failure(error));
-            case .success(let items):
-                var results: [MeetComponent] = [];
-                let group = DispatchGroup();
-                group.enter();
-                for item in items.items {
-                    group.enter();
-                    discoModule.info(for: item.jid, completionHandler: { result in
-                        switch result {
-                        case .failure(_):
-                            break;
-                        case .success(let info):
-                            if info.features.contains(MeetModule.ID) {
-                                DispatchQueue.main.async {
-                                    results.append(MeetComponent(jid: item.jid, features: info.features));
-                                }
-                            }
-                        }
-                        group.leave();
-                    })
-                }
-                group.leave();
-                group.notify(queue: DispatchQueue.main, execute: {
-                    guard !results.isEmpty else {
-                        completionHandler(.failure(XMPPError(condition: .item_not_found)));
-                        return;
+        
+        let components = try await disco.serverComponents().items.map({ $0.jid });
+        return await withTaskGroup(of: MeetComponent?.self, body: { group in
+            for componentJid in components {
+                group.addTask {
+                    guard let info = try? await disco.info(for: componentJid), info.features.contains(MeetModule.ID) else {
+                        return nil;
                     }
-                    completionHandler(.success(results));
-                })
+                    
+                    return MeetComponent(jid: componentJid, features: info.features)
+                }
             }
-        });
+            
+            var result: [MeetComponent] = [];
+            for await component in group {
+                if let comp = component {
+                    result.append(comp);
+                }
+            }
+            
+            return result;
+        })
     }
     
-    open func createMeet(at jid: JID, media: [Media], participants: [BareJID] = [], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = jid;
-        
+    open func createMeet(at jid: JID, media: [Media], participants: [BareJID] = []) async throws -> JID {
+        let iq = Iq(type: .set, to: jid);
         let createEl = Element(name: "create", xmlns: MeetModule.ID);
         for m in media {
             createEl.addChild(Element(name: "media", attributes: ["type": m.rawValue]));
@@ -164,26 +147,19 @@ open class MeetModule: XmppModuleBase, XmppModule {
         
         iq.addChild(createEl);
         
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ iq in
-                guard let id = iq.firstChild(name: "create", xmlns: MeetModule.ID)?.attribute("id") else {
-                    return .failure(.undefined_condition);
-                }
-                return .success(JID(BareJID(localPart: id, domain: jid.domain)));
-            }));
-        });
+        let response = try await write(iq: iq);
+        guard let id = iq.firstChild(name: "create", xmlns: MeetModule.ID)?.attribute("id") else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
+        }
+        return JID(BareJID(localPart: id, domain: jid.domain));
     }
     
-    open func allow(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func allow(jids: [BareJID], in meetJid: JID) async throws {
         guard !jids.isEmpty else {
-            completionHandler(.failure(XMPPError(condition: .unexpected_request, message: "List of allowed JIDs is empty!")));
-            return;
+            throw XMPPError(condition: .unexpected_request, message: "List of allowed JIDs is empty!");
         }
         
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = meetJid;
-        
+        let iq = Iq(type: .set, to: meetJid);
         let allowEl = Element(name: "allow", xmlns: MeetModule.ID);
         
         for participant in jids {
@@ -192,67 +168,52 @@ open class MeetModule: XmppModuleBase, XmppModule {
         
         iq.addChild(allowEl);
         
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        });
-    }
-        
-    open func deny(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        guard !jids.isEmpty else {
-            completionHandler(.failure(XMPPError(condition: .unexpected_request, message: "List of denied JIDs is empty!")));
-            return;
-        }
-        
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = meetJid;
-        
-        let allowEl = Element(name: "deny", xmlns: MeetModule.ID);
-        
-        for participant in jids {
-            allowEl.addChild(Element(name: "participant", cdata: participant.description));
-        }
-        
-        iq.addChild(allowEl);
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        });
+        try await write(iq: iq);
     }
     
-    open func destroy(meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = .set;
-        iq.to = meetJid;
+    
+    open func deny(jids: [BareJID], in meetJid: JID) async throws {
+        guard !jids.isEmpty else {
+            throw XMPPError(condition: .unexpected_request, message: "List of allowed JIDs is empty!");
+        }
         
+        let iq = Iq(type: .set, to: meetJid);
+        let denyEl = Element(name: "deny", xmlns: MeetModule.ID);
+        
+        for participant in jids {
+            denyEl.addChild(Element(name: "participant", cdata: participant.description));
+        }
+        
+        iq.addChild(denyEl);
+        try await write(iq: iq);
+    }
+    
+    open func destroy(meetJid: JID) async throws {
+        let iq = Iq(type: .set, to: meetJid);
         let destroyEl = Element(name: "destroy", xmlns: MeetModule.ID);
 
         iq.addChild(destroyEl);
-
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        });
+        try await write(iq: iq);
     }
     
-    open func sendMessageInitiation(action: MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
+    open func sendMessageInitiation(action: MessageInitiationAction, to jid: JID) async throws {
         guard let userJid = context?.userBareJid else {
             return;
         }
         switch action {
         case .proceed(let id):
-            sendMessageInitiation(action: .accept(id: id), to: JID(userJid));
+            try await sendMessageInitiation(action: .accept(id: id), to: JID(userJid));
         case .reject(let id):
             if jid.bareJid != userJid {
-                sendMessageInitiation(action: .reject(id: id), to: JID(userJid));
+                try await sendMessageInitiation(action: .reject(id: id), to: JID(userJid));
             }
         default:
             break;
         }
-        let response = Message();
-        response.type = .chat;
-        response.to = jid;
+
+        let response = Message(type: .chat, to: jid);
         response.meetMessageInitiationAction = action;
-        write(stanza: response, completionHandler: writeCompleted);
+        try await write(stanza: response);
     }
     
     public enum Media: String {
@@ -353,71 +314,64 @@ extension Message {
 // async-await support
 extension MeetModule {
     
-    open func findMeetComponents() async throws -> [MeetComponent] {
-        guard let disco = self.context?.module(.disco) else {
-            throw XMPPError(condition: .unexpected_request, message: "No context!")
-        }
-        
-        let components = try await disco.serverComponents().items.map({ $0.jid });
-        return await withTaskGroup(of: MeetComponent?.self, body: { group in
-            for componentJid in components {
-                group.addTask {
-                    guard let info = try? await disco.info(for: componentJid), info.features.contains(MeetModule.ID) else {
-                        return nil;
-                    }
-                    
-                    return MeetComponent(jid: componentJid, features: info.features)
-                }
+    open func findMeetComponent(completionHandler: @escaping (Result<[MeetComponent],XMPPError>) -> Void) {
+        Task {
+            do {
+                completionHandler(.success(try await findMeetComponents()));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? XMPPError(condition: .undefined_condition)));
             }
-            
-            var result: [MeetComponent] = [];
-            for await component in group {
-                if let comp = component {
-                    result.append(comp);
-                }
+        }
+    }
+    
+    open func createMeet(at jid: JID, media: [Media], participants: [BareJID] = [], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await createMeet(at: jid, media: media, participants: participants)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? XMPPError.undefined_condition))
             }
-            
-            return result;
-        })
-    }
-    
-    open func createMeet(at jid: JID, media: [Media], participants: [BareJID] = []) async throws -> JID {
-        return try await withUnsafeThrowingContinuation { continuation in
-            createMeet(at: jid, media: media, participants: participants, completionHandler: { result in
-                continuation.resume(with: result);
-            })
         }
     }
     
-    open func allow(jids: [BareJID], in meetJid: JID) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            allow(jids: jids, in: meetJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func allow(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await allow(jids: jids, in: meetJid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? XMPPError.undefined_condition))
+            }
         }
     }
     
-    open func deny(jids: [BareJID], in meetJid: JID) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            deny(jids: jids, in: meetJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func deny(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await deny(jids: jids, in: meetJid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? XMPPError.undefined_condition))
+            }
         }
     }
     
-    open func destroy(meetJid: JID) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            destroy(meetJid: meetJid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func destroy(meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await destroy(meetJid: meetJid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? XMPPError.undefined_condition))
+            }
         }
     }
     
-    open func sendMessageInitiation(action: MessageInitiationAction, to jid: JID) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            sendMessageInitiation(action: action, to: jid, writeCompleted: { result in
-                continuation.resume(with: result);
-            })
+    open func sendMessageInitiation(action: MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
+        Task {
+            do {
+                writeCompleted?(.success(try await sendMessageInitiation(action: action, to: jid)))
+            } catch {
+                writeCompleted?(.failure(error as? XMPPError ?? XMPPError.undefined_condition))
+            }
         }
     }
+    
 }

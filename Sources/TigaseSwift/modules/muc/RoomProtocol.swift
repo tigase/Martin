@@ -85,6 +85,22 @@ public enum RoomHistoryFetch {
     case skip
     case initial
     case from(Date)
+    
+    func element() -> Element? {
+        switch self {
+        case .initial:
+            return nil;
+        case .from(let date):
+            return Element(name: "history", {
+                Attribute("since", value: TimestampHelper.format(date: date))
+            })
+        case .skip:
+            return Element(name: "history", {
+                Attribute("maxchars", value: "0")
+                Attribute("maxstanzas", value: "0")
+            })
+        }
+    }
 }
 
 public enum RoomJoinResult {

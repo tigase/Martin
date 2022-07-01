@@ -41,4 +41,42 @@ class ElementTests: XCTestCase {
         el1.removeChild(nameEl);
         XCTAssertNil(el1.firstChild(name: "name", xmlns: nil));
     }
+    
+    func testElementBuilders() {
+        let settings = MessageArchiveManagementModule.Settings(defaultValue: .always, always: [JID("test-1@localhost"), JID("test-2@localhost")], never: [JID("test-3@localhost"),JID("test-4@localhost")]);
+        
+        let iq = Iq(type: .set, {
+            Element(name: "prefs", xmlns: MessageArchiveManagementModule.MAM2_XMLNS, {
+                Attribute("default", value: settings.defaultValue.rawValue)
+                if !settings.always.isEmpty {
+                    Element(name: "always", {
+                        for jid in settings.always {
+                            Element(name: "jid", cdata: jid.description)
+                        }
+                    })
+                }
+                if !settings.never.isEmpty {
+                    Element(name: "never", {
+                        for jid in settings.never {
+                            Element(name: "jid", cdata: jid.description)
+                        }
+                    })
+                }
+            })
+        });
+        iq.addChildren({
+            Element(name: "test")
+        })
+        
+        let prefsEl = iq.firstChild(name: "prefs");
+        XCTAssertNotNil(prefsEl);
+        XCTAssertEqual("always", prefsEl?.attribute("default"))
+        let always = prefsEl?.firstChild(name: "always");
+        XCTAssertNotNil(always);
+        XCTAssertEqual(["test-1@localhost", "test-2@localhost"], always?.filterChildren(name: "jid").map({ $0.value }))
+        let never = prefsEl?.firstChild(name: "never");
+        XCTAssertNotNil(never);
+        XCTAssertEqual(["test-3@localhost", "test-4@localhost"], never?.filterChildren(name: "jid").map({ $0.value }))
+        XCTAssertNotNil(iq.firstChild(name: "test"))
+    }
 }

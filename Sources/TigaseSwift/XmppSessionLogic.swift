@@ -293,12 +293,13 @@ open class SocketSessionLogic: XmppSessionLogic {
                     self.logger.debug("\(self.userJid) - feature-not-implemented \(stanza, privacy: .public)");
                     throw XMPPError(condition: .feature_not_implemented);
                 }
-            } catch let error as XMPPError {
-                let errorStanza = stanza.errorResult(of: error);
-                self.sendingOutgoingStanza(errorStanza);
             } catch {
-                self.sendingOutgoingStanza(stanza.errorResult(of: .undefined_condition));
-                self.logger.debug("\(self.userJid) - unknown unhandled exception \(error)")
+                do {
+                    let errorStanza = try stanza.errorResult(of: error as? XMPPError ?? .undefined_condition);
+                    self.sendingOutgoingStanza(errorStanza);
+                } catch {
+                    self.logger.debug("\(self.userJid) - error: \(error), while processing \(stanza)")
+                }
             }
 //        }
     }
