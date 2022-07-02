@@ -189,6 +189,15 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             enableEl.addChild(encryptEl);
         }
         
+        public func element() -> ElementItemProtocol {
+            Element(name: "encrypt", xmlns: Encryption.XMLNS, cdata: key.base64EncodedString(), {
+                Attribute("alg", value:  algorithm)
+                if let maxSize = maxPayloadSize {
+                    Attribute("max-size", value: String(maxSize));
+                }
+            })
+        }
+        
     }
     
     public struct Priority: PushNotificationsModuleExtension, Hashable {
@@ -199,6 +208,10 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         
         public func apply(to enableEl: Element) {
             enableEl.addChild(Element(name: "priority", xmlns: Priority.XMLNS));
+        }
+        
+        public func element() -> ElementItemProtocol {
+            Element(name: "priority", xmlns: Priority.XMLNS)
         }
         
     }
@@ -229,6 +242,23 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             
             enableEl.addChild(muc);
         }
+        
+        public func element() -> ElementItemProtocol {
+            let muc = Element(name: "groupchat", xmlns: GroupchatFilter.XMLNS);
+            
+            for rule in rules {
+                switch rule {
+                case .always(let room):
+                    muc.addChild(Element(name: "room", attributes: ["jid": room.description, "allow": "always"]));
+                case .never(_):
+                    break;
+                case .mentioned(let room, let nickname):
+                    muc.addChild(Element(name: "room", attributes: ["jid": room.description, "allow": "mentioned", "nick": nickname]));
+                }
+            }
+            
+            return muc;
+        }
      
         public enum Rule: Hashable {
             case always(room: BareJID)
@@ -247,6 +277,9 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             enableEl.addChild(Element(name: "ignore-unknown", xmlns: IgnoreUnknown.XMLNS));
         }
         
+        public func element() -> ElementItemProtocol {
+            Element(name: "ignore-unknown", xmlns: IgnoreUnknown.XMLNS)
+        }
     }
     
     public struct Muted: PushNotificationsModuleExtension, Hashable {
@@ -268,6 +301,15 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
             }));
             enableEl.addChild(muted);
         }
+        
+        public func element() -> ElementItemProtocol {
+            if jids.isEmpty {
+                return []
+            }
+            return Element(name: "muted", xmlns: Muted.XMLNS, children: jids.map({ (jid) -> Element in
+                return Element(name: "item", attributes: ["jid": jid.description]);
+            }))
+        }
     }
     
     public struct PushForAway: PushNotificationsModuleExtension, Hashable {
@@ -278,6 +320,10 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         
         public func apply(to enableEl: Element) {
             enableEl.attribute("away", newValue: "true");
+        }
+        
+        public func element() -> ElementItemProtocol {
+            Attribute("away", value: "true")
         }
         
     }
@@ -291,6 +337,10 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         
         public func apply(to enableEl: Element) {
             enableEl.addChild(Element(name: "jingle", xmlns: Jingle.XMLNS));
+        }
+        
+        public func element() -> ElementItemProtocol {
+            Element(name: "jingle", xmlns: Jingle.XMLNS)
         }
     }
 }

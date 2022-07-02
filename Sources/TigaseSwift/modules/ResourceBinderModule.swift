@@ -58,28 +58,21 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     /// Method called to bind resource
-    open func bind(completionHandler: ((Result<JID,XMPPError>)->Void)? = nil) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        let bind = Element(name:"bind");
-        bind.xmlns = ResourceBinderModule.BIND_XMLNS;
-        iq.element.addChild(bind);
-        let resource:String? = context?.connectionConfiguration.resource;
-        bind.addChild(Element(name: "resource", cdata:resource));
-        write(iq: iq, completionHandler: { result in
-            switch result {
-            case .success(let stanza):
-                if let name = stanza.firstChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.firstChild(name: "jid")?.value {
-                    let jid = JID(name);
-                    self.bindedJid = jid;
-                    completionHandler?(.success(jid));
-                } else {
-                    completionHandler?(.failure(.undefined_condition));
-                }
-            case .failure(let error):
-                completionHandler?(.failure(error));
-            }
-        })
+    open func bind() async throws -> JID {
+        let iq = Iq(type: .set, {
+            Element(name:"bind", xmlns: ResourceBinderModule.BIND_XMLNS, {
+                Element(name: "resource", cdata: context?.connectionConfiguration.resource)
+            })
+        });
+        
+        let response = try await write(iq: iq);
+        guard let name = response.firstChild(name: "bind", xmlns: ResourceBinderModule.BIND_XMLNS)?.firstChild(name: "jid")?.value else {
+            throw XMPPError(condition: .undefined_condition, stanza: response)
+        }
+        
+        let jid = JID(name);
+        self.bindedJid = jid;
+        return jid;
     }
     
     /// Method should not be called due to empty `criteria` property
@@ -92,11 +85,13 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
 // async-await support
 extension ResourceBinderModule {
     
-    open func bind() async throws -> JID {
-        return try await withUnsafeThrowingContinuation { continuation in
-            bind(completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func bind(completionHandler: ((Result<JID,XMPPError>)->Void)? = nil) {
+        Task {
+            do {
+                completionHandler?(.success(try await bind()))
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     

@@ -55,35 +55,28 @@ open class VCard4Module: XmppModuleBase, XmppModule, VCardModuleProtocol {
     /**
      Publish vcard
      - parameter vcard: vcard to publish
-     - parameter completionHandler: called after publication result is received
      */
-    open func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: @escaping (Result<Void,XMPPError>) -> Void) {
-        let iq = Iq(type: .set, to: JID(jid));
-        iq.addChild(vcard.toVCard4());
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
+    open func publish(vcard: VCard, to jid: BareJID?) async throws {
+        let iq = Iq(type: .set, to: JID(jid), {
+            vcard.toVCard4()
         });
+        try await write(iq: iq)
     }
         
     /**
      Retrieve vcard for JID
      - parameter jid: JID for which vcard should be retrieved
-     - parameter completionHandler: called  vcard retrieval result is received
      */
-    open func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
-        let iq = Iq(type: .get, to: jid);
-        iq.addChild(Element(name:"vcard", xmlns: VCard4Module.VCARD_XMLNS));
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ response in
-                if let vcardEl = response.firstChild(name: "vcard", xmlns: VCard4Module.VCARD_XMLNS), let vcard = VCard(vcard4: vcardEl) {
-                    return vcard;
-                } else {
-                    return VCard();
-                }
-            }))
-        });
+    open func retrieveVCard(from jid: JID? = nil) async throws -> VCard {
+        let iq = Iq(type: .get, to: jid, {
+            Element(name:"vcard", xmlns: VCard4Module.VCARD_XMLNS)
+        })
+        let response = try await write(iq: iq);
+        if let vcardEl = response.firstChild(name: "vcard", xmlns: VCard4Module.VCARD_XMLNS), let vcard = VCard(vcard4: vcardEl) {
+            return vcard;
+        } else {
+            return VCard();
+        }
     }
     
 }
@@ -169,94 +162,92 @@ extension VCard {
     }
     
     open func toVCard4() -> Element {
-        let vcard = Element(name: "vcard", xmlns: "urn:ietf:params:xml:ns:vcard-4.0");
-        
-        if bday != nil {
-            vcard.addChild(Element(name: "bday", children: [Element(name:"date", cdata: bday)]));
-        }
-        if fn != nil {
-            vcard.addChild(Element(name: "fn", children: [Element(name:"text", cdata: fn)]));
-        }
-        if surname != nil || givenName != nil || !additionalName.isEmpty || !namePrefixes.isEmpty || !nameSuffixes.isEmpty {
-            let n = Element(name: "n");
-            if surname != nil {
-                n.addChild(Element(name: "surname", cdata: surname));
+        return Element(name: "vcard", xmlns: "urn:ietf:params:xml:ns:vcard-4.0", {
+            if bday != nil {
+                Element(name: "bday", children: [Element(name:"date", cdata: bday)]);
             }
-            if givenName != nil {
-                n.addChild(Element(name: "given", cdata: givenName));
+            if fn != nil {
+                Element(name: "fn", children: [Element(name:"text", cdata: fn)]);
             }
-            n.addChildren(additionalName.map({(it) in return Element(name: "additional", cdata: it); }));
-            n.addChildren(namePrefixes.map({(it) in return Element(name: "prefix", cdata: it); }));
-            n.addChildren(nameSuffixes.map({(it) in return Element(name: "suffix", cdata: it); }));
-            vcard.addChild(n);
-        }
-        vcard.addChildren(nicknames.filter({(it) in return !it.isEmpty}).map({(it) in return Element(name: "nickname", children: [Element(name: "text", cdata: it)]); }));
-        if title != nil {
-            vcard.addChild(Element(name: "title", children: [Element(name: "text", cdata: title)]));
-        }
-        if role != nil {
-            vcard.addChild(Element(name: "role", children: [Element(name: "text", cdata: role)]));
-        }
-        if note != nil {
-            vcard.addChild(Element(name: "note", children: [Element(name: "text", cdata: note)]));
-        }
-     
-        vcard.addChildren(addresses.filter({(it) in return !it.isEmpty}).map({(addr) in
-            let el = Element(name: "adr");
-            if addr.ext != nil {
-                el.addChild(Element(name: "ext", cdata: addr.ext));
+            if surname != nil || givenName != nil || !additionalName.isEmpty || !namePrefixes.isEmpty || !nameSuffixes.isEmpty {
+                Element(name: "n", {
+                    if surname != nil {
+                        Element(name: "surname", cdata: surname);
+                    }
+                    if givenName != nil {
+                        Element(name: "given", cdata: givenName);
+                    }
+                    additionalName.map({(it) in return Element(name: "additional", cdata: it); });
+                    namePrefixes.map({(it) in return Element(name: "prefix", cdata: it); });
+                    nameSuffixes.map({(it) in return Element(name: "suffix", cdata: it); });
+                });
             }
-            if addr.street != nil {
-                el.addChild(Element(name: "street", cdata: addr.street));
+            for nick in nicknames.filter({(it) in return !it.isEmpty}) {
+                Element(name: "nickname", children: [Element(name: "text", cdata: nick)])
             }
-            if addr.locality != nil {
-                el.addChild(Element(name: "locality", cdata: addr.locality));
+            if title != nil {
+                Element(name: "title", children: [Element(name: "text", cdata: title)]);
             }
-            if addr.region != nil {
-                el.addChild(Element(name: "region", cdata: addr.region));
+            if role != nil {
+                Element(name: "role", children: [Element(name: "text", cdata: role)]);
             }
-            if addr.postalCode != nil {
-                el.addChild(Element(name: "code", cdata: addr.postalCode));
+            if note != nil {
+                Element(name: "note", children: [Element(name: "text", cdata: note)]);
             }
-            if addr.country != nil {
-                el.addChild(Element(name: "country", cdata: addr.country));
+            for addr in addresses.filter({(it) in return !it.isEmpty}) {
+                Element(name: "adr", {
+                    if addr.ext != nil {
+                       Element(name: "ext", cdata: addr.ext);
+                    }
+                    if addr.street != nil {
+                        Element(name: "street", cdata: addr.street);
+                    }
+                    if addr.locality != nil {
+                        Element(name: "locality", cdata: addr.locality);
+                    }
+                    if addr.region != nil {
+                        Element(name: "region", cdata: addr.region);
+                    }
+                    if addr.postalCode != nil {
+                        Element(name: "code", cdata: addr.postalCode);
+                    }
+                    if addr.country != nil {
+                        Element(name: "country", cdata: addr.country);
+                    }
+                })
+                VCard.convertTypesToVCard4Parameters(entry: addr);
             }
-            VCard.convertTypesToVCard4Parameters(el: el, entry: addr);
-            return el;
-        }));
-        
-        vcard.addChildren(emails.filter({(it) in return !it.isEmpty}).map({(it) in
-            let el = Element(name: "email", children: [Element(name: "text", cdata: it.address)]);
-            VCard.convertTypesToVCard4Parameters(el: el, entry: it);
-            return el;
-        }));
-        
-        vcard.addChildren(impps.filter({(it) in return !it.isEmpty}).map({(it) in
-            let el = Element(name: "impp", children: [Element(name: "uri", cdata: it.uri)]);
-            VCard.convertTypesToVCard4Parameters(el: el, entry: it);
-            return el;
-        }));
-        
-        vcard.addChildren(organizations.filter({(it) in return !it.isEmpty}).map({(it) in
-            let el = Element(name: "org", children: [Element(name: "text", cdata: it.name)]);
-            VCard.convertTypesToVCard4Parameters(el: el, entry: it);
-            return el;
-        }));
-        
-        vcard.addChildren(photos.filter({(it) in return !it.isEmpty}).map({(it) in
-            let uri = it.uri ?? "data:\(it.type!);base64,\(it.binval!)";
-            let el = Element(name: "photo", children: [Element(name: "uri", cdata: uri)]);
-            VCard.convertTypesToVCard4Parameters(el: el, entry: it);
-            return el;
-        }));
-        
-        vcard.addChildren(telephones.filter({(it) in return !it.isEmpty}).map({(it) in
-            let el = Element(name: "tel", children: [Element(name: "uri", cdata: it.uri)]);
-            VCard.convertTypesToVCard4Parameters(el: el, entry: it);
-            return el;
-        }));
-        
-        return vcard;
+            for it in emails.filter({(it) in return !it.isEmpty}) {
+                Element(name: "email", {
+                    Element(name: "text", cdata: it.address)
+                    VCard.convertTypesToVCard4Parameters(entry: it);
+                })
+            }
+            for it in impps.filter({(it) in return !it.isEmpty}) {
+                Element(name: "impp", {
+                    Element(name: "uri", cdata: it.uri)
+                    VCard.convertTypesToVCard4Parameters(entry: it);
+                })
+            }
+            for it in organizations.filter({(it) in return !it.isEmpty}) {
+                Element(name: "org", {
+                    Element(name: "text", cdata: it.name)
+                    VCard.convertTypesToVCard4Parameters(entry: it);
+                })
+            }
+            for it in photos.filter({(it) in return !it.isEmpty}) {
+                Element(name: "photo", {
+                    Element(name: "uri", cdata: it.uri ?? "data:\(it.type!);base64,\(it.binval!)")
+                    VCard.convertTypesToVCard4Parameters(entry: it);
+                })
+            }
+            for it in telephones.filter({(it) in return !it.isEmpty}) {
+                Element(name: "tel", {
+                    Element(name: "uri", cdata: it.uri)
+                    VCard.convertTypesToVCard4Parameters(entry: it);
+                })
+            }
+        })
     }
     
     fileprivate static func convertVCard4ParamtersToTypes(el: Element) -> [VCard.EntryType] {
@@ -273,6 +264,16 @@ extension VCard {
                 return nil;
             }
         }) ?? [];
+    }
+
+    fileprivate static func convertTypesToVCard4Parameters(entry: VCardEntryItemTypeAware) -> Element {
+        return Element(name: "parameters", {
+            for type in entry.types {
+                Element(name: "type", {
+                    Element(name: "text", cdata: type.vcard4Value)
+                })
+            }
+        })
     }
     
     fileprivate static func convertTypesToVCard4Parameters(el: Element, entry: VCardEntryItemTypeAware) {
@@ -292,6 +293,19 @@ extension VCard {
             }
             return Element(name: "type", children: [Element(name: "text", cdata: name)]);
         }));
+    }
+    
+}
+
+extension VCard.EntryType {
+    
+    var vcard4Value: String {
+        switch self {
+        case .home:
+            return "home"
+        case .work:
+            return "work";
+        }
     }
     
 }

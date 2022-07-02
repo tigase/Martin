@@ -45,32 +45,24 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
         throw XMPPError(condition: .feature_not_implemented);
     }
     
-    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?, completionHandler: @escaping (Result<AdHocCommandsModule.Response, XMPPError>)->Void) {
-        let iq = Iq(type: .set, to: to);
-        
-        let command = Element(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS);
-        command.attribute("node", newValue: node);
-        
-        if let data = data {
-            command.addChild(data.element(type: .submit, onlyModified: false));
+    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?) async throws -> AdHocCommandsModule.Response {
+        let iq = Iq(type: .set, to: to, {
+            Element(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS, {
+                Attribute("node", value: node)
+                data?.element(type: .submit, onlyModified: false)
+            })
+        });
+        let response = try await write(iq: iq);
+        guard let command = response.firstChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
         }
         
-        iq.addChild(command);
+        let form = DataForm(element: command.firstChild(name: "x", xmlns: "jabber:x:data"));
+        let actions = command.firstChild(name: "actions")?.children.compactMap({ Action(rawValue: $0.name) }) ?? [];
+        let notes = command.children.compactMap(Note.from(element:));
+        let status = Status(rawValue: command.attribute("status") ?? "") ?? Status.completed;
         
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                guard let command = stanza.firstChild(name: "command", xmlns: AdHocCommandsModule.COMMANDS_XMLNS) else {
-                    return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
-                }
-                
-                let form = DataForm(element: command.firstChild(name: "x", xmlns: "jabber:x:data"));
-                let actions = command.firstChild(name: "actions")?.children.compactMap({ Action(rawValue: $0.name) }) ?? [];
-                let notes = command.children.compactMap(Note.from(element:));
-                let status = Status(rawValue: command.attribute("status") ?? "") ?? Status.completed;
-                
-                return .success(Response(status: status, form: form, actions: actions, notes: notes));
-            }))
-        });
+        return Response(status: status, form: form, actions: actions, notes: notes);
     }
     
     public enum Status: String {
@@ -118,11 +110,13 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
 // async-await support
 extension AdHocCommandsModule {
     
-    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?) async throws -> AdHocCommandsModule.Response {
-        return try await withUnsafeThrowingContinuation { continuation in
-            execute(on: to, command: node, action: action, data: data, completionHandler: { reuslt in
-                continuation.resume(with: reuslt);
-            })
+    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?, completionHandler: @escaping (Result<AdHocCommandsModule.Response, XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await execute(on: to, command: node, action: action, data: data)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     

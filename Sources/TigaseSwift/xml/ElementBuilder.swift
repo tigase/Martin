@@ -93,21 +93,29 @@ extension ElementBuilder {
         return components.flatMap({ $0 })
     }
     
-    public static func buildExpression(_ expression: Attribute?) -> [ElementItemProtocol] {
+    public static func buildExpression(_ expression: ElementItemProtocol?) -> [ElementItemProtocol] {
         if expression != nil {
             return [expression!]
         } else {
             return []
         }
     }
-
-    public static func buildExpression(_ expression: Element?) -> [ElementItemProtocol] {
-        if expression != nil {
-            return [expression!]
-        } else {
-            return []
-        }
-    }
+    
+//    public static func buildExpression(_ expression: Attribute?) -> [ElementItemProtocol] {
+//        if expression != nil {
+//            return [expression!]
+//        } else {
+//            return []
+//        }
+//    }
+//
+//    public static func buildExpression(_ expression: Element?) -> [ElementItemProtocol] {
+//        if expression != nil {
+//            return [expression!]
+//        } else {
+//            return []
+//        }
+//    }
 
 }
 
@@ -122,7 +130,16 @@ extension Element {
         }
         addChildren(items.compactMap({ $0 as? Element }))
     }
-    
+
+    public convenience init(name: String, xmlns: String? = nil, cdata: String, @ElementBuilder _ builder: ()->[ElementItemProtocol]) {
+        self.init(name: name, xmlns: xmlns, cdata: cdata);
+        let items = builder();
+        for attr in items.compactMap({ $0 as? Attribute }) {
+            attribute(attr.name, newValue: attr.value);
+        }
+        addChildren(items.compactMap({ $0 as? Element }))
+    }
+
 }
 
 extension Stanza {

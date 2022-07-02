@@ -159,14 +159,14 @@ open class PubSubModule: XmppModuleBase, XmppModule {
     }
     
     /// Instace which contains item id and payload in single object
-    open class Item: CustomStringConvertible {
+    public struct Item: CustomStringConvertible {
         
         /// Item id
         public let id: String;
         /// Item payload
         public let payload: Element?;
         
-        open var description: String {
+        public var description: String {
             return "[id: " + id + ", payload: " + (payload?.description ?? "nil") + "]";
         }
         

@@ -250,6 +250,9 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
             return;
         }
         
+        context.queue.async {
+            self.joinPromises[room.jid] = completionHandler;
+        }
         
         let presence = Presence(to: room.jid.with(resource: room.nickname), {
             Element(name: "x", xmlns: "http://jabber.org/protocol/muc", {

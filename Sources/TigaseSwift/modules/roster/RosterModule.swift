@@ -261,38 +261,30 @@ extension RosterModule {
     }
     
     public func updateItem(jid: JID, name: String?, groups:[String]) async throws -> Iq {
-        let iq = Iq();
-        iq.type = .set;
-        
-        let query = Element(name:"query", xmlns:"jabber:iq:roster");
-        iq.addChild(query);
-        
-        let item = Element(name: "item");
-        item.attribute("jid", newValue: jid.description);
-        if !(name?.isEmpty ?? true) {
-            item.attribute("name", newValue: name);
-        }
-        groups.forEach({(group:String)->Void in
-            item.addChild(Element(name:"group", cdata:group));
+        let iq = Iq(type: .set, {
+            Element(name:"query", xmlns:"jabber:iq:roster", {
+                Element(name: "item", {
+                    Attribute("jid", value: jid.description)
+                    if !(name?.isEmpty ?? true) {
+                        Attribute("name", value: name)
+                    }
+                    for group in groups {
+                        Element(name:"group", cdata:group)
+                    }
+                })
+            })
         });
-
-        query.addChild(item);
         
         return try await write(iq: iq);
     }
 
     public func removeItem(jid: JID) async throws -> Iq {
-        let iq = Iq();
-        iq.type = .set;
-        
-        let query = Element(name:"query", xmlns:"jabber:iq:roster");
-        iq.addChild(query);
-        
-        let item = Element(name: "item");
-        item.attribute("jid", newValue: jid.description);
-        item.attribute("subscription", newValue: "remove");
-
-        query.addChild(item);
+        let iq = Iq(type: .set, {
+            Element(name:"query", xmlns:"jabber:iq:roster", {
+                Attribute("jid", value: jid.description)
+                Attribute("subscription", value: "remove")
+            })
+        });
         
         return try await write(iq: iq);
     }

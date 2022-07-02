@@ -82,35 +82,29 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
     }
     
     /**
-     Tries to enable message carbons
-     - parameter callback - called with result
+     Tries to enable/disable message carbons
      */
-    open func enable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
-        setState(true, callback: callback);
+    open func setState(_ state: Bool) async throws {
+        let iq = Iq(type: .set, {
+            Element(name: state ? "enable" : "disable", xmlns: MessageCarbonsModule.MC_XMLNS)
+        });
+        try await write(iq: iq);
     }
     
+    /**
+     Tries to enable message carbons
+     */
+    open func enable() async throws {
+        try await setState(true);
+    }
+ 
     /**
      Tries to disable message carbons
-     - parameter callback - called with result
      */
-    open func disable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
-        setState(false, callback: callback);
+    open func disable() async throws {
+        try await setState(false);
     }
-    
-    /**
-     Tries to enable/disable message carbons
-     - parameter callback - called with result
-     */
-    open func setState(_ state: Bool, callback: ((Result<Bool,XMPPError>) -> Void )?) {
-        let actionName = state ? "enable" : "disable";
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
-        write(iq: iq, completionHandler: { result in
-            callback?(result.map({ _ in state }));
-        });
-    }
-    
+
     /**
      Processes received message and retrieves messages forwarded inside this message
      - parameter carb: element to process
@@ -155,19 +149,22 @@ open class MessageCarbonsModule: XmppModuleBase, XmppModule {
 // async-await support
 extension MessageCarbonsModule {
     
-    open func setState(_ state: Bool) async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            setState(state, callback: { result in
-                continuation.resume(with: result);
-            })
-        }
+    open func enable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
+        setState(true, callback: callback);
     }
     
-    open func enable() async throws {
-        try await setState(true);
+    open func disable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
+        setState(false, callback: callback);
     }
- 
-    open func disable() async throws {
-        try await setState(false);
+    
+    open func setState(_ state: Bool, callback: ((Result<Bool,XMPPError>) -> Void )?) {
+        let actionName = state ? "enable" : "disable";
+        let iq = Iq();
+        iq.type = StanzaType.set;
+        iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
+        write(iq: iq, completionHandler: { result in
+            callback?(result.map({ _ in state }));
+        });
     }
+    
 }

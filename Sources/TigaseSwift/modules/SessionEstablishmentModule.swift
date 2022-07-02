@@ -70,6 +70,21 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     }
     
     /// Method called to start session establishemnt
+    open func establish() async throws {
+        guard isSessionEstablishmentRequired else {
+            return;
+        }
+        let iq = Iq(type: .set, {
+            Element(name:"session", xmlns: SessionEstablishmentModule.SESSION_XMLNS)
+        });
+        try await write(iq: iq);
+    }
+    
+}
+
+// async-await support
+extension SessionEstablishmentModule {
+    
     open func establish(completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
         guard isSessionEstablishmentRequired else {
             completionHandler?(.success(Void()));
@@ -84,19 +99,6 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
         write(iq: iq, completionHandler: { result in
             completionHandler?(result.map({ _ in Void() }));
         })
-    }
-    
-}
-
-// async-await support
-extension SessionEstablishmentModule {
-    
-    open func establish() async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            establish(completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
     }
     
 }

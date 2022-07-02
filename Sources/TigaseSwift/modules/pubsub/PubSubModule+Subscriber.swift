@@ -29,37 +29,27 @@ extension PubSubModule {
      - parameter to: node name
      - parameter subscriber: jid of subscriber
      - parameter with: optional subscription options
-     - parameter completionHandler: called when result is available
      */
-    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions? = nil, completionHandler: @escaping (Result<PubSubSubscriptionElement,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = JID(pubSubJid);
-        
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-
-        let subscribe = Element(name: "subscribe");
-        subscribe.attribute("node", newValue: nodeName);
-        subscribe.attribute("jid", newValue: subscriber.description);
-        pubsub.addChild(subscribe);
-        
-        if let options = options?.element(type: .submit, onlyModified: false) {
-            let optionsEl = Element(name: "options");
-            optionsEl.attribute("jid", newValue: subscriber.description);
-            optionsEl.attribute("node", newValue: nodeName);
-            optionsEl.addChild(options);
-            pubsub.addChild(optionsEl);
-        }
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ response in
-                guard let subscriptionEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "subscription"), let subscription = PubSubSubscriptionElement(from: subscriptionEl) else {
-                    return .failure(XMPPError(condition: .undefined_condition, stanza: response));
+    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions? = nil) async throws -> PubSubSubscriptionElement {
+        let iq = Iq(type: .set, to: pubSubJid.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "subscribe", {
+                    Attribute("node", value: nodeName)
+                    Attribute("jid", value: subscriber.description)
+                })
+                if let options = options {
+                    Element(name: "options", {
+                        options.element(type: .submit, onlyModified: false)
+                    })
                 }
-                return .success(subscription);
-            }))
+            })
         });
+        
+        let response = try await write(iq: iq);
+        guard let subscriptionEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "subscription"), let subscription = PubSubSubscriptionElement(from: subscriptionEl) else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
+        }
+        return subscription;
     }
     
     /**
@@ -67,23 +57,18 @@ extension PubSubModule {
      - parameter at: jid of PubSub service
      - parameter from: node name
      - parameter subscriber: jid of subscriber
-     - parameter completionHandler: called when result is available
      */
-    public func unsubscribe(at pubSubJid: BareJID, from nodeName: String, subscriber: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = JID(pubSubJid);
+    public func unsubscribe(at pubSubJid: BareJID, from nodeName: String, subscriber: JID) async throws {
+        let iq = Iq(type: .set, to: pubSubJid.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "unsubscribe", {
+                    Attribute("node", value: nodeName)
+                    Attribute("jid", value: subscriber.description)
+                })
+            })
+        })
         
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-        
-        let unsubscribe = Element(name: "unsubscribe");
-        unsubscribe.attribute("node", newValue: nodeName);
-        unsubscribe.attribute("jid", newValue: subscriber.description);
-        pubsub.addChild(unsubscribe);
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        });
+        try await write(iq: iq)
     }
 
     /**
@@ -92,53 +77,40 @@ extension PubSubModule {
      - parameter for: node name
      - parameter subscriber: jid of subscriber
      - parameter with: configuration to apply
-     - parameter completionHandler: called when result is available
      */
-    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.to = JID(pubSubJid);
+    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions) async throws {
+        let iq = Iq(type: .set, to: pubSubJid.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "options", {
+                    Attribute("node", value: nodeName)
+                    Attribute("jid", value: subscriber.description)
+                    options.element(type: .submit, onlyModified: false)
+                })
+            })
+        })
         
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-        
-        let optionsEl = Element(name: "options");
-        optionsEl.attribute("jid", newValue: subscriber.description);
-        optionsEl.attribute("node", newValue: nodeName);
-        optionsEl.addChild(options.element(type: .submit, onlyModified: false));
-        pubsub.addChild(optionsEl);
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { _ in Void() });
-        });
+        try await write(iq: iq);
     }
-
+    
     /**
      Retrieve default configuration for subscription
      - parameter from: jid of PubSub service
      - parameter for: node name
-     - parameter completionHandler: called when result is available
      */
-    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?, completionHandler: @escaping (Result<PubSubSubscribeOptions,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = JID(pubSubJid);
+    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?) async throws -> PubSubSubscribeOptions {
+        let iq = Iq(type: .get, to: pubSubJid.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "default", {
+                    Attribute("node", value: nodeName)
+                })
+            })
+        })
+        let response = try await write(iq: iq)
+        guard let defaultEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "default"), let x = defaultEl.firstChild(name: "x", xmlns: "jabber:x:data"), let defaults = PubSubSubscribeOptions(element: x) else {
+            throw XMPPError(condition: .undefined_condition, stanza: response)
+        }
         
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-        
-        let optionsEl = Element(name: "default");
-        optionsEl.attribute("node", newValue: nodeName);
-        pubsub.addChild(optionsEl);
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                if let defaultEl = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "default"), let x = defaultEl.firstChild(name: "x", xmlns: "jabber:x:data"), let defaults = PubSubSubscribeOptions(element: x) {
-                    return .success(defaults);
-                }
-                return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
-            }))
-        });
+        return defaults;
     }
 
     /**
@@ -146,29 +118,22 @@ extension PubSubModule {
      - parameter from: jid of PubSub service
      - parameter for: node name
      - parameter subscriber: subscriber jid
-     - parameter completionHandler: called when response is available
      */
-    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID, completionHandler: @escaping (Result<PubSubSubscribeOptions,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = JID(pubSubJid);
+    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID) async throws -> PubSubSubscribeOptions {
+        let iq = Iq(type: .get, to: pubSubJid.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "options", {
+                    Attribute("node", value: nodeName)
+                    Attribute("jid", value: subscriber.description)
+                })
+            })
+        })
         
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-        
-        let optionsEl = Element(name: "options");
-        optionsEl.attribute("jid", newValue: subscriber.description);
-        optionsEl.attribute("node", newValue: nodeName);
-        pubsub.addChild(optionsEl);
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                guard let optionsEl = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "options"), let x = optionsEl.firstChild(name: "x", xmlns: "jabber:x:data"), let options = PubSubSubscribeOptions(element: x) else {
-                    return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
-                }
-                return .success(options);
-            }))
-        });
+        let response = try await write(iq: iq);
+        guard let optionsEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "options"), let x = optionsEl.firstChild(name: "x", xmlns: "jabber:x:data"), let options = PubSubSubscribeOptions(element: x) else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
+        }
+        return options;
     }
 
     /**
@@ -176,49 +141,42 @@ extension PubSubModule {
      - parameter from: jid of PubSub service
      - parameter for: node name
      - parameter limit: limits results of the query
-     - parameter completionHandler: called when result is available
      */
-    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, limit: QueryLimit = .none, completionHandler: @escaping (Result<RetrievedItems,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.get;
-        iq.to = JID(pubSubJid);
-        
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-
-        let items = Element(name: "items");
-        items.attribute("node", newValue: nodeName);
-        pubsub.addChild(items);
-        
-        switch limit {
-        case .none:
-            break;
-        case .items(let itemIds):
-            itemIds.forEach { (itemId) in
-                let item = Element(name: "item");
-                item.attribute("id", newValue: itemId);
-                items.addChild(item);
-            }
-        case .rsm(let rsm):
-            pubsub.addChild(rsm.element());
-        case .lastItems(let maxItems):
-            items.attribute("max_items", newValue: String(maxItems));
-        }
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                guard let pubsubEl = stanza.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS), let itemsEl = pubsubEl.firstChild(name: "items") else {
-                    return .failure(XMPPError(condition: .undefined_condition, stanza: stanza));
-                }
-                var items = Array<PubSubModule.Item>();
-                for elem in itemsEl.children {
-                    if let id = elem.attribute("id") {
-                        items.append(PubSubModule.Item(id: id, payload: elem.children.first));
+    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, limit: QueryLimit = .none) async throws -> PubSubModule.RetrievedItems {
+        let iq = Iq(type: .get, to: pubSubJid.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "items", {
+                    Attribute("node", value: nodeName)
+                    if case let .items(itemIds) = limit {
+                        for itemId in itemIds {
+                            Element(name: "item", {
+                                Attribute("id", value: itemId)
+                            })
+                        }
                     }
+                    if case let .lastItems(maxItems) = limit {
+                        Attribute("max_items", value: String(maxItems))
+                    }
+                })
+                if case let .rsm(rsm) = limit {
+                    rsm.element()
                 }
-                let rsm = RSM.Result(from: pubsubEl.firstChild(name: "set", xmlns: RSM.XMLNS));
-                return .success(RetrievedItems(node: itemsEl.attribute("node") ?? nodeName, items: items, rsm: rsm));
-            }))
+            })
         });
+        
+        let response = try await write(iq: iq)
+        guard let pubsubEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS), let itemsEl = pubsubEl.firstChild(name: "items") else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
+        }
+        let items: [PubSubModule.Item] = itemsEl.compactMapChildren({
+            if let id = $0.attribute("id") {
+                return PubSubModule.Item(id: id, payload: $0.children.first)
+            } else {
+                return nil
+            }
+        })
+        let rsm = RSM.Result(from: pubsubEl.firstChild(name: "set", xmlns: RSM.XMLNS));
+        return RetrievedItems(node: itemsEl.attribute("node") ?? nodeName, items: items, rsm: rsm);
     }
     
     public enum QueryLimit {
@@ -232,20 +190,18 @@ extension PubSubModule {
      Retrieve own subscriptions for node
      - parameter from: jid of PubSub service
      - parameter for: node name
-     - parameter completionHandler: called when result is available
      */
-    public func retrieveOwnSubscriptions(from pubSubJid: BareJID, for nodeName: String, completionHandler: @escaping (Result<[PubSubSubscriptionElement],XMPPError>)->Void) {
-        self.retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS, completionHandler: completionHandler);
+    public func retrieveOwnSubscriptions(from pubSubJid: BareJID, for nodeName: String) async throws -> [PubSubSubscriptionElement] {
+        try await retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS);
     }
         
     /**
      Retrieve own affiliations for node
      - parameter from: jid of PubSub service
      - parameter for: node name
-     - parameter completionHandler: called when result is available
      */
-    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String?, completionHandler: @escaping (Result<[PubSubAffiliationItem],XMPPError>)->Void) {
-        self.retrieveAffiliations(from: pubSubJid, source: .own(node: nodeName), completionHandler: completionHandler);
+    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String?) async throws -> [PubSubAffiliationItem] {
+        return try await retrieveAffiliations(from: pubSubJid, source: .own(node: nodeName));
     }
     
     public struct RetrievedItems {
@@ -258,68 +214,72 @@ extension PubSubModule {
 // async-await support
 extension PubSubModule {
     
-    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions? = nil) async throws -> PubSubSubscriptionElement {
-        return try await withUnsafeThrowingContinuation { continuation in
-            subscribe(at: pubSubJid, to: nodeName, subscriber: subscriber, with: options, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func subscribe(at pubSubJid: BareJID, to nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions? = nil, completionHandler: @escaping (Result<PubSubSubscriptionElement,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await subscribe(at: pubSubJid, to: nodeName, subscriber: subscriber, with: options)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    public func unsubscribe(at pubSubJid: BareJID, from nodeName: String, subscriber: JID) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            unsubscribe(at: pubSubJid, from: nodeName, subscriber: subscriber, completionHandler: {  result in
-                continuation.resume(with: result);
-            })
+    public func unsubscribe(at pubSubJid: BareJID, from nodeName: String, subscriber: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await unsubscribe(at: pubSubJid, from: nodeName, subscriber: subscriber)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            configureSubscription(at: pubSubJid, for: nodeName, subscriber: subscriber, with: options, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func configureSubscription(at pubSubJid: BareJID, for nodeName: String, subscriber: JID, with options: PubSubSubscribeOptions, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await configureSubscription(at: pubSubJid, for: nodeName, subscriber: subscriber, with: options)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?, completionHandler: @escaping (Result<PubSubSubscribeOptions,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveDefaultSubscriptionConfiguration(from: pubSubJid, for: nodeName)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    public func retrieveDefaultSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String?) async throws -> PubSubSubscribeOptions {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveDefaultSubscriptionConfiguration(from: pubSubJid, for: nodeName, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID, completionHandler: @escaping (Result<PubSubSubscribeOptions,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveSubscriptionConfiguration(from: pubSubJid, for: nodeName, subscriber: subscriber)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    public func retrieveSubscriptionConfiguration(from pubSubJid: BareJID, for nodeName: String, subscriber: JID) async throws -> PubSubSubscribeOptions {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveSubscriptionConfiguration(from: pubSubJid, for: nodeName, subscriber: subscriber, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, limit: QueryLimit = .none, completionHandler: @escaping (Result<RetrievedItems,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveItems(from: pubSubJid, for: nodeName, limit: limit)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    public func retrieveItems(from pubSubJid: BareJID, for nodeName: String, limit: QueryLimit = .none) async throws -> PubSubModule.RetrievedItems {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveItems(from: pubSubJid, for: nodeName, limit: limit, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
+    public func retrieveOwnSubscriptions(from pubSubJid: BareJID, for nodeName: String, completionHandler: @escaping (Result<[PubSubSubscriptionElement],XMPPError>)->Void) {
+        self.retrieveSubscriptions(from: pubSubJid, for: nodeName, xmlns: PubSubModule.PUBSUB_XMLNS, completionHandler: completionHandler);
     }
-    
-    public func retrieveOwnSubscriptions(from pubSubJid: BareJID, for nodeName: String) async throws -> [PubSubSubscriptionElement] {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveOwnSubscriptions(from: pubSubJid, for: nodeName, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String?) async throws -> [PubSubAffiliationItem] {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveOwnAffiliations(from: pubSubJid, for: nodeName, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
+
+    public func retrieveOwnAffiliations(from pubSubJid: BareJID, for nodeName: String?, completionHandler: @escaping (Result<[PubSubAffiliationItem],XMPPError>)->Void) {
+        self.retrieveAffiliations(from: pubSubJid, source: .own(node: nodeName), completionHandler: completionHandler);
     }
     
 }

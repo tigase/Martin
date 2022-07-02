@@ -30,48 +30,31 @@ extension PubSubModule {
      - parameter itemId: id of item
      - parameter payload: item payload
      - parameter publishOptions: publish options
-     - parameter completionHandler: called on completion
      */
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: PubSubNodeConfig? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        if pubSubJid != nil {
-            iq.to = JID(pubSubJid!);
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: PubSubNodeConfig? = nil) async throws -> String {
+        let iq = Iq(type: .set, to: pubSubJid?.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "publish", {
+                    Attribute("node", value: nodeName)
+                    Element(name: "item", {
+                        Attribute("id", value: itemId)
+                        payload
+                    })
+                })
+                publishOptions?.element(type: .submit, onlyModified: true)
+            })
+        })
+        
+        let response = try await write(iq: iq);
+        
+        guard let publishEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "publish"), let id = publishEl.firstChild(name: "item")?.attribute("id") else {
+            if let id = itemId {
+                return id;
+            } else {
+                throw XMPPError(condition: .undefined_condition, stanza: response);
+            }
         }
-        
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-        
-        let publish = Element(name: "publish");
-        publish.attribute("node", newValue: nodeName);
-        pubsub.addChild(publish);
-        
-        let item = Element(name: "item");
-        item.attribute("id", newValue: itemId);
-        publish.addChild(item);
-        
-        if let payload = payload {
-            item.addChild(payload);
-        }
-        
-        if let publishOptions = publishOptions {
-            let publishOptionsEl = Element(name: "publish-options");
-            publishOptionsEl.addChild(publishOptions.element(type: .submit, onlyModified: true));
-            pubsub.addChild(publishOptionsEl);
-        }
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ response in
-                guard let publishEl = response.firstChild(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS)?.firstChild(name: "publish"), let id = publishEl.firstChild(name: "item")?.attribute("id") else {
-                    if let id = itemId {
-                        return .success(id);
-                    } else {
-                        return .failure(XMPPError(condition: .undefined_condition, stanza: response));
-                    }
-                }
-                return .success(id);
-            }))
-        });
+        return id;
     }
 
     /**
@@ -79,28 +62,21 @@ extension PubSubModule {
      - parameter at: jid of PubSub service
      - parameter from: node name
      - parameter itemId: id of item
-     - parameter completionHandler: called when result is available
      */
-    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        if pubSubJid != nil {
-            iq.to = JID(pubSubJid!);
-        }
+    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String) async throws -> String {
+        let iq = Iq(type: .set, to: pubSubJid?.jid(), {
+            Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
+                Element(name: "retract", {
+                    Attribute("node", value: nodeName)
+                    Element(name: "item", {
+                        Attribute("id", value: itemId)
+                    })
+                });
+            })
+        })
         
-        let pubsub = Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS);
-        iq.addChild(pubsub);
-        
-        let retract = Element(name: "retract");
-        retract.attribute("node", newValue: nodeName);
-        pubsub.addChild(retract);
-        
-        let item = Element(name: "item");
-        item.attribute("id", newValue: itemId);
-        retract.addChild(item);
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in itemId }))
-        });
+        try await write(iq: iq);
+        return itemId;
     }
     
 }
@@ -108,19 +84,23 @@ extension PubSubModule {
 // async-await support
 extension PubSubModule {
     
-    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: PubSubNodeConfig? = nil) async throws -> String {
-        return try await withUnsafeThrowingContinuation { continuation in
-            publishItem(at: pubSubJid, to: nodeName, itemId: itemId, payload: payload, publishOptions: publishOptions, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func publishItem(at pubSubJid: BareJID?, to nodeName: String, itemId: String? = nil, payload: Element?, publishOptions: PubSubNodeConfig? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await publishItem(at: pubSubJid, to: nodeName, payload: payload, publishOptions: publishOptions)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String) async throws -> String {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retractItem(at: pubSubJid, from: nodeName, itemId: itemId, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func retractItem(at pubSubJid: BareJID?, from nodeName: String, itemId: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retractItem(at: pubSubJid, from: nodeName, itemId: itemId)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     

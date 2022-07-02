@@ -72,116 +72,234 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
      - parameter username: username to register
      - parameter password: password for username
      - parameter email: email for registration
-     - parameter completionHandler: called on registration response
      */
-    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?) async throws {
         guard let context = context else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+            throw XMPPError.remote_server_timeout;
         }
         
-        let iq = Iq(type: .set, to: jid ?? JID((context.boundJid?.bareJid ?? context.userBareJid)?.domain));
-        let query = Element(name: "query", xmlns: "jabber:iq:register");
-        if username != nil && !username!.isEmpty {
-            query.addChild(Element(name: "username", cdata: username!));
-        }
-        if password != nil && !password!.isEmpty {
-            query.addChild(Element(name: "password", cdata: password!));
-        }
-        if email != nil && !email!.isEmpty {
-            query.addChild(Element(name: "email", cdata: email!));
-        }
-        iq.addChild(query);
+        let iq = Iq(type: .set, to: jid ?? JID((context.boundJid?.bareJid ?? context.userBareJid)?.domain), {
+            Element(name: "query", xmlns: "jabber:iq:register", {
+                if username != nil && !username!.isEmpty {
+                    Element(name: "username", cdata: username!);
+                }
+                if password != nil && !password!.isEmpty {
+                    Element(name: "password", cdata: password!);
+                }
+                if email != nil && !email!.isEmpty {
+                    Element(name: "email", cdata: email!);
+                }
+            })
+        });
         
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { _ in Void() });
-        })
+        try await write(iq: iq);
     }
     
     /**
      Retrieves registration form and call provided callback
      - parameter from: destination JID for registration - useful for registration in transports
-     - parameter completionHandler: called when result is available
      */
-    open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult<XMPPError>)->Void) {
+    open func retrieveRegistrationForm(from jid: JID? = nil) async throws -> FormResult {
         guard let context = context else {
-            completionHandler(.failure(.undefined_condition));
-            return;
+            throw XMPPError(condition: .undefined_condition)
         }
-        let iq = Iq(type: .get, to: jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain));
-        let query = Element(name: "query", xmlns: "jabber:iq:register");
-        
-        iq.addChild(query);
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { response in
-                if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.firstChild(name: "x", xmlns: "jabber:x:data")) {
-                    return FormResult(type: .dataForm, form: form, bob: query.compactMapChildren(BobData.init(from:)));
-                } else {
-                    let form = DataForm(type: .form);
-                    if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register") {
-                        if let instructions = query.firstChild(name: "instructions")?.value {
-                            form.instructions = [instructions];
-                        }
-                        if query.firstChild(name: "username") != nil {
-                            form.add(field: .TextSingle(var: "username", required: true));
-                        }
-                        if query.firstChild(name: "password") != nil {
-                            form.add(field: .TextPrivate(var: "password", required: true));
-                        }
-                        if query.firstChild(name: "email") != nil {
-                            form.add(field: .TextSingle(var: "email", required: true));
-                        }
-                    }
-                    return FormResult(type: .plain, form: form, bob: []);
-                }
-            });
-        });
-    }
 
-    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        let iq = Iq(type: .get, to: jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain), {
+            Element(name: "query", xmlns: "jabber:iq:register")
+        });
+        
+        let response = try await write(iq: iq)
+        if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.firstChild(name: "x", xmlns: "jabber:x:data")) {
+            return FormResult(type: .dataForm, form: form, bob: query.compactMapChildren(BobData.init(from:)));
+        } else {
+            let form = DataForm(type: .form);
+            if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register") {
+                if let instructions = query.firstChild(name: "instructions")?.value {
+                    form.instructions = [instructions];
+                }
+                if query.firstChild(name: "username") != nil {
+                    form.add(field: .TextSingle(var: "username", required: true));
+                }
+                if query.firstChild(name: "password") != nil {
+                    form.add(field: .TextPrivate(var: "password", required: true));
+                }
+                if query.firstChild(name: "email") != nil {
+                    form.add(field: .TextSingle(var: "email", required: true));
+                }
+            }
+            return FormResult(type: .plain, form: form, bob: []);
+        }
+    }
+        
+    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm) async throws -> Iq {
         guard let context = context else {
-            completionHandler(.failure(XMPPError(condition: .undefined_condition)));
-            return;
+            throw XMPPError(condition: .undefined_condition);
         }
                               
-        let iq = Iq(type: .set, to: jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain));
-        let query = Element(name: "query", xmlns: "jabber:iq:register");
-        query.addChild(form.element(type: .submit, onlyModified: false));
+        let iq = Iq(type: .set, to: jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain), {
+            Element(name: "query", xmlns: "jabber:iq:register")
+            form.element(type: .submit, onlyModified: false)
+        });
         
-        iq.addChild(query);
-        write(iq: iq, completionHandler: completionHandler);
+        return try await write(iq: iq);
     }
 
     /**
      Unregisters currently connected and authenticated user
-     - parameter callback: called when user is unregistrated
      */
-    open func unregister(from: JID? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq(type: .set, to: from);
-        let query = Element(name: "query", xmlns: "jabber:iq:register");
-        query.addChild(Element(name: "remove"));
-        iq.addChild(query);
-        
-        write(iq: iq, completionHandler: completionHandler);
+    open func unregister(from: JID? = nil) async throws -> Iq {
+        let iq = Iq(type: .set, to: from, {
+            Element(name: "query", xmlns: "jabber:iq:register", {
+                Element(name: "remove")
+            })
+        });
+        return try await write(iq: iq);
     }
     
-    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String) async throws -> String {
         guard let context = context, let username = context.userBareJid.localPart else {
-            return;
+            throw XMPPError(condition: .remote_server_timeout);
         }
         
-        let iq = Iq(type: .set, to: serviceJid ?? context.boundJid);
-        let query = Element(name: "query", xmlns: "jabber:iq:register");
-        query.addChild(Element(name: "username", cdata: username));
-        query.addChild(Element(name: "password", cdata: newPassword));
-        iq.addChild(query);
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { _ in newPassword});
+        let iq = Iq(type: .set, to: serviceJid ?? context.boundJid, {
+            Element(name: "query", xmlns: "jabber:iq:register", {
+                Element(name: "username", cdata: username)
+                Element(name: "password", cdata: newPassword)
+            })
         });
+        try await write(iq: iq);
+        return newPassword;
+    }
+    
+    @discardableResult
+    open func submitPreAuth(token: String) async throws -> Iq {
+        let iq = Iq(type: .set, to: JID(context!.userBareJid.domain), {
+            Element(name: "preauth", attributes: ["token": token, "xmlns": "urn:xmpp:pars:0"])
+        })
+        return try await self.write(iq: iq);
     }
     
     public private(set) var isRegistrationAvailable = false;
+    
+    open class AccountRegistrationAsyncTask {
+
+        private let client: XMPPClient;
+        var inBandRegistrationModule: InBandRegistrationModule!;
+        open var preauthToken: String?;
+        var usesDataForm = false;
+
+        public init(client: XMPPClient = XMPPClient(), domainName: String, preauth: String? = nil) {
+            _ = client.modulesManager.register(StreamFeaturesModule());
+            self.client = client;
+
+            self.inBandRegistrationModule = client.modulesManager.register(InBandRegistrationModule());
+            self.preauthToken = preauth;
+
+            self.client.connectionConfiguration.userJid = BareJID(domainName);
+        }
+
+        private func ensureConnected() async throws {
+            if !client.isConnected {
+                try await client.loginAndWait();
+                if let token = preauthToken {
+                    try await inBandRegistrationModule.submitPreAuth(token: token);
+                }
+
+            }
+        }
+
+        open func retrieveForm() async throws -> InBandRegistrationModule.FormResult {
+            try await ensureConnected();
+            let result = try await inBandRegistrationModule.retrieveRegistrationForm();
+            usesDataForm = result.type == .dataForm;
+            return result;
+        }
+
+        open func submit(form: DataForm) async throws {
+            try await ensureConnected();
+            if usesDataForm {
+                _ = try await inBandRegistrationModule.submitRegistrationForm(form: form)
+            } else {
+                let username = form.value(for: "username", type: String.self);
+                let password = form.value(for: "password", type: String.self);
+                let email = form.value(for: "email", type: String.self);
+                return try await inBandRegistrationModule.register(username: username, password: password, email: email);
+            }
+        }
+
+        open func cancel() async throws {
+            try await self.client.disconnect();
+        }
+
+    }
+        
+    public enum FormType {
+        case plain
+        case dataForm
+    }
+    
+    public struct FormResult {
+        let type: FormType;
+        let form: DataForm;
+        let bob: [BobData];
+    }
+
+    public typealias RetrieveFormResult<Failure: Error> = Result<FormResult, Failure>
+}
+
+
+// async-await support
+extension InBandRegistrationModule {
+
+    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await register(jid, username: username, password: password, email: email)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    open func unregister(from: JID? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await unregister(from: from)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+    
+    open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult<XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveRegistrationForm(from: jid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await submitRegistrationForm(to: jid, form: form)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await changePassword(for: serviceJid, newPassword: newPassword)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
     
     open class AccountRegistrationTask {
         
@@ -434,124 +552,5 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         }
         
     }
-    
-    public enum FormType {
-        case plain
-        case dataForm
-    }
-    
-    public struct FormResult {
-        let type: FormType;
-        let form: DataForm;
-        let bob: [BobData];
-    }
 
-    public typealias RetrieveFormResult<Failure: Error> = Result<FormResult, Failure>
-}
-
-
-// async-await support
-extension InBandRegistrationModule {
-
-    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            register(jid, username: username, password: password, email: email, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-
-    open func retrieveRegistrationForm(from jid: JID? = nil) async throws -> FormResult {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveRegistrationForm(from: jid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-
-    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation { continuation in
-            submitRegistrationForm(to: jid, form: form, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-
-    open func unregister(from: JID? = nil) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation { continuation in
-            unregister(from: from, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-
-    open func changePassword(for serviceJid: JID? = nil, newPassword: String) async throws -> String {
-        return try await withUnsafeThrowingContinuation { continuation in
-            changePassword(for: serviceJid, newPassword: newPassword, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-
-    @discardableResult
-    open func submitPreAuth(token: String) async throws -> Iq {
-        let iq = Iq();
-        iq.type = .set;
-        let domain: String = context!.userBareJid.domain
-        iq.to = JID(domain);
-        iq.addChild(Element(name: "preauth", attributes: ["token": token, "xmlns": "urn:xmpp:pars:0"]));
-        return try await self.write(iq: iq);
-    }
-
-    open class AccountRegistrationAsyncTask {
-
-        private let client: XMPPClient;
-        var inBandRegistrationModule: InBandRegistrationModule!;
-        open var preauthToken: String?;
-        var usesDataForm = false;
-
-        public init(client: XMPPClient = XMPPClient(), domainName: String, preauth: String? = nil) {
-            _ = client.modulesManager.register(StreamFeaturesModule());
-            self.client = client;
-
-            self.inBandRegistrationModule = client.modulesManager.register(InBandRegistrationModule());
-            self.preauthToken = preauth;
-
-            self.client.connectionConfiguration.userJid = BareJID(domainName);
-        }
-
-        private func ensureConnected() async throws {
-            if !client.isConnected {
-                try await client.loginAndWait();
-                if let token = preauthToken {
-                    try await inBandRegistrationModule.submitPreAuth(token: token);
-                }
-
-            }
-        }
-
-        open func retrieveForm() async throws -> InBandRegistrationModule.FormResult {
-            try await ensureConnected();
-            let result = try await inBandRegistrationModule.retrieveRegistrationForm();
-            usesDataForm = result.type == .dataForm;
-            return result;
-        }
-
-        open func submit(form: DataForm) async throws {
-            try await ensureConnected();
-            if usesDataForm {
-                _ = try await inBandRegistrationModule.submitRegistrationForm(form: form)
-            } else {
-                let username = form.value(for: "username", type: String.self);
-                let password = form.value(for: "password", type: String.self);
-                let email = form.value(for: "email", type: String.self);
-                return try await inBandRegistrationModule.register(username: username, password: password, email: email);
-            }
-        }
-
-        open func cancel() async throws {
-            try await self.client.disconnect();
-        }
-
-    }
 }

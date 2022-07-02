@@ -48,6 +48,12 @@ extension RoomWithPushSupportProtocol {
         });
     }
     
+    public func registerForTigasePushNotification(_ value: Bool) async throws -> Bool {
+        return try await withUnsafeThrowingContinuation({ continuation in
+            registerForTigasePushNotification(value, completionHandler: continuation.resume(with:));
+        })
+    }
+    
     public func registerForTigasePushNotification(_ value: Bool, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
         guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
             completionHandler(.failure(.undefined_condition));

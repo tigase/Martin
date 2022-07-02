@@ -23,20 +23,19 @@ import Foundation
 
 public protocol VCardModuleProtocol {
 
-    func publishVCard(_ vcard: VCard, to jid: BareJID?, completionHandler: @escaping (Result<Void,XMPPError>)->Void);
-    
-    func retrieveVCard(from jid: JID?, completionHandler: @escaping (Result<VCard,XMPPError>)->Void)
+    func publish(vcard: VCard, to jid: BareJID?) async throws;
+    func retrieveVCard(from jid: JID?) async throws -> VCard
 
 }
 
 public extension VCardModuleProtocol {
     
-    func publishVCard(_ vcard: VCard, completionHandler: @escaping (Result<Void,XMPPError>) -> Void) {
-        publishVCard(vcard, to: nil, completionHandler: completionHandler);
+    func publish(vcard: VCard) async throws {
+        try await publish(vcard: vcard, to: nil)
     }
     
-    func retrieveVCard(completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
-        retrieveVCard(from: nil, completionHandler: completionHandler);
+    func retrieveVCard() async throws -> VCard {
+        try await retrieveVCard(from: nil);
     }
     
 }
@@ -44,19 +43,24 @@ public extension VCardModuleProtocol {
 // async-await support
 extension VCardModuleProtocol {
     
-    public func publish(vcard: VCard, to jid: BareJID? = nil) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            publishVCard(vcard, to: jid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func publishVCard(_ vcard: VCard, to jid: BareJID? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await publish(vcard: vcard, to: jid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    public func retrieveVCard(from jid: JID? = nil) async throws -> VCard {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveVCard(from: jid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveVCard(from: jid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
+
 }

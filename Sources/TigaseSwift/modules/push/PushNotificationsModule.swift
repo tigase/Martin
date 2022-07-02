@@ -102,31 +102,28 @@ open class PushNotificationsModule: XmppModuleBase, XmppModule {
         notificationsPublisher.send(NotificationsDisabled(serviceJid: from, node: node));
     }
 
-    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        let enable = Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
-        enable.attribute("jid", newValue: serviceJid.description);
-        enable.attribute("node", newValue: node);
-        for ext in extensions {
-            ext.apply(to: enable);
-        }
-        if let publishOptions = publishOptions {
-            enable.addChild(publishOptions.element(type: .submit, onlyModified: false));
-        }
-        iq.addChild(enable);
-        write(iq: iq, completionHandler: completionHandler);
+    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm? = nil) async throws -> Iq {
+        let iq = Iq(type: .set, {
+            Element(name: "enable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS, {
+                Attribute("jid", value: serviceJid.description)
+                Attribute("node", value: node)
+                for ext in extensions {
+                    ext.element()
+                }
+                publishOptions?.element(type: .submit, onlyModified: false)
+            })
+        });
+        return try await write(iq: iq);
     }
-
-    open func disable(serviceJid: JID, node: String, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        let disable = Element(name: "disable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS);
-        disable.attribute("jid", newValue: serviceJid.description);
-        disable.attribute("node", newValue: node);
-        iq.addChild(disable);
-        
-        write(iq: iq, completionHandler: completionHandler);
+    
+    open func disable(serviceJid: JID, node: String) async throws -> Iq {
+        let iq = Iq(type: .set, {
+            Element(name: "disable", xmlns: PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS, {
+                Attribute("jid", value: serviceJid.description)
+                Attribute("node", value: node)
+            })
+        })
+        return try await write(iq: iq);
     }
     
 }
@@ -138,6 +135,8 @@ public protocol PushNotificationsModuleExtension {
     func apply(to enableEl: Element);
 
     func hash(into hasher: inout Hasher);
+    
+    func element() -> ElementItemProtocol
 }
 
 extension PushNotificationsModuleExtension {
@@ -151,19 +150,23 @@ extension PushNotificationsModuleExtension {
 // async-await support
 extension PushNotificationsModule {
     
-    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm? = nil) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation { continuation in
-            enable(serviceJid: serviceJid, node: node, extensions: extensions, publishOptions: publishOptions, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await enable(serviceJid: serviceJid, node: node, extensions: extensions, publishOptions: publishOptions)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func disable(serviceJid: JID, node: String) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation { continuation in
-            disable(serviceJid: serviceJid, node: node, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func disable(serviceJid: JID, node: String, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await disable(serviceJid: serviceJid, node: node)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     

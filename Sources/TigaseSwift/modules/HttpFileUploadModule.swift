@@ -94,14 +94,13 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
     }
     
     open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?) async throws -> Slot {
-        let iq = Iq(type: .get, to: componentJid);
-        let requestEl = Element(name: "request", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS);
-        requestEl.attribute("filename", newValue: filename);
-        requestEl.attribute("size", newValue: size.description);
-        if contentType != nil {
-            requestEl.attribute("content-type", newValue: contentType);
-        }
-        iq.addChild(requestEl);
+        let iq = Iq(type: .get, to: componentJid, {
+            Element(name: "request", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS, {
+                Attribute("filename", value: filename)
+                Attribute("size", value: size.description)
+                Attribute("content-type", value: contentType)
+            });
+        });
         
         let response = try await write(iq: iq);
         guard let slotEl = response.firstChild(name: "slot", xmlns: HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS), let getUri = slotEl.firstChild(name: "get")?.attribute("url"), let putUri = slotEl.firstChild(name: "put")?.attribute("url") else {

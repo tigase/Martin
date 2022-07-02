@@ -93,7 +93,7 @@ private let SAX_endElement: endElementNsSAX2Func = { ctx_, localname, prefix_, U
 
 private let SAX_charactersFound: charactersSAXFunc = { ctx_, chars_, len_ in
     let parser = unsafeBitCast(ctx_, to: XMLParser.self);
-    let chars = strFromCUtf8(chars_);
+    let chars = String(data: Data(bytes: UnsafePointer<UInt8>(chars_!), count: Int(len_)), encoding: .utf8)
     parser.delegate.charactersFound(chars!);
 }
 

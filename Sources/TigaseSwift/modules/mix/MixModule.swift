@@ -242,12 +242,20 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         switch self.channelManager.createChannel(for: context, with: channelJid, participantId: participantId, nick: nick, state: .joined) {
         case .created(let channel):
             if self.automaticRetrieve.contains(.participants) {
-                retrieveParticipants(for: channel, completionHandler: nil);
+                Task {
+                    try await retrieveParticipants(for: channel);
+                }
             }
-            retrieveInfo(for: channel.jid, completionHandler: nil);
-            retrieveAffiliations(for: channel, completionHandler: nil);
+            Task {
+                try await retrieveInfo(for: channel.jid);
+            }
+            Task {
+                try await retrieveAffiliations(for: channel);
+            }
             if self.automaticRetrieve.contains(.avatar) {
-                retrieveAvatar(for: channel.jid, completionHandler: nil);
+                Task {
+                    try await retrieveAvatar(for: channel.jid);
+                }
             }
             return channel;
         case .found(let channel):
@@ -322,32 +330,26 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
-    open func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
-        pubsubModule.retrieveItems(from: channel.jid, for: "urn:xmpp:mix:nodes:participants", completionHandler: { result in
-            switch result {
-            case .success(let items):
-                let participants = items.items.map({ (item) -> MixParticipant? in
-                    return MixParticipant(from: item, for: channel);
-                }).filter({ $0 != nil }).map({ $0! });
-                let oldParticipants = channel.participants;
-                let left = oldParticipants.filter({ old in !participants.contains(where: { new in new.id == old.id})});
-                if let ownParticipant = participants.first(where: { (participant) -> Bool in
-                    return participant.id == channel.participantId
-                }) {
-                    channel.update(ownNickname: ownParticipant.nickname);
-                }
-                channel.set(participants: participants);
-                for participant in left {
-                    self.participantsEvents.send(.left(participant));
-                }
-                for participant in participants {
-                    self.participantsEvents.send(.joined(participant));
-                }
-                completionHandler?(.success(participants));
-            case .failure(let error):
-                completionHandler?(.failure(error));
-            }
-        })
+    open func retrieveParticipants(for channel: ChannelProtocol) async throws -> [MixParticipant] {
+        let items = try await pubsubModule.retrieveItems(from: channel.jid, for: "urn:xmpp:mix:nodes:participants");
+        let participants = items.items.map({ (item) -> MixParticipant? in
+            return MixParticipant(from: item, for: channel);
+        }).filter({ $0 != nil }).map({ $0! });
+        let oldParticipants = channel.participants;
+        let left = oldParticipants.filter({ old in !participants.contains(where: { new in new.id == old.id})});
+        if let ownParticipant = participants.first(where: { (participant) -> Bool in
+            return participant.id == channel.participantId
+        }) {
+            channel.update(ownNickname: ownParticipant.nickname);
+        }
+        channel.set(participants: participants);
+        for participant in left {
+            self.participantsEvents.send(.left(participant));
+        }
+        for participant in participants {
+            self.participantsEvents.send(.joined(participant));
+        }
+        return participants;
     }
     
     open func publishInfo(_ info: ChannelInfo, for channelJid: BareJID) async throws {
@@ -493,16 +495,24 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             }
             for channel in self.channelManager.channels(for: context) {
                 if self.automaticRetrieve.contains(.participants) {
-                    retrieveParticipants(for: channel, completionHandler: nil);
+                    Task {
+                        try await retrieveParticipants(for: channel);
+                    }
                 }
                 if self.automaticRetrieve.contains(.info) {
-                    retrieveInfo(for: channel.jid, completionHandler: nil);
+                    Task {
+                        try await retrieveInfo(for: channel.jid);
+                    }
                 }
                 if self.automaticRetrieve.contains(.affiliations) {
-                    retrieveAffiliations(for: channel, completionHandler: nil);
+                    Task {
+                        try await retrieveAffiliations(for: channel);
+                    }
                 }
                 if self.automaticRetrieve.contains(.avatar) {
-                    retrieveAvatar(for: channel.jid, completionHandler: nil);
+                    Task {
+                        try await retrieveAvatar(for: channel.jid);
+                    }
                 }
             }
         }
@@ -704,6 +714,16 @@ extension MixModule {
                 completionHandler(.success(try await leave(channel: channel)));
             } catch {
                 completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+    
+    open func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
+        Task {
+            do {
+                completionHandler?(.success(try await retrieveParticipants(for: channel)))
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }
         }
     }

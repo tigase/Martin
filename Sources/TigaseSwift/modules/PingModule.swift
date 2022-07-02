@@ -50,22 +50,12 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
     /**
      Send ping request to jid
      - parameter jid: ping destination
-     - parameter completionHandler: executed when response is received or due to timeout
      */
-    open func ping(_ jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func ping(_ jid: JID) async throws {
         let iq = Iq(type: .get, to: jid);
         iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
         
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ _ in .success(Void()) }).flatMapError({ error in
-                switch error.condition {
-                case .feature_not_implemented:
-                    return .success(Void());
-                default:
-                    return .failure(error);
-                }
-            }));
-        })
+        try await write(iq: iq);
     }
     
     /**
@@ -84,10 +74,13 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
 // async-await support
 extension PingModule {
     
-    open func ping(_ jid: JID) async throws {
-        let iq = Iq(type: .get, to: jid);
-        iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
-        
-        try await write(iq: iq);
+    open func ping(_ jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await ping(jid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
     }
 }

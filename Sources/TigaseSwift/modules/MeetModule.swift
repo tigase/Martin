@@ -135,17 +135,16 @@ open class MeetModule: XmppModuleBase, XmppModule {
     }
     
     open func createMeet(at jid: JID, media: [Media], participants: [BareJID] = []) async throws -> JID {
-        let iq = Iq(type: .set, to: jid);
-        let createEl = Element(name: "create", xmlns: MeetModule.ID);
-        for m in media {
-            createEl.addChild(Element(name: "media", attributes: ["type": m.rawValue]));
-        }
-        
-        for participant in participants {
-            createEl.addChild(Element(name: "participant", cdata: participant.description));
-        }
-        
-        iq.addChild(createEl);
+        let iq = Iq(type: .set, to: jid, {
+            Element(name: "create", xmlns: MeetModule.ID, {
+                for m in media {
+                    Element(name: "media", attributes: ["type": m.rawValue])
+                }
+                for participant in participants {
+                    Element(name: "participant", cdata: participant.description)
+                }
+            })
+        });
         
         let response = try await write(iq: iq);
         guard let id = iq.firstChild(name: "create", xmlns: MeetModule.ID)?.attribute("id") else {
@@ -159,14 +158,13 @@ open class MeetModule: XmppModuleBase, XmppModule {
             throw XMPPError(condition: .unexpected_request, message: "List of allowed JIDs is empty!");
         }
         
-        let iq = Iq(type: .set, to: meetJid);
-        let allowEl = Element(name: "allow", xmlns: MeetModule.ID);
-        
-        for participant in jids {
-            allowEl.addChild(Element(name: "participant", cdata: participant.description));
-        }
-        
-        iq.addChild(allowEl);
+        let iq = Iq(type: .set, to: meetJid, {
+            Element(name: "allow", xmlns: MeetModule.ID, {
+                for participant in jids {
+                    Element(name: "participant", cdata: participant.description);
+                }
+            })
+        });
         
         try await write(iq: iq);
     }
@@ -177,22 +175,21 @@ open class MeetModule: XmppModuleBase, XmppModule {
             throw XMPPError(condition: .unexpected_request, message: "List of allowed JIDs is empty!");
         }
         
-        let iq = Iq(type: .set, to: meetJid);
-        let denyEl = Element(name: "deny", xmlns: MeetModule.ID);
-        
-        for participant in jids {
-            denyEl.addChild(Element(name: "participant", cdata: participant.description));
-        }
-        
-        iq.addChild(denyEl);
+        let iq = Iq(type: .set, to: meetJid, {
+            Element(name: "deny", xmlns: MeetModule.ID, {
+                for participant in jids {
+                    Element(name: "participant", cdata: participant.description);
+                }
+            })
+        });
         try await write(iq: iq);
     }
     
     open func destroy(meetJid: JID) async throws {
-        let iq = Iq(type: .set, to: meetJid);
-        let destroyEl = Element(name: "destroy", xmlns: MeetModule.ID);
+        let iq = Iq(type: .set, to: meetJid, {
+            Element(name: "destroy", xmlns: MeetModule.ID)
+        });
 
-        iq.addChild(destroyEl);
         try await write(iq: iq);
     }
     

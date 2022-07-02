@@ -51,25 +51,18 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
         throw XMPPError(condition: .feature_not_implemented);
     }
     
-    public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],XMPPError>)->Void) {
+    public func discover(from jid: JID?, type: String?) async throws -> [Service] {
         guard let context = context else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+           throw XMPPError.remote_server_timeout;
         }
-        let iq = Iq();
-        iq.to = jid ?? JID(context.userBareJid.domain);
-        iq.type = .get;
-        let servicesEl = Element(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS);
-        if type != nil {
-            servicesEl.attribute("type", newValue: type);
-        }
-        iq.addChild(servicesEl);
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { response in
-                return response.firstChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.compactMapChildren(Service.parse(_:)) ?? [];
+        let iq = Iq(type: .get, to: jid ?? JID(context.userBareJid.domain), {
+            Element(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS, {
+                Attribute("type", value: type)
             })
-        })
+        });
+        
+        let response = try await write(iq: iq);
+        return response.firstChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.compactMapChildren(Service.parse(_:)) ?? [];
     }
     
     open class Service {
@@ -118,11 +111,13 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
 // async-await support
 extension ExternalServiceDiscoveryModule {
     
-    public func discover(from jid: JID?, type: String?) async throws -> [Service] {
-        return try await withUnsafeThrowingContinuation { continuation in
-            discover(from: jid, type: type, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    public func discover(from jid: JID?, type: String?, completionHandler: @escaping (Result<[Service],XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await discover(from: jid, type: type)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     

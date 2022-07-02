@@ -65,23 +65,20 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
     /**
      Retrieve version of software used by recipient
      - parameter for: address for which we want to retrieve software version
-     - parameter completionHandler: called when result is available
      */
-    open func checkSoftwareVersion(for jid: JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
-        let iq = Iq(type: .get, to: jid);
-        iq.addChild(Element(name:"query", xmlns:"jabber:iq:version"));
-
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.flatMap({ stanza in
-                guard let query = stanza.firstChild(name: "query", xmlns: "jabber:iq:version"), let name = query.firstChild(name: "name")?.value, let version = query.firstChild(name: "version")?.value else {
-                    return .failure(.undefined_condition);
-                }
-                let os = query.firstChild(name: "os")?.value;
-                return .success(SoftwareVersion(name: name, version: version, os: os));
-            }))
+    open func checkSoftwareVersion(for jid:JID) async throws -> SoftwareVersion {
+        let iq = Iq(type: .get, to: jid, {
+            Element(name:"query", xmlns:"jabber:iq:version")
         });
+        
+        let response = try await write(iq: iq);
+        guard let query = response.firstChild(name: "query", xmlns: "jabber:iq:version"), let name = query.firstChild(name: "name")?.value, let version = query.firstChild(name: "version")?.value else {
+            throw XMPPError(condition: .undefined_condition, stanza: response);
+        }
+        let os = query.firstChild(name: "os")?.value;
+        return SoftwareVersion(name: name, version: version, os: os);
     }
-
+    
     /**
      Method processes incoming stanzas
      - parameter stanza: stanza to process
@@ -108,11 +105,14 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
 
 // async-await support
 extension SoftwareVersionModule {
-    open func checkSoftwareVersion(for jid:JID) async throws -> SoftwareVersion {
-        return try await withUnsafeThrowingContinuation { continuation in
-            checkSoftwareVersion(for: jid, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func checkSoftwareVersion(for jid: JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await checkSoftwareVersion(for: jid)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
+
 }

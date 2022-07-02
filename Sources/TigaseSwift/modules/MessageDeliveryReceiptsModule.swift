@@ -184,9 +184,7 @@ extension MessageDeliveryReceiptsModule {
     }
     
     open func sendReceived(to jid: JID, forStanzaId id: String, type: StanzaType?) async throws {
-        let response = Message();
-        response.type = type;
-        response.to = jid;
+        let response = Message(type: type, to: jid);
         response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
         response.hints = [.store];
         try await write(stanza: response);

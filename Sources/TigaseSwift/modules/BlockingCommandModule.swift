@@ -122,94 +122,78 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
     
-    open func block(jid: JID, report: Report? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS);
-        let item =  Element(name: "item", attributes: ["jid": jid.description]);
-        if let report = report {
-            let reportEl = Element(name: "report", xmlns: BlockingCommandModule.REPORTING_XMLNS);
-            reportEl.attribute("reason", newValue: report.cause.rawValue)
-            for stanza in report.stanzas {
-                reportEl.addChild(Element(name: "stanza-id", attributes: ["by": stanza.by.description, "id": stanza.id]));
-            }
-            if let text = report.text {
-                reportEl.addChild(Element(name: "text", cdata: text));
-            }
-            item.addChild(reportEl);
-        }
-        block.addChild(item);
-        iq.addChild(block);
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        })
+    open func block(jid: JID, report: Report? = nil) async throws {
+        let iq = Iq(type: .set, {
+            Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, {
+                Element(name: "item", {
+                    Attribute("jid", value: jid.description)
+                    if let report = report {
+                        Element(name: "report", xmlns: BlockingCommandModule.REPORTING_XMLNS, {
+                            Attribute("reason", value: report.cause.rawValue)
+                            for stanza in report.stanzas {
+                                Element(name: "stanza-id", attributes: ["by": stanza.by.description, "id": stanza.id])
+                            }
+                            if let text = report.text {
+                                Element(name: "text", cdata: text)
+                            }
+                        })
+                    }
+                })
+            })
+        });
+        try await write(iq: iq);
     }
-    
+        
     /**
      Block communication with jid
      - paramater jid: jid to block
      */
-    open func block(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        guard !jids.isEmpty else {
-            completionHandler(.success(Void()));
-            return;
-        }
-        
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        let block = Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, children: jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
-        iq.addChild(block);
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
+    open func block(jids: [JID]) async throws {
+        let iq = Iq(type: .set, {
+            Element(name: "block", xmlns: BlockingCommandModule.BC_XMLNS, {
+                for jid in jids {
+                    Element(name: "item", {
+                        Attribute("jid", value: jid.description)
+                    })
+                }
+            })
         })
+        try await write(iq: iq);
     }
     
-    open func unblock(jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        unblock(jids: [jid], completionHandler: completionHandler);
+    open func unblock(jid: JID) async throws {
+        try await unblock(jids: [jid]);
     }
     
     /**
      Unblock communication with jid
      - paramater jid: to unblock
      */
-    open func unblock(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        guard !jids.isEmpty else {
-            completionHandler(.success(Void()));
-            return;
-        }
-        
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.addChild(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS) { unblock in
-            unblock.addChildren(jids.map({ jid in Element(name: "item", attributes: ["jid": jid.description])}));
-        }
-//        let unblock = );
-//        iq.addChild(unblock);
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        })
-    }
-    
-    open func retrieveBlockedJids(completionHandler: ((Result<[JID],XMPPError>)->Void)?) {
-        guard let blockedJids = self.blockedJids else {
-            let iq = Iq();
-            iq.type = StanzaType.get;
-            let list = Element(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS);
-            iq.addChild(list);
-
-            write(iq: iq, completionHandler: { result in
-                switch result {
-                case .success(let iq):
-                    let blockedJids = iq.firstChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.children.compactMap({ JID($0.attribute("jid")) }) ?? [];
-                    self.blockedJids = blockedJids;
-                    completionHandler?(.success(blockedJids));
-                case .failure(let error):
-                    completionHandler?(.failure(error));
+    open func unblock(jids: [JID]) async throws {
+        let iq = Iq(type: .set, {
+            Element(name: "unblock", xmlns: BlockingCommandModule.BC_XMLNS, {
+                for jid in jids {
+                    Element(name: "item", {
+                        Attribute("jid", value: jid.description)
+                    })
                 }
             })
-            return;
+        })
+        try await write(iq: iq);
+    }
+        
+    open func retrieveBlockedJids() async throws -> [JID] {
+        guard let blockedJids = self.blockedJids else {
+            let iq = Iq(type: .get, {
+                Element(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)
+            })
+            
+            let response = try await write(iq: iq);
+            let blockedJids = response.firstChild(name: "blocklist", xmlns: BlockingCommandModule.BC_XMLNS)?.children.compactMap({ JID($0.attribute("jid")) }) ?? [];
+            self.blockedJids = blockedJids;
+            return blockedJids;
         }
-        completionHandler?(.success(blockedJids));
+        return blockedJids;
     }
  
 }
@@ -217,27 +201,44 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
 // async-await support
 extension BlockingCommandModule {
     
-    open func block(jids: [JID]) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            block(jids: jids, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func block(jid: JID, report: Report? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await block(jid: jid, report: report)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    
+    open func block(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await block(jids: jids)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func unblock(jids: [JID]) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            unblock(jids: jids, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func unblock(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await unblock(jids: jids)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func retrieveBlockedJids() async throws -> [JID] {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveBlockedJids(completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveBlockedJids(completionHandler: ((Result<[JID],XMPPError>)->Void)?) {
+        Task {
+            do {
+                completionHandler?(.success(try await retrieveBlockedJids()))
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
 }

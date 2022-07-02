@@ -56,34 +56,29 @@ open class VCardTempModule: XmppModuleBase, XmppModule, VCardModuleProtocol {
      Publish vcard
      - parameter vcard: vcard to publish
      - parameter to:where to publish vcard
-     - parameter completionHandler: called after publication result is received
      */
-    open func publishVCard(_ vcard: VCard, to: BareJID? = nil, completionHandler: @escaping (Result<Void, XMPPError>) -> Void) {
-        let iq = Iq(type: .set, to: JID(to));
-        iq.addChild(vcard.toVCardTemp());
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { _ in Void() });
-        })
+    public func publish(vcard: VCard, to jid: BareJID?) async throws {
+        let iq = Iq(type: .set, to: jid?.jid(), {
+            vcard.toVCardTemp()
+        });
+        try await write(iq: iq)
     }
     
     /**
      Retrieve vcard for JID
      - parameter from: JID for which vcard should be retrieved
-     - parameter completionHandler: called with result
      */
-    open func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
-        let iq = Iq(type: .get, to: jid);
-        iq.addChild(Element(name:"vCard", xmlns: VCardTempModule.VCARD_XMLNS));
-        
-        write(iq: iq, timeout: 10, completionHandler: { result in
-            completionHandler(result.map({ stanza in
-                if let vcardEl = stanza.firstChild(name: "vCard", xmlns: VCardTempModule.VCARD_XMLNS), let vcard = VCard(vcardTemp: vcardEl) {
-                    return vcard;
-                } else {
-                    return VCard();
-                }
-            }))
-        })
+    open func retrieveVCard(from jid: JID?) async throws -> VCard {
+        let iq = Iq(type: .get, to: jid, {
+            Element(name:"vCard", xmlns: VCardTempModule.VCARD_XMLNS)
+        });
+
+        let response = try await write(iq: iq);
+        if let vcardEl = response.firstChild(name: "vCard", xmlns: VCardTempModule.VCARD_XMLNS), let vcard = VCard(vcardTemp: vcardEl) {
+            return vcard;
+        } else {
+            return VCard();
+        }
     }
 
 }

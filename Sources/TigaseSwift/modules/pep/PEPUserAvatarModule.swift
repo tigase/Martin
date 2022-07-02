@@ -46,7 +46,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     
     public let avatarChangePublisher = PassthroughSubject<AvatarChange,Never>();
     
-    private let queue = DispatchQueue(label: "PEPUserAvatarModuleQueue");
+    //private let queue = DispatchQueue(label: "PEPUserAvatarModuleQueue");
     
     open var features: [String] {
         get {
@@ -81,122 +81,46 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         }
     }
     
-    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar], completionHandler: @escaping(Result<String,XMPPError>)->Void) {
-        queue.async {
-            guard let pubsubModule = self.pubsubModule, let id = avatars.first(where: { $0.info.mimeType == "image/png" })?.info.id else {
-                completionHandler(.failure(XMPPError(condition: .not_acceptable, message: "Missing payload in image/png format!", applicationCondition: PubSubErrorCondition.invalid_payload)));
-                return;
-            }
-            
-            let publish: (()->Void) = {
-                let group = DispatchGroup();
-                group.enter();
-                var itemsError: XMPPError? = nil;
-                for avatar in avatars {
-                    if let data = avatar.data {
-                        group.enter();
-                        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.DATA_XMLNS, itemId: avatar.info.id, payload: Element(name: "data", cdata: data.base64EncodedString(), xmlns: PEPUserAvatarModule.DATA_XMLNS), completionHandler: { result in
-                            self.queue.async {
-                                switch result {
-                                case .success(_):
-                                    break;
-                                case .failure(let error):
-                                    itemsError = error;
-                                }
-                            }
-                            group.leave();
-                        });
-                    }
-                }
-                group.notify(queue: self.queue, execute: {
-                    if let error = itemsError {
-                        completionHandler(.failure(error));
-                    } else {
-                        self.publishAvatarMetaData(at: at, id: id, metadata: avatars.map({ $0.info }), completionHandler: completionHandler);
-                    }
-                });
-                group.leave();
-            }
-            
-            // lets ensure we are allowed to have as many items published
-            pubsubModule.retrieveNodeConfiguration(from: at, node: PEPUserAvatarModule.DATA_XMLNS, completionHandler: { result in
-                switch result {
-                case .success(let form):
-                    if let limit = form.maxItems, limit < avatars.count {
-                        // limit is too small, reconfiguring..
-                        form.maxItems = .value(avatars.count);
-                        pubsubModule.configureNode(at: at, node: PEPUserAvatarModule.DATA_XMLNS, with: form, completionHandler: { result in
-                            switch result {
-                            case .success(_):
-                                publish();
-                            case .failure(let error):
-                                switch error.condition {
-                                case .not_acceptable:
-                                    // let's try workaround for Openfire
-                                    if let field: DataForm.Field = form.field(for: "pubsub#collection") {
-                                        form.remove(field: field);
-                                        pubsubModule.configureNode(at: at, node: PEPUserAvatarModule.DATA_XMLNS, with: form, completionHandler: { result in
-                                            switch result {
-                                            case .success(_):
-                                                publish();
-                                            case .failure(_):
-                                                completionHandler(.failure(error));
-                                            }
-                                        });
-                                    } else {
-                                        completionHandler(.failure(error));
-                                    }
-                                default:
-                                    completionHandler(.failure(error));
-                                }
-                            }
-                        })
-                    } else {
-                        publish();
-                    }
-                case .failure(_):
-                     publish();
-                }
-            })
+    open func publishAvatar(at jid: BareJID? = nil, avatar avatars: [Avatar]) async throws -> String {
+        guard let pubsubModule = self.pubsubModule, let id = avatars.first(where: { $0.info.mimeType == "image/png" })?.info.id else {
+            throw XMPPError(condition: .not_acceptable, message: "Missing payload in image/png format!", applicationCondition: PubSubErrorCondition.invalid_payload);
         }
-    }
-
-    open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
-        let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
-        pubsubModule.publishItem(at: from, to: PEPUserAvatarModule.METADATA_XMLNS, payload: metadata, completionHandler: completionHandler);
-    }
-    
-    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info], completionHandler: @escaping (Result<String,XMPPError>)->Void) {
-        let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS);
         
-        metadata.addChildren(infos.map({ $0.toElement() }));
+        let config = try await pubsubModule.retrieveNodeConfiguration(from: jid, node: PEPUserAvatarModule.DATA_XMLNS);
+        if let limit = config.maxItems, limit < avatars.count {
+            config.maxItems = .value(avatars.count)
+            try await pubsubModule.configureNode(at: jid, node: PEPUserAvatarModule.DATA_XMLNS, with: config);
+        }
         
-        pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, itemId: id, payload: metadata, completionHandler: completionHandler);
+        _ = try await avatars.filter({ $0.data != nil }).concurrentMap({ try await pubsubModule.publishItem(at: jid, to: PEPUserAvatarModule.DATA_XMLNS, itemId: $0.info.id, payload: Element(name: "data", cdata: $0.data!.base64EncodedString(), xmlns: PEPUserAvatarModule.DATA_XMLNS)) })
+        
+        return try await publishAvatarMetaData(at: jid, id: id, metadata: avatars.map({ $0.info }));
     }
     
-    open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<AvatarData,XMPPError>)->Void) {
-        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, limit: .items(withIds: [itemId]), completionHandler: { result in
-            completionHandler(result.flatMap({ items in
-                if let item = items.items.first, let cdata = item.payload?.value, let data = Data(base64Encoded: cdata, options: []) {
-                    return .success(AvatarData(id: item.id, data: data));
-                } else {
-                    return .failure(XMPPError(condition: .item_not_found));
-                }
-            }))
-        })
+    open func retractAvatar(from: BareJID? = nil) async throws -> String {
+        try await pubsubModule.publishItem(at: from, to: PEPUserAvatarModule.METADATA_XMLNS, payload: Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS));
     }
     
-    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,XMPPError>)->Void) {
-        let limit: PubSubModule.QueryLimit = itemId == nil ? .lastItems(1) : .items(withIds: [itemId!]);
-        pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, limit: limit, completionHandler: { result in
-            completionHandler(result.flatMap({ items in
-                if let item = items.items.first, let info = item.payload?.compactMapChildren(Info.init(payload:)).first {
-                    return .success(info);
-                } else {
-                    return .failure(XMPPError(condition: .item_not_found));
-                }
-            }))
-        });
+    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info]) async throws -> String {
+        let metadata = Element(name: "metadata", xmlns: PEPUserAvatarModule.METADATA_XMLNS, children: infos.map({ $0.toElement() }));
+        return try await pubsubModule.publishItem(at: at, to: PEPUserAvatarModule.METADATA_XMLNS, itemId: id, payload: metadata);
+    }
+    
+    open func retrieveAvatar(from jid: BareJID, itemId: String) async throws -> AvatarData {
+        let items = try await pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.DATA_XMLNS, limit: .items(withIds: [itemId]));
+        guard let item = items.items.first, let cdata = item.payload?.value, let data = Data(base64Encoded: cdata, options: []) else {
+            throw XMPPError(condition: .item_not_found);
+        }
+        
+        return AvatarData(id: itemId, data: data);
+    }
+    
+    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true) async throws -> Info {
+        let items = try await pubsubModule.retrieveItems(from: jid, for: PEPUserAvatarModule.METADATA_XMLNS, limit: itemId == nil ? .lastItems(1) : .items(withIds: [itemId!]));
+        guard let item = items.items.first, let info = item.payload?.compactMapChildren(Info.init(payload:)).first else {
+            throw XMPPError(condition: .item_not_found);
+        }
+        return info;
     }
 
     open override func onItemNotification(notification: PubSubModule.ItemNotification) {
@@ -280,43 +204,54 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
 // async-await support
 extension PEPUserAvatarModule {
     
-    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar]) async throws -> String {
-        return try await withUnsafeThrowingContinuation { continuation in
-            publishAvatar(at: at, avatar: avatars, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar], completionHandler: @escaping(Result<String,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await publishAvatar(at: at, avatar: avatars)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func retractAvatar(from: BareJID? = nil) async throws -> String {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retractAvatar(from: from, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retractAvatar(from: from)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info]) async throws -> String {
-        return try await withUnsafeThrowingContinuation { continuation in
-            publishAvatarMetaData(at: at, id: id, metadata: infos, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info], completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await publishAvatarMetaData(at: at, id: id, metadata: infos)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func retrieveAvatar(from jid: BareJID, itemId: String) async throws -> AvatarData {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveAvatar(from: jid, itemId: itemId, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<AvatarData,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveAvatar(from: jid, itemId: itemId)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true) async throws -> Info {
-        return try await withUnsafeThrowingContinuation { continuation in
-            retrieveAvatarMetadata(from: jid, itemId: itemId, fireEvents: fireEvents, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await retrieveAvatarMetadata(from: jid, itemId: itemId)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
+    
 }
