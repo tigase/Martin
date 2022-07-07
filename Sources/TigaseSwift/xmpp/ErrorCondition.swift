@@ -51,59 +51,25 @@ public enum ErrorCondition: String {
     case undefined_condition = "undefined-condition"
     case unexpected_request = "unexpected-request"
     
-    public var errorDescription: String? {
-        return rawValue.replacingOccurrences(of: "-", with: " ");
-    }
-    
-    public var type: String {
+    public var type: ErrorConditionType {
         switch self {
-        case .bad_request:
-            return "modify";
-        case .conflict:
-            return "cancel";
-        case .feature_not_implemented:
-            return "cancel";
-        case .forbidden:
-            return "auth";
-        case .gone:
-            return "modify";
-        case .internal_server_error:
-            return "wait";
-        case .item_not_found:
-            return "cancel";
-        case .jid_malformed:
-            return "modify";
-        case .not_acceptable:
-            return "modify";
-        case .not_allowed:
-            return "cancel";
-        case .not_authorized:
-            return "auth";
-        case .payment_required:
-            return "auth";
-        case .policy_violation:
-            return "cancel";
-        case .recipient_unavailable:
-            return "wait";
-        case .redirect:
-            return "modify";
-        case .registration_required:
-            return "auth";
-        case .remote_server_not_found:
-            return "cancel";
-        case .remote_server_timeout:
-            return "wait";
-        case .resource_constraint:
-            return "wait";
-        case .service_unavailable:
-            return "cancel";
-        case .subscription_required:
-            return "auth";
-        case .undefined_condition:
-            return "cancel";
-        case .unexpected_request:
-            return "wait";
+        case .bad_request, .gone, .jid_malformed, .not_acceptable, .redirect:
+            return .modify;
+        case .conflict, .feature_not_implemented, .item_not_found, .not_allowed, .policy_violation, .remote_server_not_found, .service_unavailable, .undefined_condition:
+            return .cancel;
+        case .forbidden, .not_authorized, .payment_required, .registration_required, .subscription_required:
+            return .auth;
+        case .internal_server_error, .recipient_unavailable, .remote_server_timeout, .resource_constraint, .unexpected_request:
+            return .wait;
         }
     }
-    
+ 
+}
+
+public enum ErrorConditionType: String {
+    case auth
+    case cancel
+    case `continue`
+    case modify
+    case wait
 }

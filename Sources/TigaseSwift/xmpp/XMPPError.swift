@@ -21,7 +21,7 @@
 
 import Foundation
 
-public struct XMPPError: LocalizedError, CustomStringConvertible {
+public struct XMPPError: Error, CustomStringConvertible {
     
     public static let remote_server_timeout = XMPPError(condition: .remote_server_timeout);
     public static let undefined_condition = XMPPError(condition: .undefined_condition);
@@ -29,15 +29,7 @@ public struct XMPPError: LocalizedError, CustomStringConvertible {
     public static var applicationErrorDecocers: [(Element)->ApplicationErrorCondition?] = [PubSubErrorCondition.init(errorEl:)];
     
     public var description: String  {
-        let message = message ?? applicationCondition?.localizedDescription ?? condition.errorDescription ?? condition.rawValue;
-        let codes = [applicationCondition?.description, condition.rawValue].compactMap({ $0 });
-        return "\(message) (\(codes.joined(separator: ", ")))";
-    }
-    
-    public var errorDescription: String? {
-        let message = message ?? applicationCondition?.localizedDescription ?? condition.errorDescription ?? condition.rawValue;
-        let codes = [applicationCondition?.description, condition.rawValue].compactMap({ $0 });
-        return "\(message) (\(codes.joined(separator: ", ")))";
+        return "XMPPError(condition: \(condition.rawValue), applicationCondition: \(applicationCondition?.description ?? "nil"), message: \(message ?? "nil")";
     }
     
     public let condition: ErrorCondition;
@@ -70,7 +62,7 @@ public struct XMPPError: LocalizedError, CustomStringConvertible {
     
     public func element() -> Element {
         let errorEl = Element(name: "error");
-        errorEl.attribute("type", newValue: self.condition.type);
+        errorEl.attribute("type", newValue: self.condition.type.rawValue);
         errorEl.addChild(Element(name: self.condition.rawValue, xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas"));
 
         if let errorText = message {
