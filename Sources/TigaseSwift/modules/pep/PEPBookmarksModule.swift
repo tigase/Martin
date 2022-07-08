@@ -116,18 +116,14 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
         }) {
             // requesting Bookmarks!!
             let pepJID = context.userBareJid;
-            self.pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, limit: .lastItems(1), completionHandler: { result in
-                switch result {
-                case .success(let items):
-                    if let item = items.items.first {
-                        if let bookmarks = Bookmarks(from: item.payload) {
-                            self.currentBookmarks = bookmarks;
-                        }
+            Task {
+                let items = try await self.pubsubModule.retrieveItems(from: pepJID, for: PEPBookmarksModule.ID, limit: .lastItems(1));
+                if let item = items.items.first {
+                    if let bookmarks = Bookmarks(from: item.payload) {
+                        self.currentBookmarks = bookmarks;
                     }
-                default:
-                    break;
                 }
-            });
+            }
         }
     }
     

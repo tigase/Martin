@@ -110,14 +110,14 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
 // async-await support
 extension AdHocCommandsModule {
     
-    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?, completionHandler: @escaping (Result<AdHocCommandsModule.Response, XMPPError>)->Void) {
-        Task {
-            do {
-                completionHandler(.success(try await execute(on: to, command: node, action: action, data: data)))
-            } catch {
-                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
-            }
-        }
-    }
+//    open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?, completionHandler: @escaping (Result<AdHocCommandsModule.Response, XMPPError>)->Void) {
+//        Task {
+//            do {
+//                completionHandler(.success(try await execute(on: to, command: node, action: action, data: data)))
+//            } catch {
+//                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+//            }
+//        }
+//    }
     
 }

@@ -173,7 +173,9 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             
             let nick = joinEl.firstChild(name: "nick")?.value;
             _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: nick);
-            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
+            Task {
+                try await self.retrieveHistory(fromChannel: channelJid, start: nil, rsm: .last(messageSyncLimit));
+            }
             if presenceSubscription {
                 Task {
                     try await self.presenceModule?.subscribed(by: JID(channelJid));
@@ -192,8 +194,9 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             guard let joinEl = response.firstChild(name: "join", xmlns: MixModule.CORE_XMLNS), let participantId = joinEl.attribute("id") else {
                 throw XMPPError(condition: .undefined_condition, stanza: response);
             }
-            
-            self.retrieveHistory(fromChannel: channelJid, rsm: .last(messageSyncLimit));
+            Task {
+                try await self.retrieveHistory(fromChannel: channelJid, start: nil, rsm: .last(messageSyncLimit));
+            }
             _ = self.channelJoined(channelJid: channelJid, participantId: participantId, nick: joinEl.firstChild(name: "nick")?.value);
             return response;
         }
@@ -243,18 +246,18 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         case .created(let channel):
             if self.automaticRetrieve.contains(.participants) {
                 Task {
-                    try await retrieveParticipants(for: channel);
+                    try await participants(for: channel);
                 }
             }
             Task {
-                try await retrieveInfo(for: channel.jid);
+                try await info(for: channel.jid);
             }
             Task {
-                try await retrieveAffiliations(for: channel);
+                try await affiliations(for: channel);
             }
             if self.automaticRetrieve.contains(.avatar) {
                 Task {
-                    try await retrieveAvatar(for: channel.jid);
+                    try await avatar(for: channel.jid);
                 }
             }
             return channel;
@@ -298,7 +301,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
-    open func retrieveAffiliations(for channel: ChannelProtocol) async throws -> Set<ChannelPermission> {
+    open func affiliations(for channel: ChannelProtocol) async throws -> Set<ChannelPermission> {
         do {
             let affiliations = try await pubsubModule.retrieveOwnAffiliations(from: channel.jid, for: nil);
             let values = Dictionary(affiliations.map({ ($0.node, $0.affiliation) }), uniquingKeysWith: { (first, _) in first });
@@ -330,7 +333,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
-    open func retrieveParticipants(for channel: ChannelProtocol) async throws -> [MixParticipant] {
+    open func participants(for channel: ChannelProtocol) async throws -> [MixParticipant] {
         let items = try await pubsubModule.retrieveItems(from: channel.jid, for: "urn:xmpp:mix:nodes:participants");
         let participants = items.items.map({ (item) -> MixParticipant? in
             return MixParticipant(from: item, for: channel);
@@ -352,11 +355,15 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         return participants;
     }
     
-    open func publishInfo(_ info: ChannelInfo, for channelJid: BareJID) async throws {
+    open func info(_ info: MixChannelInfo, for channelJid: BareJID) async throws {
+        _ = try await pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.element(type: .result, onlyModified: false))
+    }
+    
+    open func info(_ info: ChannelInfo, for channelJid: BareJID) async throws {
         _ = try await pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.form().element(type: .result, onlyModified: false))
     }
     
-    open func retrieveInfo(for channelJid: BareJID) async throws -> ChannelInfo {
+    open func info(for channelJid: BareJID) async throws -> ChannelInfo {
         let items = try await pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:info");
         guard let item = items.items.sorted(by: { (i1, i2) in return i1.id > i2.id }).first else {
             throw XMPPError(condition: .item_not_found);
@@ -374,7 +381,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         return info;
     }
     
-    open func retrieveConfig(for channelJid: BareJID) async throws -> MixChannelConfig {
+    open func config(for channelJid: BareJID) async throws -> MixChannelConfig {
         let items = try await pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:config", limit: .lastItems(1));
         guard let item = items.items.first else {
             throw XMPPError(condition: .item_not_found);
@@ -385,7 +392,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         return config;
     }
     
-    open func updateConfig(_ config: MixChannelConfig, for channelJid: BareJID) async throws {
+    open func config(_ config: MixChannelConfig, for channelJid: BareJID) async throws {
         _ = try await pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:config", payload: config.element(type: .submit, onlyModified: false));
     }
     
@@ -448,11 +455,11 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         }
     }
     
-    open func retrieveAllowed(for channelJid: BareJID) async throws -> [BareJID] {
+    open func allowed(for channelJid: BareJID) async throws -> [BareJID] {
         return try await retrieveAccessRules(for: channelJid, rule: .allow);
     }
     
-    open func retrieveBanned(for channelJid: BareJID) async throws -> [BareJID] {
+    open func banned(for channelJid: BareJID) async throws -> [BareJID] {
         return try await retrieveAccessRules(for: channelJid, rule: .deny);
     }
     
@@ -487,31 +494,35 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             if !isPAM2SupportAvailable {
                 for channel in self.channelManager.channels(for: context) {
                     if let lastMessageDate = (channel as? LastMessageTimestampAware)?.lastMessageTimestamp {
-                        self.retrieveHistory(fromChannel: channel.jid, start: lastMessageDate, rsm: .max(100));
+                        Task {
+                            try await self.retrieveHistory(fromChannel: channel.jid, start: lastMessageDate, rsm: .max(100));
+                        }
                     } else {
-                        self.retrieveHistory(fromChannel: channel.jid, rsm: .last(100));
+                        Task {
+                            try await self.retrieveHistory(fromChannel: channel.jid, start: nil, rsm: .last(100));
+                        }
                     }
                 }
             }
             for channel in self.channelManager.channels(for: context) {
                 if self.automaticRetrieve.contains(.participants) {
                     Task {
-                        try await retrieveParticipants(for: channel);
+                        try await participants(for: channel);
                     }
                 }
                 if self.automaticRetrieve.contains(.info) {
                     Task {
-                        try await retrieveInfo(for: channel.jid);
+                        try await info(for: channel.jid);
                     }
                 }
                 if self.automaticRetrieve.contains(.affiliations) {
                     Task {
-                        try await retrieveAffiliations(for: channel);
+                        try await affiliations(for: channel);
                     }
                 }
                 if self.automaticRetrieve.contains(.avatar) {
                     Task {
-                        try await retrieveAvatar(for: channel.jid);
+                        try await avatar(for: channel.jid);
                     }
                 }
             }
@@ -524,7 +535,9 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
                 }), let participantId = annotation.values["participant-id"] {
                     let result = self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
                     if let channel = result, (channel as? LastMessageTimestampAware)?.lastMessageTimestamp == nil {
-                        retrieveHistory(fromChannel: item.jid.bareJid, rsm: .last(100));
+                        Task {
+                            try await retrieveHistory(fromChannel: item.jid.bareJid, start: nil, rsm: .last(100));
+                        }
                     }
                 }
             }
@@ -586,9 +599,13 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
             
             let result = self.channelJoined(channelJid: item.jid.bareJid, participantId: participantId, nick: nil);
             if !isPAM2SupportAvailable {
-                retrieveHistory(fromChannel: item.jid.bareJid, rsm: .last(100));
+                Task {
+                    try await retrieveHistory(fromChannel: item.jid.bareJid, start: nil, rsm: .last(100));
+                }
             } else if let channel = result, (channel as? LastMessageTimestampAware)?.lastMessageTimestamp == nil {
-                retrieveHistory(fromChannel: item.jid.bareJid, rsm: .last(100));
+                Task {
+                    try await retrieveHistory(fromChannel: item.jid.bareJid, start: nil, rsm: .last(100));
+                }
             }
         case .removed(let jid):
             guard let channel = channelManager.channel(for: context, with: jid.bareJid) else {
@@ -611,7 +628,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         return try await mamModule.queryItems(MAMQueryForm(version: .MAM2, start: start), at: JID(jid), node: "urn:xmpp:mix:nodes:messages", queryId: queryId, rsm: rsm);
     }
     
-    open func retrieveAvatar(for jid: BareJID) async throws -> PEPUserAvatarModule.Info {
+    open func avatar(for jid: BareJID) async throws -> PEPUserAvatarModule.Info {
         return try await avatarModule.retrieveAvatarMetadata(from: jid);
     }
 
@@ -721,7 +738,7 @@ extension MixModule {
     open func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await retrieveParticipants(for: channel)))
+                completionHandler?(.success(try await participants(for: channel)))
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }
@@ -731,7 +748,7 @@ extension MixModule {
     open func retrieveAffiliations(for channel: ChannelProtocol, completionHandler: ((Result<Set<ChannelPermission>,XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await retrieveAffiliations(for: channel)));
+                completionHandler?(.success(try await affiliations(for: channel)));
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
             }
@@ -741,7 +758,7 @@ extension MixModule {
     open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
-                completionHandler(.success(try await publishInfo(info, for: channelJid)));
+                completionHandler(.success(try await self.info(info, for: channelJid)));
             } catch {
                 completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
             }
@@ -751,7 +768,7 @@ extension MixModule {
     open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await retrieveInfo(for: channelJid)));
+                completionHandler?(.success(try await info(for: channelJid)));
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
             }
@@ -761,7 +778,7 @@ extension MixModule {
     open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<MixChannelConfig,XMPPError>)->Void) {
         Task {
             do {
-                completionHandler(.success(try await retrieveConfig(for: channelJid)));
+                completionHandler(.success(try await config(for: channelJid)));
             } catch {
                 completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
             }
@@ -771,7 +788,7 @@ extension MixModule {
     open func updateConfig(for channelJid: BareJID, config: MixChannelConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
-                completionHandler(.success(try await updateConfig(config, for: channelJid)));
+                completionHandler(.success(try await self.config(config, for: channelJid)));
             } catch {
                 completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
             }
@@ -821,7 +838,7 @@ extension MixModule {
     open func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
         Task {
             do {
-                completionHandler(.success(try await retrieveAllowed(for: channelJid)))
+                completionHandler(.success(try await allowed(for: channelJid)))
             } catch {
                 completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
             }
@@ -831,7 +848,7 @@ extension MixModule {
     open func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
         Task {
             do {
-                completionHandler(.success(try await retrieveBanned(for: channelJid)))
+                completionHandler(.success(try await banned(for: channelJid)))
             } catch {
                 completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
             }
@@ -847,7 +864,7 @@ extension MixModule {
     open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await retrieveAvatar(for: jid)))
+                completionHandler?(.success(try await avatar(for: jid)))
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }

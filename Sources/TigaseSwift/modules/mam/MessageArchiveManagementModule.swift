@@ -56,7 +56,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
     open override var context: Context? {
         didSet {
             context?.module(.disco).$accountDiscoResult.sink(receiveValue: { [weak self] result in
-                self?.availableVersions = Version.values.filter({ result.features.contains($0.rawValue) });
+                self?.availableVersions = Version.values.filter({ result.features.contains($0.rawValue) }).sorted(by: { $0.rawValue > $1.rawValue });
             }).store(in: self);
         }
     }

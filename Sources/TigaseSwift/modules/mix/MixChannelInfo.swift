@@ -37,6 +37,14 @@ open class MixChannelInfo: DataFormWrapper {
         self.init(form: form);
     }
     
+    public init(name: String?, description: String?, contact: [JID]?) {
+        super.init(form: nil);
+        FORM_TYPE = MixModule.CORE_XMLNS;
+        self.name = name;
+        self.description = description;
+        self.contact = contact;
+    }
+    
     public override init(form: DataForm? = nil) {
         super.init(form: form);
     }

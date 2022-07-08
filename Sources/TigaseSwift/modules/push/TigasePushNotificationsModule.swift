@@ -36,79 +36,54 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
     private var adhocModule: AdHocCommandsModule!;
     private var discoModule: DiscoveryModule!;
     
-    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,XMPPError>)->Void) {
+    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil) async throws -> RegistrationResult {
         let data = DataForm(type: .submit);
         data.add(field: .TextSingle(var: "provider", value: provider));
         data.add(field: .TextSingle(var: "device-token", value: deviceId));
         if pushkitDeviceId != nil {
             data.add(field: .TextSingle(var: "device-second-token", value: pushkitDeviceId));
         }
-        
-        adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data, completionHandler: { result in
-            completionHandler(result.flatMap({ response in
-                guard let form = response.form, let result = RegistrationResult(form: form) else {
-                    return .failure(.undefined_condition);
-                }
-                return .success(result);
-            }))
-        });
+
+        let result = try await adhocModule.execute(on: serviceJid, command: "register-device", action: .execute, data: data);
+        guard let form = result.form, let resultData = RegistrationResult(form: form) else {
+            throw XMPPError(condition: .undefined_condition);
+        }
+        return resultData;
     }
     
-    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, XMPPError>)->Void) {
+    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String) async throws {
         let data = DataForm(type: .submit);
         data.add(field: .TextSingle(var: "provider", value: provider));
         data.add(field: .TextSingle(var: "device-token", value: deviceId));
         
-        adhocModule.execute(on: serviceJid, command: "unregister-device", action: .execute, data: data, completionHandler: { result in
-            switch result {
-            case .success(_):
-                completionHandler(.success(Void()));
-            case .failure(let error):
-                completionHandler(.failure(error));
-            }
-        });
+        _ = try await adhocModule.execute(on: serviceJid, command: "unregister-device", action: .execute, data: data);
     }
     
-    open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
-        guard let context = context else {
-            completionHandler(.failure(.remote_server_timeout));
-            return;
+    open func findPushComponents(requiredFeatures: [String]) async throws -> [JID] {
+        guard let disco = self.context?.module(.disco) else {
+            throw XMPPError(condition: .unexpected_request, message: "No context!")
         }
-        discoModule.items(for: JID(context.userBareJid.domain), node: nil, completionHandler: { result in
-            switch result {
-            case .success(let items):
-                var found: [JID] = [];
-                let group = DispatchGroup();
-                group.enter();
-                for item in items.items {
-                    group.enter();
-                    self.discoModule.info(for: item.jid, node: item.node, completionHandler: { result in
-                        switch result {
-                        case .success(let info):
-                            if (!info.identities.filter({ (identity) -> Bool in
-                                identity.category == "pubsub" && identity.type == "push"
-                            }).isEmpty) && Set(requiredFeatures).isSubset(of: info.features) {
-                                DispatchQueue.main.async {
-                                    found.append(item.jid);
-                                }
-                            }
-                        case .failure(_):
-                            break;
-                        }
-                        group.leave();
-                    });
-                }
-                group.leave();
-                group.notify(queue: DispatchQueue.main, execute: {
-                    if let jid = found.first {
-                        completionHandler(.success(jid));
-                    } else {
-                        completionHandler(.failure(XMPPError(condition: .item_not_found)));
+        
+        let components = try await disco.serverComponents().items.map({ $0.jid });
+        return await withTaskGroup(of: JID?.self, body: { group in
+            for componentJid in components {
+                group.addTask {
+                    guard let info = try? await disco.info(for: componentJid), info.identities.contains(where: { $0.category == "pubsub" && $0.type == "push" }), Set(requiredFeatures).isSubset(of: info.features) else {
+                        return nil;
                     }
-                })
-            case .failure(let error):
-                completionHandler(.failure(error));
+
+                    return componentJid;
+                }
             }
+            
+            var result: [JID] = [];
+            for await component in group {
+                if let comp = component {
+                    result.append(comp);
+                }
+            }
+            
+            return result;
         });
     }
     
@@ -348,47 +323,66 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
 // async-await support
 extension TigasePushNotificationsModule {
     
-    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil) async throws -> RegistrationResult {
-        return try await withUnsafeThrowingContinuation { continuation in
-            registerDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId, pushkitDeviceId: pushkitDeviceId, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await self.registerDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
+            }
         }
     }
     
-    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            unregisterDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await self.unregisterDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId)))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func findPushComponents(requiredFeatures: [String]) async throws -> [JID] {
-        guard let disco = self.context?.module(.disco) else {
-            throw XMPPError(condition: .unexpected_request, message: "No context!")
+    open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
+        guard let context = context else {
+            completionHandler(.failure(.remote_server_timeout));
+            return;
         }
-        
-        let components = try await disco.serverComponents().items.map({ $0.jid });
-        return await withTaskGroup(of: JID?.self, body: { group in
-            for componentJid in components {
-                group.addTask {
-                    guard let info = try? await disco.info(for: componentJid), info.identities.contains(where: { $0.category == "pubsub" && $0.type == "push" }), Set(requiredFeatures).isSubset(of: info.features) else {
-                        return nil;
+        discoModule.items(for: JID(context.userBareJid.domain), node: nil, completionHandler: { result in
+            switch result {
+            case .success(let items):
+                var found: [JID] = [];
+                let group = DispatchGroup();
+                group.enter();
+                for item in items.items {
+                    group.enter();
+                    self.discoModule.info(for: item.jid, node: item.node, completionHandler: { result in
+                        switch result {
+                        case .success(let info):
+                            if (!info.identities.filter({ (identity) -> Bool in
+                                identity.category == "pubsub" && identity.type == "push"
+                            }).isEmpty) && Set(requiredFeatures).isSubset(of: info.features) {
+                                DispatchQueue.main.async {
+                                    found.append(item.jid);
+                                }
+                            }
+                        case .failure(_):
+                            break;
+                        }
+                        group.leave();
+                    });
+                }
+                group.leave();
+                group.notify(queue: DispatchQueue.main, execute: {
+                    if let jid = found.first {
+                        completionHandler(.success(jid));
+                    } else {
+                        completionHandler(.failure(XMPPError(condition: .item_not_found)));
                     }
-
-                    return componentJid;
-                }
+                })
+            case .failure(let error):
+                completionHandler(.failure(error));
             }
-            
-            var result: [JID] = [];
-            for await component in group {
-                if let comp = component {
-                    result.append(comp);
-                }
-            }
-            
-            return result;
         });
     }
     
