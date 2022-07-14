@@ -137,52 +137,40 @@ open class MucModule: XmppModuleBase, XmppModule, Resetable {
         try await write(iq: iq);
     }
     
-    open func roomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
+    open func roomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation) async throws -> [RoomAffiliation] {
         let userRole = room.occupant(nickname: room.nickname)?.role ?? .none;
         guard userRole == .participant || userRole == .moderator else {
-            completionHandler(.failure(XMPPError(condition: .forbidden, message: "Only participant or moderator can ask for room affiliations!")));
-            return;
-        };
-        
-        let iq = Iq();
-        iq.to = JID(room.jid);
-        iq.type = StanzaType.get;
-        
-        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin");
-        iq.addChild(query);
-        query.addChild(Element(name: "item", attributes: ["affiliation": affiliation.rawValue]));
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ stanza in
-                return stanza.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.compactMapChildren(RoomAffiliation.init(from:)) ?? [];
-            }))
-        });
+            throw XMPPError(condition: .forbidden, message: "Only participant or moderator can ask for room affiliations!");
+        }
+        let iq = Iq(type: .get, to: room.jid.jid(), {
+            Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin", {
+                Element(name: "item", attributes: ["affiliation": affiliation.rawValue])
+            })
+        })
+        let response = try await write(iq: iq);
+        return response.firstChild(name: "query", xmlns: "http://jabber.org/protocol/muc#admin")?.compactMapChildren(RoomAffiliation.init(from:)) ?? [];
     }
     
-    open func roomAffiliations(_ affiliations: [RoomAffiliation], to room: RoomProtocol, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    open func roomAffiliations(_ affiliations: [RoomAffiliation], to room: RoomProtocol) async throws {
         let userAffiliation = room.occupant(nickname: room.nickname)?.affiliation ?? .none;
         guard userAffiliation == .admin || userAffiliation == .owner else {
-            completionHandler(.failure(XMPPError(condition: .forbidden, message: "Only room admin or owner can set room affiliations!")));
-            return;
+            throw XMPPError(condition: .forbidden, message: "Only room admin or owner can set room affiliations!");
         };
 
-        let iq = Iq();
-        iq.to = JID(room.jid);
-        iq.type = StanzaType.set;
+        let iq = Iq(type: .set, to: room.jid.jid(), {
+            Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin", {
+                for aff in affiliations {
+                    Element(name: "item", {
+                        Attribute("jid", value: aff.jid.description)
+                        Attribute("affiliation", value: aff.affiliation.rawValue)
+                    })
+                }
+            })
+        })
         
-        let query = Element(name: "query", xmlns: "http://jabber.org/protocol/muc#admin");
-        iq.addChild(query);
-        query.addChildren(affiliations.map({ aff -> Element in
-            let el = Element(name: "item");
-            el.attribute("jid", newValue: aff.jid.description);
-            el.attribute("affiliation", newValue: aff.affiliation.rawValue);
-            return el;
-        }));
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
-        });
+        try await write(iq: iq);
     }
+    
     
     open func setRoomSubject(roomJid: BareJID, newSubject: String?) async throws {
         let message = Message(type: .groupchat, id: UUID().uuidString, to: roomJid.jid(), {
@@ -597,7 +585,27 @@ extension MucModule {
             }
         }
     }
-                                   
+    
+    open func roomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await roomAffiliations(from: room, with: affiliation)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    open func roomAffiliations(_ affiliations: [RoomAffiliation], to room: RoomProtocol, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await roomAffiliations(affiliations, to: room)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
     open func roomConfiguration(of roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
         Task {
             do {

@@ -28,73 +28,65 @@ public protocol RoomWithPushSupportProtocol: RoomProtocol {
 }
 
 extension RoomWithPushSupportProtocol {
+    
+    public func checkTigasePushNotificationRegistrationStatus() async throws -> Bool {
+        guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
+            throw XMPPError(condition: .remote_server_timeout);
+        };
+        
+        let formResult = try await regModule.retrieveRegistrationForm(from: self.jid.jid());
+        guard formResult.type == .dataForm, let field: DataForm.Field.Boolean = formResult.form.field(for: "{http://tigase.org/protocol/muc}offline")else {
+            throw XMPPError(condition: .feature_not_implemented);
+        }
+        
+        return field.value();
+    }
+    
+    public func registerForTigasePushNotification(_ value: Bool) async throws {
+        guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
+            throw XMPPError(condition: .remote_server_timeout);
+        };
+        
+        let formResult = try await regModule.retrieveRegistrationForm(from: self.jid.jid());
+        guard formResult.type == .dataForm, let valueField: DataForm.Field.Boolean = formResult.form.field(for: "{http://tigase.org/protocol/muc}offline"), let nicknameField: DataForm.Field.TextSingle = formResult.form.field(for: "muc#register_roomnick")  else {
+            throw XMPPError(condition: .feature_not_implemented);
+        }
+        
+        if valueField.currentValue == value {
+            return;
+        }
+        
+        if value {
+            valueField.currentValue = value;
+            nicknameField.currentValue = self.nickname;
+            _ = try await regModule.submitRegistrationForm(to: JID(self.jid), form: formResult.form);
+        } else {
+            _ = try await regModule.unregister(from: JID(self.jid));
+        }
+    }
+}
+
+extension RoomWithPushSupportProtocol {
+
     public func checkTigasePushNotificationRegistrationStatus(completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
-        guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        };
-        
-        regModule.retrieveRegistrationForm(from: JID(self.jid), completionHandler: { result in
-            switch result {
-            case .success(let formResult):
-                if formResult.type == .dataForm, let field: DataForm.Field.Boolean = formResult.form.field(for: "{http://tigase.org/protocol/muc}offline") {
-                    completionHandler(.success(field.value()));
-                } else {
-                    completionHandler(.failure(.undefined_condition));
-                }
-            case .failure(let error):
-                completionHandler(.failure(error));
+        Task {
+            do {
+                completionHandler(.success(try await checkTigasePushNotificationRegistrationStatus()));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
             }
-        });
+        }
     }
-    
-    public func registerForTigasePushNotification(_ value: Bool) async throws -> Bool {
-        return try await withUnsafeThrowingContinuation({ continuation in
-            registerForTigasePushNotification(value, completionHandler: continuation.resume(with:));
-        })
-    }
-    
+
     public func registerForTigasePushNotification(_ value: Bool, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
-        guard let regModule = context?.modulesManager.module(.inBandRegistration) else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        };
-        
-        regModule.retrieveRegistrationForm(from: JID(self.jid), completionHandler: { result in
-            switch result {
-            case .success(let formResult):
-                if formResult.type == .dataForm, let valueField: DataForm.Field.Boolean = formResult.form.field(for: "{http://tigase.org/protocol/muc}offline"), let nicknameField: DataForm.Field.TextSingle = formResult.form.field(for: "muc#register_roomnick") {
-                    if valueField.currentValue == value {
-                        completionHandler(.success(value));
-                    } else {
-                        if value {
-                            valueField.currentValue = value;
-                            nicknameField.currentValue = self.nickname;
-                            regModule.submitRegistrationForm(to: JID(self.jid), form: formResult.form, completionHandler: { result in
-                                switch result {
-                                case .success(_):
-                                    completionHandler(.success(value));
-                                case .failure(let error):
-                                    completionHandler(.failure(error));
-                                }
-                            })
-                        } else {
-                            regModule.unregister(from: JID(self.jid), completionHandler: { result in
-                                switch result {
-                                case .success(_):
-                                    completionHandler(.success(value));
-                                case .failure(let error):
-                                    completionHandler(.failure(error));
-                                }
-                            });
-                        }
-                    }
-                } else {
-                    completionHandler(.failure(.undefined_condition));
-                }
-            case .failure(let error):
-                completionHandler(.failure(error));
+        Task {
+            do {
+                try await registerForTigasePushNotification(value)
+                completionHandler(.success(value));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
             }
-        })
+        }
     }
+    
 }
