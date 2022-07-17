@@ -70,7 +70,11 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     }
     
     /// Keeps instance of `CapabilitiesCache` responsible for caching discovery results
-    public let cache: CapabilitiesCache;
+    public var cache: CapabilitiesCache {
+        get {
+            actor.cache;
+        }
+    }
     private var verificationString: String?;
 
     /// Node used in CAPS advertisement
@@ -78,13 +82,13 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     
     private var presenceModule: PresenceModule!;
     private var discoModule: DiscoveryModule!;
-    private let queue = DispatchQueue(label: "capsInProgressSynchronizer");
+    private let actor: CAPSActor;
     private var inProgress: [String] = [];
     
     public let additionalFeatures: [AdditionalFeatures];
     
     public init(cache: CapabilitiesCache = DefaultCapabilitiesCache(), additionalFeatures: [AdditionalFeatures] = []) {
-        self.cache = cache;
+        self.actor = CAPSActor(logger: logger, cache: cache);
         self.additionalFeatures = additionalFeatures;
     }
     
@@ -112,6 +116,37 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
         presence.addChild(c);
     }
  
+    private actor CAPSActor {
+        
+        private let logger: Logger;
+        private var awaiting: Set<String> = [];
+        nonisolated let cache: CapabilitiesCache;
+        
+        init(logger: Logger, cache: CapabilitiesCache) {
+            self.logger = logger;
+            self.cache = cache;
+        }
+        
+        func discoverFeatures(module: DiscoveryModule, from jid: JID, node: String) async throws {
+            guard !awaiting.insert(node).inserted else {
+                return;
+            }
+            
+            defer {
+                awaiting.remove(node);
+            }
+
+            if cache.isCached(node: node) {
+                return;
+            }
+            
+            self.logger.debug("caps disco#info send for: \(node, privacy: .public) to: \(jid, privacy: .auto(mask: .hash))");
+            let info = try await module.info(for: jid, node: node);
+            self.logger.debug("caps disco#info received from: \(jid, privacy: .public) result: \(info, privacy: .public)");
+            cache.store(node: node, identities: info.identities, features: info.features);
+        }
+    }
+    
     open func receivedPresence(_ change: PresenceModule.ContactPresenceChange) {
         let type = change.presence.type ?? .available;
         guard let from = change.presence.from, type == .available else {
@@ -124,36 +159,8 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
         
         logger.debug("updating CAPS for \(from)")
         
-        queue.async {
-            guard !self.inProgress.contains(nodeName) else {
-                return;
-            }
-            self.cache.isCached(node: nodeName) { cached in
-                guard !cached else {
-                    return;
-                }
-                self.queue.async {
-                    guard !self.inProgress.contains(nodeName) else {
-                        return;
-                    }
-                    self.inProgress.append(nodeName);
-                    self.logger.debug("\(self.context) - caps disco#info send for: \(nodeName, privacy: .public) to: \(from, privacy: .auto(mask: .hash))");
-                    self.discoModule.info(for: from, node: nodeName, completionHandler: { result in
-                        self.queue.async {
-                            if let idx = self.inProgress.firstIndex(of: nodeName) {
-                                self.inProgress.remove(at: idx);
-                                self.logger.debug("\(self.context) - caps disco#info received from: \(from, privacy: .public) result: \(result, privacy: .public)");
-                            }
-                            switch result {
-                            case .success(let info):
-                                self.cache.store(node: nodeName, identities: info.identities, features: info.features);
-                            default:
-                                break;
-                            }
-                        }
-                    });
-                }
-            }
+        Task {
+            try await actor.discoverFeatures(module: discoModule, from: from, node: nodeName);
         }
     }
     
@@ -283,7 +290,7 @@ public protocol CapabilitiesCache {
      - parameter node: node to check
      - returns: true if data is available in cache
      */
-    func isCached(node: String, handler: @escaping (Bool)->Void);
+    func isCached(node: String) -> Bool;
     
     /**
      Check if feature is supported for node in cache.

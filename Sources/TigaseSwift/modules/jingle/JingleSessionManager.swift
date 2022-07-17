@@ -24,9 +24,9 @@ import Combine
 
 public protocol JingleSessionManager {
 
-    func sessionInitiated(for context: Context, with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?) throws
+    func sessionInitiated(for context: Context, with jid: JID, sid: String, contents: [Jingle.Content], bundle: Jingle.Bundle?) throws
 
-    func sessionAccepted(for context: Context, with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?) throws
+    func sessionAccepted(for context: Context, with jid: JID, sid: String, contents: [Jingle.Content], bundle: Jingle.Bundle?) throws
     
     func sessionTerminated(for context: Context, with jid: JID, sid: String) throws
     
@@ -34,7 +34,7 @@ public protocol JingleSessionManager {
     
     func messageInitiation(for context: Context, from jid: JID, action: Jingle.MessageInitiationAction) throws
     
-    func contentModified(for context: Context, with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) throws
+    func contentModified(for context: Context, with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: Jingle.Bundle?) throws
     
     func sessionInfo(for context: Context, with jid: JID, sid: String, info: [Jingle.SessionInfo]) throws
 }

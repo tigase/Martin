@@ -63,7 +63,7 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         queue.sync {
             var result = Set<String>();
             for (node, entry) in self.entries {
-                if entry.features.firstIndex(of: feature) != nil {
+                if entry.features.contains(feature) {
                     result.insert(node);
                 }
             }
@@ -71,10 +71,9 @@ open class DefaultCapabilitiesCache: CapabilitiesCache {
         }
     }
     
-    open func isCached(node: String, handler: @escaping (Bool)->Void) {
-        queue.async {
-            let result = self.entries.index(forKey: node) != nil;
-            handler(result);
+    open func isCached(node: String) -> Bool {
+        queue.sync {
+            return self.entries.index(forKey: node) != nil;
         }
     }
     

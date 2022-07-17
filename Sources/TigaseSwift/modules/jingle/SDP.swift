@@ -48,7 +48,7 @@ open class SDP {
         let groupParts = sessionLines.first(where: { s -> Bool in
             return s.starts(with: "a=group:BUNDLE ");
         })?.split(separator: " ") ?? [ "" ];
-        let bundle = groupParts[0] == "a=group:BUNDLE" ? groupParts.dropFirst().map({ s -> String in return String(s); }) : nil;
+        let bundle = Jingle.Bundle(groupParts[0] == "a=group:BUNDLE" ? groupParts.dropFirst().map({ s -> String in return String(s); }) : nil);
         
         let contents = media.map({ m -> Jingle.Content? in
             return Jingle.Content(fromSDP: m, creatorProvider: creatorProvider, localRole: localRole);
@@ -62,13 +62,13 @@ open class SDP {
     
     public let id: String;
     public let contents: [Jingle.Content];
-    public let bundle: [String]?;
+    public let bundle: Jingle.Bundle?;
     
-    public convenience init(contents: [Jingle.Content], bundle: [String]?) {
+    public convenience init(contents: [Jingle.Content], bundle: Jingle.Bundle?) {
         self.init(id: "\(Date().timeIntervalSince1970)", contents: contents, bundle: bundle);
     }
     
-    private init(id: String, contents: [Jingle.Content], bundle: [String]?) {
+    private init(id: String, contents: [Jingle.Content], bundle: Jingle.Bundle?) {
         self.id = id;
         self.contents = contents;
         self.bundle = bundle;
@@ -137,9 +137,9 @@ open class SDP {
             "v=0", "o=- \(sid) \(id) IN IP4 0.0.0.0", "s=-", "t=0 0"
         ];
         
-        if bundle != nil {
+        if let bundles = bundle?.names {
             var t = [ "a=group:BUNDLE" ];
-            t.append(contentsOf: self.bundle!);
+            t.append(contentsOf: bundles);
             sdp.append(t.joined(separator: " "));
         }
         

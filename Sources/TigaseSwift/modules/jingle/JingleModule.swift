@@ -133,7 +133,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         }
         
         let contents = self.contents(from: jingle);
-        let bundle = self.bundle(from: jingle);
+        let bundle = Jingle.Bundle(jingle: jingle);
         
         switch action {
         case .sessionInitiate:
@@ -158,10 +158,6 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
         write(stanza: stanza.makeResult(type: .result));
     }
-        
-    open func bundle(from jingle: Element) -> [String]? {
-        return jingle.firstChild(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0")?.filterChildren(name: "content").compactMap({ $0.attribute("name" )});
-    }
     
     open func contents(from jingle: Element) -> [Jingle.Content] {
         return jingle.filterChildren(name: "content").compactMap({ contentEl in
@@ -181,7 +177,9 @@ open class JingleModule: XmppModuleBase, XmppModule {
         case .propose(let id, let descriptions):
             let xmlnss = descriptions.map({ $0.xmlns });
             guard supportedDescriptions.first(where: { (type, features) -> Bool in features.contains(where: { xmlnss.contains($0)})}) != nil else {
-                self.sendMessageInitiation(action: .reject(id: id), to: from);
+                Task {
+                    try await self.sendMessageInitiation(action: .reject(id: id), to: from);
+                }
                 return;
             }
         case .accept(_):
@@ -196,225 +194,203 @@ open class JingleModule: XmppModuleBase, XmppModule {
         }
     }
     
-    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
+    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID) async throws {
         guard let userJid = context?.userBareJid else {
-            return;
+            throw XMPPError.undefined_condition;
         }
-        switch action {
-        case .proceed(let id):
-            sendMessageInitiation(action: .accept(id: id), to: JID(userJid));
-        case .reject(let id):
-            if jid.bareJid != userJid {
-                sendMessageInitiation(action: .reject(id: id), to: JID(userJid));
+        
+        try await withThrowingTaskGroup(of: Void.self, body: { group in
+            switch action {
+            case .proceed(let id):
+                group.addTask {
+                    try await self.sendMessageInitiation(action: .accept(id: id), to: JID(userJid));
+                }
+            case .reject(let id):
+                group.addTask {
+                    if jid.bareJid != userJid {
+                        try await self.sendMessageInitiation(action: .reject(id: id), to: JID(userJid));
+                    }
+                }
+            default:
+                break;
             }
-        default:
-            break;
-        }
-        let response = Message();
-        response.type = .chat;
-        response.to = jid;
-        response.jingleMessageInitiationAction = action;
-        write(stanza: response, completionHandler: writeCompleted);
+            group.addTask {
+                let response = Message(type: .chat, to: jid);
+                response.jingleMessageInitiationAction = action;
+                try await self.write(stanza: response);
+            }
+            
+            for try await _ in group {
+            }
+        })
     }
 
-    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: Jingle.Bundle?) async throws {
         guard let initiatior = context?.boundJid else {
-            completionHandler(.failure(.undefined_condition));
-            return;
+            throw XMPPError.undefined_condition
         }
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.set;
-        
-        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.attribute("action", newValue: "session-initiate");
-        jingle.attribute("sid", newValue: sid);
-        jingle.attribute("initiator", newValue: initiatior.description);
-    
-        iq.addChild(jingle);
-        
-        contents.forEach { (content) in
-            jingle.addChild(content.toElement());
-        }
-        
-        if bundle != nil {
-            let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
-            group.attribute("semantics", newValue: "BUNDLE");
-            bundle?.forEach({ (name) in
-                group.addChild(Element(name: "content", attributes: ["name": name]));
+        let iq = Iq(type: .set, to: jid, {
+            Element(name: "jingle", xmlns: JingleModule.XMLNS, {
+                Attribute("action", value: "session-initiate")
+                Attribute("sid", value: sid)
+                Attribute("initiator", value: initiatior.description)
+                for content in contents {
+                    content.element();
+                }
+                bundle?.element()
             })
-            jingle.addChild(group);
-        }
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
         });
+        
+        try await write(iq: iq);
     }
     
-    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: Jingle.Bundle?) async throws {
         guard let responder = context?.boundJid else {
-            completionHandler(.failure(.undefined_condition));
-            return;
+            throw XMPPError.undefined_condition
         }
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.set;
-        
-        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.attribute("action", newValue: "session-accept");
-        jingle.attribute("sid", newValue: sid);
-        jingle.attribute("responder", newValue: responder.description);
-        
-        iq.addChild(jingle);
-        
-        contents.forEach { (content) in
-            jingle.addChild(content.toElement());
-        }
-        
-        if bundle != nil {
-            let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
-            group.attribute("semantics", newValue: "BUNDLE");
-            bundle?.forEach({ (name) in
-                group.addChild(Element(name: "content", attributes: ["name": name]));
+        let iq = Iq(type: .set, to: jid, {
+            Element(name: "jingle", xmlns: JingleModule.XMLNS, {
+                Attribute("action", value: "session-accept")
+                Attribute("sid", value: sid)
+                Attribute("responder", value: responder.description)
+                for content in contents {
+                    content.element();
+                }
+                bundle?.element()
             })
-            jingle.addChild(group);
-        }
-        
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map({ _ in Void() }));
         });
+        
+        try await write(iq: iq);
     }
     
-    public func sessionInfo(with jid: JID, sid: String, actions: [Jingle.SessionInfo], creatorProvider: (String)->Jingle.Content.Creator) {
+    public func sessionInfo(with jid: JID, sid: String, actions: [Jingle.SessionInfo], creatorProvider: (String)->Jingle.Content.Creator) async throws {
         guard !actions.isEmpty else {
             return;
         }
         
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.set;
-        
-        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.attribute("action", newValue: "session-info");
-        jingle.attribute("sid", newValue: sid);
-
-        actions.map({ it in it.element(creatorProvider: creatorProvider)}).forEach(jingle.addChild(_:));
-        
-        iq.addChild(jingle);
-        
-        write(iq: iq, completionHandler: { result in
-            print("session info sent and answer received", result);
-        });
-    }
-    
-    public func terminateSession(with jid: JID, sid: String, reason: JingleSessionTerminateReason) {
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.set;
-        
-        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.attribute("action", newValue: "session-terminate");
-        jingle.attribute("sid", newValue: sid);
-        
-        iq.addChild(jingle);
-
-        jingle.addChild(reason.toReasonElement());
-        
-        write(iq: iq, completionHandler: { result in
-            print("session terminated and answer received", result);
-        });
-    }
-    
-    public func transportInfo(with jid: JID, sid: String, contents: [Jingle.Content]) {
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.set;
-        
-        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.attribute("action", newValue: "transport-info");
-        jingle.attribute("sid", newValue: sid);
-        
-        contents.forEach { content in
-            jingle.addChild(content.toElement());
-        }
-        
-        iq.addChild(jingle);
-        
-        write(iq: iq, completionHandler: { response in
-            print("session transport-info response received:", response as Any);
-        });
-    }
-    
-    public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.set;
-        
-        let jingle = Element(name: "jingle", xmlns: JingleModule.XMLNS);
-        jingle.attribute("action", newValue: action.jingleAction.rawValue);
-        jingle.attribute("sid", newValue: sid);
-    
-        iq.addChild(jingle);
-        
-        contents.forEach { (content) in
-            jingle.addChild(content.toElement());
-        }
-        
-        if bundle != nil {
-            let group = Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0");
-            group.attribute("semantics", newValue: "BUNDLE");
-            bundle?.forEach({ (name) in
-                group.addChild(Element(name: "content", attributes: ["name": name]));
+        let iq = Iq(type: .set, to: jid, {
+            Element(name: "jingle", xmlns: JingleModule.XMLNS, {
+                Attribute("action", value: "session-info")
+                Attribute("sid", value: sid)
+                for action in actions {
+                    action.element(creatorProvider: creatorProvider);
+                }
             })
-            jingle.addChild(group);
-        }
+        });
         
-        self.write(iq: iq, completionHandler: completionHandler);
+        try await write(iq: iq);
     }
     
+    public func terminateSession(with jid: JID, sid: String, reason: JingleSessionTerminateReason) async throws {
+        let iq = Iq(type: .set, to: jid, {
+            Element(name: "jingle", xmlns: JingleModule.XMLNS, {
+                Attribute("action", value: "session-terminate")
+                Attribute("sid", value: sid)
+            })
+        });
+        
+        // intentionally we do not wait for the result
+        try await write(stanza: iq);
+    }
+    
+    public func transportInfo(with jid: JID, sid: String, contents: [Jingle.Content]) async throws {
+        let iq = Iq(type: .set, to: jid, {
+            Element(name: "jingle", xmlns: JingleModule.XMLNS, {
+                Attribute("action", value: "transport-info")
+                Attribute("sid", value: sid)
+                for content in contents {
+                    content.element();
+                }
+            })
+        });
+
+        try await write(iq: iq);
+    }
+    
+    public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: Jingle.Bundle?) async throws {
+        let iq = Iq(type: .set, to: jid, {
+            Element(name: "jingle", xmlns: JingleModule.XMLNS, {
+                Attribute("action", value: action.jingleAction.rawValue)
+                Attribute("sid", value: sid)
+                for content in contents {
+                    content.element();
+                }
+                bundle?.element()
+            })
+        });
+        
+        try await write(iq: iq);
+    }
+        
+}
+
+ async-await support
+extension JingleModule {
+
+    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
+        Task {
+            do {
+                writeCompleted?(.success(try await self.sendMessageInitiation(action: action, to: jid)));
+            } catch {
+                writeCompleted?(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
+    }
+
+    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await initiateSession(to: jid, sid: sid, contents: contents, bundle: Jingle.Bundle(bundle))))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await acceptSession(with: jid, sid: sid, contents: contents, bundle: Jingle.Bundle(bundle))))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    public func sessionInfo(with jid: JID, sid: String, actions: [Jingle.SessionInfo], creatorProvider: @escaping (String)->Jingle.Content.Creator) {
+        Task {
+            try await sessionInfo(with: jid, sid: sid, actions: actions, creatorProvider: creatorProvider)
+        }
+    }
+
+    public func terminateSession(with jid: JID, sid: String, reason: JingleSessionTerminateReason) {
+        Task {
+            try await terminateSession(with: jid, sid: sid, reason: reason);
+        }
+    }
+
+    public func transportInfo(with jid: JID, sid: String, contents: [Jingle.Content]) {
+        Task {
+            try await transportInfo(with: jid, sid: sid, contents: contents);
+        }
+    }
+
+    public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await contentModify(with: jid, sid: sid, action: action, contents: contents, bundle: Jingle.Bundle(bundle))))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
     public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) -> Future<Void, XMPPError> {
         return Future({ promise in
             self.contentModify(with: jid, sid: sid, action: action, contents: contents, bundle: bundle, completionHandler: { result in
                 promise(result.map({ _ in Void() }));
             })
         });
-    }
-        
-}
-
-// async-await support
-extension JingleModule {
-    
-    public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            sendMessageInitiation(action: action, to: jid, writeCompleted: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    public func initiateSession(to jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            initiateSession(to: jid, sid: sid, contents: contents, bundle: bundle, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    public func acceptSession(with jid: JID, sid: String, contents: [Jingle.Content], bundle: [String]?) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            acceptSession(with: jid, sid: sid, contents: contents, bundle: bundle, completionHandler: { result in
-                continuation.resume(with: result);
-            })
-        }
-    }
-    
-    public func contentModify(with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: [String]?) async throws {
-        try await withUnsafeThrowingContinuation { continuation in
-            contentModify(with: jid, sid: sid, action: action, contents: contents, bundle: bundle, completionHandler: { result in
-                continuation.resume(with: result.map({ _ in Void() }))
-            })
-        }
     }
 }
 

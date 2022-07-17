@@ -87,43 +87,6 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
         });
     }
     
-    private class DiscoResults {
-        
-        let items: [DiscoveryModule.Item];
-        let completionHandler: (([JID])->Void);
-        
-        var responses = 0;
-        var found: [JID] = [];
-        
-        init(items: [DiscoveryModule.Item], completionHandler: @escaping (([JID])->Void)) {
-            self.items = items;
-            self.completionHandler = completionHandler;
-        }
-        
-        func found(_ jid: JID) {
-            DispatchQueue.main.async {
-                self.found.append(jid);
-                self.responses += 1;
-                self.checkFinished();
-                
-            }
-        }
-        
-        func failure() {
-            DispatchQueue.main.async {
-                self.responses += 1;
-                self.checkFinished();
-            }
-        }
-        
-        func checkFinished() {
-            if (self.responses == items.count) {
-                self.completionHandler(found);
-            }
-        }
-        
-    }
-    
     open class RegistrationResult {
         
         public let node: String;

@@ -21,11 +21,50 @@
 
 import Foundation
 
+public protocol CustomElementConvertible {
+    
+    func element() -> Element
+    
+}
+
 public class Jingle {
     
     public static var supportCryptoAttribute = false;
     
-    public class Content {
+    public struct Bundle: CustomElementConvertible {
+        
+        public let names: [String];
+        
+        public init?(_ names: [String]?) {
+            guard let names = names else {
+                return nil;
+            }
+            self.names = names;
+        }
+        
+        public init(_ names: [String]) {
+            self.names = names;
+        }
+        
+        public init?(jingle: Element) {
+            guard let names = jingle.firstChild(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0")?.filterChildren(name: "content").compactMap({ $0.attribute("name" )}) else {
+                return nil;
+            }
+            self.names = names;
+        }
+        
+        public func element() -> Element {
+            return Element(name: "group", xmlns: "urn:xmpp:jingle:apps:grouping:0", {
+                Attribute("semantics", value: "BUNDLE")
+                for name in names {
+                    Element(name: "content", attributes: ["name": name])
+                }
+            });
+        }
+        
+    }
+    
+    public class Content: CustomElementConvertible {
         
         public let creator: Creator;
         public let name: String;
@@ -68,22 +107,16 @@ public class Jingle {
             return Content(name: name, creator: creator, senders: senders, description: description, transports: transports);
         }
         
-        public func toElement() -> Element {
-            let el = Element(name: "content");
-            el.attribute("creator", newValue: creator.rawValue);
-            el.attribute("name", newValue: name);
-            if let senders = self.senders {
-                el.attribute("senders", newValue: senders.rawValue);
-            }
-            
-            if description != nil {
-                el.addChild(description!.toElement());
-            }
-            transports.forEach { (transport) in
-                el.addChild(transport.toElement());
-            }
-            
-            return el;
+        public func element() -> Element {
+            return Element(name: "content", {
+                Attribute("creator", value: creator.rawValue)
+                Attribute("name", value: name)
+                Attribute("senders", value: senders?.rawValue)
+                description?.element()
+                for transport in transports {
+                    transport.element();
+                }
+            });
         }
         
         public enum Creator: String {
@@ -101,23 +134,19 @@ public class Jingle {
     }
 }
 
-public protocol JingleDescription {
+public protocol JingleDescription: CustomElementConvertible {
     
     var media: String { get };
     
     init?(from el: Element);
     
-    func toElement() -> Element;
-    
 }
 
-public protocol JingleTransport {
+public protocol JingleTransport: CustomElementConvertible {
     
     var xmlns: String { get }
     
     init?(from el: Element);
-    
-    func toElement() -> Element;
     
 }
 
@@ -285,20 +314,18 @@ extension Jingle {
                 self.fingerprint = fingerprint;
             }
             
-            public func toElement() -> Element {
-                let el = Element(name: "transport", xmlns: ICEUDPTransport.XMLNS);
-                if fingerprint != nil {
-                    el.addChild(fingerprint!.toElement());
-                }
-                self.candidates.forEach { (candidate) in
-                    el.addChild(candidate.toElement());
-                }
-                el.attribute("ufrag", newValue: self.ufrag);
-                el.attribute("pwd", newValue: self.pwd);
-                return el;
+            public func element() -> Element {
+                return Element(name: "transport", xmlns: ICEUDPTransport.XMLNS, {
+                    Attribute("ufrag", value: self.ufrag)
+                    Attribute("pwd", value: self.pwd)
+                    fingerprint?.element()
+                    for candidate in candidates {
+                        candidate.element();
+                    }
+                });
             }
             
-            public class Fingerprint {
+            public class Fingerprint: CustomElementConvertible {
                 public let hash: String;
                 public let value: String;
                 public let setup: Setup;
@@ -319,11 +346,11 @@ extension Jingle {
                     self.setup = setup;
                 }
                 
-                public func toElement() -> Element {
-                    let fingerprintEl = Element(name: "fingerprint", cdata: value, xmlns: "urn:xmpp:jingle:apps:dtls:0");
-                    fingerprintEl.attribute("hash", newValue: hash);
-                    fingerprintEl.attribute("setup", newValue: setup.rawValue);
-                    return fingerprintEl;
+                public func element() -> Element {
+                    return Element(name: "fingerprint", xmlns: "urn:xmpp:jingle:apps:dtls:0", cdata: value, {
+                        Attribute("hash", value: hash)
+                        Attribute("setup", value: setup.rawValue)
+                    })
                 }
                 
                 public enum Setup: String {
@@ -333,7 +360,7 @@ extension Jingle {
                 }
             }
             
-            public class Candidate {
+            public class Candidate: CustomElementConvertible {
                 public let component: UInt8;
                 public let foundation: UInt;
                 public let generation: UInt8;
@@ -377,27 +404,24 @@ extension Jingle {
                     self.tcpType = tcpType;
                 }
                 
-                public func toElement() -> Element {
-                    let el = Element(name: "candidate");
-                    
-                    el.attribute("component", newValue: String(component));
-                    el.attribute("foundation", newValue: String(foundation));
-                    el.attribute("generation", newValue: String(generation));
-                    el.attribute("id", newValue: id);
-                    el.attribute("ip", newValue: ip);
-                    el.attribute("network", newValue: String(network));
-                    el.attribute("port", newValue: String(port));
-                    el.attribute("protocol", newValue: protocolType.rawValue);
-                    el.attribute("priority", newValue: String(priority));
-                    if relAddr != nil {
-                        el.attribute("rel-addr", newValue: relAddr);
-                    }
-                    if relPort != nil {
-                        el.attribute("rel-port", newValue: String(relPort!));
-                    }
-                    el.attribute("type", newValue: type?.rawValue);
-                    el.attribute("tcptype", newValue: tcpType);
-                    return el;
+                public func element() -> Element {
+                    return Element(name: "candidate", {
+                        Attribute("component", value: String(component))
+                        Attribute("foundation", value: String(foundation))
+                        Attribute("generation", value: String(generation))
+                        Attribute("id", value: id)
+                        Attribute("ip", value: ip)
+                        Attribute("network", value: String(network))
+                        Attribute("port", value: String(port))
+                        Attribute("protocol", value: protocolType.rawValue)
+                        Attribute("priority", value: String(priority))
+                        Attribute("rel-addr", value: relAddr);
+                        if let relPort = relPort {
+                            Attribute("rel-port", value: String(relPort));
+                        }
+                        Attribute("type", value: type?.rawValue)
+                        Attribute("tcptype", value: tcpType);
+                    });
                 }
                 
                 public enum ProtocolType: String {
@@ -435,12 +459,8 @@ extension Jingle {
                 self.candidates = candidates;
             }
             
-            public func toElement() -> Element {
-                let el = Element(name: "transport", xmlns: RawUDPTransport.XMLNS);
-                self.candidates.forEach { (candidate) in
-                    el.addChild(candidate.toElement());
-                }
-                return el;
+            public func element() -> Element {
+                return Element(name: "transport", xmlns: RawUDPTransport.XMLNS, children: candidates.map({ $0.element() }))
             }
             
             public class Candidate {
@@ -469,7 +489,7 @@ extension Jingle {
                     self.type = type;
                 }
                 
-                public func toElement() -> Element {
+                public func element() -> Element {
                     let el = Element(name: "candidate");
                     
                     el.attribute("component", newValue: String(component));
@@ -539,41 +559,29 @@ extension Jingle {
                 self.hdrExts = hdrExts;
             }
             
-            public func toElement() -> Element {
-                let el = Element(name: "description", xmlns: "urn:xmpp:jingle:apps:rtp:1");
-                el.attribute("media", newValue: media);
-                el.attribute("ssrc", newValue: ssrc);
-                
-                payloads.forEach { (payload) in
-                    el.addChild(payload.toElement());
-                }
-                
-                if Jingle.supportCryptoAttribute && !encryption.isEmpty {
-                    let encEl = Element(name: "encryption")
-                    encryption.forEach { enc in
-                        encEl.addChild(enc.toElement());
+            public func element() -> Element {
+                return Element(name: "description", xmlns: "urn:xmpp:jingle:apps:rtp:1", {
+                    Attribute("media", value: media)
+                    Attribute("ssrc", value: ssrc)
+                    payloads.map({ $0.element() })
+                    if Jingle.supportCryptoAttribute && !encryption.isEmpty {
+                        Element(name: "encryption", {
+                            encryption.map({ $0.element() })
+                        })
                     }
-                    el.addChild(encEl);
-                }
-                ssrcGroups.forEach { (group) in
-                    el.addChild(group.toElement());
-                }
-                ssrcs.forEach({ (ssrc) in
-                    el.addChild(ssrc.toElement());
-                })
-                if bandwidth != nil {
-                    el.addChild(Element(name: "bandwidth", attributes: ["type": bandwidth!]));
-                }
-                if rtcpMux {
-                    el.addChild(Element(name: "rtcp-mux"));
-                }
-                hdrExts.forEach({
-                    el.addChild($0.toElement());
-                })
-                return el;
+                    ssrcGroups.map({ $0.element() })
+                    ssrcs.map({ $0.element() })
+                    if let bandwidth = bandwidth {
+                        Element(name: "bandwidth", attributes: ["type": bandwidth])
+                    }
+                    if rtcpMux {
+                        Element(name: "rtcp-mux")
+                    }
+                    hdrExts.map({ $0.element() })
+                });
             }
             
-            public class Payload {
+            public class Payload: CustomElementConvertible {
                 public let id: UInt8;
                 public let channels: Int;
                 public let clockrate: UInt?;
@@ -605,41 +613,33 @@ extension Jingle {
                     self.rtcpFeedbacks = rtcpFeedbacks;
                 }
                 
-                public func toElement() -> Element {
-                    let el = Element(name: "payload-type");
-                    
-                    el.attribute("id", newValue: String(id));
-                    if channels != 1 {
-                        el.attribute("channels", newValue: String(channels));
-                    }
-                    
-                    el.attribute("name", newValue: name);
-                    
-                    if let clockrate = self.clockrate {
-                        el.attribute("clockrate", newValue: String(clockrate));
-                    }
-                    
-                    if let ptime = self.ptime {
-                        el.attribute("ptime", newValue: String(ptime));
-                    }
-                    if let maxptime = self.maxptime {
-                        el.attribute("maxptime", newValue: String(maxptime));
-                    }
-                    
-                    parameters?.forEach { param in
-                        el.addChild(param.toElement());
-                    }
-                    rtcpFeedbacks?.forEach({ (rtcpFb) in
-                        let rtcpFbEl = rtcpFb.toElement();
-                        // workaround for Movim!
-                        rtcpFbEl.attribute("id", newValue: String(id));
-                        el.addChild(rtcpFbEl);
-                    })
-                    
-                    return el;
+                public func element() -> Element {
+                    return Element(name: "payload-type", {
+                        Attribute("id", value: String(id))
+                        if channels != 1 {
+                            Attribute("channels", value: String(channels))
+                        }
+                        Attribute("name", value: name)
+                        if let clockrate = self.clockrate {
+                           Attribute("clockrate", value: String(clockrate));
+                        }
+                        
+                        if let ptime = self.ptime {
+                            Attribute("ptime", value: String(ptime));
+                        }
+                        if let maxptime = self.maxptime {
+                            Attribute("maxptime", value: String(maxptime));
+                        }
+                        parameters?.map({ $0.element() })
+                        rtcpFeedbacks?.map({
+                            let rtcpFbEl = $0.element();
+                            rtcpFbEl.attribute("id", newValue: String(id));
+                            return rtcpFbEl;
+                        })
+                    });
                 }
                 
-                public class Parameter {
+                public class Parameter: CustomElementConvertible {
                     
                     public let name: String;
                     public let value: String;
@@ -656,12 +656,12 @@ extension Jingle {
                         self.value = value;
                     }
                     
-                    public func toElement() -> Element {
+                    public func element() -> Element {
                         return Element(name: "parameter", attributes: ["name": name, "value": value, "xmlns": "urn:xmpp:jingle:apps:rtp:1"]);
                     }
                 }
                 
-                public class RtcpFeedback {
+                public class RtcpFeedback: CustomElementConvertible {
                     
                     public let type: String;
                     public let subtype: String?;
@@ -678,7 +678,7 @@ extension Jingle {
                         self.subtype = subtype;
                     }
                     
-                    public func toElement() -> Element {
+                    public func element() -> Element {
                         let el = Element(name: "rtcp-fb", xmlns: "urn:xmpp:jingle:apps:rtp:rtcp-fb:0");
                         el.attribute("type", newValue: type);
                         el.attribute("subtype", newValue: subtype);
@@ -687,7 +687,7 @@ extension Jingle {
                 }
             }
             
-            public class Encryption {
+            public class Encryption: CustomElementConvertible {
                 
                 public let cryptoSuite: String;
                 public let keyParams: String;
@@ -709,7 +709,7 @@ extension Jingle {
                     self.tag = tag;
                 }
                 
-                public func toElement() -> Element {
+                public func element() -> Element {
                     let el = Element(name: "crypto");
                     el.attribute("crypto-suite", newValue: cryptoSuite);
                     el.attribute("key-params", newValue: keyParams);
@@ -720,7 +720,7 @@ extension Jingle {
                 
             }
             
-            public class HdrExt {
+            public class HdrExt: CustomElementConvertible {
 
                 public let id: String;
                 public let uri: String;
@@ -743,7 +743,7 @@ extension Jingle {
                     self.senders = senders;
                 }
                 
-                public func toElement() -> Element {
+                public func element() -> Element {
                     let el = Element(name: "rtp-hdrext", xmlns: "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0");
                     el.attribute("id", newValue: id);
                     el.attribute("uri", newValue: uri);
@@ -765,7 +765,7 @@ extension Jingle {
                 case both
             }
             
-            public class SSRCGroup {
+            public class SSRCGroup: CustomElementConvertible {
                 public let semantics: String;
                 public let sources: [String];
                 
@@ -786,19 +786,19 @@ extension Jingle {
                     self.sources = sources;
                 }
                 
-                public func toElement() -> Element {
-                    let el = Element(name: "ssrc-group", xmlns: "urn:xmpp:jingle:apps:rtp:ssma:0");
-                    el.attribute("semantics", newValue: semantics);
-                    for source in sources {
-                        let sel = Element(name: "source");
-                        sel.attribute("ssrc", newValue: source);
-                        el.addChild(sel);
-                    }
-                    return el;
+                public func element() -> Element {
+                    return Element(name: "ssrc-group", xmlns: "urn:xmpp:jingle:apps:rtp:ssma:0", {
+                        Attribute("semantics", value: semantics)
+                        for source in sources {
+                            Element(name: "source", {
+                                Attribute("ssrc", value: source)
+                            })
+                        }
+                    });
                 }
             }
             
-            public class SSRC {
+            public class SSRC: CustomElementConvertible {
                 
                 public let ssrc: String;
                 public let parameters: [Parameter];
@@ -821,22 +821,15 @@ extension Jingle {
                     self.parameters = parameters;
                 }
                 
-                public func toElement() -> Element {
-                    let el = Element(name: "source", xmlns: "urn:xmpp:jingle:apps:rtp:ssma:0");
-                    el.attribute("ssrc", newValue: ssrc);
-                    el.attribute("id", newValue: ssrc);
-                    for param in parameters {
-                        let p = Element(name: "parameter");
-                        p.attribute("name", newValue: param.key);
-                        if param.value != nil {
-                            p.attribute("value", newValue: param.value);
-                        }
-                        el.addChild(p);
-                    }
-                    return el;
+                public func element() -> Element {
+                    return Element(name: "source", xmlns: "urn:xmpp:jingle:apps:rtp:ssma:0", {
+                        Attribute("ssrc", value: ssrc)
+                        Attribute("id", value: ssrc)
+                        parameters.map({ $0.element() })
+                    });
                 }
                 
-                public class Parameter {
+                public class Parameter: CustomElementConvertible {
                     
                     public let key: String;
                     public let value: String?;
@@ -844,6 +837,13 @@ extension Jingle {
                     public init(key: String, value: String?) {
                         self.key = key;
                         self.value = value;
+                    }
+                    
+                    public func element() -> Element {
+                        return Element(name: "parameter", {
+                            Attribute("name", value: key)
+                            Attribute("value", value: value);
+                        });
                     }
                     
                 }

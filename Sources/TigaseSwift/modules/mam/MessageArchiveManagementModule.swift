@@ -123,7 +123,6 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable
      - parameter node: PubSub node to query (if querying PubSub component)
      - parameter queryId: id of a query
      - parameter rsm: instance defining result set Management
-     - parameter completionHandler: callback called when query results
      */
     open func queryItems(_ query: MAMQueryForm, at componentJid: JID? = nil, node: String? = nil, queryId: String, rsm: RSM.Query? = nil) async throws -> QueryResult {
         

@@ -183,10 +183,34 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     
     open class AccountRegistrationAsyncTask {
 
-        private let client: XMPPClient;
+        public let client: XMPPClient;
         var inBandRegistrationModule: InBandRegistrationModule!;
         open var preauthToken: String?;
         var usesDataForm = false;
+        open var acceptedSslCertificate: SslCertificateInfo? {
+            didSet {
+                switch client.connectionConfiguration.connectorOptions {
+                case is SocketConnectorNetwork.Options:
+                    client.connectionConfiguration.modifyConnectorOptions(type: SocketConnectorNetwork.Options.self, { options in
+                        if let fingerprint = acceptedSslCertificate?.details.fingerprintSha1 {
+                            options.sslCertificateValidation = .fingerprint(fingerprint)
+                        } else {
+                            options.sslCertificateValidation = .default;
+                        }
+                    })
+                case is SocketConnector.Options:
+                    client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
+                        if let fingerprint = acceptedSslCertificate?.details.fingerprintSha1 {
+                            options.sslCertificateValidation = .fingerprint(fingerprint)
+                        } else {
+                            options.sslCertificateValidation = .default;
+                        }
+                    })
+                default:
+                    break;
+                }
+            }
+        }
 
         public init(client: XMPPClient = XMPPClient(), domainName: String, preauth: String? = nil) {
             _ = client.modulesManager.register(StreamFeaturesModule());
@@ -239,9 +263,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     }
     
     public struct FormResult {
-        let type: FormType;
-        let form: DataForm;
-        let bob: [BobData];
+        public let type: FormType;
+        public let form: DataForm;
+        public let bob: [BobData];
     }
 
     public typealias RetrieveFormResult<Failure: Error> = Result<FormResult, Failure>
