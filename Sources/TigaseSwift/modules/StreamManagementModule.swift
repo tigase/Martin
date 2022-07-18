@@ -96,6 +96,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     
     open var ackDelay: TimeInterval = 0.1;
     private var scheduledAck: Bool = false;
+    private let semaphore = DispatchSemaphore(value: 1);
     
     open override var context: Context? {
         didSet {

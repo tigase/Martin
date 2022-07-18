@@ -324,7 +324,7 @@ open class JingleModule: XmppModuleBase, XmppModule {
         
 }
 
- async-await support
+// async-await support
 extension JingleModule {
 
     public func sendMessageInitiation(action: Jingle.MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {

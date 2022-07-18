@@ -29,8 +29,8 @@ extension XmppModuleIdentifier {
 }
 
 open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotationAwareProtocol {
-    func prepareRosterGetRequest(queryElem el: Element) {
-        el.addChild(Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0"));
+    func rosterExtensionRequestElement() -> Element? {
+        return Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0");
     }
     
     func process(rosterItemElem el: Element) -> RosterItemAnnotation? {
@@ -150,7 +150,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotat
         if let channel = self.channelManager.channel(for: context, with: channelJid) {
             _  = self.channelManager.close(channel: channel);
         }
-        self.rosterModule?.removeItem(jid: JID(channelJid), completionHandler: { _ in });
+        _ = try? await self.rosterModule?.removeItem(jid: JID(channelJid));
     }
         
     open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100) async throws -> Iq {

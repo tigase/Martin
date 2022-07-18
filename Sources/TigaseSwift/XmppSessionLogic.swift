@@ -337,16 +337,15 @@ open class SocketSessionLogic: XmppSessionLogic {
     
     open func keepalive() {
         if let pingModule = modulesManager.moduleOrNil(.ping) {
-            pingModule.ping(JID(userJid), completionHandler: { result in
-                switch result {
-                case .failure(let error):
-                    if error.condition == .remote_server_timeout {
+            Task {
+                do {
+                    try await pingModule.ping(userJid.jid());
+                } catch {
+                    if (error as? XMPPError)?.condition == .remote_server_timeout {
                         self.logger.debug("\(self.userJid) - no response on ping packet - possible that connection is broken, reconnecting...");
                     }
-                default:
-                    break;
                 }
-            });
+            }
         }
     }
                 
@@ -354,13 +353,19 @@ open class SocketSessionLogic: XmppSessionLogic {
         state = .connected(resumed: resumed);
         self.logger.debug("\(self.userJid) - session binded and established");
         if let discoveryModule = modulesManager.moduleOrNil(.disco) {
-            discoveryModule.discoverServerFeatures(completionHandler: nil);
-            discoveryModule.discoverAccountFeatures(completionHandler: nil);
+            Task {
+                try await discoveryModule.serverFeatures()
+            }
+            Task {
+                try await discoveryModule.accountFeatures();
+            }
         }
         
-        if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement) {
+        if !resumed, let streamManagementModule = modulesManager.moduleOrNil(.streamManagement) {
             if streamManagementModule.isAvailable {
-                streamManagementModule.enable(completionHandler: nil);
+                Task {
+                    try await streamManagementModule.enable();
+                }
             }
         }
     }
@@ -385,59 +390,50 @@ open class SocketSessionLogic: XmppSessionLogic {
                     authModule.login();
                 } else {
                     self.logger.debug("\(self.userJid) - skipping authentication as it is already in progress!");
-                    self.streamAuthenticated();
+                    Task {
+                        do {
+                            try await self.streamAuthenticated();
+                        } catch {
+                            self.stop();
+                        }
+                    }
                 }
             } else if modulesManager.moduleOrNil(.inBandRegistration) != nil {
                 self.logger.debug("\(self.userJid) - marking client as connected and ready for registration")
                 self.state = .connected(resumed: false);
             }
         } else if authorized {
-            self.streamAuthenticated();
+            Task {
+                do {
+                    try await self.streamAuthenticated();
+                } catch {
+                    self.stop();
+                }
+            }
         }
         self.logger.debug("\(self.userJid) - finished processing stream features");
     }
     
-    private func streamAuthenticated() {
-        if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.resumptionEnabled && streamManagementModule.isAvailable {
-            streamManagementModule.resume(completionHandler: { [weak self] result in
-                switch result {
-                case .success(_):
-                    self?.processSessionBindedAndEstablished(resumed: true);
-                case .failure(_):
-                    self?.context?.reset(scopes: [.session]);
-                    self?.streamAuthenticatedNoStreamResumption();
-                }
-            });
-        } else {
-            streamAuthenticatedNoStreamResumption();
-        }
-    }
-    
-    private func streamAuthenticatedNoStreamResumption() {
-        if let bindModule = self.modulesManager.moduleOrNil(.resourceBind) {
-            bindModule.bind(completionHandler: { [weak self] result in
-                switch result {
-                case .failure(_):
-                    self?.stop();
-                case .success(_):
-                    self?.resourceBound();
-                }
-            });
-        } else {
-            self.stop();
-        }
-    }
-    
-    private func resourceBound() {
-        modulesManager.module(.sessionEstablishment).establish(completionHandler: { result in
-            switch result {
-            case .success(_):
-                self.processSessionBindedAndEstablished(resumed: false);
-            case .failure(_):
-                //TODO: Should we handle failure somehow?
-                break;
+    private func streamAuthenticated() async throws {
+        do {
+            // handling stream resumption
+            if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.resumptionEnabled && streamManagementModule.isAvailable {
+                try await streamManagementModule.resume();
+                processSessionBindedAndEstablished(resumed: true);
+                return;
             }
-        });
+        } catch {
+            context?.reset(scopes: [.session]);
+        }
+        
+        // normal connection or stream resumption failed
+        if let bindModule = self.modulesManager.moduleOrNil(.resourceBind) {
+            _ = try await bindModule.bind();
+            try await modulesManager.module(.sessionEstablishment).establish();
+            self.processSessionBindedAndEstablished(resumed: false);
+        } else {
+            throw XMPPError(condition: .undefined_condition, message: "BindModule is not registered!")
+        }
     }
     
     private func startStream() {

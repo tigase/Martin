@@ -44,28 +44,26 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
         
     }
 
-    public struct QueryResult {
+    public struct EntityTime {
         let timeZone: String?;
         let timestamp: Date?;
     }
         
-    open func entityTime(from jid: JID, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.to = jid;
-        iq.type = StanzaType.get;
+    open func entityTime(from jid: JID) async throws -> EntityTime {
+        let iq = Iq(type: .get, to: jid, {
+            Element(name: "time", xmlns: EntityTimeModule.XMLNS)
+        })
         
-        iq.addChild(Element(name: "time", xmlns: EntityTimeModule.XMLNS));
+        let response = try await write(iq: iq);
+        guard let timeEl = response.firstChild(name: "time", xmlns: EntityTimeModule.XMLNS), let utcStr = timeEl.firstChild(name: "utc")?.value, let timezone = timeEl.firstChild(name: "tzo")?.value else {
+            throw XMPPError(condition: .not_acceptable, stanza: response);
+        }
         
-        write(iq: iq, completionHandler: { result in
-            completionHandler(result.map { response in
-                let timeEl = response.firstChild(name: "time", xmlns: EntityTimeModule.XMLNS);
-                var date: Date? = nil;
-                if let utc = timeEl?.firstChild(name: "utc")?.value {
-                    date = EntityTimeModule.stampFormatter.date(from: utc);
-                }
-                return QueryResult(timeZone: timeEl?.firstChild(name: "tzo")?.value, timestamp: date);
-            })
-        });
+        guard let utc = EntityTimeModule.stampFormatter.date(from: utcStr) else {
+            throw XMPPError(condition: .not_acceptable, stanza: response);
+        }
+        
+        return EntityTime(timeZone: timezone, timestamp: utc);
     }
     
     open func processGet(stanza: Stanza) throws {
@@ -95,6 +93,21 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
     
     open func processSet(stanza: Stanza) throws {
         throw XMPPError(condition: .bad_request);
+    }
+    
+}
+
+// async-await support
+extension EntityTimeModule {
+    
+    open func entityTime(from jid: JID, completionHandler: @escaping (Result<EntityTime,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await entityTime(from: jid)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
     }
     
 }

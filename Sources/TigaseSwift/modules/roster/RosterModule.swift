@@ -80,7 +80,9 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
         guard case .connected(let resumed) = newState, !resumed else {
             return;
         }
-        self.requestRoster();
+        Task {
+            try await self.requestRoster();
+        }
     }
         
     open func processGet(stanza: Stanza) throws {
@@ -139,120 +141,33 @@ open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
     /**
      Send roster retrieval request to server
      */
-    @available(*, deprecated, renamed: "requestRoster")
-    open func rosterRequest() {
-        requestRoster(completionHandler: nil)
-    }
-    
-    open func requestRoster(completionHandler: ((Result<Void, XMPPError>)->Void)? = nil) {
-        let iq = Iq();
-        iq.type = .get;
-        let query = Element(name:"query", xmlns:"jabber:iq:roster");
-        
-        for module in context?.modulesManager.modules ?? [] {
-            (module as? RosterAnnotationAwareProtocol)?.prepareRosterGetRequest(queryElem: query);
-        }
-        
-        if isRosterVersioningAvailable, let context = self.context {
-            let x = rosterManager.version(for: context) ?? "";
-            query.attribute("ver", newValue: x);
-        }
-        iq.addChild(query);
-        
-        write(iq: iq, completionHandler: { result in
-            switch result {
-            case .success(let iq):
-                if let query = iq.firstChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
-                    let oldJids = self.rosterManager.items(for: context).map({ $0.jid });
-                    let newJids: Set<JID> = Set(query.filterChildren(name: "item").compactMap({ item in
-                        return self.processRosterItem(item, context: context);
-                    }));
-                    
-                    let removed = oldJids.filter({ !newJids.contains($0) });
-                    for jid in removed {
-                        if self.rosterManager.deleteItem(for: context, jid: jid) != nil {
-                            self.eventsSender.send(.removed(jid));
-                        }
-                    }
-                    
-                    self.rosterManager.set(version: query.attribute("ver"), for: context);
-                }
-            default:
-                break;
-            }
-            completionHandler?(result.map({ _ in Void() }));
-        })
-    }
-    
-    public func addItem(jid: JID, name: String?, groups:[String], completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        self.updateItem(jid: jid, name: name, groups: groups, completionHandler: completionHandler);
-    }
-    
-    public func updateItem(jid: JID, name: String?, groups:[String], completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = .set;
-        
-        let query = Element(name:"query", xmlns:"jabber:iq:roster");
-        iq.addChild(query);
-        
-        let item = Element(name: "item");
-            item.attribute("jid", newValue: jid.description);
-        if !(name?.isEmpty ?? true) {
-            item.attribute("name", newValue: name);
-        }
-        groups.forEach({(group:String)->Void in
-            item.addChild(Element(name:"group", cdata:group));
-        });
-
-        query.addChild(item);
-        
-        write(iq: iq, completionHandler: completionHandler);
-    }
-
-    public func removeItem(jid: JID, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        let iq = Iq();
-        iq.type = .set;
-        
-        let query = Element(name:"query", xmlns:"jabber:iq:roster");
-        iq.addChild(query);
-        
-        let item = Element(name: "item");
-        item.attribute("jid", newValue: jid.description);
-        item.attribute("subscription", newValue: "remove");
-
-        query.addChild(item);
-        
-        write(iq: iq, completionHandler: completionHandler);
-    }
-            
-    /**
-     Actions which could happen to roster items:
-     - added: item was added
-     - removed: item was removed
-     */
-    public enum Action {
-        case added // or updated
-        case removed
-    }
-    
-}
-
-protocol RosterAnnotationAwareProtocol {
-    
-    func prepareRosterGetRequest(queryElem el: Element);
-    
-    func process(rosterItemElem el: Element) -> RosterItemAnnotation?;
-    
-}
-
-// async-await support
-extension RosterModule {
-    
     open func requestRoster() async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            requestRoster(completionHandler: { result in
-                continuation.resume(with: result);
+        let iq = Iq(type: .get, {
+            Element(name:"query", xmlns:"jabber:iq:roster", {
+                if isRosterVersioningAvailable, let context = self.context {
+                    Attribute("ver", value: rosterManager.version(for: context) ?? "")
+                }
+                for module in (context?.modulesManager.modules ?? []).compactMap({ $0 as? RosterAnnotationAwareProtocol }) {
+                    module.rosterExtensionRequestElement();
+                }
             })
+        });
+        
+        let response = try await write(iq: iq);
+        if let query = response.firstChild(name: "query", xmlns: "jabber:iq:roster"), let context = self.context {
+            let oldJids = self.rosterManager.items(for: context).map({ $0.jid });
+            let newJids: Set<JID> = Set(query.filterChildren(name: "item").compactMap({ item in
+                return self.processRosterItem(item, context: context);
+            }));
+        
+            let removed = oldJids.filter({ !newJids.contains($0) });
+            for jid in removed {
+                if self.rosterManager.deleteItem(for: context, jid: jid) != nil {
+                    self.eventsSender.send(.removed(jid));
+                }
+            }
+        
+            self.rosterManager.set(version: query.attribute("ver"), for: context);
         }
     }
     
@@ -277,7 +192,7 @@ extension RosterModule {
         
         return try await write(iq: iq);
     }
-
+            
     public func removeItem(jid: JID) async throws -> Iq {
         let iq = Iq(type: .set, {
             Element(name:"query", xmlns:"jabber:iq:roster", {
@@ -288,4 +203,84 @@ extension RosterModule {
         
         return try await write(iq: iq);
     }
+    
+    /**
+     Actions which could happen to roster items:
+     - added: item was added
+     - removed: item was removed
+     */
+    public enum Action {
+        case added // or updated
+        case removed
+    }
+    
+}
+
+protocol RosterAnnotationAwareProtocol {
+    
+    func rosterExtensionRequestElement() -> Element?
+    
+    func process(rosterItemElem el: Element) -> RosterItemAnnotation?;
+    
+}
+
+// async-await support
+extension RosterModule {
+
+    @available(*, deprecated, renamed: "requestRoster")
+    open func rosterRequest() {
+        requestRoster(completionHandler: nil)
+    }
+
+    open func requestRoster(completionHandler: ((Result<Void, XMPPError>)->Void)? = nil) {
+        Task {
+            do {
+                completionHandler?(.success(try await requestRoster()));
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
+            }
+        }
+    }
+
+    public func addItem(jid: JID, name: String?, groups:[String], completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        self.updateItem(jid: jid, name: name, groups: groups, completionHandler: completionHandler);
+    }
+
+    public func updateItem(jid: JID, name: String?, groups:[String], completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        let iq = Iq();
+        iq.type = .set;
+
+        let query = Element(name:"query", xmlns:"jabber:iq:roster");
+        iq.addChild(query);
+
+        let item = Element(name: "item");
+            item.attribute("jid", newValue: jid.description);
+        if !(name?.isEmpty ?? true) {
+            item.attribute("name", newValue: name);
+        }
+        groups.forEach({(group:String)->Void in
+            item.addChild(Element(name:"group", cdata:group));
+        });
+
+        query.addChild(item);
+
+        write(iq: iq, completionHandler: completionHandler);
+    }
+
+    public func removeItem(jid: JID, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        let iq = Iq();
+        iq.type = .set;
+
+        let query = Element(name:"query", xmlns:"jabber:iq:roster");
+        iq.addChild(query);
+
+        let item = Element(name: "item");
+        item.attribute("jid", newValue: jid.description);
+        item.attribute("subscription", newValue: "remove");
+
+        query.addChild(item);
+
+        write(iq: iq, completionHandler: completionHandler);
+    }
+
 }

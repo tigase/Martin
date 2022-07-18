@@ -51,7 +51,14 @@ open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
         didSet {
             if let context = context {
                 discoModule = context.module(.disco);
-                store(discoModule.$serverDiscoResult.filter({ $0.features.contains(BlockingCommandModule.BC_XMLNS) }).sink(receiveValue: { [weak self] _ in self?.retrieveBlockedJids(completionHandler: nil)}));
+                discoModule.$serverDiscoResult.filter({ $0.features.contains(BlockingCommandModule.BC_XMLNS) }).sink(receiveValue: { [weak self] _ in
+                    guard let that = self else {
+                        return;
+                    }
+                    Task {
+                        try await that.retrieveBlockedJids();
+                    }
+                }).store(in: self);
             }
         }
     }
