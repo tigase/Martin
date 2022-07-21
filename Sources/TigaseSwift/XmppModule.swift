@@ -42,6 +42,20 @@ public protocol XmppModule: AnyObject {
     
 }
 
+extension XmppModule {
+    func process(stanza: Stanza) async throws {
+        return try await withUnsafeThrowingContinuation({ continuation in
+            do {
+                try self.process(stanza: stanza);
+                continuation.resume();
+            } catch {
+                continuation.resume(throwing: error);
+            }
+        })
+        
+    }
+}
+
 extension AnyCancellable {
     
     public func store(in module: XmppModuleBase) {
@@ -132,17 +146,26 @@ open class XmppModuleBase: ContextAware, PacketWriter {
 // async-await support
 extension XmppModuleBase {
     
+    public func write(stanza: Stanza, for condition: ResponseManager.Condition, timeout: TimeInterval) async throws -> Stanza {
+        guard let writer = context?.writer else {
+            throw XMPPError(condition: .remote_server_timeout);
+        }
+        return try await writer.write(stanza: stanza, for: condition, timeout: timeout);
+    }
+    
     @discardableResult
     public func write(iq: Iq, timeout: TimeInterval = 30.0) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation { continuation in
-            write(iq: iq, timeout: timeout, completionHandler: continuation.resume(with:));
+        guard let writer = context?.writer else {
+            throw XMPPError(condition: .remote_server_timeout);
         }
+        return try await writer.write(iq: iq, timeout: timeout);
     }
     
     public func write(stanza: Stanza) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            write(stanza: stanza, completionHandler: continuation.resume(with:));
+        guard let writer = context?.writer else {
+            throw XMPPError(condition: .remote_server_timeout);
         }
+        return try await writer.write(stanza: stanza);
     }
     
 }

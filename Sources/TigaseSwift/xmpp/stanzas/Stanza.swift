@@ -178,13 +178,25 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
             return element.xmlns;
         }
     }
+    
+    open var value: String? {
+        get {
+            return element.value;
+        }
+        set {
+            element.value = newValue;
+        }
+    }
 
-    public init(name: String, xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil) {
+    public init(name: String, xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil, value: String? = nil) {
         self.element = Element(name: name, xmlns: xmlns);
         self.type = type;
         self.to = toJid;
         if let id = id {
             self.element.attribute("id", newValue: id);
+        }
+        if let value = value {
+            self.element.value = value;
         }
     }
     

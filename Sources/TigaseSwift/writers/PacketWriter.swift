@@ -27,21 +27,23 @@ import Foundation
 public typealias PacketErrorDecoder<Failure: Error> = (Stanza?) -> Error;
 
 public protocol PacketWriter {
+
+    func write(stanza: Stanza, for condition: ResponseManager.Condition, timeout: TimeInterval) async throws -> Stanza;
     
-    func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void)
+    func write(iq: Iq, timeout: TimeInterval) async throws -> Iq
         
-    func write(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?)
+    func write(stanza: Stanza) async throws
     
 }
 
 extension PacketWriter {
 
-    public func write(iq: Iq, timeout: TimeInterval = 30.0, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
-        write(iq: iq, timeout: timeout, completionHandler: completionHandler);
+    public func write(stanza: Stanza, for condition: ResponseManager.Condition) async throws -> Stanza {
+        return try await write(stanza: stanza, for: condition, timeout: 30.0)
     }
-
-    public func write(stanza: Stanza) {
-        write(stanza: stanza, completionHandler: nil);
+    
+    public func write(iq: Iq) async throws -> Iq {
+        return try await write(iq: iq, timeout: 30.0);
     }
     
 }
@@ -49,16 +51,25 @@ extension PacketWriter {
 // async-await support
 extension PacketWriter {
     
-    public func write(stanza: Stanza) async throws {
-        return try await withUnsafeThrowingContinuation { continuation in
-            write(stanza: stanza, completionHandler: continuation.resume(with:));
+    public func write(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
+        Task {
+            do {
+                try await write(stanza: stanza);
+                completionHandler?(.success(Void()));
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
+            }
         }
     }
     
-    public func write(iq: Iq, timeout: TimeInterval = 30.0) async throws -> Iq {
-        return try await withUnsafeThrowingContinuation({ continuation in
-            write(iq: iq, timeout: timeout, completionHandler: continuation.resume(with:));
-        })
+    public func write(iq: Iq, timeout: TimeInterval = 30.0, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+        Task {
+            do {
+                completionHandler(.success(try await write(iq: iq, timeout: timeout)));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
     }
 
 }

@@ -235,7 +235,8 @@ extension RosterModule {
     open func requestRoster(completionHandler: ((Result<Void, XMPPError>)->Void)? = nil) {
         Task {
             do {
-                completionHandler?(.success(try await requestRoster()));
+                try await requestRoster();
+                completionHandler?(.success(Void()));
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }

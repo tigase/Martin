@@ -60,7 +60,8 @@ extension ConversationProtocol {
     public func send(message: Message, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await send(message: message)));
+                try await send(message: message);
+                completionHandler?(.success(Void()));
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }

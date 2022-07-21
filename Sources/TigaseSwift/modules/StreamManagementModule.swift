@@ -56,46 +56,51 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     fileprivate var outgoingQueue = Queue<Stanza>();
     
     // TODO: should this stay here or be moved to sessionObject as in Jaxmpp?
-    private let queue = DispatchQueue(label: "StreamManagementQueue");
+    //private let queue = DispatchQueue(label: "StreamManagementQueue");
+    private var lock = UnfairLock();
     private var ackH = AckHolder();
 
-    fileprivate var _ackEnabled: Bool = false;
-    /// Is ACK enabled?
-    open var ackEnabled: Bool {
-        return _ackEnabled;
+    private var ackEnabled: Bool = false;
+    private var resumptionId: String? = nil;
+    private var _resumptionLocation: ConnectorEndpoint? = nil;
+    private var _resumptionTime: TimeInterval?;
+    private var ackTask: Task<Void,Error>?;
+
+    public var isEnabled: Bool {
+        get {
+            lock.with {
+                return ackEnabled;
+            }
+        }
     }
     
     fileprivate var lastRequestTimestamp = Date();
     fileprivate var lastSentH = UInt32(0);
     
     /// Is stream resumption enabled?
-    open var resumptionEnabled: Bool {
-        return resumptionId != nil
+    open var isResumptionEnabled: Bool {
+        return lock.with {
+            resumptionId != nil
+        }
     }
     
-    fileprivate var resumptionId: String? = nil;
-    
-    fileprivate var _resumptionLocation: ConnectorEndpoint? = nil;
     /// Address to use when resuming stream
     open var resumptionLocation: ConnectorEndpoint? {
-        return _resumptionLocation;
+        return lock.with {
+            _resumptionLocation;
+        }
     }
     /// Maximal resumption timeout to use
-    open var maxResumptionTimeout: Int?;
+    public let maxResumptionTimeout: Int?;
     
-    fileprivate var _resumptionTime: TimeInterval?;
     /// Negotiated resumption timeout
     open var resumptionTime: TimeInterval? {
-        return _resumptionTime;
+        return lock.with { _resumptionTime };
     }
-    
-    private var enablingHandler: ((Result<String?,XMPPError>)->Void)?;
-    private var resumptionHandler: ((Result<Void,XMPPError>)->Void)?;
     
     open private(set) var isAvailable: Bool = false;
     
-    open var ackDelay: TimeInterval = 0.1;
-    private var scheduledAck: Bool = false;
+    public let ackDelay: TimeInterval;
     private let semaphore = DispatchSemaphore(value: 1);
     
     open override var context: Context? {
@@ -104,7 +109,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
     }
     
-    public override init() {
+    public init(maxResumptionTimeout: Int? = nil, ackDelay: TimeInterval = 0.1) {
+        self.maxResumptionTimeout = maxResumptionTimeout;
+        self.ackDelay = ackDelay;
     }
     
     /**
@@ -112,34 +119,47 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
      - parameter resumption: should resumption be enabled
      - parameter maxResumptionTimeout: maximal resumption timeout to use
      */
-    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil, completionHandler: ( (Result<String?,XMPPError>)->Void)?) {
-        guard !(ackEnabled || resumptionEnabled) else {
-            completionHandler?(.failure(XMPPError(condition: .unexpected_request)));
-            return;
+    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) async throws {
+        guard !(ackEnabled || isResumptionEnabled) else {
+            throw XMPPError(condition: .unexpected_request);
         }
         
         logger.debug("enabling StreamManagament with resume=\(resumption)");
-        self.enablingHandler = completionHandler;
-        let enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS);
-        if resumption {
-            enable.attribute("resume", newValue: "true");
-            if let timeout = maxResumptionTimeout ?? self.maxResumptionTimeout {
-                enable.attribute("max", newValue: String(timeout));
+        let enable = Stanza(name: "enable", xmlns: StreamManagementModule.SM_XMLNS, {
+            if resumption {
+                Attribute("resume", value: "true")
+                if let timeout = maxResumptionTimeout ?? self.maxResumptionTimeout {
+                    Attribute("max", value: String(timeout));
+                }
             }
-        }
+        });
         
-        write(stanza: enable);
+        let response = try await write(stanza: enable, for: .init(names: ["enabled","failed"], xmlns: StreamManagementModule.SM_XMLNS));
+        switch response.name {
+        case "enabled":
+            processEnabled(response);
+        default:
+            try processFailed(response);
+        }
     }
     
     open func reset(scopes: Set<ResetableScope>) {
-        queue.async {
-            self.scheduledAck = false;
-        }
-        if scopes.contains(.stream) {
-            _ackEnabled = false;
-        }
-        if scopes.contains(.session) {
-            reset();
+        lock.with {
+            ackTask?.cancel();
+            ackTask = nil
+
+            if scopes.contains(.stream) {
+                ackEnabled = false;
+            }
+            if scopes.contains(.session) {
+                ackEnabled = false;
+                resumptionId = nil
+                _resumptionTime = nil;
+                _resumptionLocation = nil;
+                    ackH.reset();
+                outgoingQueue.clear();
+
+            }
         }
     }
         
@@ -153,37 +173,22 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
      - parameter stanza: stanza to process
      */
     open func processIncoming(stanza: Stanza) -> Bool {
-        guard ackEnabled else {
-            guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
-                return false;
-            }
-            
-            switch stanza.name {
-            case "resumed":
-                processResumed(stanza);
-            case "failed":
-                processFailed(stanza);
-            case "enabled":
-                processEnabled(stanza);
-            default:
-                break;
-            }
-            return true;
+        guard lock.with({ ackEnabled }) else {
+            return false;
         }
         
         guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
-            queue.sync {
+            lock.with {
                 ackH.incrementIncoming();
-                guard !self.scheduledAck else {
-                    return;
-                }
-                self.scheduledAck = true;
-                queue.asyncAfter(deadline: .now() + ackDelay) {
-                    guard self.scheduledAck else {
-                        return;
+            }
+           
+            if ackTask == nil {
+                ackTask = Task {
+                    try await Task.sleep(nanoseconds: UInt64(ackDelay * 1000_000_000));
+                    self.lock.with {
+                        ackTask = nil;
                     }
-                    self.scheduledAck = false;
-                    self._sendAck(force: true);
+                    _sendAck(force: true)
                 }
             }
             return false;
@@ -199,7 +204,6 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         default:
             return false;
         }
-        //return false;
     }
     
     /**
@@ -208,7 +212,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
      - parameter stanza: stanza to process
      */
     open func processOutgoing(stanza: Stanza) {
-        guard ackEnabled else {
+        guard lock.with({ ackEnabled }) else {
             return;
         }
         
@@ -221,58 +225,51 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             }
         }
         
-        queue.sync {
+        let sendRequest: Bool = lock.with {
             ackH.incrementOutgoing();
+            outgoingQueue.offer(stanza);
+            if lastRequestTimestamp.timeIntervalSinceNow >= 1 && outgoingQueue.count > 3 {
+                lastRequestTimestamp = Date();
+                return true;
+            }
+            return false;
         }
-        outgoingQueue.offer(stanza);
-        if (outgoingQueue.count > 3) {
+        
+        if sendRequest {
             request();
         }
     }
     
     /// Send ACK request to server
     open func request() {
-        guard lastRequestTimestamp.timeIntervalSinceNow < 1 else {
-            return;
+        lock.with {
+            lastRequestTimestamp = Date();
         }
-        
         let r = Stanza(name: "r", xmlns: StreamManagementModule.SM_XMLNS);
         write(stanza: r);
-        lastRequestTimestamp = Date();
     }
-    
-    /// Reset all internal variables
-    open func reset() {
-        enablingHandler = nil;
-        resumptionHandler = nil;
-        _ackEnabled = false;
-        resumptionId = nil
-        _resumptionTime = nil;
-        _resumptionLocation = nil;
-        queue.sync {
-            ackH.reset();
-        }
-        outgoingQueue.clear();
-    }
-    
-    /// Start stream resumption
-    open func resume(completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        logger.debug("starting stream resumption");
-        self.resumptionHandler = completionHandler;
-        let resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
-        queue.sync {
-            resume.attribute("h", newValue: String(ackH.incomingCounter));
-        }
-        resume.attribute("previd", newValue: resumptionId);
         
-        write(stanza: resume);
+    /// Start stream resumption
+    open func resume() async throws {
+        logger.debug("starting stream resumption");
+        let resume = Stanza(name: "resume", xmlns: StreamManagementModule.SM_XMLNS);
+        lock.with {
+            resume.attribute("h", newValue: String(ackH.incomingCounter));
+            resume.attribute("previd", newValue: resumptionId);
+        }
+        
+        let response = try await write(stanza: resume, for: .init(names: ["resumed","failed"], xmlns: StreamManagementModule.SM_XMLNS));
+        switch response.name {
+        case "resumed":
+            processResumed(response);
+        default:
+            try processFailed(response);
+        }
     }
     
     /// Send ACK to server
     open func sendAck() {
-        return queue.sync {
-            _sendAck(force: false);
-        }
+        _sendAck(force: false);
     }
     
     private func _sendAck(force: Bool) {
@@ -284,26 +281,28 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     
     // call only from internal queue
     private func prepareAck(force: Bool) -> Stanza? {
-        guard force || lastSentH != ackH.incomingCounter else {
-            return nil;
+        lock.with {
+            guard force || lastSentH != ackH.incomingCounter else {
+                return nil;
+            }
+        
+            let value = ackH.incomingCounter;
+            lastSentH = value;
+        
+            let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
+            a.attribute("h", newValue: String(value));
+            return a;
         }
-        
-        let value = ackH.incomingCounter;
-        lastSentH = value;
-        
-        let a = Stanza(name: "a", xmlns: StreamManagementModule.SM_XMLNS);
-        a.attribute("h", newValue: String(value));
-        return a;
     }
     
     /// Process ACK from server
-    func processAckAnswer(_ stanza: Stanza) {
+    private func processAckAnswer(_ stanza: Stanza) {
         guard let attr = stanza.attribute("h") else {
             return;
         }
         let newH = UInt32(attr) ?? 0;
-        queue.sync {
-            _ackEnabled = true;
+        lock.with {
+            ackEnabled = true;
             let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
             ackH.outgoingCounter = newH;
             while left < outgoingQueue.count {
@@ -313,75 +312,68 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     }
     
     /// Process ACK request from server
-    func processAckRequest(_ stanza: Stanza) {
-        queue.asyncAfter(deadline: .now() + 0.1) {
+    private func processAckRequest(_ stanza: Stanza) {
+        Task {
+            try await Task.sleep(nanoseconds: 100_000_000)
             guard let a = self.prepareAck(force: true) else {
                 return;
             }
-            self.write(stanza: a);
+            try await self.write(stanza: a);
         }
     }
     
-    func processFailed(_ stanza: Stanza) {
-        let resumptionHandler = self.resumptionHandler;
-        let enablingHandler = self.enablingHandler;
-        reset();
+    private func processFailed(_ stanza: Stanza) throws {
+        reset(scopes: [.stream,.session]);
         
         logger.debug("stream resumption failed");
         
-        let error = XMPPError(condition: stanza.firstChild(xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas").map({ ErrorCondition.init(rawValue: $0.name) ?? .undefined_condition }) ?? .undefined_condition);
-        resumptionHandler?(.failure(error));
-        enablingHandler?(.failure(error));
+        throw XMPPError(condition: stanza.firstChild(xmlns: "urn:ietf:params:xml:ns:xmpp-stanzas").map({ ErrorCondition.init(rawValue: $0.name) ?? .undefined_condition }) ?? .undefined_condition);
     }
     
-    func processResumed(_ stanza: Stanza) {
+    private func processResumed(_ stanza: Stanza) {
         let newH = UInt32(stanza.attribute("h")!) ?? 0;
-        _ackEnabled = true;
-        queue.sync {
+        let oldOutgoingQueue: Queue<Stanza> = lock.with {
+            ackEnabled = true;
             let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
             while left < outgoingQueue.count {
                 _ = outgoingQueue.poll();
             }
             ackH.outgoingCounter = newH;
+            defer {
+                outgoingQueue = Queue<Stanza>();
+            }
+            return outgoingQueue;
         }
-        let oldOutgoingQueue = outgoingQueue;
-        outgoingQueue = Queue<Stanza>();
         while let s = oldOutgoingQueue.poll() {
             write(stanza: s);
         }
         
         logger.debug("stream resumed");
-        if let completionHandler = resumptionHandler {
-            resumptionHandler = nil;
-            completionHandler(.success(Void()));
-        }
     }
     
-    func processEnabled(_ stanza: Stanza) {
+    private func processEnabled(_ stanza: Stanza) {
         let id = stanza.attribute("id");
         let r = stanza.attribute("resume");
         let mx = stanza.attribute("max");
         //let resume = (r == "true" || r == "1") && id != nil;
-        _resumptionLocation = (self.context as? XMPPClient)?.connector?.prepareEndpoint(withResumptionLocation: stanza.attribute("location"))
-        
-        resumptionId = id;
-        _ackEnabled = true;
-        if mx != nil {
-            _resumptionTime = Double(mx!);
+        lock.with {
+            _resumptionLocation = (self.context as? XMPPClient)?.connector?.prepareEndpoint(withResumptionLocation: stanza.attribute("location"))
+            
+            resumptionId = id;
+            ackEnabled = true;
+            if let mx = mx {
+                _resumptionTime = Double(mx);
+            }
         }
         
         logger.debug("stream management enabled");
-        if let completionHandler = enablingHandler {
-            enablingHandler = nil;
-            completionHandler(.success(resumptionId));
-        }
     }
     
     /// Internal class for holding incoming and outgoing counters
     class AckHolder {
         
-        var incomingCounter:UInt32 = 0;
-        var outgoingCounter:UInt32 = 0;
+        var incomingCounter: UInt32 = 0;
+        var outgoingCounter: UInt32 = 0;
         
         func reset() {
             incomingCounter = 0;
@@ -470,19 +462,26 @@ public class Queue<T> {
 // async-await support
 extension StreamManagementModule {
     
-    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil) async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            enable(resumption: resumption, maxResumptionTimeout: maxResumptionTimeout, completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil, completionHandler: ( (Result<String?,XMPPError>)->Void)?) {
+        Task {
+            do {
+                try await enable(resumption: resumption, maxResumptionTimeout: maxResumptionTimeout);
+                completionHandler?(.success(self.resumptionId))
+            } catch {
+                completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
     
-    open func resume() async throws {
-        _ = try await withUnsafeThrowingContinuation { continuation in
-            resume(completionHandler: { result in
-                continuation.resume(with: result);
-            })
+    open func resume(completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        Task {
+            do {
+                try await resume();
+                completionHandler(.success(Void()))
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+            }
         }
     }
+
 }

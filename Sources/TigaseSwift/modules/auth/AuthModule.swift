@@ -55,11 +55,7 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable {
     public override init() {
         
     }
-    
-    deinit {
-        stateObserverCancellable?.cancel();
-    }
-    
+        
     open func process(stanza: Stanza) throws {
         
     }
@@ -68,15 +64,17 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable {
      Starts authentication process using other module providing 
      mechanisms for authentication
      */
-    open func login() {
-        stateObserverCancellable?.cancel();
+    open func login() async throws {
         if let saslModule = context?.modulesManager.moduleOrNil(.sasl) {
-            stateObserverCancellable = saslModule.$state.sink(receiveValue: { [weak self] state in
-                self?.update(state: state);
-            })
-            saslModule.login();
+            do {
+                try await saslModule.login();
+                state = .authorized;
+            } catch {
+                state = .error(error);
+            }
         } else {
-            state = .error(XMPPError(condition: .item_not_found));
+            state = .notAuthorized;
+            throw XMPPError(condition: .undefined_condition, message: "Missing SASL authentication module")
         }
     }
     

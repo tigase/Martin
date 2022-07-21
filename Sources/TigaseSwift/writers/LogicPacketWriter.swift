@@ -26,33 +26,63 @@ import Foundation
  */
 public struct LogicPacketWriter: PacketWriter {
     
-    let sessionLogic: XmppSessionLogic;
-    let responseManager: ResponseManager;
+    private let sessionLogic: XmppSessionLogic;
+    private let responseManager: ResponseManager;
+    
+    private let iqRequestTypes: Set<StanzaType> = [.get, .set];
     
     init(sessionLogic: XmppSessionLogic, responseManager: ResponseManager) {
         self.sessionLogic = sessionLogic;
         self.responseManager = responseManager;
     }
-      
-    public func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void) {
-        let cancellable = responseManager.registerResponseHandler(for: iq, timeout: timeout, completionHandler: completionHandler);
-        
-        sessionLogic.send(stanza: iq, completionHandler: { result in
-            switch result {
-            case .success(_):
-                break;
-            case .failure(_):
-                cancellable.cancel();
+    
+    public func write(stanza: Stanza, for condition: ResponseManager.Condition, timeout: TimeInterval) async throws -> Stanza {
+        try await withUnsafeThrowingContinuation({ continuation in
+            Task {
+                await responseManager.registerContinuation(continuation, for: condition, timeout: timeout);
+                do {
+                    try await sessionLogic.send(stanza: stanza)
+                } catch {
+                    await responseManager.cancel(for: condition, withError: error);
+                }
             }
-        });
+        })
+    }
+      
+    public func write(iq: Iq, timeout: TimeInterval) async throws -> Iq {
+        guard let type = iq.type else {
+            throw XMPPError(condition: .bad_request, message: "IQ stanza requires `type`!");
+        }
+        guard iqRequestTypes.contains(type) else {
+            fatalError("This method can only be used for sending iq requests and not responses!");
+        }
+        return try await withUnsafeThrowingContinuation({ continuation in
+            Task {
+                let key = await responseManager.registerContinuation(continuation, for: iq, timeout: timeout);
+                do {
+                    try await sessionLogic.send(stanza: iq)
+                } catch {
+                    await responseManager.cancel(for: key, withError: error);
+                }
+            }
+        })
     }
     
-    public func write(stanza: Stanza, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
-        if stanza.name == "iq" && stanza.id == nil {
-            stanza.id = UUID().uuidString;
+    public func write(stanza: Stanza) async throws {
+        if stanza.name == "iq" {
+            guard let type = stanza.type else {
+                throw XMPPError(condition: .bad_request, message: "IQ stanza requires `type`!");
+            }
+            if iqRequestTypes.contains(type) {
+                if stanza.id == nil {
+                    stanza.id = UIDGenerator.nextUid;
+                }
+            } else {
+                throw XMPPError(condition: .bad_request, message: "IQ stanza of type error requires `id` attribute!")
+            }
         }
 
-        sessionLogic.send(stanza: stanza, completionHandler: completionHandler);
+        try await sessionLogic.send(stanza: stanza);
     }
     
 }

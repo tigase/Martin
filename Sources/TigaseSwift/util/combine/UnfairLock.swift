@@ -35,4 +35,19 @@ open class UnfairLock {
         os_unfair_lock_unlock(&lock_s);
     }
     
+    public func with<T>(_ body: () -> T) -> T {
+        lock();
+        defer {
+            unlock();
+        }
+        return body();
+    }
+    
+    public func with<T>(_ body: () throws -> T) rethrows -> T {
+        lock();
+        defer {
+            unlock();
+        }
+        return try body();
+    }
 }

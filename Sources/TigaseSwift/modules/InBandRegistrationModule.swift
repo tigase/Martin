@@ -137,8 +137,9 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
         }
                               
         let iq = Iq(type: .set, to: jid ?? JID(context.boundJid?.domain ?? context.userBareJid.domain), {
-            Element(name: "query", xmlns: "jabber:iq:register")
-            form.element(type: .submit, onlyModified: false)
+            Element(name: "query", xmlns: "jabber:iq:register", {
+                form.element(type: .submit, onlyModified: false)
+            })
         });
         
         return try await write(iq: iq);
@@ -385,7 +386,9 @@ extension InBandRegistrationModule {
                 options.sslCertificateValidation = sslCertificateValidator == nil ? .default : .customValidator(sslCertificateValidator!);
             });
             self.onCertificateValidationError = onCertificateValidationError;
-            self.client?.login();
+            Task {
+                try await self.client?.login();
+            }
         }
         
         deinit {
@@ -397,7 +400,9 @@ extension InBandRegistrationModule {
         open func submit(form: DataForm) {
             formToSubmit = form;
             guard (client?.state ?? .disconnected()) != .disconnected() else {
-                client?.login();
+                Task {
+                    try await client?.login();
+                }
                 return;
             }
             if (usesDataForm) {
@@ -463,7 +468,9 @@ extension InBandRegistrationModule {
                     })
                     self.acceptedCertificate = certData;
                     self.serverAvailable = false;
-                    self.client.login();
+                    Task {
+                        try await self.client.login();
+                    }
                 });
             }
         }

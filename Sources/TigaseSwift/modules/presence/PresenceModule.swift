@@ -81,7 +81,9 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
         }
 
         if initialPresence {
-            sendInitialPresence();
+            Task {
+                try await sendInitialPresence();
+            }
         }
     }
     
@@ -114,14 +116,14 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
     }
     
     /// Send initial presence
-    open func sendInitialPresence() {
+    open func sendInitialPresence() async throws {
         self.presence = presence;
-        write(stanza: presence);
+        try await write(stanza: presence);
     }
     
-    open func sendPresence() {
+    open func sendPresence() async throws {
         self.presence = presence;
-        write(stanza: presence);
+        try await write(stanza: presence);
     }
     
     /**
@@ -226,12 +228,16 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetabl
 // async-await support
 extension PresenceModule {
     
-    open func sendInitialPresence() async throws {
-        try await write(stanza: presence);
+    open func sendInitialPresence() {
+        Task {
+            try await sendInitialPresence();
+        }
     }
     
-    open func sendPresence() async throws {
-        try await write(stanza: presence);
+    open func sendPresence() {
+        Task {
+            try await sendPresence();
+        }
     }
     
     open func setPresence(show:Presence.Show?, status:String?, priority:Int?, additionalElements: [Element]? = nil) async throws {

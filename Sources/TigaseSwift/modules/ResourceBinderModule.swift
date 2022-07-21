@@ -88,7 +88,8 @@ extension ResourceBinderModule {
     open func bind(completionHandler: ((Result<JID,XMPPError>)->Void)? = nil) {
         Task {
             do {
-                completionHandler?(.success(try await bind()))
+                let jid = try await bind();
+                completionHandler?(.success(jid))
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }

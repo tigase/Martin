@@ -69,7 +69,24 @@ open class Context: CustomStringConvertible, Resetable {
     open var isConnected: Bool {
         return self.state == .connected();
     }
-        
+    
+    private let lock = UnfairLock();
+    public func withLock(body: ()->Void) {
+        lock.lock();
+        defer {
+            lock.unlock()
+        }
+        body();
+    }
+
+    public func withLock(body: () throws -> Void) rethrows {
+        lock.lock();
+        defer {
+            lock.unlock()
+        }
+        try body();
+    }
+    
     // Instance of `PacketWriter` to use for sending stanzas
     open var writer: PacketWriter;
     
@@ -82,7 +99,7 @@ open class Context: CustomStringConvertible, Resetable {
     }
     
     deinit {
-        queue.sync {
+        withLock {
             for lifecycleAware in lifecycleAwares {
                 lifecycleAware.deinitialize(context: self);
             }
@@ -110,23 +127,32 @@ open class Context: CustomStringConvertible, Resetable {
     }
 
     open func register(lifecycleAware: ContextLifecycleAware) {
-        queue.async {
+        withLock {
             self.lifecycleAwares.append(lifecycleAware);
             lifecycleAware.initialize(context: self);
         }
     }
     
     open func unregister(lifecycleAware: ContextLifecycleAware) {
-        queue.async {
+        withLock {
             lifecycleAware.deinitialize(context: self);
             self.lifecycleAwares.append(lifecycleAware);
         }
     }
     
     func update(state: XMPPClient.State) {
-        guard state != self.state else {
-            return;
+        withLock {
+            guard state != self.state else {
+                return;
+            }
+            self.state = state;
         }
-        self.state = state;
+    }
+    
+    func update(state newState: XMPPClient.State, precondition: (XMPPClient.State) throws ->Void) throws {
+        try withLock {
+            try precondition(state);
+            self.state = newState;
+        }
     }
 }

@@ -144,8 +144,8 @@ extension Element {
 
 extension Stanza {
     
-    public convenience init(name: String, xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil, @ElementBuilder _ builder: ()->[ElementItemProtocol]) {
-        self.init(name: name, xmlns: xmlns, type: type, id: id, to: toJid);
+    public convenience init(name: String, xmlns: String? = nil, type: StanzaType? = nil, id: String? = nil, to toJid: JID? = nil, value: String? = nil, @ElementBuilder _ builder: ()->[ElementItemProtocol]) {
+        self.init(name: name, xmlns: xmlns, type: type, id: id, to: toJid, value: value);
         let items = builder();
         for attr in items.compactMap({ $0 as? Attribute }) {
             attribute(attr.name, newValue: attr.value);

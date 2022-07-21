@@ -43,24 +43,24 @@ public extension VCardModuleProtocol {
 // async-await support
 extension VCardModuleProtocol {
     
-    public func publishVCard(_ vcard: VCard, to jid: BareJID? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
-        Task {
-            do {
-                completionHandler(.success(try await publish(vcard: vcard, to: jid)))
-            } catch {
-                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
-            }
-        }
-    }
-    
-    public func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
-        Task {
-            do {
-                completionHandler(.success(try await retrieveVCard(from: jid)))
-            } catch {
-                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
-            }
-        }
-    }
+//    public func publishVCard(_ vcard: VCard, to jid: BareJID? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+//        Task {
+//            do {
+//                completionHandler(.success(try await publish(vcard: vcard, to: jid)))
+//            } catch {
+//                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+//            }
+//        }
+//    }
+//    
+//    public func retrieveVCard(from jid: JID? = nil, completionHandler: @escaping (Result<VCard,XMPPError>)->Void) {
+//        Task {
+//            do {
+//                completionHandler(.success(try await retrieveVCard(from: jid)))
+//            } catch {
+//                completionHandler(.failure(error as? XMPPError ?? .undefined_condition))
+//            }
+//        }
+//    }
 
 }

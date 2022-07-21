@@ -114,7 +114,7 @@ open class XMPPClient: Context {
             sessionLogic?.streamLogger = streamLogger;
         }
     }
-    private let responseManager:ResponseManager;
+    private let responseManager: ResponseManager;
     
     fileprivate var keepaliveTimer: Timer?;
     open var keepaliveTimeout: TimeInterval = (3 * 60) - 5;
@@ -139,40 +139,45 @@ open class XMPPClient: Context {
     /**
      Method initiates modules if needed and starts process of connecting to XMPP server.
      */
-    open func login(lastSeeOtherHost: ConnectorEndpoint? = nil) -> Void {
-        guard state == .disconnected() else {
-            logger.debug("XMPP in state: \(self.state), - not starting connection");
-            return;
-        }
+    open func login(lastSeeOtherHost: ConnectorEndpoint? = nil) throws {
+        try update(state: .connecting, precondition: { state in
+            guard state == .disconnected() else {
+                logger.debug("XMPP in state: \(self.state), - not starting connection");
+                throw XMPPError(condition: .unexpected_request, message: "Invalid XMPP connection state! (\(state), expected: disconnected)")
+            }
+        })
         logger.debug("starting connection......");
-        queue.sync {
-            self.responseManager.accountJID = JID(context.userBareJid);
-            let socketConnector = self.connectionConfiguration.connectorOptions.connector.init(context: context); 
-            let sessionLogic: XmppSessionLogic = SocketSessionLogic(connector: socketConnector, responseManager: responseManager, context: context, seeOtherHost: lastSeeOtherHost);
-            context.writer = LogicPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager);
-            self.sessionLogic = sessionLogic;
-            sessionLogic.bind();
-            sessionLogicCancellable = sessionLogic.statePublisher.dropFirst(1).sink(receiveValue: { [weak self] newState in
-                guard let that = self else {
-                    return;
-                }
-                let oldState = that.state;
-                that.update(state: newState);
-                switch newState {
-                case .connected:
-                    that.scheduleKeepAlive();
-                case .disconnected(let reason):
-                    that.releaseKeepAlive();
-                    that.handleDisconnection(clean: oldState == .disconnecting, reason: reason);
-                default:
-                    that.releaseKeepAlive();
-                }
-            });
-            
-            keepaliveTimer?.invalidate();
-            keepaliveTimer = nil;
-            sessionLogic.start();
+        
+        Task {
+            await self.responseManager.initialize(account: context.userBareJid.jid());
         }
+        let socketConnector = self.connectionConfiguration.connectorOptions.connector.init(context: context);
+        let sessionLogic: XmppSessionLogic = SocketSessionLogic(connector: socketConnector, responseManager: responseManager, context: context, seeOtherHost: lastSeeOtherHost);
+            context.writer = LogicPacketWriter(sessionLogic: sessionLogic, responseManager: responseManager);
+        self.sessionLogic = sessionLogic;
+        sessionLogic.bind();
+        sessionLogicCancellable = sessionLogic.statePublisher.dropFirst(1).sink(receiveValue: { [weak self] newState in
+            guard let that = self else {
+                return;
+            }
+            let oldState = that.state;
+            that.update(state: newState);
+            switch newState {
+            case .connected:
+                that.scheduleKeepAlive();
+            case .disconnected(let reason):
+                that.releaseKeepAlive();
+                Task {
+                    await that.handleDisconnection(clean: oldState == .disconnecting, reason: reason);
+                }
+            default:
+                that.releaseKeepAlive();
+            }
+        });
+            
+        keepaliveTimer?.invalidate();
+        keepaliveTimer = nil;
+        sessionLogic.start();
     }
 
     private func scheduleKeepAlive() {
@@ -198,16 +203,14 @@ open class XMPPClient: Context {
         keepaliveTimer = nil;
     }
     
-    private func handleDisconnection(clean: Bool, reason: XMPPClient.State.DisconnectionReason) {
+    private func handleDisconnection(clean: Bool, reason: XMPPClient.State.DisconnectionReason) async {
         keepaliveTimer?.invalidate();
         keepaliveTimer = nil;
         let scopes: Set<ResetableScope> = clean ? [.session, .stream] : [.stream];
         self.reset(scopes: scopes);
-        sessionLogic?.unbind();
-        queue.sync {
-            self.update(state: .disconnected(reason));
-            sessionLogic = nil;
-        }
+        await sessionLogic?.unbind();
+        self.update(state: .disconnected(reason));
+        sessionLogic = nil;
         logger.debug("connection stopped......");
     }
     
@@ -246,10 +249,10 @@ open class XMPPClient: Context {
 extension XMPPClient {
     
     open func loginAndWait(lastSeeOtherHost: ConnectorEndpoint? = nil) async throws {
+        try await login();
         return try await withUnsafeThrowingContinuation { continuation in
-            self.login(lastSeeOtherHost: lastSeeOtherHost);
             var cancellable: AnyCancellable?;
-            cancellable = self.$state.dropFirst().sink(receiveValue: { state in
+            cancellable = self.$state.sink(receiveValue: { state in
                 switch state {
                 case .disconnected(let err):
                     continuation.resume(throwing: err);

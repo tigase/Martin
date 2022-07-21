@@ -27,168 +27,148 @@ import Combine
  and their callbacks, and to retieve them when response appears
  in the stream.
  */
-open class ResponseManager {
+public actor ResponseManager {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "ResponseManager")
     /// Internal class holding information about request and callbacks
-    private struct Key: Hashable {
+    public struct Key: Hashable {
         let id: String;
         let jid: JID;
     }
-    
+
     private struct Entry {
-        let key: Key;
-        let timestamp: Date;
-        let callback: (Iq?)->Void;
+        let continuation: UnsafeContinuation<Iq,Error>;
+        let timeoutTask: Task<Void,Error>;
         
-        init(key: Key, callback:@escaping (Iq?)->Void, timeout:TimeInterval) {
-            self.key = key;
-            self.callback = callback;
-            self.timestamp = Date(timeIntervalSinceNow: timeout);
+        public func handleResponse(stanza: Stanza) -> Void {
+            handleResponse(iq: stanza as! Iq)
         }
         
-        func checkTimeout() -> Bool {
-            return timestamp.timeIntervalSinceNow < 0;
+        public func handleResponse(iq: Iq) -> Void {
+            timeoutTask.cancel();
+            guard let error = XMPPError(iq) else {
+                continuation.resume(returning: iq);
+                return;
+            }
+            continuation.resume(throwing: error);
         }
     }
     
-    private let queue = DispatchQueue(label: "response_manager_queue", attributes: []);
+    public struct Condition: Equatable {
+        let names: [String];
+        let xmlns: String?;
+        
+        func matches(_ stanza: Stanza) -> Bool {
+            if !names.isEmpty {
+                guard names.contains(stanza.name) else {
+                    return false;
+                }
+            }
+            if let xmlns = xmlns {
+                guard xmlns == stanza.xmlns else {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
     
-    private var timer:Timer?;
+    private struct ConditionEntry {
+        let condition: Condition;
+        let continuation: UnsafeContinuation<Stanza,Error>;
+        let timeoutTask: Task<Void,Error>;
+        
+        public func handleResponse(stanza: Stanza) -> Void {
+            timeoutTask.cancel();
+            guard let error = XMPPError(stanza) else {
+                continuation.resume(returning: stanza);
+                return;
+            }
+            continuation.resume(throwing: error);
+        }
+    }
     
-    private var handlers = [Key: Entry]();
+    private var iqHandlers = [Key: Entry](); //UnsafeContinuation<Iq,Error>]();
+    private var conditionHandlers = [ConditionEntry]();
     
-    public var accountJID: JID = JID("");
-    
-    open weak var context: Context?;
-    
+    private var accountJID: JID = JID("");
+        
     public init() {
     }
     
-    deinit {
-        timer?.invalidate();
-    }
-
-    /**
-     Method processes passed stanza and looks for callback
-     - paramater stanza: stanza to process
-     - returns: callback handler if any
-     */
-    open func getResponseHandler(for stanza: Iq)-> ((Iq?)->Void)? {
-        guard let type = stanza.type, let id = stanza.id, (type == StanzaType.error || type == StanzaType.result) else {
-            return nil;
-        }
-
-        return queue.sync {
-            if let entry = self.handlers.removeValue(forKey: .init(id: id, jid: stanza.from ?? accountJID)) {
-                return entry.callback;
-            }
-            return nil;
-        }
+    public func initialize(account: JID) {
+        self.accountJID = account;
     }
     
-    /**
-     Method registers callback for stanza for time
-     - parameter stanza: stanza for which to wait for response
-     - parameter timeout: maximal time for which should wait for response
-     - parameter callback: callback to execute on response or timeout
-     */
-    open func registerResponseHandler(for stanza:Stanza, timeout:TimeInterval, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) -> Cancellable {
-
-        let id = idForStanza(stanza: stanza);
-        
-        let key = Key(id: id, jid: stanza.to ?? accountJID);
-        let entry = Entry(key: key, callback: { response in
-            if let response = response {
-                if response.type == .result {
-                    completionHandler(.success(response))
-                } else {
-                    completionHandler(.failure(XMPPError(response) ?? .undefined_condition));
-                }
-            } else {
-                completionHandler(.failure(.remote_server_timeout));
+    public func continuation(for stanza: Stanza) -> ((Stanza) -> Void)? {
+        guard let iq = stanza as? Iq else {
+            guard let idx = conditionHandlers.firstIndex(where: { $0.condition.matches(stanza) }) else {
+                return nil;
             }
-        }, timeout: timeout);
-        queue.async {
-            self.handlers[key] = entry;
+            let entry = conditionHandlers.remove(at: idx);
+            return entry.handleResponse(stanza:);
         }
-        
-        return CancellableEntry(responseManager: self, entry: entry);
+        guard let type = iq.type, let id = stanza.id, (type == StanzaType.error || type == StanzaType.result) else {
+            return nil;
+        }
+
+        return self.iqHandlers.removeValue(forKey: .init(id: id, jid: stanza.from ?? accountJID))?.handleResponse(stanza:);
+    }
+    
+    public func registerContinuation(_ continuation: UnsafeContinuation<Iq,Error>, for stanza: Iq, timeout: TimeInterval) -> Key {
+        let id = idForStanza(stanza: stanza);
+        let key = Key(id: id, jid: stanza.to ?? accountJID);
+        self.iqHandlers[key] = .init(continuation: continuation, timeoutTask: Task {
+            try await Task.sleep(nanoseconds: UInt64(timeout  * 1000_000_000));
+            self.cancel(for: key, withError: XMPPError.remote_server_timeout);
+        });
+
+        return key;
+    }
+
+    public func registerContinuation(_ continuation: UnsafeContinuation<Stanza,Error>, for condition: Condition, timeout: TimeInterval) {
+        conditionHandlers.append(.init(condition: condition, continuation: continuation, timeoutTask: Task {
+            try await Task.sleep(nanoseconds: UInt64(timeout  * 1000_000_000));
+            self.cancel(for: condition, withError: XMPPError.remote_server_timeout);
+        }))
+    }
+
+    public func cancel(for key: Key , withError error: Error) {
+        guard let entry = self.iqHandlers.removeValue(forKey: key) else {
+            return;
+        }
+        entry.continuation.resume(throwing: error);
+    }
+    
+    public func cancel(for condition: Condition, withError error: Error) {
+        guard let idx = self.conditionHandlers.firstIndex(where: { $0.condition == condition }) else {
+            return;
+        }
+        let entry = conditionHandlers.remove(at: idx);
+        entry.continuation.resume(throwing: error);
     }
     
     private func idForStanza(stanza: Stanza) -> String {
         guard let id = stanza.id else {
-            let id = nextUid();
+            let id = UIDGenerator.nextUid;
             stanza.id = id;
             return id;
         }
         return id;
     }
     
-    /// Activate response manager
-    open func start() {
-        let timer = Timer(timeInterval: 30.0, repeats: true, block: { [weak self] timer in
-            self?.checkTimeouts();
-        })
-        DispatchQueue.main.async {
-            RunLoop.current.add(timer, forMode: .common);
-        }
-        self.timer = timer;
-    }
-    
     /// Deactivates response manager
-    open func stop() {
-        if let timer = timer {
-            DispatchQueue.main.async {
-                timer.invalidate();
-            }
+    public func stop() {
+        for entry in self.iqHandlers.values {
+            entry.timeoutTask.cancel();
+            entry.continuation.resume(throwing: XMPPError.remote_server_timeout);
         }
-        timer = nil;
-        queue.sync {
-            for (id,handler) in self.handlers {
-                self.handlers.removeValue(forKey: id);
-                handler.callback(nil);
-            }
+        self.iqHandlers.removeAll();
+        for entry in self.conditionHandlers {
+            entry.timeoutTask.cancel();
+            entry.continuation.resume(throwing: XMPPError.remote_server_timeout);
         }
+        self.conditionHandlers.removeAll();
     }
-    
-    /// Returns next unique id
-    func nextUid() -> String {
-        return UIDGenerator.nextUid;
-    }
-    
-    /// Check if any callback should be called due to timeout
-    func checkTimeouts() {
-        queue.sync {
-            for (key,handler) in self.handlers {
-                if handler.checkTimeout() {
-                    self.handlers.removeValue(forKey: key);
-                    handler.callback(nil);
-                }
-            }
-        }
-    }
-    
-    private func cancel(entry: Entry) -> Bool {
-        return queue.sync {
-            self.handlers.removeValue(forKey: entry.key) != nil;
-        }
-    }
-    
-    private class CancellableEntry: Cancellable {
         
-        private let responseManager: ResponseManager;
-        private let entry: Entry;
-        
-        fileprivate init(responseManager: ResponseManager, entry: Entry) {
-            self.responseManager = responseManager;
-            self.entry = entry;
-        }
-        
-        public func cancel() {
-            if responseManager.cancel(entry: entry) {
-                entry.callback(nil);
-            }
-        }
-    }
 }

@@ -44,7 +44,7 @@ public protocol XmppSessionLogic: AnyObject {
     /// Register to listen for events
     func bind();
     /// Unregister to stop listening for events
-    func unbind();
+    func unbind() async;
         
     func send(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?);
     
@@ -167,37 +167,36 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
         
     open func bind() {
-        context?.moduleOrNil(.auth)?.$state.receive(on: queue).sink(receiveValue: { [weak self] state in self?.authStateChanged(state) }).store(in: &moduleSubscriptions);
         context?.module(.streamFeatures).$streamFeatures.receive(on: self.queue).sink(receiveValue: { [weak self] streamFeatures in self?.processStreamFeatures(streamFeatures) }).store(in: &moduleSubscriptions);
 
-        responseManager.start();
+        //responseManager.start();
     }
     
-    private func authStateChanged(_ state: AuthModule.AuthorizationStatus) {
-        switch state {
-        case .authorized:
-            let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining;
-
-            if !(streamFeaturesWithPipelining?.active ?? false) {
-                connector.restartStream();
-            }
-        case .expectedAuthorization:
-            guard let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining else {
-                return;
-            }
-            
-            // current version of Tigase is not capable of pipelining auth with <stream> as get features is called before authentication is done!!
-            if streamFeaturesWithPipelining.active {
-                self.startStream();
-            }
-        case .error(_):
-            _ = self.stop(force: true);
-        default:
-            logger.debug("Received auth state: \(state)")
-        }
-    }
+//    private func authStateChanged(_ state: AuthModule.AuthorizationStatus) {
+//        switch state {
+//        case .authorized:
+//            let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining;
+//
+//            if !(streamFeaturesWithPipelining?.active ?? false) {
+//                connector.restartStream();
+//            }
+//        case .expectedAuthorization:
+//            guard let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining else {
+//                return;
+//            }
+//
+//            // current version of Tigase is not capable of pipelining auth with <stream> as get features is called before authentication is done!!
+//            if streamFeaturesWithPipelining.active {
+//                self.startStream();
+//            }
+//        case .error(_):
+//            _ = self.stop(force: true);
+//        default:
+//            logger.debug("Received auth state: \(state)")
+//        }
+//    }
     
-    open func unbind() {
+    open func unbind() async {
         for subscription in socketSubscriptions {
             subscription.cancel();
         }
@@ -205,7 +204,7 @@ open class SocketSessionLogic: XmppSessionLogic {
             subscription.cancel();
         }
         moduleSubscriptions.removeAll();
-        responseManager.stop();
+        await responseManager.stop();
     }
     
     open func start() {
@@ -246,9 +245,9 @@ open class SocketSessionLogic: XmppSessionLogic {
         
     private func onStreamError(_ streamErrorEl: Element) -> Bool {
         if let seeOtherHostEl = streamErrorEl.firstChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value) {
-            if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
-                streamFeaturesWithPipelining.connectionRestarted();
-            }
+//            if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
+//                streamFeaturesWithPipelining.connectionRestarted();
+//            }
             
             self.logger.log("reconnecting via see-other-host to host \(seeOtherHost.0)");
             self.seeOtherHost = connector.prepareEndpoint(withSeeOtherHost: seeOtherHostEl.value);
@@ -261,12 +260,22 @@ open class SocketSessionLogic: XmppSessionLogic {
     private func onStreamTerminate() {
         // we may need to adjust those condition....
         if self.connector.state == .connecting {
-            modulesManager.moduleOrNil(.streamManagement)?.reset();
+            modulesManager.moduleOrNil(.streamManagement)?.reset(scopes: [.stream,.session]);
         }
     }
     
+    // we can process only 1 stanza at once..
+    private let semaphore = DispatchSemaphore(value: 1);
+    
     private func receivedIncomingStanza(_ stanza:Stanza) {
 //        dispatcher.async {
+        Task {
+            semaphore.wait();
+            defer {
+                semaphore.signal();
+                print("finished processing: \(stanza.description)")
+            }
+            print("processing: \(stanza.description)")
             do {
                 for filter in self.modulesManager.filters {
                     if filter.processIncoming(stanza: stanza) {
@@ -274,34 +283,35 @@ open class SocketSessionLogic: XmppSessionLogic {
                     }
                 }
             
-                if let iq = stanza as? Iq, let handler = self.responseManager.getResponseHandler(for: iq) {
-                    handler(iq);
+                if let continuation = await self.responseManager.continuation(for: stanza) {
+                    continuation(stanza);
                     return;
                 }
-            
+                            
                 guard stanza.name != "iq" || (stanza.type != StanzaType.result && stanza.type != StanzaType.error) else {
                     return;
                 }
             
                 let modules = self.modulesManager.findModules(for: stanza);
-//                self.log("stanza:", stanza, "will be processed by", modules);
-                if !modules.isEmpty {
-                    for module in modules {
-                        try module.process(stanza: stanza);
-                    }
-                } else {
+                guard !modules.isEmpty else {
                     self.logger.debug("\(self.userJid) - feature-not-implemented \(stanza, privacy: .public)");
                     throw XMPPError(condition: .feature_not_implemented);
                 }
+                
+                for module in modules {
+                    try await module.process(stanza: stanza);
+                }
             } catch {
-                do {
-                    let errorStanza = try stanza.errorResult(of: error as? XMPPError ?? .undefined_condition);
-                    self.sendingOutgoingStanza(errorStanza);
-                } catch {
-                    self.logger.debug("\(self.userJid) - error: \(error), while processing \(stanza)")
+                Task {
+                    do {
+                        let errorStanza = try stanza.errorResult(of: error as? XMPPError ?? .undefined_condition);
+                        self.sendingOutgoingStanza(errorStanza);
+                    } catch {
+                        self.logger.debug("\(self.userJid) - error: \(error), while processing \(stanza)")
+                    }
                 }
             }
-//        }
+        }
     }
     
     open func send(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
@@ -384,18 +394,14 @@ open class SocketSessionLogic: XmppSessionLogic {
         } else if ((!connector.activeFeatures.contains(.ZLIB)) && connector.availableFeatures.contains(.ZLIB) && (!connectionConfiguration.disableCompression) && streamFeatures.contains(.compressionZLIB)) {
             connector.activate(feature: .ZLIB);
         } else if !authorized {
-            if let authModule:AuthModule = modulesManager.moduleOrNil(.auth) {
+            if let authModule: AuthModule = modulesManager.moduleOrNil(.auth) {
                 self.logger.debug("\(self.userJid) - starting authentication");
-                if authModule.state != .inProgress {
-                    authModule.login();
-                } else {
-                    self.logger.debug("\(self.userJid) - skipping authentication as it is already in progress!");
-                    Task {
-                        do {
-                            try await self.streamAuthenticated();
-                        } catch {
-                            self.stop();
-                        }
+                Task {
+                    do {
+                        try await authModule.login();
+                        self.startStream();
+                    } catch {
+                        await self.stop(force: true);
                     }
                 }
             } else if modulesManager.moduleOrNil(.inBandRegistration) != nil {
@@ -417,7 +423,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     private func streamAuthenticated() async throws {
         do {
             // handling stream resumption
-            if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.resumptionEnabled && streamManagementModule.isAvailable {
+            if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.isResumptionEnabled && streamManagementModule.isAvailable {
                 try await streamManagementModule.resume();
                 processSessionBindedAndEstablished(resumed: true);
                 return;
@@ -446,9 +452,9 @@ open class SocketSessionLogic: XmppSessionLogic {
         }
         self.connector.send(.streamOpen(attributes: attributes));
         
-        if let streamFeaturesWithPipelining = self.modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
-            streamFeaturesWithPipelining.streamStarted();
-        }
+//        if let streamFeaturesWithPipelining = self.modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
+//            streamFeaturesWithPipelining.streamStarted();
+//        }
     }
     
 }

@@ -43,11 +43,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "SaslModule")
 
-    public let criteria = Criteria.or(
-        Criteria.name("success", xmlns: SASL_XMLNS),
-        Criteria.name("failure", xmlns: SASL_XMLNS),
-        Criteria.name("challenge", xmlns: SASL_XMLNS)
-    );
+    public let criteria: Criteria = .false;
     
     private var cancellable: Cancellable?;
     open override var context: Context? {
@@ -62,17 +58,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     private var _mechanismsOrder = [String]();
     
     private var supportedMechanisms: [String] = [];
-    
-    // remember to clear it! ie. on SessionObject being cleared!
-    private var mechanismInUse: SaslMechanism?;
-    
-    open var inProgress: Bool {
-        return (mechanismInUse?.status ?? .new) == .completedExpected;
-    }
-    
-    @Published
-    public private(set) var state: AuthModule.AuthorizationStatus = .notAuthorized;
-    
+        
     /// Order of mechanisms preference
     open var mechanismsOrder:[String] {
         get {
@@ -102,10 +88,6 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     open func reset(scopes: Set<ResetableScope>) {
-        self.mechanismInUse = nil;
-        if state != .notAuthorized {
-            self.state = .notAuthorized;
-        }
         for mechanism in mechanisms.values {
             mechanism.reset(scopes: scopes);
         }
@@ -126,108 +108,82 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     }
     
     open func process(stanza elem: Stanza) throws {
+        throw XMPPError(condition: .bad_request);
+    }
+    
+    private func handleResponse(stanza elem: Stanza, mechanism: SaslMechanism) async throws {
         do {
         switch elem.name {
             case "success":
-                try processSuccess(elem);
+                try processSuccess(elem, mechanism: mechanism);
             case "failure":
-                try processFailure(elem);
+                try processFailure(elem, mechanism: mechanism);
             case "challenge":
-                try processChallenge(elem);
+                try await processChallenge(elem, mechanism: mechanism);
             default:
                 break;
             }
         } catch ClientSaslException.badChallenge(let msg) {
             logger.debug("Received bad challenge from server: \(msg ?? "nil")");
-            self.state = .error(SaslError.temporary_auth_failure);
+            throw SaslError.temporary_auth_failure;
         } catch ClientSaslException.genericError(let msg) {
             logger.debug("Generic error happened: \(msg ?? "nil")");
-            self.state = .error(SaslError.temporary_auth_failure);
+            throw SaslError.temporary_auth_failure;
         } catch ClientSaslException.invalidServerSignature {
             logger.debug("Received answer from server with invalid server signature!");
-            self.state = .error(SaslError.server_not_trusted);
+            throw SaslError.server_not_trusted;
         } catch ClientSaslException.wrongNonce {
             logger.debug("Received answer from server with wrong nonce!");
-            self.state = .error(SaslError.server_not_trusted);
+            throw SaslError.server_not_trusted;
         }
     }
     
     /**
      Begin SASL authentication process
      */
-    open func login() {
-        if state != .notAuthorized {
-            self.state = .notAuthorized;
-        }
+    open func login() async throws {
         guard let mechanism = guessSaslMechanism() else {
-            self.state = .error(SaslError.invalid_mechanism);
-            return;
+            throw SaslError.invalid_mechanism;
         }
-        self.mechanismInUse = mechanism;
         
-        do {
-            let auth = Stanza(name: "auth");
-            auth.element.xmlns = SaslModule.SASL_XMLNS;
-            auth.element.attribute("mechanism", newValue: mechanism.name);
-            auth.element.value = try mechanism.evaluateChallenge(nil, context: context!);
-        
-            if state != .inProgress {
-                self.state = .inProgress;
-            }
-            
-            write(stanza: auth, completionHandler: { _ in
-                if mechanism.status == .completedExpected {
-                    self.state = .expectedAuthorization;
-                }
-            });
-            
-        } catch let error {
-            logger.error("Authentication aborted: \(error)")
-            self.state = .error(SaslError.aborted);
-        }
+        let result = try mechanism.evaluateChallenge(nil, context: context!);
+        let auth = Stanza(name: "auth", xmlns: SaslModule.SASL_XMLNS, value: result, {
+            Attribute("mechanism", value: mechanism.name);
+        });
+                
+        let response = try await write(stanza: auth, for: .init(names: ["success", "failure", "challenge"], xmlns: SaslModule.SASL_XMLNS));
+        try await handleResponse(stanza: response, mechanism: mechanism);
     }
     
-    func processSuccess(_ stanza: Stanza) throws {
-        let mechanism: SaslMechanism? = self.mechanismInUse;
-        _ = try mechanism!.evaluateChallenge(stanza.element.value, context: context!);
+    private func processSuccess(_ stanza: Stanza, mechanism: SaslMechanism) throws {
+        _ = try mechanism.evaluateChallenge(stanza.element.value, context: context!);
         
-        if mechanism!.status == .completed {
+        if mechanism.status == .completed {
             logger.debug("Authenticated");
-            if state != .authorized {
-                self.state = .authorized;
-            }
         } else {
             logger.debug("Authenticated by server but responses not accepted by client.");
-            self.state = .error(SaslError.server_not_trusted);
+            throw SaslError.server_not_trusted;
         }
     }
     
-    func processFailure(_ stanza: Stanza) throws {
-        self.mechanismInUse = nil;
-        let errorName = stanza.children.first?.name;
-        let error = errorName == nil ? nil : SaslError(rawValue: errorName!);
+    private func processFailure(_ stanza: Stanza, mechanism: SaslMechanism) throws {
+        guard let errorName = stanza.children.first?.name, let error = SaslError(rawValue: errorName) else {
+            throw SaslError.not_authorized;
+        }
         logger.error("Authentication failed with error: \(error), \(errorName)");
-        self.state = .error(error ?? SaslError.not_authorized);
+        throw error;
     }
     
-    func processChallenge(_ stanza: Stanza) throws {
-        guard let mechanism: SaslMechanism = self.mechanismInUse else {
-            return;
-        }
+    private func processChallenge(_ stanza: Stanza, mechanism: SaslMechanism) async throws {
         if mechanism.status == .completed {
             throw XMPPError(condition: .bad_request, message: "Authentication is already completed!");
         }
-        let challenge = stanza.element.value;
-        let response = try mechanism.evaluateChallenge(challenge, context: context!);
-        let responseEl = Stanza(name: "response");
-        responseEl.element.xmlns = SaslModule.SASL_XMLNS;
-        responseEl.element.value = response;
-        write(stanza: responseEl, completionHandler: { result in
-            if mechanism.status == .completedExpected {
-                self.state = .expectedAuthorization;
-            }
-        });
+        let challenge = stanza.value;
+        let result = try mechanism.evaluateChallenge(challenge, context: context!);
+        let request = Stanza(name: "response", xmlns: SaslModule.SASL_XMLNS, value: result);
         
+        let response = try await write(stanza: request, for: .init(names: ["success", "failure", "challenge"], xmlns: SaslModule.SASL_XMLNS));
+        try await handleResponse(stanza: response, mechanism: mechanism);
     }
     
     static func supportedMechanisms(streamFeatures: StreamFeatures) -> [String] {

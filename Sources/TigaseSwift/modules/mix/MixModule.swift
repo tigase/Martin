@@ -738,7 +738,8 @@ extension MixModule {
     open func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await participants(for: channel)))
+                let result = try await participants(for: channel);
+                completionHandler?(.success(result))
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }
@@ -748,7 +749,8 @@ extension MixModule {
     open func retrieveAffiliations(for channel: ChannelProtocol, completionHandler: ((Result<Set<ChannelPermission>,XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await affiliations(for: channel)));
+                let result = try await affiliations(for: channel);
+                completionHandler?(.success(result));
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
             }
@@ -768,7 +770,8 @@ extension MixModule {
     open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await info(for: channelJid)));
+                let result = try await info(for: channelJid);
+                completionHandler?(.success(result));
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
             }
@@ -864,7 +867,8 @@ extension MixModule {
     open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await avatar(for: jid)))
+                let result = try await avatar(for: jid);
+                completionHandler?(.success(result))
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }

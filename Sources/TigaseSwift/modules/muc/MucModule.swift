@@ -579,7 +579,8 @@ extension MucModule {
     open func decline(invitation: Invitation, reason: String?, completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
         Task {
             do {
-                completionHandler?(.success(try await decline(invitation: invitation, reason: reason)));
+                try await decline(invitation: invitation, reason: reason);
+                completionHandler?(.success(Void()));
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition));
             }

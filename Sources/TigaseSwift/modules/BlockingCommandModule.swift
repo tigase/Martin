@@ -242,7 +242,8 @@ extension BlockingCommandModule {
     open func retrieveBlockedJids(completionHandler: ((Result<[JID],XMPPError>)->Void)?) {
         Task {
             do {
-                completionHandler?(.success(try await retrieveBlockedJids()))
+                let result = try await retrieveBlockedJids();
+                completionHandler?(.success(result))
             } catch {
                 completionHandler?(.failure(error as? XMPPError ?? .undefined_condition))
             }

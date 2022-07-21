@@ -85,13 +85,12 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         
         connectorStreamDelegate = ConnectionStreamDelegate(connector: self);
         
-        self.stateSubscription = $state.sink(receiveValue: { [weak self] newState in
+        self.stateSubscription = $state.receive(on: self.queue).sink(receiveValue: { [weak self] newState in
             guard let that = self else {
                 return;
             }
             let oldState = that.state;
             
-            that.queue.sync {
             switch newState {
             case .disconnected:
                 if oldState != .disconnected() {
@@ -116,7 +115,6 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
                 }
             default:
                 break;
-            }
             }
         })
     }
