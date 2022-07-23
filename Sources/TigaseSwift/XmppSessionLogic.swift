@@ -229,8 +229,8 @@ open class SocketSessionLogic: XmppSessionLogic {
     private let semaphore = DispatchSemaphore(value: 1);
     
     private func receivedIncomingStanza(_ stanza:Stanza) {
+        semaphore.wait();
         Task {
-            semaphore.wait();
             defer {
                 semaphore.signal();
             }

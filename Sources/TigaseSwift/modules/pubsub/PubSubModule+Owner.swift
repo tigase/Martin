@@ -29,7 +29,7 @@ extension PubSubModule {
      - parameter node: name of node to create
      - parameter with: option configuration for new node
      */
-    open func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: PubSubNodeConfig? = nil) async throws -> String {
+    public func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: PubSubNodeConfig? = nil) async throws -> String {
         let iq = Iq(type: .set, to: pubSubJid.jid(), {
             Element(name: "pubsub", xmlns: PubSubModule.PUBSUB_XMLNS, {
                 Element(name: "create", {
@@ -275,7 +275,7 @@ public enum PubSubAffilicationsSource {
 // async-await support
 extension PubSubModule {
     
-    open func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: PubSubNodeConfig? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    public func createNode(at pubSubJid: BareJID, node nodeName: String?, with configuration: PubSubNodeConfig? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await createNode(at: pubSubJid, node: nodeName, with: configuration)))
@@ -285,7 +285,7 @@ extension PubSubModule {
         }
     }
     
-    open func configureNode(at pubSubJid: BareJID?, node nodeName: String, with configuration: PubSubNodeConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func configureNode(at pubSubJid: BareJID?, node nodeName: String, with configuration: PubSubNodeConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await configureNode(at: pubSubJid, node: nodeName, with: configuration)))
@@ -295,7 +295,7 @@ extension PubSubModule {
         }
     }
     
-    open func requestDefaultNodeConfiguration(from pubSubJid: BareJID, completionHandler: @escaping (Result<PubSubNodeConfig,XMPPError>)->Void) {
+    public func requestDefaultNodeConfiguration(from pubSubJid: BareJID, completionHandler: @escaping (Result<PubSubNodeConfig,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await requestDefaultNodeConfiguration(from: pubSubJid)))
@@ -305,7 +305,7 @@ extension PubSubModule {
         }
     }
 
-    open func retrieveNodeConfiguration(from pubSubJid: BareJID?, node: String, completionHandler: @escaping (Result<PubSubNodeConfig,XMPPError>)->Void) {
+    public func retrieveNodeConfiguration(from pubSubJid: BareJID?, node: String, completionHandler: @escaping (Result<PubSubNodeConfig,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await retrieveNodeConfiguration(from: pubSubJid, node: node)))

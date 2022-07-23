@@ -228,19 +228,19 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor,
 // async-await support
 extension PresenceModule {
     
-    open func sendInitialPresence() {
+    public func sendInitialPresence() {
         Task {
             try await sendInitialPresence();
         }
     }
     
-    open func sendPresence() {
+    public func sendPresence() {
         Task {
             try await sendPresence();
         }
     }
     
-    open func setPresence(show:Presence.Show?, status:String?, priority:Int?, additionalElements: [Element]? = nil) async throws {
+    public func setPresence(show:Presence.Show?, status:String?, priority:Int?, additionalElements: [Element]? = nil) async throws {
         let presence = Presence();
         presence.show = show;
         presence.status = status;
@@ -260,7 +260,7 @@ extension PresenceModule {
         }
     }
     
-    open func subscribe(to jid:JID, preauth: String? = nil) async throws {
+    public func subscribe(to jid:JID, preauth: String? = nil) async throws {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribe;
@@ -275,7 +275,7 @@ extension PresenceModule {
      Subscribed to JID
      - parameter by: jid which is being subscribed
      */
-    open func subscribed(by jid:JID) async throws {
+    public func subscribed(by jid:JID) async throws {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.subscribed;
@@ -287,7 +287,7 @@ extension PresenceModule {
      Unsubscribe from jid
      - parameter from: jid to unsubscribe from
      */
-    open func unsubscribe(from jid:JID) async throws {
+    public func unsubscribe(from jid:JID) async throws {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.unsubscribe;
@@ -299,7 +299,7 @@ extension PresenceModule {
      Unsubscribed from JID
      - parameter by: jid which is being unsubscribed
      */
-    open func unsubscribed(by jid:JID) async throws {
+    public func unsubscribed(by jid:JID) async throws {
         let presence = Presence();
         presence.to = jid;
         presence.type = StanzaType.unsubscribed;

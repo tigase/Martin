@@ -120,7 +120,7 @@ open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppStanzaProcessor {
 
 extension Message {
     
-    open var messageDelivery: MessageDeliveryReceiptEnum? {
+    public var messageDelivery: MessageDeliveryReceiptEnum? {
         get {
             if let el = element.firstChild(xmlns: MessageDeliveryReceiptsModule.XMLNS) {
                 switch el.name {
@@ -175,7 +175,7 @@ public enum MessageDeliveryReceiptEnum {
 // async-await support
 extension MessageDeliveryReceiptsModule {
     
-    open func sendReceived(for message: Message) async throws {
+    public func sendReceived(for message: Message) async throws {
         guard let id = message.id, message.type != .groupchat, let jid = message.from else {
             return;
         }
@@ -183,7 +183,7 @@ extension MessageDeliveryReceiptsModule {
         try await sendReceived(to: jid, forStanzaId: id, type: message.type)
     }
     
-    open func sendReceived(to jid: JID, forStanzaId id: String, type: StanzaType?) async throws {
+    public func sendReceived(to jid: JID, forStanzaId id: String, type: StanzaType?) async throws {
         let response = Message(type: type, to: jid);
         response.messageDelivery = MessageDeliveryReceiptEnum.received(id: id);
         response.hints = [.store];

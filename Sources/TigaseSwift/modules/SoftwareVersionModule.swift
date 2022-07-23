@@ -105,7 +105,7 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
 
 // async-await support
 extension SoftwareVersionModule {
-    open func checkSoftwareVersion(for jid: JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
+    public func checkSoftwareVersion(for jid: JID, completionHandler: @escaping (Result<SoftwareVersion,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await checkSoftwareVersion(for: jid)))

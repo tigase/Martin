@@ -359,7 +359,7 @@ extension DiscoveryModule {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    open func discoverServerFeatures(completionHandler: ((Result<DiscoveryInfoResult,XMPPError>)->Void)?) {
+    public func discoverServerFeatures(completionHandler: ((Result<DiscoveryInfoResult,XMPPError>)->Void)?) {
         if let jid = context?.boundJid {
             info(for: JID(jid.domain), completionHandler: { result in
                 switch result {
@@ -378,7 +378,7 @@ extension DiscoveryModule {
      - parameter onInfoReceived: called when info will be available
      - parameter onError: called when received error or request timed out
      */
-    open func discoverAccountFeatures(completionHandler:((Result<DiscoveryInfoResult,XMPPError>) -> Void)?) {
+    public func discoverAccountFeatures(completionHandler:((Result<DiscoveryInfoResult,XMPPError>) -> Void)?) {
         if let jid = context?.boundJid {
             info(for: jid.withoutResource(), completionHandler: { result in
                 switch result {
@@ -398,7 +398,7 @@ extension DiscoveryModule {
      - parameter node: node to query for informations
      - parameter completionHandler: called where result is available
      */
-    open func info(for jid:JID, node: String? = nil, completionHandler: @escaping (Result<DiscoveryInfoResult,XMPPError>) -> Void) {
+    public func info(for jid:JID, node: String? = nil, completionHandler: @escaping (Result<DiscoveryInfoResult,XMPPError>) -> Void) {
         Task {
             do {
                 completionHandler(.success(try await info(for: jid, node: node)))
@@ -414,7 +414,7 @@ extension DiscoveryModule {
      - parameter node: node to query for items
      - parameter completionHandler: called where result is available
      */
-    open func items(for jid: JID, node: String? = nil, completionHandler: @escaping (Result<DiscoveryItemsResult,XMPPError>) -> Void) {
+    public func items(for jid: JID, node: String? = nil, completionHandler: @escaping (Result<DiscoveryItemsResult,XMPPError>) -> Void) {
         Task {
             do {
                 completionHandler(.success(try await items(for: jid, node: node)))

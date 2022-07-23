@@ -78,7 +78,7 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
 // async-await support
 extension ResourceBinderModule {
     
-    open func bind(completionHandler: ((Result<JID,XMPPError>)->Void)? = nil) {
+    public func bind(completionHandler: ((Result<JID,XMPPError>)->Void)? = nil) {
         Task {
             do {
                 let jid = try await bind();

@@ -185,7 +185,7 @@ extension VCard {
         })
     }
     
-    open func toVCardTemp() -> Element {
+    public func toVCardTemp() -> Element {
         let vcardTemp = Element(name: "vCard", xmlns: "vcard-temp");
         
         if bday != nil {

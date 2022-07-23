@@ -326,7 +326,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
 extension MessageArchiveManagementModule {
     
     @available(*, deprecated, message: "use queryItems(componentJid:node:query:queryId:rsm:completionHandler:)")
-    open func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
+    public func queryItems(version: Version? = nil, componentJid: JID? = nil, node: String? = nil, with: JID? = nil, start: Date? = nil, end: Date? = nil, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void) {
         guard let version = version ?? availableVersions.first else {
             completionHandler(.failure(XMPPError(condition: .feature_not_implemented)));
             return;
@@ -334,7 +334,7 @@ extension MessageArchiveManagementModule {
         queryItems(componentJid: componentJid, node: node, query: .init(version: version, with: with, start: start, end: end), queryId: queryId, rsm: rsm, completionHandler: completionHandler);
     }
     
-    open func queryItems(componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
+    public func queryItems(componentJid: JID? = nil, node: String? = nil, query: MAMQueryForm, queryId: String, rsm: RSM.Query? = nil, completionHandler: @escaping (Result<QueryResult,XMPPError>)->Void)
     {
         Task {
             do {
@@ -345,7 +345,7 @@ extension MessageArchiveManagementModule {
         }
     }
     
-    open func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
+    public func retrieveForm(version: Version? = nil, componentJid: JID? = nil, completionHandler: @escaping (Result<MAMQueryForm,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await retrieveForm(version: version, from: componentJid)));
@@ -355,7 +355,7 @@ extension MessageArchiveManagementModule {
         }
     }
 
-    open func retrieveSettings(version: Version? = nil, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
+    public func retrieveSettings(version: Version? = nil, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await settings(version: version)));
@@ -365,7 +365,7 @@ extension MessageArchiveManagementModule {
         }
     }
     
-    open func updateSettings(version: Version? = nil, settings: Settings, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
+    public func updateSettings(version: Version? = nil, settings: Settings, completionHandler: @escaping (Result<Settings,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await self.settings(settings, version: version)));
@@ -375,7 +375,7 @@ extension MessageArchiveManagementModule {
         }
     }
     
-    open func updateSettings(version: Version, settings: Settings) async throws -> Settings {
+    public func updateSettings(version: Version, settings: Settings) async throws -> Settings {
         return try await withUnsafeThrowingContinuation { continuation in
             updateSettings(version: version, settings: settings, completionHandler: { result in
                 continuation.resume(with: result);

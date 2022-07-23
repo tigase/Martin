@@ -576,7 +576,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
 // async-await support
 extension MucModule {
     
-    open func decline(invitation: Invitation, reason: String?, completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
+    public func decline(invitation: Invitation, reason: String?, completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
         Task {
             do {
                 try await decline(invitation: invitation, reason: reason);
@@ -587,7 +587,7 @@ extension MucModule {
         }
     }
     
-    open func roomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
+    public func roomAffiliations(from room: RoomProtocol, with affiliation: MucAffiliation, completionHandler: @escaping (Result<[RoomAffiliation],XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await roomAffiliations(from: room, with: affiliation)));
@@ -597,7 +597,7 @@ extension MucModule {
         }
     }
 
-    open func roomAffiliations(_ affiliations: [RoomAffiliation], to room: RoomProtocol, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func roomAffiliations(_ affiliations: [RoomAffiliation], to room: RoomProtocol, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await roomAffiliations(affiliations, to: room)));
@@ -607,7 +607,7 @@ extension MucModule {
         }
     }
 
-    open func roomConfiguration(of roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
+    public func roomConfiguration(of roomJid: JID, completionHandler: @escaping (Result<RoomConfig,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await roomConfiguration(of: roomJid)));
@@ -617,7 +617,7 @@ extension MucModule {
         }
     }
     
-    open func roomConfiguration(_ configuration: RoomConfig, of roomJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func roomConfiguration(_ configuration: RoomConfig, of roomJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await roomConfiguration(configuration, of: roomJid)));
@@ -627,21 +627,21 @@ extension MucModule {
         }
     }
     
-    open func setRoomSubject(roomJid: BareJID, newSubject: String?) {
+    public func setRoomSubject(roomJid: BareJID, newSubject: String?) {
         Task {
             try await setRoomSubject(roomJid: roomJid, newSubject: newSubject);
         }
     }
     
-    open func invite(to room: RoomProtocol, invitee: JID, reason: String?) {
+    public func invite(to room: RoomProtocol, invitee: JID, reason: String?) {
         room.invite(invitee, reason: reason);
     }
     
-    open func inviteDirectly(to room: RoomProtocol, invitee: JID, reason: String?, threadId: String?) {
+    public func inviteDirectly(to room: RoomProtocol, invitee: JID, reason: String?, threadId: String?) {
         room.inviteDirectly(invitee, reason: reason, threadId: threadId);
     }
     
-    open func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, completionHandler: @escaping (Result<RoomJoinResult,XMPPError>)->Void) {
+    public func join(roomName: String, mucServer: String, nickname: String, password: String? = nil, completionHandler: @escaping (Result<RoomJoinResult,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await join(roomName: roomName, mucServer: mucServer, nickname: nickname, password: password)))
@@ -652,7 +652,7 @@ extension MucModule {
     }
 
     @discardableResult
-    open func destroy(room: RoomProtocol) -> Bool {
+    public func destroy(room: RoomProtocol) -> Bool {
         guard room.state == .joined && room.occupant(nickname: room.nickname)?.affiliation == .owner else {
             return false;
         }
@@ -671,7 +671,7 @@ extension MucModule {
         return true;
     }
  
-    open func leave(room: RoomProtocol) {
+    public func leave(room: RoomProtocol) {
         if room.state == .joined {
             room.update(state: .not_joined());
             

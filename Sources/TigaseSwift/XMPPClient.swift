@@ -251,8 +251,8 @@ open class XMPPClient: Context {
 // async-await support
 extension XMPPClient {
     
-    open func loginAndWait(lastSeeOtherHost: ConnectorEndpoint? = nil) async throws {
-        try await login();
+    public func loginAndWait(lastSeeOtherHost: ConnectorEndpoint? = nil) async throws {
+        try login();
         return try await withUnsafeThrowingContinuation { continuation in
             var cancellable: AnyCancellable?;
             cancellable = self.$state.sink(receiveValue: { state in

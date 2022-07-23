@@ -64,7 +64,7 @@ open class MixChannelInfo: DataFormWrapper {
 
 extension MixModule {
     
-    open func publishInfo(for channelJid: BareJID, info: MixChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func publishInfo(for channelJid: BareJID, info: MixChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         pubsubModule.publishItem(at: channelJid, to: "urn:xmpp:mix:nodes:info", payload: info.element(type: .form, onlyModified: false), completionHandler: { response in
             switch response {
             case .success(_):
@@ -75,7 +75,7 @@ extension MixModule {
         });
     }
 
-    open func retrieveInfo(for channelJid: BareJID, resultHandler: @escaping (Result<MixChannelInfo,XMPPError>)->Void) {
+    public func retrieveInfo(for channelJid: BareJID, resultHandler: @escaping (Result<MixChannelInfo,XMPPError>)->Void) {
         pubsubModule.retrieveItems(from: channelJid, for: "urn:xmpp:mix:nodes:info", completionHandler: { result in
             switch result {
             case .success(let items):

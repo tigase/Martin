@@ -455,7 +455,7 @@ public class Queue<T> {
 // async-await support
 extension StreamManagementModule {
     
-    open func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil, completionHandler: ( (Result<String?,XMPPError>)->Void)?) {
+    public func enable(resumption: Bool = true, maxResumptionTimeout: Int? = nil, completionHandler: ( (Result<String?,XMPPError>)->Void)?) {
         Task {
             do {
                 try await enable(resumption: resumption, maxResumptionTimeout: maxResumptionTimeout);
@@ -466,7 +466,7 @@ extension StreamManagementModule {
         }
     }
     
-    open func resume(completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func resume(completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 try await resume();

@@ -23,7 +23,7 @@ import Foundation
 
 extension Message {
     
-    open var lastMessageCorrectionId: String? {
+    public var lastMessageCorrectionId: String? {
         get {
             return element.firstChild(name: "replace", xmlns: "urn:xmpp:message-correct:0")?.attribute("id");
         }

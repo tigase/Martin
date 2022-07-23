@@ -198,7 +198,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
 // async-await support
 extension PEPUserAvatarModule {
     
-    open func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar], completionHandler: @escaping(Result<String,XMPPError>)->Void) {
+    public func publishAvatar(at: BareJID? = nil, avatar avatars: [Avatar], completionHandler: @escaping(Result<String,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await publishAvatar(at: at, avatar: avatars)));
@@ -208,7 +208,7 @@ extension PEPUserAvatarModule {
         }
     }
     
-    open func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    public func retractAvatar(from: BareJID? = nil, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await retractAvatar(from: from)));
@@ -218,7 +218,7 @@ extension PEPUserAvatarModule {
         }
     }
     
-    open func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info], completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    public func publishAvatarMetaData(at: BareJID? = nil, id: String, metadata infos: [Info], completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await publishAvatarMetaData(at: at, id: id, metadata: infos)));
@@ -228,7 +228,7 @@ extension PEPUserAvatarModule {
         }
     }
     
-    open func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<AvatarData,XMPPError>)->Void) {
+    public func retrieveAvatar(from jid: BareJID, itemId: String, completionHandler: @escaping (Result<AvatarData,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await retrieveAvatar(from: jid, itemId: itemId)));
@@ -238,7 +238,7 @@ extension PEPUserAvatarModule {
         }
     }
     
-    open func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,XMPPError>)->Void) {
+    public func retrieveAvatarMetadata(from jid: BareJID, itemId: String? = nil, fireEvents: Bool = true, completionHandler: @escaping (Result<Info,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await retrieveAvatarMetadata(from: jid, itemId: itemId)));

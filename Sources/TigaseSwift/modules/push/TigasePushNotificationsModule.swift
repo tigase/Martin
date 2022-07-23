@@ -286,7 +286,7 @@ open class TigasePushNotificationsModule: PushNotificationsModule {
 // async-await support
 extension TigasePushNotificationsModule {
     
-    open func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,XMPPError>)->Void) {
+    public func registerDevice(serviceJid: JID, provider: String, deviceId: String, pushkitDeviceId: String? = nil, completionHandler: @escaping (Result<RegistrationResult,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await self.registerDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId)));
@@ -296,7 +296,7 @@ extension TigasePushNotificationsModule {
         }
     }
     
-    open func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, XMPPError>)->Void) {
+    public func unregisterDevice(serviceJid: JID, provider: String, deviceId: String, completionHandler: @escaping (Result<Void, XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await self.unregisterDevice(serviceJid: serviceJid, provider: provider, deviceId: deviceId)))
@@ -306,7 +306,7 @@ extension TigasePushNotificationsModule {
         }
     }
     
-    open func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
+    public func findPushComponent(requiredFeatures: [String], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
         guard let context = context else {
             completionHandler(.failure(.remote_server_timeout));
             return;

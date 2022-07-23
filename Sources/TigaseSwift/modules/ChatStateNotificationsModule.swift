@@ -84,7 +84,7 @@ public enum ChatState: String {
 
 extension Message {
     
-    open var chatState: ChatState? {
+    public var chatState: ChatState? {
         get {
             return ChatState(from: self.element.firstChild(xmlns: ChatStateNotificationsModule.XMLNS)?.name);
         }

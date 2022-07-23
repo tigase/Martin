@@ -150,7 +150,7 @@ extension PushNotificationsModuleExtension {
 // async-await support
 extension PushNotificationsModule {
     
-    open func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    public func enable(serviceJid: JID, node: String, extensions: [PushNotificationsModuleExtension] = [], publishOptions: DataForm? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await enable(serviceJid: serviceJid, node: node, extensions: extensions, publishOptions: publishOptions)))
@@ -160,7 +160,7 @@ extension PushNotificationsModule {
         }
     }
     
-    open func disable(serviceJid: JID, node: String, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    public func disable(serviceJid: JID, node: String, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await disable(serviceJid: serviceJid, node: node)))

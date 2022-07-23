@@ -679,7 +679,7 @@ open class MixInvitation {
 }
 
 extension Message {
-    open var mixInvitation: MixInvitation? {
+    public var mixInvitation: MixInvitation? {
         get {
             return MixInvitation(from: firstChild(name: "invitation", xmlns: "urn:xmpp:mix:misc:0"));
         }
@@ -695,7 +695,7 @@ extension Message {
 // async-await support
 extension MixModule {
     
-    open func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,XMPPError>)->Void) {
+    public func create(channel: String?, at componentJid: BareJID, completionHandler: @escaping (Result<BareJID,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await create(channel: channel, at: componentJid)));
@@ -705,7 +705,7 @@ extension MixModule {
         }
     }
     
-    open func destroy(channel channelJid: BareJID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func destroy(channel channelJid: BareJID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await destroy(channel: channelJid)));
@@ -715,7 +715,7 @@ extension MixModule {
         }
     }
     
-    open func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
+    public func join(channel channelJid: BareJID, withNick nick: String?, subscribeNodes nodes: [String] = ["urn:xmpp:mix:nodes:messages", "urn:xmpp:mix:nodes:participants", "urn:xmpp:mix:nodes:info", "urn:xmpp:avatar:metadata"], presenceSubscription: Bool = true, invitation: MixInvitation? = nil, messageSyncLimit: Int = 100, completionHandler: @escaping (Result<Iq,XMPPError>) -> Void) {
         Task {
             do {
                 completionHandler(.success(try await join(channel: channelJid, withNick: nick, subscribeNodes: nodes, presenceSubscription: presenceSubscription, invitation: invitation, messageSyncLimit: messageSyncLimit)));
@@ -725,7 +725,7 @@ extension MixModule {
         }
     }
     
-    open func leave(channel: ChannelProtocol, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    public func leave(channel: ChannelProtocol, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await leave(channel: channel)));
@@ -735,7 +735,7 @@ extension MixModule {
         }
     }
     
-    open func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
+    public func retrieveParticipants(for channel: ChannelProtocol, completionHandler: ((ParticipantsResult)->Void)?) {
         Task {
             do {
                 let result = try await participants(for: channel);
@@ -746,7 +746,7 @@ extension MixModule {
         }
     }
     
-    open func retrieveAffiliations(for channel: ChannelProtocol, completionHandler: ((Result<Set<ChannelPermission>,XMPPError>)->Void)?) {
+    public func retrieveAffiliations(for channel: ChannelProtocol, completionHandler: ((Result<Set<ChannelPermission>,XMPPError>)->Void)?) {
         Task {
             do {
                 let result = try await affiliations(for: channel);
@@ -757,7 +757,7 @@ extension MixModule {
         }
     }
     
-    open func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func publishInfo(for channelJid: BareJID, info: ChannelInfo, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await self.info(info, for: channelJid)));
@@ -767,7 +767,7 @@ extension MixModule {
         }
     }
     
-    open func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,XMPPError>)->Void)?) {
+    public func retrieveInfo(for channelJid: BareJID, completionHandler: ((Result<ChannelInfo,XMPPError>)->Void)?) {
         Task {
             do {
                 let result = try await info(for: channelJid);
@@ -778,7 +778,7 @@ extension MixModule {
         }
     }
     
-    open func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<MixChannelConfig,XMPPError>)->Void) {
+    public func retrieveConfig(for channelJid: BareJID, completionHandler: @escaping (Result<MixChannelConfig,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await config(for: channelJid)));
@@ -788,7 +788,7 @@ extension MixModule {
         }
     }
     
-    open func updateConfig(for channelJid: BareJID, config: MixChannelConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func updateConfig(for channelJid: BareJID, config: MixChannelConfig, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await self.config(config, for: channelJid)));
@@ -798,7 +798,7 @@ extension MixModule {
         }
     }
     
-    open func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func allowAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await allowAccess(to: channelJid, for: jid, value: value)));
@@ -808,7 +808,7 @@ extension MixModule {
         }
     }
     
-    open func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func denyAccess(to channelJid: BareJID, for jid: BareJID, value: Bool = true, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await denyAccess(to: channelJid, for: jid, value: value)));
@@ -818,7 +818,7 @@ extension MixModule {
         }
     }
         
-    open func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func changeAccessPolicy(of channelJid: BareJID, isPrivate: Bool, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await changeAccessPolicy(of: channelJid, isPrivate: isPrivate)));
@@ -828,7 +828,7 @@ extension MixModule {
         }
     }
     
-    open func checkAccessPolicy(of channelJid: BareJID, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
+    public func checkAccessPolicy(of channelJid: BareJID, completionHandler: @escaping (Result<Bool,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await checkAccessPolicy(of: channelJid)))
@@ -838,7 +838,7 @@ extension MixModule {
         }
     }
 
-    open func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
+    public func retrieveAllowed(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await allowed(for: channelJid)))
@@ -848,7 +848,7 @@ extension MixModule {
         }
     }
     
-    open func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
+    public func retrieveBanned(for channelJid: BareJID, completionHandler: @escaping (Result<[BareJID],XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await banned(for: channelJid)))
@@ -858,13 +858,13 @@ extension MixModule {
         }
     }
     
-    open func retrieveHistory(fromChannel jid: BareJID, start: Date? = nil, rsm: RSM.Query) {
+    public func retrieveHistory(fromChannel jid: BareJID, start: Date? = nil, rsm: RSM.Query) {
         Task {
             try await retrieveAllHistory(fromChannel: jid, start: start, rsm: rsm);
         }
     }
     
-    open func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) {
+    public func retrieveAvatar(for jid: BareJID, completionHandler: ((Result<PEPUserAvatarModule.Info, XMPPError>)->Void)?) {
         Task {
             do {
                 let result = try await avatar(for: jid);

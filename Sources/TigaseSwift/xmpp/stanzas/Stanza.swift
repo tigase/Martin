@@ -316,11 +316,11 @@ open class Stanza: ElementProtocol, CustomStringConvertible {
 extension Stanza {
     
     @available(*, deprecated, renamed: "firstChild")
-    open func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
+    public func findChild(name:String? = nil, xmlns:String? = nil) -> Element? {
         return self.element.findChild(name: name, xmlns: xmlns);
     }
     @available(*, deprecated, renamed: "firstChild")
-    open func findChild(where body: (Element) -> Bool) -> Element? {
+    public func findChild(where body: (Element) -> Bool) -> Element? {
         return self.element.findChild(where: body);
     }
     @available(*, deprecated, message: "Method removed")
@@ -328,20 +328,20 @@ extension Stanza {
         return self.element.firstIndex(ofChild: child);
     }
     @available(*, deprecated, renamed: "filterChildren")
-    open func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
+    public func getChildren(name:String? = nil, xmlns:String? = nil) -> Array<Element> {
         return self.element.getChildren(name: name, xmlns: xmlns);
     }
     @available(*, deprecated, renamed: "filterChildren")
-    open func getChildren(where body: (Element) -> Bool) -> Array<Element> {
+    public func getChildren(where body: (Element) -> Bool) -> Array<Element> {
         return self.element.getChildren(where: body);
     }
     @available(*, deprecated, renamed: "attribute(_:)")
-    open func getAttribute(_ key:String) -> String? {
+    public func getAttribute(_ key:String) -> String? {
         return self.element.getAttribute(key);
     }
     
     @available(*, deprecated, renamed: "attribute(_:newValue:)")
-    open func setAttribute(_ key:String, value:String?) {
+    public func setAttribute(_ key:String, value:String?) {
         self.element.setAttribute(key, value: value);
     }
     

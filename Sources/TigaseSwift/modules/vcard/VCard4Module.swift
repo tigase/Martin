@@ -155,7 +155,7 @@ extension VCard {
         })
     }
     
-    open func toVCard4() -> Element {
+    public func toVCard4() -> Element {
         return Element(name: "vcard", xmlns: "urn:ietf:params:xml:ns:vcard-4.0", {
             if bday != nil {
                 Element(name: "bday", children: [Element(name:"date", cdata: bday)]);

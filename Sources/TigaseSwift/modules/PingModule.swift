@@ -74,7 +74,7 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
 // async-await support
 extension PingModule {
     
-    open func ping(_ jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func ping(_ jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await ping(jid)))

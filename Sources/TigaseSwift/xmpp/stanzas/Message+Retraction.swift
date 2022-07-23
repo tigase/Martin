@@ -23,7 +23,7 @@ import Foundation
 
 extension Message {
     
-    open var messageRetractionId: String? {
+    public var messageRetractionId: String? {
         get {
             guard let el = self.element.firstChild(name: "apply-to", xmlns: "urn:xmpp:fasten:0"), let id = el.attribute("id") else {
                 return nil;

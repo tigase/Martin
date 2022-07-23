@@ -267,7 +267,7 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule {
 // async-await support
 extension InBandRegistrationModule {
 
-    open func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func register(_ jid: JID? = nil, username: String?, password: String?, email: String?, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await register(jid, username: username, password: password, email: email)))
@@ -277,7 +277,7 @@ extension InBandRegistrationModule {
         }
     }
 
-    open func unregister(from: JID? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    public func unregister(from: JID? = nil, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await unregister(from: from)))
@@ -287,7 +287,7 @@ extension InBandRegistrationModule {
         }
     }
     
-    open func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult<XMPPError>)->Void) {
+    public func retrieveRegistrationForm(from jid: JID? = nil, completionHandler: @escaping (RetrieveFormResult<XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await retrieveRegistrationForm(from: jid)))
@@ -297,7 +297,7 @@ extension InBandRegistrationModule {
         }
     }
 
-    open func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
+    public func submitRegistrationForm(to jid: JID? = nil, form: DataForm, completionHandler: @escaping (Result<Iq,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await submitRegistrationForm(to: jid, form: form)))
@@ -307,7 +307,7 @@ extension InBandRegistrationModule {
         }
     }
 
-    open func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
+    public func changePassword(for serviceJid: JID? = nil, newPassword: String, completionHandler: @escaping (Result<String,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await changePassword(for: serviceJid, newPassword: newPassword)))

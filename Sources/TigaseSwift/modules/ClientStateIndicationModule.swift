@@ -117,7 +117,7 @@ extension ClientStateIndicationModule {
         }
     }
     
-    open func setState(_ state: ClientState) async throws -> Bool {
+    public func setState(_ state: ClientState) async throws -> Bool {
         guard self.available else {
             throw XMPPError(condition: .feature_not_implemented);
         }

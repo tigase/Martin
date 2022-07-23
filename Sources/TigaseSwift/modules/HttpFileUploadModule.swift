@@ -145,7 +145,7 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
 // async-await support
 extension HttpFileUploadModule {
     
-    open func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], XMPPError>)->Void) {
+    public func findHttpUploadComponent(completionHandler: @escaping (Result<[UploadComponent], XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await findHttpUploadComponents()));
@@ -155,7 +155,7 @@ extension HttpFileUploadModule {
         }
     }
     
-    open func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {
+    public func requestUploadSlot(componentJid: JID, filename: String, size: Int, contentType: String?, completionHandler: @escaping (Result<Slot,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await requestUploadSlot(componentJid: componentJid, filename: filename, size: size, contentType: contentType)));

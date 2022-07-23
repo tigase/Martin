@@ -228,11 +228,11 @@ protocol RosterAnnotationAwareProtocol {
 extension RosterModule {
 
     @available(*, deprecated, renamed: "requestRoster")
-    open func rosterRequest() {
+    public func rosterRequest() {
         requestRoster(completionHandler: nil)
     }
 
-    open func requestRoster(completionHandler: ((Result<Void, XMPPError>)->Void)? = nil) {
+    public func requestRoster(completionHandler: ((Result<Void, XMPPError>)->Void)? = nil) {
         Task {
             do {
                 try await requestRoster();

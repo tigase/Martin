@@ -69,7 +69,7 @@ extension Message {
         }
     }
     
-    open var hints: [ProcessingHint] {
+    public var hints: [ProcessingHint] {
         get {
             return ProcessingHint.from(message: self);
         }

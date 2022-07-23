@@ -24,7 +24,7 @@ import Foundation
 extension Message {
     
     /// Returns information about MIX (nickname, sender jid, etc.)
-    open var mix:Mix? {
+    public var mix:Mix? {
         if let mixEl = element.firstChild(name: "mix", xmlns: MixModule.CORE_XMLNS) {
             return Mix(element: mixEl);
         }

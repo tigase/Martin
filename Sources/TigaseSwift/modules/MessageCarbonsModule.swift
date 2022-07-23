@@ -149,15 +149,15 @@ open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor {
 // async-await support
 extension MessageCarbonsModule {
     
-    open func enable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
+    public func enable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
         setState(true, callback: callback);
     }
     
-    open func disable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
+    public func disable(_ callback: ((Result<Bool,XMPPError>) -> Void )? = nil) {
         setState(false, callback: callback);
     }
     
-    open func setState(_ state: Bool, callback: ((Result<Bool,XMPPError>) -> Void )?) {
+    public func setState(_ state: Bool, callback: ((Result<Bool,XMPPError>) -> Void )?) {
         let actionName = state ? "enable" : "disable";
         let iq = Iq();
         iq.type = StanzaType.set;

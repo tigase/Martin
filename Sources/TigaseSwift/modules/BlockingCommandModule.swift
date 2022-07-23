@@ -208,7 +208,7 @@ open class BlockingCommandModule: XmppModuleBase, XmppStanzaProcessor, Resetable
 // async-await support
 extension BlockingCommandModule {
     
-    open func block(jid: JID, report: Report? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func block(jid: JID, report: Report? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await block(jid: jid, report: report)))
@@ -219,7 +219,7 @@ extension BlockingCommandModule {
     }
 
     
-    open func block(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func block(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await block(jids: jids)))
@@ -229,7 +229,7 @@ extension BlockingCommandModule {
         }
     }
     
-    open func unblock(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func unblock(jids: [JID], completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await unblock(jids: jids)))
@@ -239,7 +239,7 @@ extension BlockingCommandModule {
         }
     }
     
-    open func retrieveBlockedJids(completionHandler: ((Result<[JID],XMPPError>)->Void)?) {
+    public func retrieveBlockedJids(completionHandler: ((Result<[JID],XMPPError>)->Void)?) {
         Task {
             do {
                 let result = try await retrieveBlockedJids();

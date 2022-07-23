@@ -100,7 +100,7 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
 // async-await support
 extension EntityTimeModule {
     
-    open func entityTime(from jid: JID, completionHandler: @escaping (Result<EntityTime,XMPPError>)->Void) {
+    public func entityTime(from jid: JID, completionHandler: @escaping (Result<EntityTime,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await entityTime(from: jid)));

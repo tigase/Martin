@@ -78,7 +78,7 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
 // async-await support
 extension SessionEstablishmentModule {
     
-    open func establish(completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
+    public func establish(completionHandler: ((Result<Void,XMPPError>)->Void)? = nil) {
         guard isSessionEstablishmentRequired else {
             completionHandler?(.success(Void()));
             return;

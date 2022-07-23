@@ -311,7 +311,7 @@ extension Message {
 // async-await support
 extension MeetModule {
     
-    open func findMeetComponent(completionHandler: @escaping (Result<[MeetComponent],XMPPError>) -> Void) {
+    public func findMeetComponent(completionHandler: @escaping (Result<[MeetComponent],XMPPError>) -> Void) {
         Task {
             do {
                 completionHandler(.success(try await findMeetComponents()));
@@ -321,7 +321,7 @@ extension MeetModule {
         }
     }
     
-    open func createMeet(at jid: JID, media: [Media], participants: [BareJID] = [], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
+    public func createMeet(at jid: JID, media: [Media], participants: [BareJID] = [], completionHandler: @escaping (Result<JID,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await createMeet(at: jid, media: media, participants: participants)))
@@ -331,7 +331,7 @@ extension MeetModule {
         }
     }
     
-    open func allow(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func allow(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await allow(jids: jids, in: meetJid)))
@@ -341,7 +341,7 @@ extension MeetModule {
         }
     }
     
-    open func deny(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func deny(jids: [BareJID], in meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await deny(jids: jids, in: meetJid)))
@@ -351,7 +351,7 @@ extension MeetModule {
         }
     }
     
-    open func destroy(meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func destroy(meetJid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await destroy(meetJid: meetJid)))
@@ -361,7 +361,7 @@ extension MeetModule {
         }
     }
     
-    open func sendMessageInitiation(action: MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
+    public func sendMessageInitiation(action: MessageInitiationAction, to jid: JID, writeCompleted: ((Result<Void,XMPPError>)->Void)? = nil) {
         Task {
             do {
                 writeCompleted?(.success(try await sendMessageInitiation(action: action, to: jid)))

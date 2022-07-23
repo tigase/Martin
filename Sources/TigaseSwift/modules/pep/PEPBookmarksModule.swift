@@ -144,7 +144,7 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
 // async-await support
 extension PEPBookmarksModule {
     
-    open func addOrUpdate(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func addOrUpdate(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await addOrUpdate(bookmark: item)))
@@ -154,7 +154,7 @@ extension PEPBookmarksModule {
         }
     }
     
-    open func remove(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func remove(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await remove(bookmark: item)))
@@ -164,7 +164,7 @@ extension PEPBookmarksModule {
         }
     }
     
-    open func setConferenceAutojoin(_ value: Bool, for jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func setConferenceAutojoin(_ value: Bool, for jid: JID, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await setConferenceAutojoin(value, for: jid)))
