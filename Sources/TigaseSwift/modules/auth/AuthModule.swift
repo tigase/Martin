@@ -38,12 +38,8 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
     public static let IDENTIFIER = XmppModuleIdentifier<AuthModule>();
-    public static let CREDENTIALS_CALLBACK = "credentialsCallback";
-    public static let LOGIN_USER_NAME_KEY = "LOGIN_USER_NAME";
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "AuthModule");
-    
-    public let criteria = Criteria.empty();
     
     public let features = [String]();
     
@@ -55,11 +51,7 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable {
     public override init() {
         
     }
-        
-    open func process(stanza: Stanza) throws {
-        
-    }
-    
+            
     /**
      Starts authentication process using other module providing 
      mechanisms for authentication

@@ -44,7 +44,6 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "CapabilitiesModule");
     
-    public let criteria = Criteria.empty();
     public var features: [String] {
         return ["http://jabber.org/protocol/caps"] + additionalFeatures.map({ $0.rawValue });
     }
@@ -83,18 +82,12 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule {
     private var presenceModule: PresenceModule!;
     private var discoModule: DiscoveryModule!;
     private let actor: CAPSActor;
-    private var inProgress: [String] = [];
     
     public let additionalFeatures: [AdditionalFeatures];
     
     public init(cache: CapabilitiesCache = DefaultCapabilitiesCache(), additionalFeatures: [AdditionalFeatures] = []) {
         self.actor = CAPSActor(logger: logger, cache: cache);
         self.additionalFeatures = additionalFeatures;
-    }
-    
-    /// Method do noting
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .bad_request);
     }
     
     open func updateCaps(in presence: Presence) {

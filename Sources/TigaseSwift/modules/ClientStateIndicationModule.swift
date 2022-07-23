@@ -44,8 +44,6 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
     public static let ID = CSI_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<ClientStateIndicationModule>();
     
-    public let criteria = Criteria.empty();
-    
     public let features = [String]();
         
     open private(set) var state: Bool = false;
@@ -66,10 +64,6 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
         if scopes.contains(.session) {
             state = false;
         }
-    }
-    
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .feature_not_implemented);
     }
     
     /**

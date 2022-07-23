@@ -221,15 +221,16 @@ open class XMPPClient: Context {
      
      [XEP-0198: Stream Management - Resumption]: http://xmpp.org/extensions/xep-0198.html#resumption
      */
-    open func disconnect(_ force: Bool = false) -> AnyPublisher<Void,XMPPError> {
+    open func disconnect(force: Bool = false) async throws {
         guard self.state == .connected() || self.state == .connecting, let sessionLogic = self.sessionLogic else {
             self.logger.debug("XMPP in state: \(self.state), - not stopping connection");
-            return Fail(error: XMPPError.undefined_condition).eraseToAnyPublisher();
+            throw XMPPError.undefined_condition;
         }
-            
+        
         self.keepaliveTimer?.invalidate();
         self.keepaliveTimer = nil;
-        return sessionLogic.stop(force: force).mapError({ _ in XMPPError.undefined_condition }).eraseToAnyPublisher();
+        
+        await sessionLogic.stop(force: force);
     }
     
     /**
@@ -239,7 +240,9 @@ open class XMPPClient: Context {
         guard state == .connected() else {
             return;
         }
-        sessionLogic?.keepalive();
+        Task {
+            try await sessionLogic?.keepalive();
+        }
     }
     
 }
@@ -265,18 +268,6 @@ extension XMPPClient {
                 }
             });
         }
-    }
-    
-    open func disconnect(force: Bool = false) async throws {
-        guard self.state == .connected() || self.state == .connecting, let sessionLogic = self.sessionLogic else {
-            self.logger.debug("XMPP in state: \(self.state), - not stopping connection");
-            throw XMPPError.undefined_condition;
-        }
-        
-        self.keepaliveTimer?.invalidate();
-        self.keepaliveTimer = nil;
-        
-        await sessionLogic.stop(force: force);
     }
     
 }

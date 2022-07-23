@@ -29,7 +29,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MeetModule: XmppModuleBase, XmppModule {
+open class MeetModule: XmppModuleBase, XmppStanzaProcessor {
     
     public static let ID = "tigase:meet:0";
     public static let IDENTIFIER = XmppModuleIdentifier<MeetModule>();

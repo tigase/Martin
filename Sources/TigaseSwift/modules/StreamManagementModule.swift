@@ -48,8 +48,6 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "StreamManagementModule")
     
-    public let criteria = Criteria.xmlns(SM_XMLNS);
-    
     public let features = [String]();
         
     /// Holds queue with stanzas sent but not acked
@@ -161,11 +159,6 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
 
             }
         }
-    }
-        
-    open func process(stanza: Stanza) throws {
-        // all requests should be processed already
-        throw XMPPError.undefined_condition;
     }
     
     /**

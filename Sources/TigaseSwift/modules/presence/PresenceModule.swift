@@ -35,7 +35,7 @@ extension XmppModuleIdentifier {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html
  */
-open class PresenceModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable {
+open class PresenceModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Resetable {
         
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "presence";

@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0045: Multi-User Chat]: http://xmpp.org/extensions/xep-0045.html
  */
-open class MucModule: XmppModuleBase, XmppModule, Resetable {
+open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let IDENTIFIER = XmppModuleIdentifier<MucModule>();
     public static let ID = "muc";

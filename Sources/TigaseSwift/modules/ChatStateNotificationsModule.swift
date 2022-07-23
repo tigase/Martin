@@ -34,14 +34,8 @@ open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
     public static let ID = XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<ChatStateNotificationsModule>();
     
-    public var criteria: Criteria = Criteria.empty();
-    
     public var features: [String] = [XMLNS];
-    
-    public func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .bad_request);
-    }
-    
+        
     public override weak var context: Context? {
         didSet {
             if let context = self.context {

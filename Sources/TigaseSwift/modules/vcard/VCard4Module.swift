@@ -40,16 +40,10 @@ open class VCard4Module: XmppModuleBase, XmppModule, VCardModuleProtocol {
     public static let ID = VCARD_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<VCard4Module>();
     
-    public let criteria = Criteria.empty();
-    
     public let features = [VCARD_XMLNS];
     
     public override init() {
         
-    }
-    
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .feature_not_implemented);
     }
     
     /**

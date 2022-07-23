@@ -39,33 +39,18 @@ public protocol XmppSessionLogic: AnyObject {
     var streamLogger: StreamLogger? { get set }
     
     func start();
-    func stop(force: Bool) -> Future<Void,Never>;
+    func stop(force: Bool) async;
     
     /// Register to listen for events
     func bind();
     /// Unregister to stop listening for events
     func unbind() async;
         
-    func send(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?);
+    func send(stanza: Stanza) async throws;
     
     /// Called to send data to keep connection open
-    func keepalive();
-
-    // async-await support
-    func stop(force: Bool) async;
-}
-
-extension XmppSessionLogic {
+    func keepalive() async throws;
     
-    public func send(stanza: Stanza) {
-        send(stanza: stanza, completionHandler: nil);
-    }
-    
-    public func send(stanza: Stanza) async throws {
-        try await withUnsafeThrowingContinuation({ continuation in
-            send(stanza: stanza, completionHandler: continuation.resume(with:));
-        })
-    }
 }
 
 /** 
@@ -172,30 +157,6 @@ open class SocketSessionLogic: XmppSessionLogic {
         //responseManager.start();
     }
     
-//    private func authStateChanged(_ state: AuthModule.AuthorizationStatus) {
-//        switch state {
-//        case .authorized:
-//            let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining;
-//
-//            if !(streamFeaturesWithPipelining?.active ?? false) {
-//                connector.restartStream();
-//            }
-//        case .expectedAuthorization:
-//            guard let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining else {
-//                return;
-//            }
-//
-//            // current version of Tigase is not capable of pipelining auth with <stream> as get features is called before authentication is done!!
-//            if streamFeaturesWithPipelining.active {
-//                self.startStream();
-//            }
-//        case .error(_):
-//            _ = self.stop(force: true);
-//        default:
-//            logger.debug("Received auth state: \(state)")
-//        }
-//    }
-    
     open func unbind() async {
         for subscription in socketSubscriptions {
             subscription.cancel();
@@ -268,14 +229,11 @@ open class SocketSessionLogic: XmppSessionLogic {
     private let semaphore = DispatchSemaphore(value: 1);
     
     private func receivedIncomingStanza(_ stanza:Stanza) {
-//        dispatcher.async {
         Task {
             semaphore.wait();
             defer {
                 semaphore.signal();
-                print("finished processing: \(stanza.description)")
             }
-            print("processing: \(stanza.description)")
             do {
                 for filter in self.modulesManager.filters {
                     if filter.processIncoming(stanza: stanza) {
@@ -292,20 +250,20 @@ open class SocketSessionLogic: XmppSessionLogic {
                     return;
                 }
             
-                let modules = self.modulesManager.findModules(for: stanza);
-                guard !modules.isEmpty else {
+                let processors = self.modulesManager.findProcessors(for: stanza);
+                guard !processors.isEmpty else {
                     self.logger.debug("\(self.userJid) - feature-not-implemented \(stanza, privacy: .public)");
                     throw XMPPError(condition: .feature_not_implemented);
                 }
                 
-                for module in modules {
-                    try await module.process(stanza: stanza);
+                for processor in processors {
+                    try await processor.process(stanza: stanza);
                 }
             } catch {
                 Task {
                     do {
                         let errorStanza = try stanza.errorResult(of: error as? XMPPError ?? .undefined_condition);
-                        self.sendingOutgoingStanza(errorStanza);
+                        try await self.sendingOutgoingStanza(errorStanza);
                     } catch {
                         self.logger.debug("\(self.userJid) - error: \(error), while processing \(stanza)")
                     }
@@ -314,47 +272,36 @@ open class SocketSessionLogic: XmppSessionLogic {
         }
     }
     
-    open func send(stanza: Stanza, completionHandler: ((Result<Void,XMPPError>)->Void)?) {
-        queue.async {
-            let state = self.state;
-            guard state == .connected() || state == .connecting else {
-                completionHandler?(.failure(XMPPError(condition: .not_authorized, message: "You are not connected to the XMPP server")));
-                return;
-            }
-            
-            for filter in self.modulesManager.filters {
-                filter.processOutgoing(stanza: stanza);
-            }
-            if let completionHandler = completionHandler {
-                self.connector.send(.stanza(stanza), completion: .written({ result in
-                    completionHandler(result.mapError({ _ in XMPPError(condition: .remote_server_timeout) }));
-                }));
-            } else {
-                self.connector.send(.stanza(stanza), completion: .none);
-            }
+    open func send(stanza: Stanza) async throws {
+        let state = self.state;
+        guard state == .connected() || state == .connecting else {
+           throw XMPPError(condition: .not_authorized, message: "You are not connected to the XMPP server");
         }
+            
+        for filter in self.modulesManager.filters {
+            filter.processOutgoing(stanza: stanza);
+        }
+        
+        try await connector.send(.stanza(stanza));
     }
 
     
-    private func sendingOutgoingStanza(_ stanza: Stanza) {
-        queue.async {
-            for filter in self.modulesManager.filters {
-                filter.processOutgoing(stanza: stanza);
-            }
-            self.connector.send(.stanza(stanza));
+    private func sendingOutgoingStanza(_ stanza: Stanza) async throws {
+        for filter in self.modulesManager.filters {
+            filter.processOutgoing(stanza: stanza);
         }
+        try await self.connector.send(.stanza(stanza));
     }
     
-    open func keepalive() {
+    open func keepalive() async throws {
         if let pingModule = modulesManager.moduleOrNil(.ping) {
-            Task {
-                do {
-                    try await pingModule.ping(userJid.jid());
-                } catch {
-                    if (error as? XMPPError)?.condition == .remote_server_timeout {
-                        self.logger.debug("\(self.userJid) - no response on ping packet - possible that connection is broken, reconnecting...");
-                    }
+            do {
+                try await pingModule.ping(userJid.jid());
+            } catch {
+                if (error as? XMPPError)?.condition == .remote_server_timeout {
+                    self.logger.debug("\(self.userJid) - no response on ping packet - possible that connection is broken, reconnecting...");
                 }
+                throw error;
             }
         }
     }

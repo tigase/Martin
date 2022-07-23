@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PushNotificationsModule: XmppModuleBase, XmppModule {
+open class PushNotificationsModule: XmppModuleBase, XmppStanzaProcessor {
     
     public static let PUSH_NOTIFICATIONS_XMLNS = "urn:xmpp:push:0";
     

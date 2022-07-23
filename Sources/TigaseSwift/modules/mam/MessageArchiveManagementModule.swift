@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0313: Message Archive Management]: http://xmpp.org/extensions/xep-0313.html
  */
-open class MessageArchiveManagementModule: XmppModuleBase, XmppModule, Resetable {
+open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
     
     // namespace used by XEP-0313
     public static let MAM_XMLNS = "urn:xmpp:mam:1";

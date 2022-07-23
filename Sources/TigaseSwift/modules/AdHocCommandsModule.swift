@@ -34,15 +34,9 @@ open class AdHocCommandsModule: XmppModuleBase, XmppModule {
     public static let ID = COMMANDS_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<AdHocCommandsModule>();
     
-    public let criteria = Criteria.empty();
-    
     public let features = [String]();
     
     public override init() {
-    }
-    
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .feature_not_implemented);
     }
     
     open func execute(on to: JID?, command node: String, action: Action?, data: DataForm?) async throws -> AdHocCommandsModule.Response {

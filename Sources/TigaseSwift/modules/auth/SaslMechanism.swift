@@ -38,7 +38,7 @@ public protocol SaslMechanism: AnyObject, Resetable {
      - parameter sessionObject: instance of `SessionObject`
      - returns: response to send to server
      */
-    func evaluateChallenge(_ input:String?, context: Context) throws -> String?
+    func evaluateChallenge(_ input: String?, context: Context) throws -> String?
     
     /** 
      Check if mechanism may be used (ie. if needed data are available)

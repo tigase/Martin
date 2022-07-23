@@ -33,8 +33,6 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
     public static let ID = "storage:bookmarks";
     public static let IDENTIFIER = XmppModuleIdentifier<PEPBookmarksModule>();
     
-    public let criteria = Criteria.empty();
-    
     public let features: [String] = [ ID + "+notify" ];
     
     @Published
@@ -74,11 +72,6 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
         }
         try await addOrUpdate(bookmark: conference.with(autojoin: value));
     }
-        
-    public func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .feature_not_implemented);
-    }
-    
     
     public func publish(bookmarks: Bookmarks) async throws -> String {
         guard let context = context else {

@@ -40,8 +40,6 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
     public static let ID = HTTP_FILE_UPLOAD_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<HttpFileUploadModule>();
     
-    public let criteria = Criteria.empty();
-    
     public let features = [String]();
     
     open weak override var context: Context? {
@@ -58,10 +56,6 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule {
     
     public override init() {
         
-    }
-    
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .bad_request);
     }
     
     open func findHttpUploadComponents() async throws -> [HttpFileUploadModule.UploadComponent] {

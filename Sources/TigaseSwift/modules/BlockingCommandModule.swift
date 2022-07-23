@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class BlockingCommandModule: XmppModuleBase, XmppModule, Resetable {
+open class BlockingCommandModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
     
     public enum Cause: String {
         case spam = "urn:xmpp:reporting:spam"

@@ -91,9 +91,13 @@ extension Connector {
     }
         
     public func send(_ data: StreamEvent) async throws {
-        try await withUnsafeThrowingContinuation({ continuation in
-            send(data, completion: .written(continuation.resume(with:)));
-        })
+        do {
+            try await withUnsafeThrowingContinuation({ continuation in
+                send(data, completion: .written(continuation.resume(with:)));
+            })
+        } catch {
+            throw XMPPError.remote_server_timeout;
+        }
     }
 
 }

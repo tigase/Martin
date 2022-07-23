@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [stream features]: http://xmpp.org/rfcs/rfc6120.html#streams-negotiation-features
  */
-open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppModule, Resetable {
+open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Resetable {
 
     public static let ID = "stream:features";
     public static let STREAM_FEATURES_KEY = "stream:features";

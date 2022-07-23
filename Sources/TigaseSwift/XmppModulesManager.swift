@@ -37,24 +37,50 @@ public struct XmppModuleIdentifier<T: XmppModule> {
  instances of `XmppModule` which are registered for processing particular
  stanza.
  */
-open class XmppModulesManager : ContextAware, Resetable {
+public class XmppModulesManager : ContextAware, Resetable {
         
     open weak var context: Context?;
     
+    private var _filters: [XmppStanzaFilter] = [];
+    private var _modules: [XmppModule] = [];
+    private var _processors: [XmppStanzaProcessor] = [];
+    
     /// List of registered instances of `XmppStanzaFilter` which needs to process packets
-    open private(set) var filters = [XmppStanzaFilter]();
-        
+    public var filters: [XmppStanzaFilter] {
+        get {
+            return lock.with {
+                return _filters;
+            }
+        }
+    }
     /// List of registered modules
-    open private(set) var modules = [XmppModule]();
+    public var modules: [XmppModule] {
+        get {
+            return lock.with {
+                return _modules;
+            }
+        }
+    }
+    
+    /// List of registered processors
+    public var processors: [XmppStanzaProcessor] {
+        get {
+            return lock.with {
+                return _processors;
+            }
+        }
+    }
     /// Map of registered modules where module id is key - used for fast retrieval of module instances
     private var modulesById = [String:XmppModule]();
+    
+    private let lock = UnfairLock();
     
     init() {
     }
     
     deinit {
         for module in modules {
-            if var contextAware = module as? ContextAware {
+            if let contextAware = module as? ContextAware {
                 contextAware.context = nil;
             }
         }
@@ -73,24 +99,10 @@ open class XmppModulesManager : ContextAware, Resetable {
      Processes passed stanza and return list of `XmppModule` instances which should process this stanza.
      Instances of `XmppModule` are selected by checking if it's `criteria` field matches stanza.
      */
-    open func findModules(for stanza:Stanza) -> [XmppModule] {
-        return findModules(for: stanza.element);
+    open func findProcessors(for stanza:Stanza) -> [XmppStanzaProcessor] {
+        return processors.filter({ $0.criteria.match(stanza.element) })
     }
     
-    /**
-     Processes passed element and return list of `XmppModule` instances which should process this element.
-     Instances of `XmppModule` are selected by checking if it's `criteria` field matches element.
-     */
-    open func findModules(for elem:Element) -> [XmppModule] {
-        var results = [XmppModule]();
-        for module in modules {
-            if module.criteria.match(elem) {
-                results.append(module);
-            }
-        }
-        return results;
-    }
-
     open func module<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T {
         return modulesById[identifier.id]! as! T;
     }
@@ -105,18 +117,6 @@ open class XmppModulesManager : ContextAware, Resetable {
 
     open func moduleOrNil<T: XmppModule>(_ type: T.Type) -> T? {
         return modulesById[type.ID] as? T;
-    }
-
-    /// Returns instance of `XmppModule` registered under passed id
-    @available(* , deprecated, message: "Replaced with moduleOrNil using XmppModule type or XmppModuleIdentifier as a parameter")
-    open func getModule<T:XmppModule>(_ id:String) -> T? {
-        return modulesById[id] as? T;
-    }
-    
-    // Returns true if there is an instance of `XmppModule` registered for passed id
-    @available(* , deprecated, message: "Replaced with method accepting XmppModule type or XmppModuleIdentifier as a parameter")
-    open func hasModule(_ id: String) -> Bool {
-        return modulesById[id] != nil;
     }
 
     open func hasModule(_ type: XmppModule.Type) -> Bool {
@@ -143,16 +143,21 @@ open class XmppModulesManager : ContextAware, Resetable {
      */
     @discardableResult
     open func register<T:XmppModule>(_ module:T) -> T {
-        if var contextAware = module as? ContextAware {
+        if let contextAware = module as? ContextAware {
             contextAware.context = context;
         }
-        
-        modulesById[T.ID] = module;
-        modules.append(module);
-        if let filter = module as? XmppStanzaFilter {
-            filters.append(filter);
+
+        return lock.with {
+            modulesById[T.ID] = module;
+            _modules.append(module);
+            if let filter = module as? XmppStanzaFilter {
+                _filters.append(filter);
+            }
+            if let processor = module as? XmppStanzaProcessor {
+                _processors.append(processor);
+            }
+            return module;
         }
-        return module;
     }
     
     /**
@@ -162,19 +167,22 @@ open class XmppModulesManager : ContextAware, Resetable {
      */
     @discardableResult
     open func unregister<T:XmppModule>(_ module:T) -> T {
-        modulesById.removeValue(forKey: T.ID)
-        if let idx = self.modules.firstIndex(where: { $0 === module}) {
-            self.modules.remove(at: idx);
-        }
-        if let filter = module as? XmppStanzaFilter {
-            if let idx = self.filters.firstIndex(where: { $0 === filter }) {
-                self.filters.remove(at: idx);
+        defer {
+            if let contextAware = module as? ContextAware {
+                contextAware.context = nil;
             }
         }
-        if var contextAware = module as? ContextAware {
-            contextAware.context = nil;
+        return lock.with {
+            modulesById.removeValue(forKey: T.ID)
+            _modules.removeAll(where: { $0 === module })
+            if let filter = module as? XmppStanzaFilter {
+                _filters.removeAll(where: { $0 === filter })
+            }
+            if let processor = module as? XmppStanzaProcessor {
+                _processors.removeAll(where: { $0 === processor });
+            }
+            return module;
         }
-        return module;
     }
     
 }

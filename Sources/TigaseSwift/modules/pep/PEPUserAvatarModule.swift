@@ -40,8 +40,6 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     public static let FEATURES_NOTIFY = [ METADATA_XMLNS + "+notify" ];
     public static let FEATURES_NONE = [String]();
     
-    public let criteria = Criteria.empty();
-    
     open var listenForAvatarChanges: Bool = true;
     
     public let avatarChangePublisher = PassthroughSubject<AvatarChange,Never>();
@@ -60,10 +58,6 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
     
     public override init() {
         
-    }
-    
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .feature_not_implemented);
     }
     
     public struct Avatar {

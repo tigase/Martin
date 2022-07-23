@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class JingleModule: XmppModuleBase, XmppModule {
+open class JingleModule: XmppModuleBase, XmppStanzaProcessor {
     
     public static let XMLNS = "urn:xmpp:jingle:1";
     

@@ -33,7 +33,6 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
     public static let ID = XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<ExternalServiceDiscoveryModule>();
     
-    public let criteria: Criteria = Criteria.empty();
     public let features: [String] = [];
     
     open var isAvailable: Bool {
@@ -45,10 +44,6 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
     
     public override init() {
         
-    }
-    
-    public func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .feature_not_implemented);
     }
     
     public func discover(from jid: JID?, type: String?) async throws -> [Service] {

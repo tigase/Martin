@@ -41,8 +41,6 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     public static let ID = BIND_XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<ResourceBinderModule>();
     
-    public let criteria = Criteria.empty();
-    
     public let features = [String]();
     
     open private(set) var bindedJid: JID?;
@@ -73,11 +71,6 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
         let jid = JID(name);
         self.bindedJid = jid;
         return jid;
-    }
-    
-    /// Method should not be called due to empty `criteria` property
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .bad_request);
     }
     
 }

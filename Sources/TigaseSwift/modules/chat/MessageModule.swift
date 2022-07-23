@@ -30,7 +30,7 @@ extension XmppModuleIdentifier {
 /**
  Module provides features responsible for handling messages
  */
-open class MessageModule: XmppModuleBase, XmppModule {
+open class MessageModule: XmppModuleBase, XmppStanzaProcessor {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "message";
     public static let IDENTIFIER = XmppModuleIdentifier<MessageModule>();

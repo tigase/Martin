@@ -43,8 +43,6 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "SaslModule")
 
-    public let criteria: Criteria = .false;
-    
     private var cancellable: Cancellable?;
     open override var context: Context? {
         didSet {
@@ -106,11 +104,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
             self._mechanismsOrder.append(mechanism.name);
         }
     }
-    
-    open func process(stanza elem: Stanza) throws {
-        throw XMPPError(condition: .bad_request);
-    }
-    
+        
     private func handleResponse(stanza elem: Stanza, mechanism: SaslMechanism) async throws {
         do {
         switch elem.name {

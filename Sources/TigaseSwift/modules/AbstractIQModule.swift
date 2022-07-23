@@ -25,7 +25,7 @@ import Foundation
  Extension of `XmppModule` with helper methods for implementing
  modules reacting on `Iq` stanzas
  */
-public protocol AbstractIQModule: XmppModule {
+public protocol AbstractIQModule: XmppStanzaProcessor {
     
     /**
      Will be called on `<iq type=\"get\"/>'

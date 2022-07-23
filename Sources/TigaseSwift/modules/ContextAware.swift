@@ -24,7 +24,7 @@ import Foundation
 /**
  Common protocol for classes aware of `Context`
  */
-public protocol ContextAware {
+public protocol ContextAware: AnyObject {
     
     var context: Context? { get set }
     

@@ -29,31 +29,22 @@ public protocol XmppModule: AnyObject {
     
     static var ID: String { get }
     
-    /// criteria used to match if this module should process particular stanza
-    var criteria: Criteria { get };
     /// list of features supported by this module
     var features: [String] { get };
+        
+}
+
+public protocol XmppStanzaProcessor: XmppModule {
+    
+    /// criteria used to match if this module should process particular stanza
+    var criteria: Criteria { get };
     
     /**
      This method is responsible for actual processing of `Stanza` instance.
      - throws: ErrorCondition - if processing resulted in an error
      */
-    func process(stanza: Stanza) throws
-    
-}
+    func process(stanza: Stanza) async throws
 
-extension XmppModule {
-    func process(stanza: Stanza) async throws {
-        return try await withUnsafeThrowingContinuation({ continuation in
-            do {
-                try self.process(stanza: stanza);
-                continuation.resume();
-            } catch {
-                continuation.resume(throwing: error);
-            }
-        })
-        
-    }
 }
 
 extension AnyCancellable {
@@ -63,48 +54,6 @@ extension AnyCancellable {
     }
     
 }
-
-//public protocol AsyncXmppModule: AnyObject {
-//    
-//    static var ID: String { get }
-//    
-//    /// criteria used to match if this module should process particular stanza
-//    var criteria: Criteria { get };
-//    /// list of features supported by this module
-//    var features: [String] { get };
-//    
-//    /**
-//     This method is responsible for actual processing of `Stanza` instance.
-//     - throws: ErrorCondition - if processing resulted in an error
-//     */
-//    func process(stanza: Stanza) async throws
-//    
-//}
-//
-//open class AsyncXmppModuleBase: XmppModuleBase {
-//    
-//    func process(stanza: Stanza) async throws {
-//        
-//    }
-//    
-//    private let actor = ModuleActor();
-//    
-//    func process(stanza: Stanza) throws {
-//        Task {
-//            actor.execute({ try await self.process(stanza: stanza) });
-//        }
-//    }
-//    
-//    private actor ModuleActor {
-//        private var task: Task<Void,Error>?;
-//        
-//        func execute(_ body: () async throws -> Void) {
-//            task = Task {
-//                try await body();
-//            }
-//        }
-//    }
-//}
 
 open class XmppModuleBase: ContextAware, PacketWriter {
         
@@ -124,27 +73,6 @@ open class XmppModuleBase: ContextAware, PacketWriter {
     public func store(_ cancellable: AnyCancellable?) {
         cancellable?.store(in: &cancellables);
     }
-    
-    public func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void) {
-        guard let writer = context?.writer else {
-            completionHandler(.failure(XMPPError(condition: .remote_server_timeout)));
-            return;
-        }
-        writer.write(iq: iq, timeout: timeout, completionHandler: completionHandler);
-    }
-    
-    public func write(stanza: Stanza, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
-        guard let writer = context?.writer else {
-            completionHandler?(.failure(.remote_server_timeout));
-            return;
-        }
-        writer.write(stanza: stanza, completionHandler: completionHandler);
-    }
-
-}
-
-// async-await support
-extension XmppModuleBase {
     
     public func write(stanza: Stanza, for condition: ResponseManager.Condition, timeout: TimeInterval) async throws -> Stanza {
         guard let writer = context?.writer else {
@@ -166,6 +94,28 @@ extension XmppModuleBase {
             throw XMPPError(condition: .remote_server_timeout);
         }
         return try await writer.write(stanza: stanza);
+    }
+
+}
+
+// async-await support
+extension XmppModuleBase {
+    
+    
+    public func write(iq: Iq, timeout: TimeInterval, completionHandler: @escaping (Result<Iq, XMPPError>) -> Void) {
+        guard let writer = context?.writer else {
+            completionHandler(.failure(XMPPError(condition: .remote_server_timeout)));
+            return;
+        }
+        writer.write(iq: iq, timeout: timeout, completionHandler: completionHandler);
+    }
+    
+    public func write(stanza: Stanza, completionHandler: ((Result<Void, XMPPError>) -> Void)?) {
+        guard let writer = context?.writer else {
+            completionHandler?(.failure(.remote_server_timeout));
+            return;
+        }
+        writer.write(stanza: stanza, completionHandler: completionHandler);
     }
     
 }

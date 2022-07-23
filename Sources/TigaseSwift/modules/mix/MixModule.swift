@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MixModule: XmppModuleBaseSessionStateAware, XmppModule, RosterAnnotationAwareProtocol {
+open class MixModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, RosterAnnotationAwareProtocol {
     func rosterExtensionRequestElement() -> Element? {
         return Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0");
     }

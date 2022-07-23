@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0060: Publish-Subscribe]: http://www.xmpp.org/extensions/xep-0060.html
  */
-open class PubSubModule: XmppModuleBase, XmppModule {
+open class PubSubModule: XmppModuleBase, XmppStanzaProcessor {
     
     public static let PUBSUB_XMLNS = "http://jabber.org/protocol/pubsub";
     

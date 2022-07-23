@@ -40,9 +40,7 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "session";
     public static let IDENTIFIER = XmppModuleIdentifier<SessionEstablishmentModule>();
-    
-    public let criteria = Criteria.empty();
-    
+
     public let features = [String]();
     
     open override var context: Context? {
@@ -62,11 +60,6 @@ open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
     
     public override init() {
         
-    }
-    
-    /// Method should not be called due to empty `criteria`
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .bad_request);
     }
     
     /// Method called to start session establishemnt

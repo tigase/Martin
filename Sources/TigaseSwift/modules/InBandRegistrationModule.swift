@@ -40,13 +40,12 @@ extension StreamFeatures.StreamFeature {
  
  [XEP-0077: In-Band Registration]: http://xmpp.org/extensions/xep-0077.html
  */
-open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
+open class InBandRegistrationModule: XmppModuleBase, XmppModule {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "InBandRegistrationModule";
     public static let IDENTIFIER = XmppModuleIdentifier<InBandRegistrationModule>();
     
     public let features = [String]();
-    public let criteria = Criteria.empty();
     
     open override var context: Context? {
         didSet {
@@ -56,14 +55,6 @@ open class InBandRegistrationModule: XmppModuleBase, AbstractIQModule {
     
     public override init() {
         
-    }
-    
-    open func processGet(stanza: Stanza) throws {
-        throw XMPPError(condition: .not_allowed);
-    }
-    
-    open func processSet(stanza: Stanza) throws {
-        throw XMPPError(condition: .not_allowed);
     }
     
     /** 
@@ -337,7 +328,9 @@ extension InBandRegistrationModule {
                 }
                 cancellables.removeAll();
                 if let client = self.client {
-                    _ = client.disconnect();
+                    Task {
+                        try await client.disconnect();
+                    }
                 }
             }
             didSet {
@@ -387,7 +380,7 @@ extension InBandRegistrationModule {
             });
             self.onCertificateValidationError = onCertificateValidationError;
             Task {
-                try await self.client?.login();
+                try self.client?.login();
             }
         }
         
@@ -401,7 +394,7 @@ extension InBandRegistrationModule {
             formToSubmit = form;
             guard (client?.state ?? .disconnected()) != .disconnected() else {
                 Task {
-                    try await client?.login();
+                    try client?.login();
                 }
                 return;
             }
@@ -438,7 +431,9 @@ extension InBandRegistrationModule {
         }
         
         open func cancel() {
-            _ = self.client?.disconnect();
+            Task {
+               try await self.client?.disconnect();
+            }
             self.finish();
         }
         
@@ -469,7 +464,7 @@ extension InBandRegistrationModule {
                     self.acceptedCertificate = certData;
                     self.serverAvailable = false;
                     Task {
-                        try await self.client.login();
+                        try self.client.login();
                     }
                 });
             }

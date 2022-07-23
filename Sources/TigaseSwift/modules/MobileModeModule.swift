@@ -33,9 +33,7 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
     public static let ID = MM_XMLNS;
     
     public let id = MM_XMLNS;
-    
-    public let criteria = Criteria.empty();
-    
+        
     public let features = [String]();
         
     open private(set) var activeMode: Mode?;
@@ -59,10 +57,6 @@ open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
         }
     }
         
-    open func process(stanza: Stanza) throws {
-        throw XMPPError(condition: .feature_not_implemented);
-    }
-    
     /**
      Enable optimization mode
      - paramater mode: mode to use
