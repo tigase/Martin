@@ -21,7 +21,7 @@
 import Foundation
 
 
-open class DataFormWrapper: DataFormProtocol {
+open class DataFormWrapper: DataFormProtocol, @unchecked Sendable {
     
     @propertyWrapper
     public struct Field<Value> {

@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [session establishment]: http://xmpp.org/rfcs/rfc3921.html#session
  */
-open class SessionEstablishmentModule: XmppModuleBase, XmppModule {
+open class SessionEstablishmentModule: XmppModuleBase, XmppModule, @unchecked Sendable {
 
     /// Namespace used in session establishment process
     static let SESSION_XMLNS = "urn:ietf:params:xml:ns:xmpp-session";

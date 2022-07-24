@@ -35,7 +35,7 @@ extension XmppModuleIdentifier {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html
  */
-open class PresenceModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Resetable {
+open class PresenceModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Resetable, @unchecked Sendable {
         
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "presence";
@@ -52,10 +52,6 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor,
     
     /// Presence store with current presence informations
     public let store: PresenceStore;
-    
-    /// Should send presence changes events during stream resumption
-    open var fireEventsOnStreamResumption = true;
-    fileprivate var streamResumptionPresences: [Presence]? = nil;
     
     @Published
     public private(set) var presence: Presence = Presence();

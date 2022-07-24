@@ -28,9 +28,9 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class BlockingCommandModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
+open class BlockingCommandModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked Sendable {
     
-    public enum Cause: String {
+    public enum Cause: String, Sendable {
         case spam = "urn:xmpp:reporting:spam"
         case abuse = "urn:xmpp:reporting:abuse"
     }
@@ -112,8 +112,8 @@ open class BlockingCommandModule: XmppModuleBase, XmppStanzaProcessor, Resetable
         }
     }
     
-    public struct Report {
-        public struct ReportedStanza {
+    public struct Report: Sendable {
+        public struct ReportedStanza: Sendable {
             let id: String;
             let by: JID;
         }

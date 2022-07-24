@@ -31,7 +31,7 @@ import Foundation
  Every role contains properties which describes what user 
  in particular role can and cannot do.
  */
-public enum MucRole: String {
+public enum MucRole: String, Sendable {
     
     case moderator
     case participant

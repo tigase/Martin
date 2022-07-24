@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class JingleModule: XmppModuleBase, XmppStanzaProcessor {
+open class JingleModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
     
     public static let XMLNS = "urn:xmpp:jingle:1";
     
@@ -60,10 +60,11 @@ open class JingleModule: XmppModuleBase, XmppStanzaProcessor {
 
     private let sessionManager: JingleSessionManager;
 
-    public var supportsMessageInitiation = false;
+    private let supportsMessageInitiation: Bool;
     
-    public init(sessionManager: JingleSessionManager) {
+    public init(sessionManager: JingleSessionManager, supportsMessageInitiation: Bool = false) {
         self.sessionManager = sessionManager;
+        self.supportsMessageInitiation = supportsMessageInitiation;
     }
     
     public func register(description: JingleDescription.Type, features: [String]) {

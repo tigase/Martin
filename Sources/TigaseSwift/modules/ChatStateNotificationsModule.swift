@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
+open class ChatStateNotificationsModule: XmppModuleBase, XmppModule, @unchecked Sendable {
     
     public static let XMLNS = "http://jabber.org/protocol/chatstates";
     
@@ -67,7 +67,7 @@ open class ChatStateNotificationsModule: XmppModuleBase, XmppModule {
     
 }
 
-public enum ChatState: String {
+public enum ChatState: String, Sendable {
     case active
     case inactive
     case gone

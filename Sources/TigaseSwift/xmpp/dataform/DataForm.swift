@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class DataForm: DataFormProtocol {
+open class DataForm: DataFormProtocol, @unchecked Sendable {
 
     public enum FormType: String {
         case cancel
@@ -30,9 +30,9 @@ open class DataForm: DataFormProtocol {
         case submit
     }
 
-    open class Field {
+    open class Field: @unchecked Sendable {
         
-        public enum FieldType: String {
+        public enum FieldType: String, Sendable {
             case boolean
             case fixed
             case hidden
@@ -52,7 +52,7 @@ open class DataForm: DataFormProtocol {
             }
         }
         
-        public struct Media {
+        public struct Media: Sendable {
 
             public static func from(element el: Element) -> [Media] {
                 return el.compactMapChildren(Media.init(element:));
@@ -71,7 +71,7 @@ open class DataForm: DataFormProtocol {
                 self.uris = uris;
             }
 
-            public struct Uri {
+            public struct Uri: Sendable {
                 public let type: String;
                 public let value: String;
 
@@ -89,7 +89,7 @@ open class DataForm: DataFormProtocol {
             }
         }
         
-        public struct Option {
+        public struct Option: Sendable {
             
             public static func from(element el: Element) -> [Option] {
                 return el.compactMapChildren(Option.init(element:));
@@ -141,7 +141,9 @@ open class DataForm: DataFormProtocol {
                 return .TextSingle(element: el);
             }
         }
-        
+
+        public let lock = UnfairLock();
+
         public let `var`: String;
         public let type: FieldType?;
         public let isRequired: Bool;
@@ -201,12 +203,18 @@ open class DataForm: DataFormProtocol {
 
     }
         
+    private let lock = UnfairLock();
     public let type: FormType;
-    open var title: String?;
-    open var instructions: [String];
-    open private(set) var fields: [Field];
-    open var reported: [Reported];
-    open var layout: [Page];
+    public let title: String?;
+    public let instructions: [String];
+    private var _fields: [Field];
+    public var fields: [Field] {
+        return lock.with({
+            return _fields;
+        })
+    }
+    public let reported: [Reported];
+    public let layout: [Page];
 
     public convenience init?(element: Element?) {
         guard let el = element else {
@@ -231,18 +239,26 @@ open class DataForm: DataFormProtocol {
         self.type = type;
         self.title = title;
         self.instructions = instructions;
-        self.fields = fields;
+        self._fields = fields;
         self.reported = reported;
         self.layout = layout;
     }
                                       
     open func add(field: Field) {
-        self.remove(field: field);
-        self.fields.append(field);
+        lock.with {
+            self._remove(field: field);
+            self._fields.append(field);
+        }
     }
     
     open func remove(field: Field) {
-        self.fields.removeAll(where: { $0.var == field.var });
+        lock.with({
+            _remove(field: field);
+        })
+    }
+    
+    private func _remove(field: Field) {
+        self._fields.removeAll(where: { $0.var == field.var });
     }
     
     open func field(for `var`: String) -> Field? {

@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [resource binding]: http://xmpp.org/rfcs/rfc6120.html#bind
  */
-open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
+open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendable {
  
     /// Namespace used by resource binding
     static let BIND_XMLNS = "urn:ietf:params:xml:ns:xmpp-bind";
@@ -43,7 +43,13 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     
     public let features = [String]();
     
-    open private(set) var bindedJid: JID?;
+    private let lock = UnfairLock();
+    private var _bindedJid: JID?;
+    open var bindedJid: JID? {
+        return lock.with({
+            return _bindedJid;
+        })
+    }
     
     public override init() {
         
@@ -51,7 +57,9 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
     
     public func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.session) {
-            bindedJid = nil;
+            lock.with({
+                _bindedJid = nil;
+            })
         }
     }
     
@@ -69,7 +77,9 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable {
         }
         
         let jid = JID(name);
-        self.bindedJid = jid;
+        lock.with({
+            _bindedJid = nil;
+        })
         return jid;
     }
     

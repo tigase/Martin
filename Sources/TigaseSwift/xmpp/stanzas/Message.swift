@@ -22,7 +22,7 @@
 import Foundation
 
 /// Extenstion of `Stanza` class with specific features existing only in `message' elements.
-open class Message: Stanza {
+open class Message: Stanza, @unchecked Sendable {
     
     /// Message plain text
     open var body:String? {

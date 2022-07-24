@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class AbstractPEPModule: XmppModuleBase {
+open class AbstractPEPModule: XmppModuleBase, @unchecked Sendable {
     
     open private(set) var pubsubModule: PubSubModule! {
         didSet {

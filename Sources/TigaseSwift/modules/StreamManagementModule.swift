@@ -37,7 +37,7 @@ extension StreamFeatures.StreamFeature {
  
  [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
  */
-open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, Resetable {
+open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, Resetable, @unchecked Sendable {
     
     /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
@@ -72,8 +72,8 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
     }
     
-    fileprivate var lastRequestTimestamp = Date();
-    fileprivate var lastSentH = UInt32(0);
+    private var lastRequestTimestamp = Date();
+    private var lastSentH = UInt32(0);
     
     /// Is stream resumption enabled?
     open var isResumptionEnabled: Bool {

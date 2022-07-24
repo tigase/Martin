@@ -42,7 +42,7 @@ extension DataFormEnum {
 
 extension DataForm {
     
-    public enum IntegerOrMax: LosslessStringConvertible, Equatable {
+    public enum IntegerOrMax: LosslessStringConvertible, Equatable, Sendable {
         case value(Int)
         case max
         

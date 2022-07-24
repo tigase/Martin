@@ -22,7 +22,7 @@
 import Foundation
 import CryptoKit
 
-open class SslCertificateInfo: NSObject, NSCoding {
+open class SslCertificateInfo: NSObject, NSCoding, @unchecked Sendable {
     
     public let details: Entry;
     public let issuer: Entry?;

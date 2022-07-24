@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class ChatMarkersModule: XmppModuleBase, XmppStanzaProcessor {
+open class ChatMarkersModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
     
     public static let ID = Message.ChatMarkers.XMLNS;
     public static let IDENTIFIER = XmppModuleIdentifier<ChatMarkersModule>();

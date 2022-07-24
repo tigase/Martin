@@ -21,16 +21,23 @@
 
 import Foundation
 
+public protocol BookmarksItem: CustomElementConvertible, Sendable {
+
+    var id: String { get }
+    var name: String? { get }
+    
+}
+
 open class Bookmarks {
     
-    open var items: [Item];
+    open var items: [BookmarksItem];
     
     public init?(from elem: Element?) {
         guard let el = elem, el.name == "storage" && el.xmlns == "storage:bookmarks" else {
             return nil;
         }
         
-        self.items = el.children.compactMap({ child -> Item? in
+        self.items = el.children.compactMap({ child -> BookmarksItem? in
             switch child.name {
             case "url":
                 return Url(from: child);
@@ -42,22 +49,12 @@ open class Bookmarks {
         });
     }
     
-    public init(items: [Item] = []) {
+    public init(items: [BookmarksItem] = []) {
         self.items = items;
     }
     
-    open func updateOrAdd(bookmark: Item) -> Bookmarks? {
-        if let idx = items.firstIndex(where: { (item) -> Bool in
-            guard item.type == bookmark.type else {
-                return false;
-            }
-            switch item.type {
-            case .url:
-                return (item as? Url)?.url == (bookmark as? Url)?.url;
-            case .conference:
-                return (item as? Conference)?.jid == (bookmark as? Conference)?.jid;
-            }
-        }) {
+    open func updateOrAdd(bookmark: BookmarksItem) -> Bookmarks? {
+        if let idx =  items.firstIndex(where: { bookmark.id == $0.id }) {
             items[idx] = bookmark;
         } else {
             items.append(bookmark);
@@ -65,18 +62,8 @@ open class Bookmarks {
         return self;
     }
     
-    open func remove(bookmark: Item) -> Bookmarks? {
-        if let idx = items.firstIndex(where: { (item) -> Bool in
-            guard item.type == bookmark.type else {
-                return false;
-            }
-            switch item.type {
-            case .url:
-                return (item as? Url)?.url == (bookmark as? Url)?.url;
-            case .conference:
-                return (item as? Conference)?.jid == (bookmark as? Conference)?.jid;
-            }
-        }) {
+    open func remove(bookmark: BookmarksItem) -> Bookmarks? {
+        if let idx = items.firstIndex(where: { bookmark.id == $0.id }) {
             items.remove(at: idx);
             return self;
         } else {
@@ -90,35 +77,21 @@ open class Bookmarks {
     
     open func toElement() -> Element {
         let el = Element(name: "storage", xmlns: "storage:bookmarks");
-        el.addChildren(items.map({ item in item.toElement()}));
+        el.addChildren(items.map({ item in item.element()}));
         return el;
     }
     
-    open class Item {
+    public struct Conference: BookmarksItem, Sendable {
+        public var id: String {
+            return jid.description
+        }
         public let name: String?;
-        public let type: ItemType;
-        
-        public init(type: ItemType, name: String?) {
-            self.type = type;
-            self.name = name;
-        }
-        
-        open func toElement() -> Element {
-            let el = Element(name: type.rawValue);
-            if name != nil {
-                el.attribute("name", newValue: name);
-            }
-            return el;
-        }
-    }
-    
-    open class Conference: Item {
         public let jid: JID;
         public let autojoin: Bool;
         public let nick: String?;
         public let password: String?;
         
-        convenience public init?(from el: Element?) {
+        public init?(from el: Element?) {
             guard el?.name == "conference", let jid = JID(el?.attribute("jid")) else {
                 return nil;
             }
@@ -129,39 +102,44 @@ open class Bookmarks {
         }
         
         public init(name: String?, jid: JID, autojoin: Bool, nick: String? = nil, password: String? = nil) {
+            self.name = name;
             self.jid = jid;
             self.autojoin = autojoin;
             self.nick = nick;
             self.password = password;
-            super.init(type: .conference, name: name);
         }
         
-        open override func toElement() -> Element {
-            let el = super.toElement();
-            el.attribute("jid", newValue: jid.description);
-            if autojoin {
-                el.attribute("autojoin", newValue: "true");
-            }
-            if let nick = self.nick {
-                el.addChild(Element(name: "nick", cdata: nick));
-            }
-            el.attribute("password", newValue: password);
-            return el;
+        public func element() -> Element {
+            return Element(name: "conference", {
+                Attribute("name", value: name)
+                Attribute("jid", value: jid.description)
+                Attribute("password", value: password)
+                if autojoin {
+                    Attribute("autojoin", value: "true")
+                }
+                if let nick = self.nick {
+                    Element(name: "nick", cdata: nick);
+                }
+            })
         }
         
-        open func with(autojoin: Bool) -> Bookmarks.Conference {
+        public func with(autojoin: Bool) -> Bookmarks.Conference {
             return Bookmarks.Conference(name: name, jid: jid, autojoin: autojoin, nick: nick, password: password);
         }
         
-        open func with(password: String?) -> Bookmarks.Conference {
+        public func with(password: String?) -> Bookmarks.Conference {
             return Bookmarks.Conference(name: name, jid: jid, autojoin: autojoin, nick: nick, password: password);
         }
     }
     
-    public class Url: Item {
+    public struct Url: BookmarksItem, Sendable {
+        public var id: String {
+            return url;
+        }
+        public let name: String?;
         public let url: String;
         
-        convenience public init?(from el: Element?) {
+        public init?(from el: Element?) {
             guard el?.name == "url", let url = el?.attribute("url") else {
                 return nil;
             }
@@ -170,13 +148,14 @@ open class Bookmarks {
         
         public init(name: String?, url: String) {
             self.url = url;
-            super.init(type: .url, name: name);
+            self.name = name;
         }
         
-        open override func toElement() -> Element {
-            let el = super.toElement();
-            el.attribute("url", newValue: url);
-            return el;
+        public func element() -> Element {
+            return Element(name: "url", {
+                Attribute("name", value: name)
+                Attribute("url", value: url);
+            })
         }
     }
     

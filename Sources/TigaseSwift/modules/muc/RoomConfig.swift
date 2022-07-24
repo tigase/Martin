@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class RoomConfig: DataFormWrapper {
+open class RoomConfig: DataFormWrapper, @unchecked Sendable {
     
     public enum WhoisEnum {
         case moderators

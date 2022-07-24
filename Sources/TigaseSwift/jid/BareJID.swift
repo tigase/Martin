@@ -24,7 +24,7 @@ import Foundation
 /**
  XMPP entity address for `localpart@domainpart`
  */
-public struct BareJID : LosslessStringConvertible, Hashable, Equatable, Codable, Comparable {
+public struct BareJID : LosslessStringConvertible, Hashable, Equatable, Codable, Comparable, Sendable {
     
     public static func < (lhs: BareJID, rhs: BareJID) -> Bool {
         return lhs.description.compare(rhs.description) == .orderedAscending;

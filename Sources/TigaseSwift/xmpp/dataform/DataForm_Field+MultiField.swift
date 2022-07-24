@@ -23,9 +23,21 @@ import Foundation
 
 extension DataForm.Field {
     
-    open class MultiField<Value: Equatable>: DataForm.Field {
+    open class MultiField<Value: Equatable>: DataForm.Field, @unchecked Sendable {
         private let origValues: [Value];
-        public var currentValues: [Value];
+        private var _currentValues: [Value];
+        public var currentValues: [Value] {
+            get {
+                return lock.with({
+                    return _currentValues;
+                })
+            }
+            set {
+                lock.with({
+                    _currentValues = newValue;
+                })
+            }
+        }
 
         public override var wasModified: Bool {
             return origValues != currentValues;
@@ -33,19 +45,19 @@ extension DataForm.Field {
         
         public init(`var`: String, type: FieldType? = .textMulti, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], values: [Value] = []) {
             self.origValues = [];
-            self.currentValues = values;
+            self._currentValues = values;
             super.init(var: `var`, type: type, required: required, label: label, desc: desc, media: media);
         }
 
         public init?(element el: Element, values: [Value]) {
             origValues = values;
-            currentValues = values;
+            _currentValues = values;
             super.init(element: el);
         }
 
     }
 
-    open class TextMulti: MultiField<String> {
+    open class TextMulti: MultiField<String>, @unchecked Sendable {
 
         open override var isValid: Bool {
             return !isRequired || !currentValues.isEmpty;
@@ -77,7 +89,7 @@ extension DataForm.Field {
 
     }
     
-    open class JIDMulti: MultiField<JID> {
+    open class JIDMulti: MultiField<JID>, @unchecked Sendable {
         
         open override var isValid: Bool {
             return !isRequired || !currentValues.isEmpty;
@@ -108,7 +120,7 @@ extension DataForm.Field {
         }
     }
 
-    open class ListMulti: TextMulti {
+    open class ListMulti: TextMulti, @unchecked Sendable {
         public let options: [Option];
         
         open override var isValid: Bool {

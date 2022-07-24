@@ -29,7 +29,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MeetModule: XmppModuleBase, XmppStanzaProcessor {
+open class MeetModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
     
     public static let ID = "tigase:meet:0";
     public static let IDENTIFIER = XmppModuleIdentifier<MeetModule>();
@@ -48,7 +48,7 @@ open class MeetModule: XmppModuleBase, XmppStanzaProcessor {
     
     public let eventsPublisher = PassthroughSubject<MeetEvent,Never>();
     
-    public enum MeetEvent {
+    public enum MeetEvent: Sendable {
         case publisherJoined(BareJID, Publisher)
         case publisherLeft(BareJID, Publisher)
         case inivitation(MessageInitiationAction, JID)
@@ -94,7 +94,7 @@ open class MeetModule: XmppModuleBase, XmppStanzaProcessor {
         }
     }
     
-    public struct Publisher {
+    public struct Publisher: Sendable {
         public let jid: BareJID;
         public let streams: [String];
         
@@ -213,17 +213,17 @@ open class MeetModule: XmppModuleBase, XmppStanzaProcessor {
         try await write(stanza: response);
     }
     
-    public enum Media: String {
+    public enum Media: String, Sendable {
         case audio
         case video
     }
     
-    public struct MeetComponent {
+    public struct MeetComponent: Sendable {
         public let jid: JID;
         public let features: [String];
     }
     
-    public enum MessageInitiationAction {
+    public enum MessageInitiationAction: Sendable {
         case propose(id: String, meetJid: JID, media: [Media])
         case proceed(id: String)
         case accept(id: String)

@@ -36,7 +36,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0115: Entity Capabilities]:http://xmpp.org/extensions/xep-0115.html
  */
-open class CapabilitiesModule: XmppModuleBase, XmppModule {
+open class CapabilitiesModule: XmppModuleBase, XmppModule, @unchecked Sendable {
         
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "caps";

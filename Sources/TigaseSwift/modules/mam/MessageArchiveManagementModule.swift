@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0313: Message Archive Management]: http://xmpp.org/extensions/xep-0313.html
  */
-open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
+open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked Sendable {
     
     // namespace used by XEP-0313
     public static let MAM_XMLNS = "urn:xmpp:mam:1";
@@ -46,7 +46,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
     
     public let features = [String]();
 
-    private let queue = DispatchQueue(label: "MAMQueries");
+    private let lock = UnfairLock();
     private var queries: [String: Query] = [:];
         
     open var isAvailable: Bool {
@@ -69,9 +69,9 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
     public override init() {}
     
     open func reset(scopes: Set<ResetableScope>) {
-        self.queue.async {
+        lock.with({
             self.queries.removeAll();
-        }
+        })
     }
         
     open func process(stanza: Stanza) throws {
@@ -79,13 +79,13 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
             guard Version.isSupported(xmlns: result.xmlns) else {
                 return;
             }
-            guard let messageId = result.attribute("id"), let queryId = result.attribute("queryid"), let forwardedEl = result.firstChild(name: "forwarded", xmlns: "urn:xmpp:forward:0"), let query = queue.sync(execute: { return self.queries[queryId]; }) else {
+            guard let messageId = result.attribute("id"), let queryId = result.attribute("queryid"), let forwardedEl = result.firstChild(name: "forwarded", xmlns: "urn:xmpp:forward:0"), let query = lock.with({ self.queries[queryId]; }) else {
                 return;
             }
             guard let messageEl = forwardedEl.firstChild(name: "message"), let message = Stanza.from(element: messageEl) as? Message, let delayEl = forwardedEl.firstChild(name: "delay", xmlns: "urn:xmpp:delay") else {
                 return;
             }
-            guard let timestamp = Delay(element: delayEl).stamp else {
+            guard let timestamp = Delay(element: delayEl)?.stamp else {
                 return;
             }
             
@@ -139,7 +139,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
             });
         });
         
-        self.queue.async {
+        lock.with {
             self.queries[queryId] = Query(id: queryId, version: version);
         }
 
@@ -152,13 +152,16 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
             let rsmResult = RSM.Result(from: fin.firstChild(name: "set", xmlns: "http://jabber.org/protocol/rsm"));
 
             let complete = ("true" == fin.attribute("complete")) || MessageArchiveManagementModule.isComplete(rsm: rsmResult);
-            self.queue.asyncAfter(deadline: .now() + 10.0) {
-                self.queries.removeValue(forKey: queryId);
+            Task {
+                try await Task.sleep(nanoseconds: 10_000_000_000);
+                lock.with({
+                    _ = self.queries.removeValue(forKey: queryId);
+                })
             }
             return QueryResult(queryId: queryId, complete: complete, rsm: rsmResult);
         } catch {
-            self.queue.async {
-                self.queries.removeValue(forKey: queryId);
+            lock.with {
+                _ = self.queries.removeValue(forKey: queryId);
             }
             throw error;
         }
@@ -200,7 +203,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
         return MAMQueryForm(form: form);
     }
         
-    public struct Settings {
+    public struct Settings: Sendable {
         public var defaultValue: DefaultValue;
         public var always: [JID];
         public var never: [JID];
@@ -274,7 +277,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
     }
     
     /// Enum defines possible values for default archiving of messages
-    public enum DefaultValue: String {
+    public enum DefaultValue: String, Sendable {
         /// All messages should be archive
         case always
         /// Only messages from jids in the roster should be archived
@@ -283,7 +286,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
         case never
     }
     
-    public enum Version: String {
+    public enum Version: String, Sendable {
         case MAM1 = "urn:xmpp:mam:1"
         case MAM2 = "urn:xmpp:mam:2"
         
@@ -297,7 +300,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
         }
     }
     
-    public struct ArchivedMessageReceived {
+    public struct ArchivedMessageReceived: Sendable {
         public let messageId: String;
         public let source: BareJID;
         public let query: Query;
@@ -305,18 +308,13 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
         public let message: Message;
     }
     
-    public class Query {
+    public struct Query: Sendable {
         public let id: String;
         public let version: Version;
-        private(set) var endedAt: Date?;
             
         init(id: String, version: Version) {
             self.id = id;
             self.version = version;
-        }
-        
-        func ended(at date: Date) {
-            self.endedAt = date;
         }
         
     }

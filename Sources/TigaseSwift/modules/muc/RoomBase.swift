@@ -22,7 +22,7 @@
 import Foundation
 import Combine
 
-open class RoomBase: ConversationBase, RoomProtocol {
+open class RoomBase: ConversationBase, RoomProtocol, @unchecked Sendable {
     
     open override var defaultMessageType: StanzaType {
         return .groupchat;

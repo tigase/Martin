@@ -34,7 +34,7 @@ extension XmppModuleIdentifier {
  
  [SASL negotiation and authentication]: https://tools.ietf.org/html/rfc6120#section-6
  */
-open class SaslModule: XmppModuleBase, XmppModule, Resetable {
+open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendable {
     /// Namespace used SASL negotiation and authentication
     static let SASL_XMLNS = "urn:ietf:params:xml:ns:xmpp-sasl";
     /// ID of module for lookup in `XmppModulesManager`
@@ -52,6 +52,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
 
     public let features = [String]();
     
+    private var lock = UnfairLock();
     private var mechanisms = [String:SaslMechanism]();
     private var _mechanismsOrder = [String]();
     
@@ -60,20 +61,24 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     /// Order of mechanisms preference
     open var mechanismsOrder:[String] {
         get {
-            return _mechanismsOrder;
+            return lock.with({
+                return _mechanismsOrder;
+            })
         }
         set {
-            var value = newValue;
-            for name in newValue {
-                if mechanisms[name] == nil {
-                    value.remove(at: value.firstIndex(of: name)!);
+            lock.with({
+                var value = newValue;
+                for name in newValue {
+                    if mechanisms[name] == nil {
+                        value.remove(at: value.firstIndex(of: name)!);
+                    }
                 }
-            }
-            for name in mechanisms.keys {
-                if value.firstIndex(of: name) == nil {
-                    mechanisms.removeValue(forKey: name);
+                for name in mechanisms.keys {
+                    if value.firstIndex(of: name) == nil {
+                        mechanisms.removeValue(forKey: name);
+                    }
                 }
-            }
+            })
         }
     }
     
@@ -97,12 +102,14 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
      - parameter first: add as best mechanism to use
      */
     open func addMechanism(_ mechanism:SaslMechanism, first:Bool = false) {
-        self.mechanisms[mechanism.name] = mechanism;
-        if (first) {
-            self._mechanismsOrder.insert(mechanism.name, at: 0);
-        } else {
-            self._mechanismsOrder.append(mechanism.name);
-        }
+        lock.with({
+            self.mechanisms[mechanism.name] = mechanism;
+            if (first) {
+                self._mechanismsOrder.insert(mechanism.name, at: 0);
+            } else {
+                self._mechanismsOrder.append(mechanism.name);
+            }
+        })
     }
         
     private func handleResponse(stanza elem: Stanza, mechanism: SaslMechanism) async throws {
@@ -186,7 +193,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable {
     
     func guessSaslMechanism() -> SaslMechanism? {
         let supported = self.supportedMechanisms;
-        for name in _mechanismsOrder {
+        for name in mechanismsOrder {
             if let mechanism = mechanisms[name] {
                 if (!supported.contains(name)) {
                     continue;

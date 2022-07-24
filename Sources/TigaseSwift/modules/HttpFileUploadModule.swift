@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0363: HTTP File Upload]: https://xmpp.org/extensions/xep-0363.html
  */
-open class HttpFileUploadModule: XmppModuleBase, XmppModule {
+open class HttpFileUploadModule: XmppModuleBase, XmppModule, @unchecked Sendable {
     
     static let HTTP_FILE_UPLOAD_XMLNS = "urn:xmpp:http:upload:0";
     

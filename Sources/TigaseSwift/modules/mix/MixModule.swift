@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MixModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, RosterAnnotationAwareProtocol {
+open class MixModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, RosterAnnotationAwareProtocol, @unchecked Sendable {
     func rosterExtensionRequestElement() -> Element? {
         return Element(name: "annotate", xmlns: "urn:xmpp:mix:roster:0");
     }
@@ -645,7 +645,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Rost
     }
 }
 
-open class MixInvitation {
+public final class MixInvitation: Sendable {
     public let inviter: BareJID;
     public let invitee: BareJID;
     public let channel: BareJID;
@@ -668,7 +668,7 @@ open class MixInvitation {
         self.token = token;
     }
     
-    open func element() -> Element {
+    public func element() -> Element {
         return Element(name: "invitation", xmlns: "urn:xmpp:mix:misc:0", children: [
             Element(name: "inviter", cdata: inviter.description),
             Element(name: "invitee", cdata: invitee.description),

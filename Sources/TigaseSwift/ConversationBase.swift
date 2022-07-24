@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class ConversationBase: ConversationProtocol {
+open class ConversationBase: ConversationProtocol, @unchecked Sendable {
     
     open weak var context: Context?;
     public let account: BareJID;

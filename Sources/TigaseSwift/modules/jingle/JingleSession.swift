@@ -22,7 +22,7 @@
 import Foundation
 import Combine
 
-open class JingleSession: CustomDebugStringConvertible {
+open class JingleSession: CustomDebugStringConvertible, @unchecked Sendable {
     
     public let account: BareJID;
     public private(set) var jid: JID;

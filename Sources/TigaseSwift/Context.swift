@@ -25,7 +25,7 @@ import Foundation
  Instances of this class holds information passed to classes with support for `ContextAware` 
  protocol - mostly for implementations of `XmppModule` protocol.
  */
-open class Context: CustomStringConvertible, Resetable {
+open class Context: CustomStringConvertible, Resetable, @unchecked Sendable {
     
     let queue = DispatchQueue(label: "context_queue");
     

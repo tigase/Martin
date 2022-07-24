@@ -26,20 +26,19 @@ import Foundation
  
  [XEP-0203: Delayed Delivery]: http://xmpp.org/extensions/xep-0203.html
  */
-public struct Delay {
+public struct Delay: Sendable {
     
     /// Holds timestamp when delay started. In most cases it is very close to time when stanza was sent.
     public let stamp:Date?;
     /// JID of entity responsible for delay
     public let from:JID?;
     
-    public init(element:Element) {
-        stamp = TimestampHelper.parse(timestamp: element.attribute("stamp"));
-        if let fromStr = element.attribute("from") {
-            from = JID(fromStr);
-        } else {
-            from = nil
+    public init?(element: Element) {
+        guard let stamp = TimestampHelper.parse(timestamp: element.attribute("stamp")) else {
+            return nil;
         }
+        self.stamp = stamp;
+        from = JID(element.attribute("from"));
     }
     
 }

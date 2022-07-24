@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0092: Software Version]: https://xmpp.org/extensions/xep-0092.html
  */
-open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
+open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule, @unchecked Sendable {
     
     public static let DEFAULT_NAME_VAL = "Tigase based software";
         
@@ -50,7 +50,7 @@ open class SoftwareVersionModule: XmppModuleBase, AbstractIQModule {
         self.version = version;
     }
     
-    public class SoftwareVersion {
+    public struct SoftwareVersion: Sendable {
         public let name: String;
         public let version: String;
         public let os: String?;

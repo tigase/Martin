@@ -40,7 +40,7 @@ extension StreamFeatures.StreamFeature {
  
  [XEP-0077: In-Band Registration]: http://xmpp.org/extensions/xep-0077.html
  */
-open class InBandRegistrationModule: XmppModuleBase, XmppModule {
+open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Sendable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "InBandRegistrationModule";
     public static let IDENTIFIER = XmppModuleIdentifier<InBandRegistrationModule>();
@@ -103,11 +103,8 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule {
         if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register"), let form = DataForm(element: query.firstChild(name: "x", xmlns: "jabber:x:data")) {
             return FormResult(type: .dataForm, form: form, bob: query.compactMapChildren(BobData.init(from:)));
         } else {
-            let form = DataForm(type: .form);
             if let query = response.firstChild(name: "query", xmlns: "jabber:iq:register") {
-                if let instructions = query.firstChild(name: "instructions")?.value {
-                    form.instructions = [instructions];
-                }
+                let form = DataForm(type: .form, instructions: query.filterChildren(name: "instructions").compactMap({ $0.value }));
                 if query.firstChild(name: "username") != nil {
                     form.add(field: .TextSingle(var: "username", required: true));
                 }
@@ -117,8 +114,10 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule {
                 if query.firstChild(name: "email") != nil {
                     form.add(field: .TextSingle(var: "email", required: true));
                 }
+                return FormResult(type: .plain, form: form, bob: []);
+            } else {
+                throw XMPPError(condition: .undefined_condition, message: "Missing required element!");
             }
-            return FormResult(type: .plain, form: form, bob: []);
         }
     }
         
@@ -249,12 +248,12 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule {
 
     }
         
-    public enum FormType {
+    public enum FormType: Sendable {
         case plain
         case dataForm
     }
     
-    public struct FormResult {
+    public struct FormResult: Sendable {
         public let type: FormType;
         public let form: DataForm;
         public let bob: [BobData];

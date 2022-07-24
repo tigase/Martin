@@ -23,7 +23,7 @@ import Foundation
 
 extension Sequence {
     
-    public func mapReduce<T>(_ transform: (Element) -> [T]) -> [T] {
+    public func mapReduce<T>(_ transform: @Sendable  (Element) -> [T]) -> [T] {
         var values = [T]();
         for element in self {
             values.append(contentsOf: transform(element));
@@ -31,7 +31,7 @@ extension Sequence {
         return values;
     }
 
-    public func asyncMap<T>(_ transform: (Element) async -> T) async -> [T] {
+    public func asyncMap<T>(_ transform: @Sendable  (Element) async -> T) async -> [T] {
         var values = [T]();
         for element in self {
             await values.append(transform(element));
@@ -39,7 +39,7 @@ extension Sequence {
         return values;
     }
 
-    public func asyncMap<T>(_ transform: (Element) async throws -> T) async rethrows -> [T] {
+    public func asyncMap<T>(_ transform: @Sendable  (Element) async throws -> T) async rethrows -> [T] {
         var values = [T]();
         for element in self {
             try await values.append(transform(element));
@@ -47,7 +47,7 @@ extension Sequence {
         return values;
     }
 
-    public func asyncMapReduce<T>(_ transform: (Element) async throws -> [T]) async rethrows -> [T] {
+    public func asyncMapReduce<T>(_ transform: @Sendable  (Element) async throws -> [T]) async rethrows -> [T] {
         var values = [T]();
         for element in self {
             try await values.append(contentsOf: transform(element));
@@ -55,7 +55,7 @@ extension Sequence {
         return values;
     }
 
-    public func concurrentMap<T>(_ transform: @escaping (Element) async throws -> T) async throws -> [T] {
+    public func concurrentMap<T>(_ transform: @Sendable @escaping (Element) async throws -> T) async throws -> [T] {
         let tasks = map({ element in
             Task {
                 try await transform(element);
@@ -65,7 +65,7 @@ extension Sequence {
         return try await tasks.asyncMap({ try await $0.value });
     }
     
-    public func concurrentMap<T>(_ transform: @escaping (Element) async -> T) async -> [T] {
+    public func concurrentMap<T>(_ transform: @Sendable @escaping (Element) async -> T) async -> [T] {
         let tasks = map({ element in
             Task {
                 await transform(element);
@@ -75,7 +75,7 @@ extension Sequence {
         return await tasks.asyncMap({ await $0.value });
     }
 
-    public func concurrentMapReduce<T>(_ transform: @escaping (Element) async throws -> [T]) async throws -> [T] {
+    public func concurrentMapReduce<T>(_ transform: @Sendable  @escaping (Element) async throws -> [T]) async throws -> [T] {
         let tasks = map({ element in
             Task {
                 try await transform(element);
@@ -85,7 +85,7 @@ extension Sequence {
         return try await tasks.asyncMapReduce({ try await $0.value });
     }
 
-    public func concurrentMapReduce<T>(_ transform: @escaping (Element) async -> [T]) async -> [T] {
+    public func concurrentMapReduce<T>(_ transform: @Sendable  @escaping (Element) async -> [T]) async -> [T] {
         let tasks = map({ element in
             Task {
                 await transform(element);
@@ -95,7 +95,7 @@ extension Sequence {
         return await tasks.asyncMapReduce({ await $0.value });
     }
 
-    public func concurrentForEach(_ body: @escaping (Element) async -> Void) async {
+    public func concurrentForEach(_ body: @Sendable  @escaping (Element) async -> Void) async {
         let tasks = map({ element in
             Task {
                 await body(element);

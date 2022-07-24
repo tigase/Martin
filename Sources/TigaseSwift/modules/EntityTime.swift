@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
+open class EntityTimeModule: XmppModuleBase, AbstractIQModule, @unchecked Sendable {
 
     public static let XMLNS = "urn:xmpp:time";
     public static let ID = XMLNS;
@@ -44,9 +44,9 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
         
     }
 
-    public struct EntityTime {
-        let timeZone: String?;
-        let timestamp: Date?;
+    public struct EntityTime: Sendable {
+        let timeZone: String;
+        let timestamp: Date;
     }
         
     open func entityTime(from jid: JID) async throws -> EntityTime {
@@ -67,12 +67,7 @@ open class EntityTimeModule: XmppModuleBase, AbstractIQModule {
     }
     
     open func processGet(stanza: Stanza) throws {
-        let iq = Iq();
-        iq.type = StanzaType.result;
-        iq.to = stanza.from;
-        iq.from = stanza.to;
-        iq.id = stanza.id;
-        
+        let iq = stanza.makeResult(type: .result);        
         let timeEl = Element(name: "time", xmlns: EntityTimeModule.XMLNS);
         
         let minutesFromGMT = TimeZone.autoupdatingCurrent.secondsFromGMT() / 60;

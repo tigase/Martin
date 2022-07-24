@@ -22,10 +22,22 @@ import Foundation
 
 extension DataForm.Field {
     
-    open class SingleField<Value: Equatable>: DataForm.Field {
+    open class SingleField<Value: Equatable>: DataForm.Field, @unchecked Sendable {
 
         private let origValue: Value;
-        public var currentValue: Value;
+        private var _currentValue: Value;
+        public var currentValue: Value {
+            get {
+                return lock.with({
+                    return _currentValue;
+                })
+            }
+            set {
+                lock.with({
+                    _currentValue = newValue;
+                })
+            }
+        }
         
         public override var wasModified: Bool {
             return origValue != currentValue;
@@ -33,18 +45,18 @@ extension DataForm.Field {
         
         public init(`var`: String, type: FieldType? = .textSingle, required: Bool = false, label: String? = nil, desc: String? = nil, media: [Media] = [], value: Value, originalValue: Value) {
             self.origValue = originalValue;
-            self.currentValue = value;
+            self._currentValue = value;
             super.init(var: `var`, type: type, required: required, label: label, desc: desc, media: media);
         }
         
         public init?(element el: Element, value: Value) {
             self.origValue = value;
-            self.currentValue = value;
+            self._currentValue = value;
             super.init(element: el);
         }
     }
     
-    open class TextSingle: SingleField<String?> {
+    open class TextSingle: SingleField<String?>, @unchecked Sendable {
         
         open override var isValid: Bool {
             return !isRequired || currentValue != nil;
@@ -79,7 +91,7 @@ extension DataForm.Field {
 
     }
     
-    open class JIDSingle: SingleField<JID?> {
+    open class JIDSingle: SingleField<JID?>, @unchecked Sendable {
         
         open override var isValid: Bool {
             return !isRequired || currentValue != nil;
@@ -111,7 +123,7 @@ extension DataForm.Field {
 
     }
     
-    open class Boolean: SingleField<Bool> {
+    open class Boolean: SingleField<Bool>, @unchecked Sendable {
 
         public required init?(element el: Element) {
             let val = el.firstChild(name: "value")?.value;
@@ -138,7 +150,7 @@ extension DataForm.Field {
 
     }
     
-    open class TextPrivate: TextSingle {
+    open class TextPrivate: TextSingle, @unchecked Sendable {
         
         open override var isValid: Bool {
             return !isRequired || currentValue != nil;
@@ -153,7 +165,7 @@ extension DataForm.Field {
         }
     }
 
-    open class Hidden: TextSingle {
+    open class Hidden: TextSingle, @unchecked Sendable {
         
         public required init?(element: Element) {
             super.init(element: element);
@@ -164,7 +176,7 @@ extension DataForm.Field {
         }
     }
 
-    open class Fixed: TextSingle {
+    open class Fixed: TextSingle, @unchecked Sendable {
         
         public required init?(element: Element) {
             super.init(element: element);
@@ -175,7 +187,7 @@ extension DataForm.Field {
         }
     }
     
-    open class ListSingle: TextSingle {
+    open class ListSingle: TextSingle, @unchecked Sendable {
         public let options: [Option];
         
         open override var isValid: Bool {

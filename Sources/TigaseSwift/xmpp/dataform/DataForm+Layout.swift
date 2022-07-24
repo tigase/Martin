@@ -22,9 +22,9 @@ import Foundation
 
 extension DataForm {
     
-    public struct Page {
+    public struct Page: Sendable {
         
-        public enum Item {
+        public enum Item: Sendable {
             case text(String)
             case fieldref(String)
             case reportedref

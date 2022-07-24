@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class ChannelInfo {
+open class ChannelInfo: @unchecked Sendable {
     
     public let name: String?;
     public let description: String?;

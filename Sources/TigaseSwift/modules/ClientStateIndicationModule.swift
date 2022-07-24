@@ -36,7 +36,7 @@ extension StreamFeatures.StreamFeature {
  
  [XEP-0352: Client State Inidication]:https://xmpp.org/extensions/xep-0352.html
  */
-open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
+open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendable {
     
     /// Client State Indication XMLNS
     public static let CSI_XMLNS = "urn:xmpp:csi:0";
@@ -103,7 +103,7 @@ open class ClientStateIndicationModule: XmppModuleBase, XmppModule, Resetable {
 // async-await support
 extension ClientStateIndicationModule {
     
-    public enum ClientState: String {
+    public enum ClientState: String, Sendable {
         case active
         case inactive
         

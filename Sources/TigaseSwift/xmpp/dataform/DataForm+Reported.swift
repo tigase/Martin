@@ -23,7 +23,7 @@ import Foundation
 
 extension DataForm {
     
-    public struct Reported {
+    public struct Reported: Sendable {
         
         public static func from(formElement: Element) -> [Reported] {
             return formElement.filterChildren(name: "reported").compactMap({ Reported(element: $0, formElement: formElement) });
@@ -59,7 +59,7 @@ extension DataForm {
             return [el] + items.map({ $0.element() });
         }
         
-        public struct Item {
+        public struct Item: Sendable {
             public let fields: [FieldValue];
             
             public init?(element: Element) {
@@ -76,7 +76,7 @@ extension DataForm {
                 return el;
             }
             
-            public struct FieldValue {
+            public struct FieldValue: Sendable {
                 public let `var`: String;
                 public let values: [String];
                 

@@ -23,7 +23,7 @@ import Foundation
 
 extension Message {
     
-    public enum ChatMarkers {
+    public enum ChatMarkers: Sendable {
         case received(id: String)
         case displayed(id: String)
         case acknowledged(id: String)

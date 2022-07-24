@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppStanzaProcessor {
+open class MessageDeliveryReceiptsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
     
     /// Namespace used by Message Carbons
     public static let XMLNS = "urn:xmpp:receipts";

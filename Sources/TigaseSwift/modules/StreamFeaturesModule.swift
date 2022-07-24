@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [stream features]: http://xmpp.org/rfcs/rfc6120.html#streams-negotiation-features
  */
-open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Resetable {
+open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Resetable, @unchecked Sendable {
 
     public static let ID = "stream:features";
     public static let STREAM_FEATURES_KEY = "stream:features";
@@ -67,7 +67,7 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppStanzaProc
     }
 }
 
-public struct StreamFeatures {
+public struct StreamFeatures: Sendable {
     
     public static let none = StreamFeatures(element: nil);
     
@@ -92,8 +92,8 @@ public struct StreamFeatures {
         return feature.check(in: elem);
     }
     
-    public struct StreamFeature {
-        public struct Node {
+    public struct StreamFeature: Sendable {
+        public struct Node: Sendable {
             public let name: String;
             public let xmlns: String?;
             public let value: String?;

@@ -27,7 +27,7 @@ import Foundation
  Value of `to`/`from` attributes is cached on instance level. After `Stanza` is created from element do not modify element
  `to`/`from` attributes directly - instead use `to`/`from` properties of `Stanza` class.
  */
-open class Stanza: ElementProtocol, CustomStringConvertible {
+open class Stanza: ElementProtocol, CustomStringConvertible, @unchecked Sendable  {
     
     enum ValueHolder<V> {
         case unset

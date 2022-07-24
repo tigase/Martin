@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class SDP {
+open class SDP: @unchecked Sendable {
     
     @available(*, deprecated, message: "May set invalid content 'creator' and 'senders' values. Use method parse(sdpString:,creatorProvider:,localRole:)")
     static public func parse(sdpString sdp: String, creator: Jingle.Content.Creator) -> (SDP, String)? {

@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0054: vcard-temp]: http://xmpp.org/extensions/xep-0054.html
  */
-open class VCardTempModule: XmppModuleBase, XmppModule, VCardModuleProtocol {
+open class VCardTempModule: XmppModuleBase, XmppModule, VCardModuleProtocol, @unchecked Sendable {
 
     /// Namespace used by vcard-temp feature
     fileprivate static let VCARD_XMLNS = "vcard-temp";
@@ -79,7 +79,7 @@ open class VCardTempModule: XmppModuleBase, XmppModule, VCardModuleProtocol {
 
 extension VCard {
     
-    public convenience init?(vcardTemp el: Element?) {
+    public init?(vcardTemp el: Element?) {
         guard let vcardTemp = el, vcardTemp.name == "vCard" && vcardTemp.xmlns == "vcard-temp" else {
             return nil;
         }

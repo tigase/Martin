@@ -23,7 +23,7 @@ import Foundation
 
 extension Message {
     
-    public enum ProcessingHint {
+    public enum ProcessingHint: Sendable {
         case noPermanentStore
         case noCopy
         case noStore

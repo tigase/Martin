@@ -57,7 +57,7 @@ public enum RoomState: Equatable {
     }
 }
 
-public protocol RoomProtocol: ConversationProtocol {
+public protocol RoomProtocol: ConversationProtocol, Sendable {
     
     var state: RoomState { get }
     var statePublisher: AnyPublisher<RoomState, Never> { get }
@@ -103,7 +103,7 @@ public enum RoomHistoryFetch {
     }
 }
 
-public enum RoomJoinResult {
+public enum RoomJoinResult: Sendable {
     case created(RoomProtocol)
     case joined(RoomProtocol)
 }

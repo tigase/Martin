@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0030: Service Discovery]: http://xmpp.org/extensions/xep-0030.html
  */
-open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
+open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable, @unchecked Sendable {
 
     /// Namespace used by service discovery
     public static let ITEMS_XMLNS = "http://jabber.org/protocol/disco#items";
@@ -42,16 +42,15 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
     public static let ID = "discovery";
     public static let IDENTIFIER = XmppModuleIdentifier<DiscoveryModule>();
         
-    public let criteria = Criteria.name("iq").add(
-        Criteria.or(
-            Criteria.name("query", xmlns: DiscoveryModule.ITEMS_XMLNS),
-            Criteria.name("query", xmlns: DiscoveryModule.INFO_XMLNS)
-        )
-    );
+    public let criteria: Criteria = .name("iq").then(.or(
+        .name("query", xmlns: DiscoveryModule.ITEMS_XMLNS),
+        .name("query", xmlns: DiscoveryModule.INFO_XMLNS)
+    ));
     
     public let features = [ DiscoveryModule.ITEMS_XMLNS, DiscoveryModule.INFO_XMLNS ];
     
-    fileprivate var callbacks = [String:NodeDetailsEntry]();
+    private let lock = UnfairLock();
+    private var callbacks = [String:NodeDetailsEntry]();
     
     public let identity: Identity;
     
@@ -154,11 +153,13 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
      */
     open func setNodeCallback(_ node_: String?, entry: NodeDetailsEntry?) {
         let node = node_ ?? "";
-        if entry == nil {
-            callbacks.removeValue(forKey: node);
-        } else {
-            callbacks[node] = entry;
-        }
+        lock.with({
+            if entry == nil {
+                callbacks.removeValue(forKey: node);
+            } else {
+                callbacks[node] = entry;
+            }
+        })
     }
     
     /**
@@ -168,7 +169,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         let query = stanza.firstChild(name: "query")!;
         let node = query.attribute("node");
         if let xmlns = query.xmlns {
-            if let callback = callbacks[node ?? ""] {
+            if let callback = lock.with({ callbacks[node ?? ""] }) {
                 switch xmlns {
                 case DiscoveryModule.INFO_XMLNS:
                     processGetInfo(stanza, node, callback);
@@ -262,7 +263,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         }
     }
     
-    public struct Identity: CustomStringConvertible {
+    public struct Identity: CustomStringConvertible, Sendable {
         
         public let category: String;
         public let type: String;
@@ -293,7 +294,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         }
     }
     
-    public struct Item: CustomStringConvertible {
+    public struct Item: CustomStringConvertible, Sendable {
         
         public let jid:JID;
         public let node:String?;
@@ -324,7 +325,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         }
     }
 
-    public struct DiscoveryInfoResult {
+    public struct DiscoveryInfoResult: Sendable {
         public let identities: [Identity];
         public let features: [String];
         public let form: DataForm?;
@@ -340,7 +341,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable {
         }
     }
     
-    public struct DiscoveryItemsResult {
+    public struct DiscoveryItemsResult: Sendable {
         public let node: String?;
         public let items: [Item];
         

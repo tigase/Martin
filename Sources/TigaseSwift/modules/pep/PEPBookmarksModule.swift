@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
+open class PEPBookmarksModule: AbstractPEPModule, XmppModule, @unchecked Sendable {
     
     public static let ID = "storage:bookmarks";
     public static let IDENTIFIER = XmppModuleIdentifier<PEPBookmarksModule>();
@@ -54,13 +54,13 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
         
     }
     
-    open func addOrUpdate(bookmark item: Bookmarks.Item) async throws {
+    open func addOrUpdate(bookmark item: BookmarksItem) async throws {
         if let updated = currentBookmarks.updateOrAdd(bookmark: item) {
             _ = try await self.publish(bookmarks: updated);
         }
     }
     
-    open func remove(bookmark item: Bookmarks.Item) async throws {
+    open func remove(bookmark item: BookmarksItem) async throws {
         if let updated = currentBookmarks.remove(bookmark: item) {
             _ = try await self.publish(bookmarks: updated);
         }
@@ -144,7 +144,7 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule {
 // async-await support
 extension PEPBookmarksModule {
     
-    public func addOrUpdate(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func addOrUpdate(bookmark item: BookmarksItem, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await addOrUpdate(bookmark: item)))
@@ -154,7 +154,7 @@ extension PEPBookmarksModule {
         }
     }
     
-    public func remove(bookmark item: Bookmarks.Item, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+    public func remove(bookmark item: BookmarksItem, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
         Task {
             do {
                 completionHandler(.success(try await remove(bookmark: item)))

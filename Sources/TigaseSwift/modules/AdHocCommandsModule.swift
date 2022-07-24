@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class AdHocCommandsModule: XmppModuleBase, XmppModule {
+open class AdHocCommandsModule: XmppModuleBase, @unchecked Sendable, XmppModule {
     
     public static let COMMANDS_XMLNS = "http://jabber.org/protocol/commands";
     

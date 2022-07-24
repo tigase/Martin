@@ -60,7 +60,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         
     }
     
-    public struct Avatar {
+    public struct Avatar: Sendable {
         public let data: Data?;
         public let info: Info;
         
@@ -138,12 +138,12 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         avatarChangePublisher.send(.init(jid: from, itemId: itemId, info: info));
     }
     
-    public struct AvatarData {
+    public struct AvatarData: Sendable {
         public let id: String;
         public let data: Data;
     }
     
-    public struct Info {
+    public struct Info: Sendable {
         public let size: Int;
         public let height: Int?;
         public let id: String;
@@ -186,7 +186,7 @@ open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
         }
     }
     
-    public struct AvatarChange {
+    public struct AvatarChange: Sendable {
 
         public let jid: JID;
         public let itemId: String;

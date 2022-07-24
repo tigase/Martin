@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0280: Message Carbons]: http://xmpp.org/extensions/xep-0280.html
  */
-open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor {
+open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
     /// Namespace used by Message Carbons
     public static let MC_XMLNS = "urn:xmpp:carbons:2";
     /// Namepsace used for forwarding messages

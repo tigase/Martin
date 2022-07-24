@@ -27,7 +27,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
+open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule, @unchecked Sendable {
 
     public static let XMLNS = "urn:xmpp:extdisco:2";
     public static let ID = XMLNS;
@@ -60,7 +60,7 @@ open class ExternalServiceDiscoveryModule: XmppModuleBase, XmppModule {
         return response.firstChild(name: "services", xmlns: ExternalServiceDiscoveryModule.XMLNS)?.compactMapChildren(Service.parse(_:)) ?? [];
     }
     
-    open class Service {
+    open class Service: @unchecked Sendable {
 
         public let expires: Date?;
         public let host: String;

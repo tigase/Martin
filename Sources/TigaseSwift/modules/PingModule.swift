@@ -32,7 +32,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0199: XMPP Ping]: http://xmpp.org/extensions/xep-0199.html
  */
-open class PingModule: XmppModuleBase, AbstractIQModule {
+open class PingModule: XmppModuleBase, AbstractIQModule, @unchecked Sendable {
     /// Namespace used by XMPP ping
     fileprivate static let PING_XMLNS = "urn:xmpp:ping";
     /// ID of module for lookup in `XmppModulesManager`

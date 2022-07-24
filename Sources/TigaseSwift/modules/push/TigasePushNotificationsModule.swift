@@ -22,7 +22,7 @@
 import Foundation
 import TigaseLogging
 
-open class TigasePushNotificationsModule: PushNotificationsModule {
+open class TigasePushNotificationsModule: PushNotificationsModule, @unchecked Sendable {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "TigasePushNotificationsModule");
     

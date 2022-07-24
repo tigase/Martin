@@ -22,7 +22,7 @@
 import Foundation
 
 /// Extenstion of `Stanza` class with specific features existing only in `iq` elements.
-open class Iq: Stanza {
+open class Iq: Stanza, @unchecked Sendable  {
 
     open override var debugDescription: String {
         return String("Iq : \(element)")

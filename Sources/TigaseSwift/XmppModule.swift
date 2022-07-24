@@ -25,7 +25,7 @@ import Combine
 /** This is protocol which needs to be supported by every class which needs
  to be registered in `XmppModulesManager` and process incoming `Stanza`s
  */
-public protocol XmppModule: AnyObject {
+public protocol XmppModule: AnyObject, Sendable {
     
     static var ID: String { get }
     

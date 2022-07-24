@@ -38,7 +38,7 @@ extension StreamFeatures.StreamFeature {
  
  [RFC6121]: http://xmpp.org/rfcs/rfc6121.html#roster
  */
-open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule {
+open class RosterModule: XmppModuleBaseSessionStateAware, AbstractIQModule, @unchecked Sendable {
     
     public static let IDENTIFIER = XmppModuleIdentifier<RosterModule>();
     /// ID of module for looup in `XmppModulesManager`

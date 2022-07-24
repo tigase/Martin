@@ -25,7 +25,7 @@ import Combine
 /**
  Class is representation of MUC room occupant
  */
-open class MucOccupant: Hashable {
+open class MucOccupant: Hashable, @unchecked Sendable {
     
     public static func ==(lhs: MucOccupant, rhs: MucOccupant) -> Bool {
         return lhs.nickname == rhs.nickname;

@@ -21,130 +21,129 @@
 
 import Foundation
 
-open class VCard {
-    
-    open var bday: String?;
-    
-    open var fn: String?;
-    
-    open var surname: String?;
-    
-    open var givenName: String?;
-    
-    open var additionalName: [String] = [];
+protocol VCardEntryItemTypeAware {
+    var types: [VCard.EntryType] { get set }
+}
 
-    open var namePrefixes: [String] = [];
+public struct VCard: Sendable {
     
-    open var nameSuffixes: [String] = [];
+    public var bday: String?;
     
-    open var nicknames: [String] = [];
+    public var fn: String?;
     
-    open var title: String?;
+    public var surname: String?;
     
-    open var role: String?;
+    public var givenName: String?;
     
-    open var note: String?;
-    
-    open var addresses: [Address] = [];
-    
-    open var emails: [Email] = [];
-    
-    open var impps: [IMPP] = [];
-    
-    open var organizations: [Organization] = [];
+    public var additionalName: [String] = [];
 
-    open var photos: [Photo] = [];
+    public var namePrefixes: [String] = [];
     
-    open var telephones: [Telephone] = [];
+    public var nameSuffixes: [String] = [];
+    
+    public var nicknames: [String] = [];
+    
+    public var title: String?;
+    
+    public var role: String?;
+    
+    public var note: String?;
+    
+    public var addresses: [Address] = [];
+    
+    public var emails: [Email] = [];
+    
+    public var impps: [IMPP] = [];
+    
+    public var organizations: [Organization] = [];
+
+    public var photos: [Photo] = [];
+    
+    public var telephones: [Telephone] = [];
 
     public init() {
         
     }
     
-    public enum EntryType {
+    public enum EntryType : Sendable {
         case home
         case work
         
         public static let allValues: [EntryType] = [.home, .work];
     }
-    
-    open class VCardEntryItemTypeAware {
         
-        open var types: [EntryType];
+    public final class Address: VCardEntryItemTypeAware, VCardEntryProtocol, @unchecked Sendable {
         
-        public init(types: [EntryType]) {
+        public var types: [EntryType];
+        public var ext: String?;
+        public var street: String?;
+        public var locality: String?;
+        public var region: String?;
+        public var postalCode: String?;
+        public var country: String?;
+
+        public var isEmpty: Bool {
+            return (ext?.isEmpty ?? true) && (street?.isEmpty ?? true) && (locality?.isEmpty ?? true) && (region?.isEmpty ?? true) && (postalCode?.isEmpty ?? true) && (country?.isEmpty ?? true);
+        }
+
+        public init(types: [EntryType]=[]) {
             self.types = types;
         }
         
     }
-    
-    open class Address: VCardEntryItemTypeAware, VCardEntryProtocol {
-        
-        open var ext: String?;
-        open var street: String?;
-        open var locality: String?;
-        open var region: String?;
-        open var postalCode: String?;
-        open var country: String?;
 
-        open var isEmpty: Bool {
-            return (ext?.isEmpty ?? true) && (street?.isEmpty ?? true) && (locality?.isEmpty ?? true) && (region?.isEmpty ?? true) && (postalCode?.isEmpty ?? true) && (country?.isEmpty ?? true);
-        }
-
-        public override init(types: [EntryType]=[]) {
-            super.init(types: types);
-        }
+    public final class Email: VCardEntryItemTypeAware, VCardEntryProtocol, @unchecked Sendable {
         
-    }
-
-    open class Email: VCardEntryItemTypeAware, VCardEntryProtocol {
-        
-        open var address: String?;
-        open var isEmpty: Bool {
+        public var types: [EntryType];
+        public var address: String?;
+        public var isEmpty: Bool {
             return address?.isEmpty ?? true;
         }
         
         public init(address: String?, types: [EntryType] = []) {
             self.address = address;
-            super.init(types: types);
+            self.types = types;
         }
         
     }
     
-    open class IMPP: VCardEntryItemTypeAware, VCardEntryProtocol {
+    public final class IMPP: VCardEntryItemTypeAware, VCardEntryProtocol, @unchecked Sendable {
         
-        open var uri: String?;
-        open var isEmpty: Bool {
+        public var types: [EntryType];
+        public var uri: String?;
+        public var isEmpty: Bool {
             return uri?.isEmpty ?? true;
         }
         
         public init(uri: String?, types: [EntryType] = []) {
             self.uri = uri;
-            super.init(types: types);
+            self.types = types;
         }
         
     }
     
-    open class Organization: VCardEntryItemTypeAware {
+    public final class Organization: VCardEntryItemTypeAware, @unchecked Sendable {
         
-        open var name: String?;
-        open var isEmpty: Bool {
+        public var types: [EntryType];
+        public var name: String?;
+        public var isEmpty: Bool {
             return name?.isEmpty ?? true;
         }
         
         public init(name: String?, types: [EntryType] = []) {
             self.name = name;
-            super.init(types: types);
+            self.types = types;
         }
         
     }
     
-    open class Photo: VCardEntryItemTypeAware, VCardEntryProtocol {
+    public final class Photo: VCardEntryItemTypeAware, VCardEntryProtocol, @unchecked Sendable {
         
-        open var uri: String?;
-        open var type: String?;
-        open var binval: String?;
-        open var isEmpty: Bool {
+        public var types: [EntryType];
+        public var uri: String?;
+        public var type: String?;
+        public var binval: String?;
+        public var isEmpty: Bool {
             return (uri?.isEmpty ?? true) && ((type?.isEmpty ?? true) || (binval?.isEmpty ?? true));
         }
         
@@ -152,13 +151,14 @@ open class VCard {
             self.uri = uri;
             self.type = type;
             self.binval = binval;
-            super.init(types: types);
+            self.types = types;
         }
     }
     
-    open class Telephone: VCardEntryItemTypeAware, VCardEntryProtocol {
+    public final class Telephone: VCardEntryItemTypeAware, VCardEntryProtocol, @unchecked Sendable {
         
-        open var number: String? {
+        public var types: [EntryType];
+        public var number: String? {
             get {
                 if uri == nil {
                     return nil;
@@ -174,23 +174,23 @@ open class VCard {
                 }
             }
         }
-        open var uri: String?;
-        open var kinds: [Kind];
-        open var isEmpty: Bool {
+        public var uri: String?;
+        public var kinds: [Kind];
+        public var isEmpty: Bool {
             return uri?.isEmpty ?? true;
         }
         
-        convenience public init(number: String, kinds: [Kind] = [], types: [EntryType] = []) {
+        public convenience init(number: String, kinds: [Kind] = [], types: [EntryType] = []) {
             self.init(uri: "tel:\(number)", kinds: kinds, types: types);
         }
         
         public init(uri: String?, kinds: [Kind] = [], types: [EntryType] = []) {
             self.kinds = kinds;
             self.uri = uri;
-            super.init(types: types);
+            self.types = types;
         }
         
-        public enum Kind {
+        public enum Kind: Sendable {
             case fax
             case msg
             case voice

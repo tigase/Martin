@@ -34,7 +34,7 @@ extension XmppModuleIdentifier {
  Other authentication module (like ie. `SaslModule`) may require this
  module to work properly.
  */
-open class AuthModule: XmppModuleBase, XmppModule, Resetable {
+open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let ID = "auth";
     public static let IDENTIFIER = XmppModuleIdentifier<AuthModule>();
@@ -45,8 +45,6 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable {
     
     @Published
     open private(set) var state: AuthorizationStatus = .notAuthorized;
-    
-    private var stateObserverCancellable: Cancellable?;
     
     public override init() {
         

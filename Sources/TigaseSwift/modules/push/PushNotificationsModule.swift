@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PushNotificationsModule: XmppModuleBase, XmppStanzaProcessor {
+open class PushNotificationsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
     
     public static let PUSH_NOTIFICATIONS_XMLNS = "urn:xmpp:push:0";
     
@@ -71,7 +71,7 @@ open class PushNotificationsModule: XmppModuleBase, XmppStanzaProcessor {
     }
 //    open var pushServiceJid: JID?;
     
-    public struct NotificationsDisabled {
+    public struct NotificationsDisabled: Sendable {
         public let serviceJid: JID;
         public let node: String;
     }

@@ -22,7 +22,7 @@
 import Foundation
 import Combine
 
-public protocol ChannelProtocol: ConversationProtocol, MixParticipantsProtocol {
+public protocol ChannelProtocol: ConversationProtocol, MixParticipantsProtocol, Sendable {
  
     var nickname: String? { get }
     var state: ChannelState { get }
@@ -45,12 +45,12 @@ extension ChannelProtocol {
     
 }
 
-public enum ChannelState: Int {
+public enum ChannelState: Int, Sendable {
     case left = 0
     case joined = 1
 }
 
-public enum ChannelPermission {
+public enum ChannelPermission: Sendable {
     case changeConfig
     case changeInfo
     case changeAvatar

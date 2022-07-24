@@ -33,7 +33,7 @@ extension XmppModuleIdentifier {
  
  [XEP-0045: Multi-User Chat]: http://xmpp.org/extensions/xep-0045.html
  */
-open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
+open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked Sendable {
     /// ID of module for lookup in `XmppModulesManager`
     public static let IDENTIFIER = XmppModuleIdentifier<MucModule>();
     public static let ID = "muc";
@@ -542,14 +542,14 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable {
         }
     }
     //TODO: Maybe this should be struct?
-    open class RoomAffiliation {
+    public struct RoomAffiliation: Sendable {
         
         public let jid: JID;
         public let affiliation: MucAffiliation;
         public let nickname: String?;
         public let role: MucRole?;
         
-        public convenience init?(from el: Element) {
+        public init?(from el: Element) {
             guard el.name == "item" else {
                 return nil;
             }

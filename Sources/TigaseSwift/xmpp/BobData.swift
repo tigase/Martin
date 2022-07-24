@@ -21,7 +21,7 @@
 
 import Foundation
 
-public struct BobData {
+public struct BobData: Sendable {
     
     public let cid: String;
     public let type: String?;

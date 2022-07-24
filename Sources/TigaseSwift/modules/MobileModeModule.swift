@@ -25,7 +25,7 @@ import Foundation
  Module provides support for Tigase Mobile Optimizations feature
  */
 @available(*, deprecated, message: "This custom extension implementation module should be replaced by use of ClientStateIndicationModule")
-open class MobileModeModule: XmppModuleBase, XmppModule, Resetable {
+open class MobileModeModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendable {
     
     /// Base part of namespace used by Mobile Optimizations
     public static let MM_XMLNS = "http://tigase.org/protocol/mobile";

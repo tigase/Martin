@@ -31,7 +31,7 @@ public class Jingle {
     
     public static var supportCryptoAttribute = false;
     
-    public struct Bundle: CustomElementConvertible {
+    public struct Bundle: CustomElementConvertible, Sendable {
         
         public let names: [String];
         
@@ -64,7 +64,7 @@ public class Jingle {
         
     }
     
-    public class Content: CustomElementConvertible {
+    public class Content: CustomElementConvertible, @unchecked Sendable {
         
         public let creator: Creator;
         public let name: String;
@@ -119,12 +119,12 @@ public class Jingle {
             });
         }
         
-        public enum Creator: String {
+        public enum Creator: String, Sendable {
             case initiator
             case responder
         }
         
-        public enum Senders: String {
+        public enum Senders: String, Sendable {
             case none
             case initiator
             case responder
@@ -134,7 +134,7 @@ public class Jingle {
     }
 }
 
-public protocol JingleDescription: CustomElementConvertible {
+public protocol JingleDescription: CustomElementConvertible, Sendable {
     
     var media: String { get };
     
@@ -142,7 +142,7 @@ public protocol JingleDescription: CustomElementConvertible {
     
 }
 
-public protocol JingleTransport: CustomElementConvertible {
+public protocol JingleTransport: CustomElementConvertible, Sendable {
     
     var xmlns: String { get }
     
@@ -152,7 +152,7 @@ public protocol JingleTransport: CustomElementConvertible {
 
 extension Jingle {
     
-    public enum Action: String {
+    public enum Action: String, Sendable {
         case contentAccept = "content-accept"
         case contentAdd = "content-add"
         case contentModify = "content-modify"
@@ -174,7 +174,7 @@ extension Jingle {
 
 extension Jingle {
     
-    public enum ContentAction {
+    public enum ContentAction: Sendable {
         case add
         case accept
         case remove
@@ -212,7 +212,7 @@ extension Jingle {
 }
 
 extension Jingle {
-    public enum SessionInfo {
+    public enum SessionInfo: Sendable {
         case active
         case hold
         case unhold
@@ -286,7 +286,7 @@ extension Jingle {
 extension Jingle {
     public class Transport {
         
-        public class ICEUDPTransport: JingleTransport {
+        public class ICEUDPTransport: JingleTransport, @unchecked Sendable {
             
             public static let XMLNS = "urn:xmpp:jingle:transports:ice-udp:1";
             
@@ -325,7 +325,7 @@ extension Jingle {
                 });
             }
             
-            public class Fingerprint: CustomElementConvertible {
+            public class Fingerprint: CustomElementConvertible, @unchecked Sendable {
                 public let hash: String;
                 public let value: String;
                 public let setup: Setup;
@@ -360,7 +360,7 @@ extension Jingle {
                 }
             }
             
-            public class Candidate: CustomElementConvertible {
+            public class Candidate: CustomElementConvertible, @unchecked Sendable {
                 public let component: UInt8;
                 public let foundation: UInt;
                 public let generation: UInt8;
@@ -424,12 +424,12 @@ extension Jingle {
                     });
                 }
                 
-                public enum ProtocolType: String {
+                public enum ProtocolType: String, Sendable {
                     case udp
                     case tcp
                 }
                 
-                public enum CandidateType: String {
+                public enum CandidateType: String, Sendable {
                     case host
                     case prflx
                     case relay
@@ -439,7 +439,7 @@ extension Jingle {
             
         }
         
-        public class RawUDPTransport: JingleTransport {
+        public class RawUDPTransport: JingleTransport, @unchecked Sendable {
             
             public static let XMLNS = "urn:xmpp:jingle:transports:raw-udp:1";
             
@@ -463,7 +463,7 @@ extension Jingle {
                 return Element(name: "transport", xmlns: RawUDPTransport.XMLNS, children: candidates.map({ $0.element() }))
             }
             
-            public class Candidate {
+            public class Candidate: @unchecked Sendable {
                 public let component: UInt8;
                 public let generation: UInt8;
                 public let id: String;
@@ -502,7 +502,7 @@ extension Jingle {
                     return el;
                 }
                 
-                public enum CandidateType: String {
+                public enum CandidateType: String, Sendable {
                     case host
                     case prflx
                     case relay
@@ -516,7 +516,7 @@ extension Jingle {
 
 extension Jingle {
     public class RTP {
-        public class Description: JingleDescription {
+        public class Description: JingleDescription, @unchecked Sendable {
             
             public let media: String;
             public let ssrc: String?;
@@ -581,7 +581,7 @@ extension Jingle {
                 });
             }
             
-            public class Payload: CustomElementConvertible {
+            public class Payload: CustomElementConvertible, @unchecked Sendable {
                 public let id: UInt8;
                 public let channels: Int;
                 public let clockrate: UInt?;
@@ -639,7 +639,7 @@ extension Jingle {
                     });
                 }
                 
-                public class Parameter: CustomElementConvertible {
+                public class Parameter: CustomElementConvertible, @unchecked Sendable {
                     
                     public let name: String;
                     public let value: String;
@@ -661,7 +661,7 @@ extension Jingle {
                     }
                 }
                 
-                public class RtcpFeedback: CustomElementConvertible {
+                public class RtcpFeedback: CustomElementConvertible, @unchecked Sendable {
                     
                     public let type: String;
                     public let subtype: String?;
@@ -687,7 +687,7 @@ extension Jingle {
                 }
             }
             
-            public class Encryption: CustomElementConvertible {
+            public class Encryption: CustomElementConvertible, @unchecked Sendable {
                 
                 public let cryptoSuite: String;
                 public let keyParams: String;
@@ -720,7 +720,7 @@ extension Jingle {
                 
             }
             
-            public class HdrExt: CustomElementConvertible {
+            public class HdrExt: CustomElementConvertible, @unchecked Sendable {
 
                 public let id: String;
                 public let uri: String;
@@ -759,13 +759,13 @@ extension Jingle {
                 }
             }
             
-            public enum Senders: String {
+            public enum Senders: String, Sendable {
                 case initiator
                 case responder
                 case both
             }
             
-            public class SSRCGroup: CustomElementConvertible {
+            public class SSRCGroup: CustomElementConvertible, @unchecked Sendable {
                 public let semantics: String;
                 public let sources: [String];
                 
@@ -798,7 +798,7 @@ extension Jingle {
                 }
             }
             
-            public class SSRC: CustomElementConvertible {
+            public class SSRC: CustomElementConvertible, @unchecked Sendable {
                 
                 public let ssrc: String;
                 public let parameters: [Parameter];
@@ -829,7 +829,7 @@ extension Jingle {
                     });
                 }
                 
-                public class Parameter: CustomElementConvertible {
+                public class Parameter: CustomElementConvertible, @unchecked Sendable {
                     
                     public let key: String;
                     public let value: String?;

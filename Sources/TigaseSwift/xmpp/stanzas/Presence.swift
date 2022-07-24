@@ -22,7 +22,7 @@
 import Foundation
 
 /// Extenstion of `Stanza` class with specific features existing only in `presence' elements.
-open class Presence: Stanza {
+open class Presence: Stanza, @unchecked Sendable  {
 
     /**
      Possible values:
@@ -32,7 +32,7 @@ open class Presence: Stanza {
      - xa: sender of stanza is away for longer time (eXtender Away)
      - dnd: sender of stanza wishes not to be disturbed
      */
-    public enum Show: String {
+    public enum Show: String, Sendable {
         case chat
         case online
         case away
