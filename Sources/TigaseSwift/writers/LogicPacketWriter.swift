@@ -47,6 +47,9 @@ open class LogicPacketWriter: PacketWriter {
                 }
             });
         } else {
+            if iq.id == nil && (iq.type == .get || iq.type == .set) {
+                iq.id = UIDGenerator.nextUid;
+            }
             sessionLogic.send(stanza: iq)
         }
     }
