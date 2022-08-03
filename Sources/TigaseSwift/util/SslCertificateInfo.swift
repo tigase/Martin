@@ -22,7 +22,164 @@
 import Foundation
 import CryptoKit
 
-open class SslCertificateInfo: NSObject, NSCoding, @unchecked Sendable {
+extension SecCertificate {
+    func fingerprint(algoright: SSLCertificateInfo.Fingerprint.Algorithm) -> String {
+        let data = SecCertificateCopyData(self) as Data;
+        switch algoright {
+        case .sha1:
+            return Insecure.SHA1.hash(toHex: data);
+        case .sha256:
+            return SHA256.hash(toHex: data);
+        }
+    }
+}
+
+public struct SSLCertificateInfo: Codable, Equatable {
+    
+    public struct Fingerprint: Codable, Equatable {
+
+        enum CodingKeys: String, CodingKey {
+            case value
+            case algorithm = "alg"
+        }
+        
+        public enum Algorithm: String, Codable {
+            case sha1 = "SHA-1"
+            case sha256 = "SHA-256"
+
+            public static let values: [Algorithm] = [.sha256, .sha1];
+        }
+        
+
+        public let value: String
+        public let algorithm: Algorithm
+
+        public init(algorithm: Algorithm, value: String) {
+            self.algorithm = algorithm;
+            self.value = value;
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self);
+            algorithm = try container.decode(Algorithm.self, forKey: .algorithm);
+            value = try container.decode(String.self, forKey: .value);
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self);
+            try container.encode(algorithm, forKey: .algorithm);
+            try container.encode(value, forKey: .value);
+        }
+        
+        public func matches(certificate: SecCertificate) -> Bool {
+            return value == certificate.fingerprint(algoright: algorithm);
+        }
+    }
+    
+    public struct Entry: Codable, Equatable {
+        
+        enum CodingKeys: CodingKey {
+            case name
+            case fingerprints
+            #if os(macOS)
+            case notBefore
+            case notAfter
+            #endif
+        }
+        
+        public let name: String;
+        public let fingerprints: [Fingerprint]
+        #if os(macOS)
+        public let notBefore: Date?
+        public let notAfter: Date?
+        #endif
+        
+        #if os(macOS)
+        public init(name: String, fingerprints: [Fingerprint], notBefore: Date?, notAfter: Date?) {
+            self.name = name;
+            self.fingerprints = fingerprints;
+            self.notBefore = notBefore;
+            self.notAfter = notAfter;
+        }
+        #else
+        public init(name: String, fingerprints: [Fingerprint]) {
+            self.name = name;
+            self.fingerprints = fingerprints;
+        }
+        #endif
+        
+        public init?(secCertificate cert: SecCertificate) {
+            guard let summary = (SecCertificateCopySubjectSummary(cert) as NSString?) as String? else {
+                return nil;
+            }
+            name = summary;
+            fingerprints = Fingerprint.Algorithm.values.map({ Fingerprint(algorithm: $0, value: cert.fingerprint(algoright: $0)) });
+            #if os(macOS)
+            let values = SecCertificateCopyValues(cert!, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
+            notBefore = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
+            notAfter = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
+            #endif
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self);
+            name = try container.decode(String.self, forKey: .name);
+            fingerprints = try container.decode([Fingerprint].self, forKey: .fingerprints);
+            #if os(macOS)
+            notBefore = try container.decodeIfPresent(Date.self, forKey: .notBefore);
+            notAfter = try container.decodeIfPresent(Date.self, forKey: .notAfter);
+            #endif
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self);
+            try container.encode(name, forKey: .name);
+            try container.encode(fingerprints, forKey: .fingerprints)
+            #if os(macOS)
+            try container.encode(notBefore, forKey: .notBefore);
+            try container.encode(notAfter, forKey: .notAfter)
+            #endif
+        }
+    }
+
+    enum CodingKeys: CodingKey {
+        case subject
+        case issuer
+    }
+    
+    public var subject: Entry;
+    public var issuer: Entry?;
+    
+    public init?(trust: SecTrust) {
+        let certCount = SecTrustGetCertificateCount(trust);
+        guard certCount > 0, let subjectCert = SecTrustGetCertificateAtIndex(trust, 0), let subject = Entry(secCertificate: subjectCert) else{
+            return nil;
+        }
+        self.subject = subject;
+        if certCount > 1, let issuerCert = SecTrustGetCertificateAtIndex(trust, 1) {
+            issuer = Entry(secCertificate: issuerCert);
+        }
+    }
+    
+    public init(subject: Entry, issuer: Entry?) {
+        self.subject = subject;
+        self.issuer = issuer;
+    }
+ 
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self);
+        subject = try container.decode(Entry.self, forKey: .subject);
+        issuer = try container.decodeIfPresent(Entry.self, forKey: .issuer);
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self);
+        try container.encode(subject, forKey: .subject);
+        try container.encodeIfPresent(issuer, forKey: .issuer);
+    }
+}
+
+open class SslCertificateInfoOld: NSObject, NSCoding, @unchecked Sendable {
     
     public let details: Entry;
     public let issuer: Entry?;
@@ -40,7 +197,7 @@ open class SslCertificateInfo: NSObject, NSCoding, @unchecked Sendable {
         self.issuer = Entry(name: aDecoder.decodeObject(forKey: "issuer-name") as? String, fingerprintSha1: aDecoder.decodeObject(forKey: "issuer-fingerprint-sha1") as? String, validFrom: nil, validTo: nil);
     }
     
-    public init(sslCertificateInfo: SslCertificateInfo) {
+    public init(sslCertificateInfo: SslCertificateInfoOld) {
         self.details = sslCertificateInfo.details;
         self.issuer = sslCertificateInfo.issuer;
     }
@@ -52,7 +209,7 @@ open class SslCertificateInfo: NSObject, NSCoding, @unchecked Sendable {
         
         for i in 0..<certCount {
             let cert = SecTrustGetCertificateAtIndex(trust, i);
-            let fingerprint = SslCertificateInfo.calculateSha1Fingerprint(certificate: cert!);
+            let fingerprint = SslCertificateInfoOld.calculateSha1Fingerprint(certificate: cert!);
         
             // on first cert got 03469208e5d8e580f65799497d73b2d3098e8c8a
             // while openssl reports: SHA1 Fingerprint=03:46:92:08:E5:D8:E5:80:F6:57:99:49:7D:73:B2:D3:09:8E:8C:8A
@@ -91,6 +248,10 @@ open class SslCertificateInfo: NSObject, NSCoding, @unchecked Sendable {
         aCoder.encode(issuer?.fingerprintSha1, forKey: "issuer-fingerprint-sha1");
     }
 
+    public func sslCertificateInfo() -> SSLCertificateInfo {
+        return SSLCertificateInfo(subject: details.entry(), issuer: issuer?.entry());
+    }
+    
     open class Entry {
     
         public let name: String;
@@ -107,8 +268,17 @@ open class SslCertificateInfo: NSObject, NSCoding, @unchecked Sendable {
             self.validFrom = validFrom;
             self.validTo = validTo;
         }
+    
+        public func entry() -> SSLCertificateInfo.Entry {
+            #if os(macOS)
+            return SSLCertificateInfo.Entry(name: name, fingerprints: [.init(algorithm: .sha1, value: fingerprintSha1)], notBefore: validFrom, notAfter: validTo);
+            #else
+                return SSLCertificateInfo.Entry(name: name, fingerprints: [.init(algorithm: .sha1, value: fingerprintSha1)])
+            #endif
+        }
         
     }
+    
     #if os(macOS)
     fileprivate static func extractDate(from values: [String: [String: AnyObject]], key: CFString) -> Date? {
         let value = values[key as String]?[kSecPropertyKeyValue as String];

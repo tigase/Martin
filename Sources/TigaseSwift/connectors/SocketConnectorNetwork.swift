@@ -368,7 +368,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         self.connection?.send(content: data, completion: completion.sendCompletion)
     }
 
-    public struct Endpoint: ConnectorEndpoint, CustomStringConvertible {
+    public struct Endpoint: ConnectorEndpoint, CustomStringConvertible, Equatable {
         
         public let proto: ConnectorProtocol;
         public let host: String;

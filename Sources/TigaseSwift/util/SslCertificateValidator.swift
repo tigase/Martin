@@ -20,10 +20,11 @@
 //
 
 import Foundation
+import CryptoKit
 
 open class SslCertificateValidator {
         
-    public static func validateSslCertificate(domain: String, fingerprint acceptedFingerprint: String, trust: SecTrust) -> Bool {
+    public static func validateSslCertificate(domain: String, fingerprint acceptedFingerprint: SSLCertificateInfo.Fingerprint, trust: SecTrust) -> Bool {
         let policy = SecPolicyCreateSSL(false, domain as CFString?);
         var secTrustResultType = SecTrustResultType.invalid;
         var error: CFError?;
@@ -37,8 +38,7 @@ open class SslCertificateValidator {
             
             if certCount > 0 {
                 let cert = SecTrustGetCertificateAtIndex(trust, 0);
-                let fingerprint = SslCertificateInfo.calculateSha1Fingerprint(certificate: cert!);
-                valid = fingerprint == acceptedFingerprint;
+                valid = acceptedFingerprint.matches(certificate: cert!);
             }
             else {
                 valid = false;
@@ -51,6 +51,6 @@ open class SslCertificateValidator {
 
 public enum SSLCertificateValidation {
     case `default`
-    case fingerprint(String)
+    case fingerprint(SSLCertificateInfo.Fingerprint)
     case customValidator((SecTrust)->Bool)
 }

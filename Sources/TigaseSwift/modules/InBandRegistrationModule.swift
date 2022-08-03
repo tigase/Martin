@@ -178,12 +178,12 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Send
         var inBandRegistrationModule: InBandRegistrationModule!;
         open var preauthToken: String?;
         var usesDataForm = false;
-        open var acceptedSslCertificate: SslCertificateInfo? {
+        open var acceptedSslCertificate: SSLCertificateInfo? {
             didSet {
                 switch client.connectionConfiguration.connectorOptions {
                 case is SocketConnectorNetwork.Options:
                     client.connectionConfiguration.modifyConnectorOptions(type: SocketConnectorNetwork.Options.self, { options in
-                        if let fingerprint = acceptedSslCertificate?.details.fingerprintSha1 {
+                        if let fingerprint = acceptedSslCertificate?.subject.fingerprints.first {
                             options.sslCertificateValidation = .fingerprint(fingerprint)
                         } else {
                             options.sslCertificateValidation = .default;
@@ -191,7 +191,7 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Send
                     })
                 case is SocketConnector.Options:
                     client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
-                        if let fingerprint = acceptedSslCertificate?.details.fingerprintSha1 {
+                        if let fingerprint = acceptedSslCertificate?.subject.fingerprints.first {
                             options.sslCertificateValidation = .fingerprint(fingerprint)
                         } else {
                             options.sslCertificateValidation = .default;
@@ -355,15 +355,15 @@ extension InBandRegistrationModule {
         var inBandRegistrationModule: InBandRegistrationModule!;
         var onForm: ((DataForm, [BobData], AccountRegistrationTask)->Void)?;
         var completionHandler: ((RegistrationResult)->Void)?;
-        var onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)?;
+        var onCertificateValidationError: ((SSLCertificateInfo, @escaping ()->Void)->Void)?;
         
         var usesDataForm = false;
         var formToSubmit: DataForm?;
         var serverAvailable: Bool = false;
         
-        var acceptedCertificate: SslCertificateInfo? = nil;
+        var acceptedCertificate: SSLCertificateInfo? = nil;
         
-        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (DataForm, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SecTrust)->Bool)? = nil, onCertificateValidationError: ((SslCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
+        public init(client: XMPPClient? = nil, domainName: String, preauth: String? = nil, onForm: @escaping (DataForm, [BobData], InBandRegistrationModule.AccountRegistrationTask)->Void, sslCertificateValidator: ((SecTrust)->Bool)? = nil, onCertificateValidationError: ((SSLCertificateInfo, @escaping ()->Void)->Void)? = nil, completionHandler: @escaping (RegistrationResult)->Void) {
             let localClient = client ?? XMPPClient();
             _ = localClient.modulesManager.register(StreamFeaturesModule());
             self.setClient(client: localClient);
@@ -454,11 +454,11 @@ extension InBandRegistrationModule {
         
         private func serverSSLCertValidationFailed(_ trust: SecTrust) {
             if let onError = self.onCertificateValidationError {
-                let certData = SslCertificateInfo(trust: trust);
+                let certData = SSLCertificateInfo(trust: trust)!;
                 self.serverAvailable = true;
                 onError(certData, {() -> Void in
                     self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
-                        options.sslCertificateValidation = .fingerprint(certData.details.fingerprintSha1);
+                        options.sslCertificateValidation = .fingerprint(certData.subject.fingerprints.first!);
                     })
                     self.acceptedCertificate = certData;
                     self.serverAvailable = false;
@@ -511,7 +511,7 @@ extension InBandRegistrationModule {
             });
         }
         
-        public func getAcceptedCertificate() -> SslCertificateInfo? {
+        public func getAcceptedCertificate() -> SSLCertificateInfo? {
             return acceptedCertificate;
         }
         
