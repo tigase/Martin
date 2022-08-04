@@ -35,7 +35,7 @@ extension Element: ElementItemProtocol {
     
 }
 
-extension Array: ElementItemProtocol where Element == TigaseSwift.ElementItemProtocol {
+extension Array: ElementItemProtocol where Element == ElementItemProtocol {
     
     public func asItems() -> [ElementItemProtocol] {
         return self;

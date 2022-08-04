@@ -115,9 +115,9 @@ public struct SSLCertificateInfo: Codable, Equatable {
             name = summary;
             fingerprints = Fingerprint.Algorithm.values.map({ Fingerprint(algorithm: $0, value: cert.fingerprint(algoright: $0)) });
             #if os(macOS)
-            let values = SecCertificateCopyValues(cert!, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
-            notBefore = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
-            notAfter = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
+            let values = SecCertificateCopyValues(cert, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
+            notBefore = SecCertExtractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
+            notAfter = SecCertExtractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
             #endif
         }
         
@@ -217,8 +217,8 @@ open class SslCertificateInfoOld: NSObject, NSCoding, @unchecked Sendable {
             
             #if os(macOS)
                 let values = SecCertificateCopyValues(cert!, [kSecOIDX509V1ValidityNotAfter, kSecOIDX509V1ValidityNotBefore] as CFArray, nil);
-                let validFrom = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
-                let validTo = SslCertificateInfo.extractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
+                let validFrom = SecCertExtractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotBefore);
+                let validTo = SecCertExtractDate(from: values! as! [String : [String : AnyObject]], key: kSecOIDX509V1ValidityNotAfter);
             #else
                 let validFrom: Date? = nil;
                 let validTo: Date? = nil;
@@ -279,15 +279,16 @@ open class SslCertificateInfoOld: NSObject, NSCoding, @unchecked Sendable {
         
     }
     
-    #if os(macOS)
-    fileprivate static func extractDate(from values: [String: [String: AnyObject]], key: CFString) -> Date? {
-        let value = values[key as String]?[kSecPropertyKeyValue as String];
-        let time = (value as? NSNumber)?.doubleValue;
-        if time == nil {
-            return nil;
-        } else {
-            return Date(timeIntervalSinceReferenceDate: time!);
-        }
-    }
-    #endif
 }
+
+#if os(macOS)
+fileprivate func SecCertExtractDate(from values: [String: [String: AnyObject]], key: CFString) -> Date? {
+    let value = values[key as String]?[kSecPropertyKeyValue as String];
+    let time = (value as? NSNumber)?.doubleValue;
+    if time == nil {
+        return nil;
+    } else {
+        return Date(timeIntervalSinceReferenceDate: time!);
+    }
+}
+#endif

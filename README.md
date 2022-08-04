@@ -9,7 +9,7 @@
 </p>-->
 
 <h1 align="center">
-  Tigase Swift XMPP client library
+  Martin - XMPP client library for Swift
 </h1>
 
 <!--<p align="center">
@@ -19,13 +19,13 @@
 
 # What it is
 
-Tigase Swift XMPP client library is an [XMPP](https://xmpp.org) client library written in a [Swift](https://swift.org) programming language. 
+Martin is an [XMPP](https://xmpp.org) client library written in a [Swift](https://swift.org) programming language. 
 It provides implementation of core of the XMPP standard and processing XML. Additionally it provides support for many popular extensions (XEP's). 
 
 This repository contains source files of the library.
 
 # Features
-Tigase Swift implements support for [RFC 6120: Extensible Messaging and Presence Protocol (XMPP): Core](https://xmpp.org/rfcs/rfc6120.html) and [RFC 6121: Extensible Messaging and Presence Protocol (XMPP): Instant Messaging and Presence](https://xmpp.org/rfcs/rfc6121.html).
+Martin implements support for [RFC 6120: Extensible Messaging and Presence Protocol (XMPP): Core](https://xmpp.org/rfcs/rfc6120.html) and [RFC 6121: Extensible Messaging and Presence Protocol (XMPP): Instant Messaging and Presence](https://xmpp.org/rfcs/rfc6121.html).
 Additionally it supports many popular XEPs. Below is a list of some of the supported XEPs:
 
 * [XEP-0004: Data Forms](https://xmpp.org/extensions/xep-0004.html)
@@ -54,7 +54,7 @@ Additionally it supports many popular XEPs. Below is a list of some of the suppo
 * [XEP-0313: Message Archive Management](https://xmpp.org/extensions/xep-0313.html)
 * [XEP-0357: Push Notifications](https://xmpp.org/extensions/xep-0357.html)
 * [XEP-0363: HTTP File Upload](https://xmpp.org/extensions/xep-0363.html)
-* [XEP-0384: OMEMO Encryption](https://xmpp.org/extensions/xep-0384.html) - support provided with additonaly library [Tigase Swift OMEMO](https://github.com/tigase/tigase-swift-omemo/)
+* [XEP-0384: OMEMO Encryption](https://xmpp.org/extensions/xep-0384.html) - support provided with additonaly library [MartinOMEMO](https://github.com/tigase/martin-omemo/)
 * [XEP-0402: Bookmarks 2](https://xmpp.org/extensions/xep-0402.html)
 * ....
 
@@ -75,7 +75,7 @@ Compilation process and building instructions are available in our [documentatio
 
 # License
 
-<img alt="Tigase Tigase Logo" src="https://github.com/tigase/website-assets/blob/master/tigase/images/tigase-logo.png?raw=true" width="25"/> Official <a href="https://tigase.net/">Tigase</a> repository is available at: https://github.com/tigase/tigase-swift/.
+<img alt="Tigase Tigase Logo" src="https://github.com/tigase/website-assets/blob/master/tigase/images/tigase-logo.png?raw=true" width="25"/> Official <a href="https://tigase.net/">Tigase</a> repository is available at: https://github.com/tigase/Martin/.
 
 Copyright (c) 2004 Tigase, Inc.
 

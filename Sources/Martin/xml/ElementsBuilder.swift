@@ -33,7 +33,7 @@ extension Element: ElementGroup {
     
 }
 
-extension Array: ElementGroup where Element == TigaseSwift.Element {
+extension Array: ElementGroup where Element == Martin.Element {
     public func asElements() -> [Element] {
         return self;
     }

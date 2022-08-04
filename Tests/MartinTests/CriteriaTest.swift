@@ -19,7 +19,7 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 import Foundation
-import TigaseSwift
+import Martin
 import XCTest
 
 class CriteriaTest: XCTestCase {
