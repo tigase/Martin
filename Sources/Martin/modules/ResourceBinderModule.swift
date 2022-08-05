@@ -78,7 +78,7 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable, @uncheck
         
         let jid = JID(name);
         lock.with({
-            _bindedJid = nil;
+            _bindedJid = jid;
         })
         return jid;
     }

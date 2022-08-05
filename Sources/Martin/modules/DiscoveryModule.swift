@@ -82,7 +82,9 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable, @unchec
         guard let boundJid = context?.boundJid, let serverJid = JID(boundJid.domain) else {
             throw XMPPError(condition: .unexpected_request, message: "Resournce not bound yet!")
         }
-        return try await info(for: serverJid);
+        let result = try await info(for: serverJid);
+        serverDiscoResult = result;
+        return result;
     }
     
     /**
@@ -92,7 +94,9 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable, @unchec
         guard let accountJid = context?.boundJid?.withoutResource() else {
             throw XMPPError(condition: .unexpected_request, message: "Resournce not bound yet!")
         }
-        return try await info(for: accountJid);
+        let result = try await info(for: accountJid);
+        accountDiscoResult = result;
+        return result;
     }
     
     open func serverComponents() async throws -> DiscoveryItemsResult {

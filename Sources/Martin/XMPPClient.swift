@@ -252,7 +252,7 @@ open class XMPPClient: Context {
 extension XMPPClient {
     
     public func loginAndWait(lastSeeOtherHost: ConnectorEndpoint? = nil) async throws {
-        try login();
+        try login(lastSeeOtherHost: lastSeeOtherHost);
         return try await withUnsafeThrowingContinuation { continuation in
             var cancellable: AnyCancellable?;
             cancellable = self.$state.sink(receiveValue: { state in
