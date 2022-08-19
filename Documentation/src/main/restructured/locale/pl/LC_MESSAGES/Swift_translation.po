@@ -1,0 +1,984 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2004-2022, Tigase, Inc
+# This file is distributed under the same license as the TigaseDoc package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: TigaseDoc \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-08-18 23:03-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.8.0\n"
+
+#: ../../Basics.rst:2
+msgid "Basics"
+msgstr ""
+
+#: ../../Basics.rst:5
+msgid "Create XMPP client instance"
+msgstr ""
+
+#: ../../Basics.rst:7
+msgid ""
+"To use TigaseSwift library you need to create instance of ``XMPPClient`` "
+"class which is implementation of XMPP client."
+msgstr ""
+
+#: ../../Basics.rst:14
+msgid "Register required modules"
+msgstr ""
+
+#: ../../Basics.rst:16
+msgid ""
+"Next step is to register modules providing support for features you would"
+" like to use. Almost in any case you will need at least following "
+"modules:"
+msgstr ""
+
+#: ../../Basics.rst:18
+msgid "``StreamFeaturesModule``"
+msgstr ""
+
+#: ../../Basics.rst:20
+msgid "Responsible for handling XMPP stream features"
+msgstr ""
+
+#: ../../Basics.rst:22
+msgid "``AuthModule`` and ``SaslModule``"
+msgstr ""
+
+#: ../../Basics.rst:24
+msgid ""
+"``AuthModule`` add common authentication features, while ``SaslModule`` "
+"add support for SASL based authentication."
+msgstr ""
+
+#: ../../Basics.rst:26
+msgid "``ResourceBinderModule``"
+msgstr ""
+
+#: ../../Basics.rst:28
+msgid ""
+"Module responsible for resource binding which is part of stream "
+"negotiation process."
+msgstr ""
+
+#: ../../Basics.rst:30
+msgid "``SessionEstablishmentModule``"
+msgstr ""
+
+#: ../../Basics.rst:32
+msgid ""
+"Module handles session establishment which is last step of stream "
+"negotiation, however it is not needed according to `RFC 6120 "
+"<http://xmpp.org/rfcs/rfc6120.html>`__. We recommend to register this "
+"module for compatibility reasons - if it will be not needed then it will "
+"not be used."
+msgstr ""
+
+#: ../../Basics.rst:34
+msgid "To register, ie. ``StreamFeaturesModule`` you need to use following code:"
+msgstr ""
+
+#: ../../Basics.rst:41
+msgid "Register additional modules you need"
+msgstr ""
+
+#: ../../Basics.rst:43
+msgid ""
+"You can add any additional modules found in TigaseSwift library or you "
+"can create your own based by implementing support for ``XmppModule`` "
+"protocol."
+msgstr ""
+
+#: ../../Basics.rst:45
+msgid "Here is list of some modules provided by TigaseSwift library:"
+msgstr ""
+
+#: ../../Basics.rst:47
+msgid "``PresenceModule``"
+msgstr ""
+
+#: ../../Basics.rst:49
+msgid ""
+"Responsible for handling incoming presences and allows to set client "
+"presence."
+msgstr ""
+
+#: ../../Basics.rst:51
+msgid "``MessageModule``"
+msgstr ""
+
+#: ../../Basics.rst:53
+msgid ""
+"This module is responsible for processing incoming messages, "
+"creating/destroying chats and sending messages."
+msgstr ""
+
+#: ../../Basics.rst:55
+msgid "``RosterModule``"
+msgstr ""
+
+#: ../../Basics.rst:57
+msgid "Provides support for retrieval and manipulation of XMPP roster."
+msgstr ""
+
+#: ../../Basics.rst:59
+msgid "``MucModule``"
+msgstr ""
+
+#: ../../Basics.rst:61
+msgid ""
+"Provides support for MUC rooms as described in `XEP-0045: Multi-User Chat"
+" <http://xmpp.org/extensions/xep-0045.html>`__"
+msgstr ""
+
+#: ../../Basics.rst:63
+msgid "``DiscoveryModule``"
+msgstr ""
+
+#: ../../Basics.rst:65
+msgid ""
+"Provides support for service discovery described in `XEP-0030: Service "
+"Discovery <http://xmpp.org/extensions/xep-0030.html>`__"
+msgstr ""
+
+#: ../../Basics.rst:67
+msgid "``StreamManagementModule``"
+msgstr ""
+
+#: ../../Basics.rst:69
+msgid ""
+"Provides support for Stream Management acking and stream resumption as "
+"specified in `XEP-0198: Stream Management "
+"<http://xmpp.org/extensions/xep-0198.html>`__"
+msgstr ""
+
+#: ../../Basics.rst:71
+msgid "``MessageCarbonsModule``"
+msgstr ""
+
+#: ../../Basics.rst:73
+msgid ""
+"Adds support for forwarding messages delivered to other resources as "
+"described in `XEP-0280: Message Carbons "
+"<http://xmpp.org/extensions/xep-0280.html>`__"
+msgstr ""
+
+#: ../../Basics.rst:75
+msgid "``VCardModule``"
+msgstr ""
+
+#: ../../Basics.rst:77
+msgid ""
+"Implementation of support for `XEP-0054: vcard-temp "
+"<http://xmpp.org/extensions/xep-0054.html>`__"
+msgstr ""
+
+#: ../../Basics.rst:79
+msgid "``PingModule``"
+msgstr ""
+
+#: ../../Basics.rst:81
+msgid ""
+"Allows to check if other XMPP client is available and it is possible to "
+"deliver packet to this XMPP client as specified in `XEP-0199: XMPP Ping "
+"<http://xmpp.org/extensions/xep-0199.html>`__"
+msgstr ""
+
+#: ../../Basics.rst:83
+msgid "``InBandRegistrationModule``"
+msgstr ""
+
+#: ../../Basics.rst:85
+msgid ""
+"Adds possibility to register XMPP account using `XEP-0077: In-Band "
+"Registration <http://xmpp.org/extensions/xep-0077.html>`__"
+msgstr ""
+
+#: ../../Basics.rst:87
+msgid "``MobileModeModule``"
+msgstr ""
+
+#: ../../Basics.rst:89
+msgid "Provides support for using Tigase Optimizations for mobile devices"
+msgstr ""
+
+#: ../../Basics.rst:91
+msgid "``CapabilitiesModule``"
+msgstr ""
+
+#: ../../Basics.rst:93
+msgid ""
+"Provides support for `XEP-0115: Entity Capabilities "
+"<http://xmpp.org/extensions/xep-0115.html>`__ which allows for "
+"advertisement and automatic discovery of features supported by other "
+"clients."
+msgstr ""
+
+#: ../../Basics.rst:96
+msgid "Provide credentials needed for authentication"
+msgstr ""
+
+#: ../../Basics.rst:98
+msgid "This should be done using ``connectionConfiguration`` properties, ie."
+msgstr ""
+
+#: ../../Basics.rst:106
+msgid ""
+"To use ANONYMOUS authentication mechanism, do not set user jid and "
+"password. Instead just set server domain:"
+msgstr ""
+
+#: ../../Basics.rst:113
+msgid "Register for connection related events"
+msgstr ""
+
+#: ../../Basics.rst:115
+msgid "There are three event related to connection state which should be handled:"
+msgstr ""
+
+#: ../../Basics.rst:117
+msgid "``SocketConnector.ConnectedEvent``"
+msgstr ""
+
+#: ../../Basics.rst:119
+msgid ""
+"Fired when client opens TCP connection to server - XMPP stream is not "
+"ready at this point."
+msgstr ""
+
+#: ../../Basics.rst:121
+msgid "``SessionEstablishmentModule.SessionEstablishmentSuccessEvent``"
+msgstr ""
+
+#: ../../Basics.rst:123
+msgid ""
+"Fired when client finishes session establishment. It will be called even "
+"if ``SessionEstablishmentModule`` is not registered."
+msgstr ""
+
+#: ../../Basics.rst:125
+msgid "``SocketConnector.DisconnectedEvent``"
+msgstr ""
+
+#: ../../Basics.rst:127
+msgid ""
+"Fired when TCP connection is closed or when XMPP stream is closed. It "
+"will be also called when TCP connection is broken."
+msgstr ""
+
+#: ../../Basics.rst:130
+msgid "Login"
+msgstr ""
+
+#: ../../Basics.rst:132
+msgid ""
+"To start process of DNS resolution, establishing TCP connection and "
+"establishing XMPP stream you need to call:"
+msgstr ""
+
+#: ../../Basics.rst:139
+msgid "Disconnect"
+msgstr ""
+
+#: ../../Basics.rst:141
+msgid ""
+"To disconnect from server properly and close XMPP and TCP connection you "
+"need to call:"
+msgstr ""
+
+#: ../../Basics.rst:148
+msgid "Sending custom stanza"
+msgstr ""
+
+#: ../../Basics.rst:150
+msgid ""
+"Usually class which supports ``XmppModule`` protocol is being implemented"
+" to add new feature to ``TigaseSwift`` library. However in some cases in "
+"which we want to send simple stanza or send stanza and react on received "
+"response there is no need to implement class supporting ``XmppModule`` "
+"protocol. Instead of that following methods may be used."
+msgstr ""
+
+#: ../../Basics.rst:154
+msgid "Sending stanza without waiting for response"
+msgstr ""
+
+#: ../../Basics.rst:156
+msgid ""
+"To send custom stanza you need to construct this stanza and execute "
+"following code"
+msgstr ""
+
+#: ../../Basics.rst:162
+msgid ""
+"``writer`` is instance of ``PacketWriter`` class responsible for sending "
+"stanzas from client to server. Property can be nil if connection is not "
+"established."
+msgstr ""
+
+#: ../../Basics.rst:166
+msgid "Sending stanza and waiting for response (closures)"
+msgstr ""
+
+#: ../../Basics.rst:168 ../../Basics.rst:188 ../../Basics.rst:203
+msgid ""
+"It possible to wait for response stanza, but only in case of ``Iq`` "
+"stanzas. To do so, you need to pass callback which will be called when "
+"result will be received, ie."
+msgstr ""
+
+#: ../../Basics.rst:180
+msgid ""
+"You can omit ``timeout`` parameter. Default value of 30 seconds will be "
+"used as a timeout."
+msgstr ""
+
+#: ../../Basics.rst:182
+msgid ""
+"You can pass nil as any of closures. In this case particular response "
+"will not trigger any reaction."
+msgstr ""
+
+#: ../../Basics.rst:186
+msgid "Sending stanza and waiting for response (closure)"
+msgstr ""
+
+#: ../../Basics.rst:196 ../../Basics.rst:211
+msgid ""
+"You can omit ``timeout`` parameter, which will use 30 seconds as default "
+"timeout."
+msgstr ""
+
+#: ../../Basics.rst:198
+msgid ""
+"As callback is called always as it will be called in case of received "
+"``result``, ``error`` or in case of timeout it is required to be able to "
+"distinguish what caused execution of this closure. In case of ``result`` "
+"or ``error`` packet being received, received stanza will be passed to "
+"closure for processing. However in case of timeout ``nil`` will be passed"
+" instead of stanza - as no stanza was received."
+msgstr ""
+
+#: ../../Basics.rst:201
+msgid "Sending stanza and waiting for response (AsyncCallback)"
+msgstr ""
+
+#: ../../Basics.rst:209
+msgid "where callback is implementation of ``AsyncCallback`` protocol."
+msgstr ""
+
+#: ../../Examples.rst:2
+msgid "Usage examples"
+msgstr ""
+
+#: ../../Examples.rst:5
+msgid "Simple client sending message"
+msgstr ""
+
+#: ../../Examples.rst:7
+msgid ""
+"Below is example code of client which send XMPP message to "
+"``recipient@domain.com`` as ``sender@domain.com`` using ``Pa$$w0rd`` as "
+"password for authentication. Message is sent just after clients connects "
+"to server, authenticates and establishes session."
+msgstr ""
+
+#: ../../Examples.rst:12
+msgid "Simple client setting presence and handling incoming presences"
+msgstr ""
+
+#: ../../Examples.rst:14
+msgid ""
+"In this example we will connect to server, set our presence to ``Do not "
+"disturb`` with status message set to ``Do not disturb me!``."
+msgstr ""
+
+#: ../../Examples.rst:16
+msgid ""
+"This example will also print any presence we will receive from our "
+"contacts. However for this part to work our roster cannot be empty and at"
+" least one of our roster contacts needs to be available."
+msgstr ""
+
+#: ../../Examples.rst:22
+msgid ""
+"Simple client setting presence, handling incoming presences and "
+"responding on incoming messages"
+msgstr ""
+
+#: ../../Examples.rst:24
+msgid ""
+"This example presents way to listen for incoming messages and responding "
+"on this messages."
+msgstr ""
+
+#: ../../Examples.rst:30
+msgid "Simple client with support for MUC"
+msgstr ""
+
+#: ../../Examples.rst:32
+msgid ""
+"In this example you can find how to join to room, send message to room "
+"and handle informations about occupants."
+msgstr ""
+
+#: ../../Examples.rst:37
+msgid "Simple client with support for PubSub"
+msgstr ""
+
+#: ../../Examples.rst:39
+msgid ""
+"In this example you can find how to create PubSub node, publish item, "
+"receive notifications, retrieve items and delete PubSub node."
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:2
+msgid "List of specifications and modules implementing it"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:6
+msgid "`RFC 6120 XMPP: Core <http://xmpp.org/rfcs/rfc6120.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:6
+msgid "AuthModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:7
+msgid "SaslModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:8
+msgid "StreamFeaturesModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:9
+msgid "ResourceBinderModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:10
+msgid "SessionEstablishmentModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:12
+msgid "`RFC 6121 XMPP: IM <http://xmpp.org/rfcs/rfc6121.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:12
+msgid "MessageModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:13
+msgid "PresenceModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:14
+msgid "RosterModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:16
+msgid "`XEP-0030: Service Discovery <http://xmpp.org/extensions/xep-0030.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:16
+msgid "DiscoveryModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:18
+msgid "`XEP-0045: Multi-User Chat <https://xmpp.org/extensions/xep-0045.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:18
+msgid "MucModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:20
+msgid "`XEP-0054: vcard-temp <https://xmpp.org/extensions/xep-0054.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:20
+#: ../../List_of_specifications_and_modules.rst:30
+msgid "VCardModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:22
+msgid "`XEP-0060: Publish-Subscribe <https://xmpp.org/extensions/xep-0060.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:22
+#: ../../List_of_specifications_and_modules.rst:32
+msgid "PubSubModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:24
+msgid ""
+"`XEP-0077: In-Band Registration "
+"<https://xmpp.org/extensions/xep-0077.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:24
+msgid "InBandRegistrationModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:26
+msgid "`XEP-0092: SoftwareVersion <https://xmpp.org/extensions/xep-0092.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:26
+msgid "SoftwareVersionModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:28
+msgid ""
+"`XEP-0115: Entity Capabilities "
+"<https://xmpp.org/extensions/xep-0115.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:28
+msgid "CapabilitiesModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:30
+msgid ""
+"`XEP-0153: vCard-Based Avatars "
+"<https://xmpp.org/extensions/xep-0153.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:32
+msgid ""
+"`XEP-0163: Personal Eventing Protocol "
+"<https://xmpp.org/extensions/xep-0163.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:34
+msgid "`XEP-0175: SASL Anonymous <https://xmpp.org/extensions/xep-0175.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:34
+msgid "AnonymousMechanism"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:36
+msgid "`XEP-0199: XMPP Ping <https://xmpp.org/extensions/xep-0199.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:36
+msgid "PingModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:38
+msgid "`XEP-0203: Delayed Delivery <https://xmpp.org/extensions/xep-0203.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:38
+msgid "Delay"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:40
+msgid "`XEP-0280: Message Carbons <https://xmpp.org/extensions/xep-0280.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:40
+msgid "MessageCarbonsModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:42
+msgid ""
+"`XEP-0352: Client State Indication "
+"<https://xmpp.org/extensions/xep-0352.html>`_"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:42
+msgid "ClientStateIndicationModule"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:44
+#: ../../Supported_features.rst:47
+msgid "Mobile Optimizations"
+msgstr ""
+
+#: ../../List_of_specifications_and_modules.rst:44
+msgid "MobileModeModule"
+msgstr ""
+
+#: ../../Starting_up.rst:2
+msgid "Starting up"
+msgstr ""
+
+#: ../../Starting_up.rst:5
+msgid "Preparation of environment for development"
+msgstr ""
+
+#: ../../Starting_up.rst:7
+msgid "Download and install newest version of XCode"
+msgstr ""
+
+#: ../../Starting_up.rst:9
+msgid "Download source code of library"
+msgstr ""
+
+#: ../../Starting_up.rst:11
+msgid "It is best to download library source code from our Git repository"
+msgstr ""
+
+#: ../../Starting_up.rst:13
+msgid "Create workspace in XCode"
+msgstr ""
+
+#: ../../Starting_up.rst:15
+msgid ""
+"Add library project to newly created workspace using ``Add Files to "
+"\"workspace_name\"…​`` from ``File`` menu of XCode when workspace is "
+"opened in XCode."
+msgstr ""
+
+#: ../../Starting_up.rst:17 ../../Starting_up.rst:33
+msgid "|AddFilesTo|"
+msgstr ""
+
+#: ../../Starting_up.rst:51
+msgid "AddFilesTo"
+msgstr ""
+
+#: ../../Starting_up.rst:19
+msgid ""
+"Select ``TigaseSwift.xcodeproj`` which wil be inside root directory of "
+"source code of library and click ``Add``"
+msgstr ""
+
+#: ../../Starting_up.rst:21
+msgid "|SelectTigaseSwiftLibrary|"
+msgstr ""
+
+#: ../../Starting_up.rst:52
+msgid "SelectTigaseSwiftLibrary"
+msgstr ""
+
+#: ../../Starting_up.rst:23
+msgid "Workspace for development using TigaseSwift library is ready"
+msgstr ""
+
+#: ../../Starting_up.rst:27
+msgid "Creation of project using TigaseSwift library"
+msgstr ""
+
+#: ../../Starting_up.rst:29
+msgid "Create project in XCode"
+msgstr ""
+
+#: ../../Starting_up.rst:31
+msgid ""
+"Add project to TigaseSwift library workspace created during preparation "
+"of environment for development using @Add Files to \"workspace_name\"…​@ "
+"from @File@ menu of XCode when workspace is opened in XCode."
+msgstr ""
+
+#: ../../Starting_up.rst:35
+msgid "Select XCode project file of your newly created project and click ``Add``"
+msgstr ""
+
+#: ../../Starting_up.rst:37
+msgid "This file name will end with ``.xcodeproj``"
+msgstr ""
+
+#: ../../Starting_up.rst:39
+msgid "|SelectNewProject|"
+msgstr ""
+
+#: ../../Starting_up.rst:53
+msgid "SelectNewProject"
+msgstr ""
+
+#: ../../Starting_up.rst:41
+msgid "In XCode open ``Build Settings`` tab of imported project"
+msgstr ""
+
+#: ../../Starting_up.rst:43
+msgid "In section ``Embedded Binaries`` click on ``+`` sign"
+msgstr ""
+
+#: ../../Starting_up.rst:45
+msgid "Select ``TigaseSwift.framework`` and add it to project"
+msgstr ""
+
+#: ../../Starting_up.rst:47
+msgid ""
+"It will be located in ``Products`` folder of ``TigaseSwift`` project "
+"|AddTigaseSwiftAsEmbeddedFramework|"
+msgstr ""
+
+#: ../../Starting_up.rst:54
+msgid "AddTigaseSwiftAsEmbeddedFramework"
+msgstr ""
+
+#: ../../Starting_up.rst:49
+msgid "Your project contains embedded ``TigaseSwift`` framework"
+msgstr ""
+
+#: ../../Supported_features.rst:2
+msgid "Supported features"
+msgstr ""
+
+#: ../../Supported_features.rst:5
+msgid "Specification"
+msgstr ""
+
+#: ../../Supported_features.rst:5
+msgid "Name"
+msgstr ""
+
+#: ../../Supported_features.rst:5
+msgid "Description"
+msgstr ""
+
+#: ../../Supported_features.rst:7
+msgid "`RFC 6120 <http://xmpp.org/rfcs/rfc6120.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:7
+msgid "Extensible Messaging and Presence Protocol (XMPP): Core"
+msgstr ""
+
+#: ../../Supported_features.rst:7
+msgid ""
+"XMPP specification including SSL/TLS encryption, SASL authentication, "
+"resource binding, etc.."
+msgstr ""
+
+#: ../../Supported_features.rst:9
+msgid "`RFC 6121 <http://xmpp.org/rfcs/rfc6121.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:9
+msgid ""
+"Extensible Messaging and Presence Protocol (XMPP): Instant Messaging and "
+"Presence"
+msgstr ""
+
+#: ../../Supported_features.rst:9
+msgid "Roster management, presence subscription, sending and receiving messages"
+msgstr ""
+
+#: ../../Supported_features.rst:11
+msgid "`EP-0030 <http://xmpp.org/extensions/xep-0030.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:11
+msgid "Service Discovery"
+msgstr ""
+
+#: ../../Supported_features.rst:11
+msgid "Support for XMPP service discovery"
+msgstr ""
+
+#: ../../Supported_features.rst:13
+msgid "`XEP-0045 <http://xmpp.org/extensions/xep-0045.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:13
+msgid "Multi-User Chat"
+msgstr ""
+
+#: ../../Supported_features.rst:13
+msgid "Support for MUC protocol extension"
+msgstr ""
+
+#: ../../Supported_features.rst:15
+msgid "`XEP-0054 <http://xmpp.org/extensions/xep-0054.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:15
+msgid "vcard-temp"
+msgstr ""
+
+#: ../../Supported_features.rst:15
+msgid "User vCard implementation"
+msgstr ""
+
+#: ../../Supported_features.rst:17
+msgid "`XEP-0060 <http://xmpp.org/extensions/xep-0060.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:17
+msgid "Publish-Subscribe"
+msgstr ""
+
+#: ../../Supported_features.rst:17
+msgid "Support for PubSub protocol extension"
+msgstr ""
+
+#: ../../Supported_features.rst:19
+msgid "`XEP-0077 <http://xmpp.org/extensions/xep-0077.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:19
+msgid "In-Band Registration"
+msgstr ""
+
+#: ../../Supported_features.rst:19
+msgid "Support for in-band account registration"
+msgstr ""
+
+#: ../../Supported_features.rst:21
+msgid "`XEP-0082 <http://xmpp.org/extensions/xep-0082.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:21
+msgid "XMPP Date and Time Profiles"
+msgstr ""
+
+#: ../../Supported_features.rst:21
+msgid "Support for standarized ISO 8601 profiles and lexical representation"
+msgstr ""
+
+#: ../../Supported_features.rst:23
+msgid "`XEP-0092 <http://xmpp.org/extensions/xep-0092.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:23
+msgid "Software Version"
+msgstr ""
+
+#: ../../Supported_features.rst:23
+msgid "Support for discovery and advertisement of used software and it’s version"
+msgstr ""
+
+#: ../../Supported_features.rst:25
+msgid "`XEP-0115 <http://xmpp.org/extensions/xep-0115.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:25
+msgid "Entity Capabilities"
+msgstr ""
+
+#: ../../Supported_features.rst:25 ../../Supported_features.rst:27
+msgid ""
+"Support for discovery of features supported and advertised by clients and"
+" servers"
+msgstr ""
+
+#: ../../Supported_features.rst:27
+msgid "`XEP-0138 <http://xmpp.org/extensions/xep-0138.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:27
+msgid "Compression of data exchanged between client and server"
+msgstr ""
+
+#: ../../Supported_features.rst:29
+msgid "`XEP-0153 <http://xmpp.org/extensions/xep-0153.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:29
+msgid "vCard-Based Avatars"
+msgstr ""
+
+#: ../../Supported_features.rst:29
+msgid "Storage of user avatar inside vCard"
+msgstr ""
+
+#: ../../Supported_features.rst:31
+msgid "`XEP-0163 <http://xmpp.org/extensions/xep-0163.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:31
+msgid "Personal Eventing Protocol"
+msgstr ""
+
+#: ../../Supported_features.rst:31
+msgid "Support for PEP protocol extension"
+msgstr ""
+
+#: ../../Supported_features.rst:33
+msgid "`XEP-0172 <http://xmpp.org/extensions/xep-0172.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:33
+msgid "User Nickname"
+msgstr ""
+
+#: ../../Supported_features.rst:33
+msgid "Support for communication of user nickname"
+msgstr ""
+
+#: ../../Supported_features.rst:35
+msgid "`XEP-0175 <https://xmpp.org/extensions/xep-0175.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:35
+msgid "Best Practices for Use of SASL ANONYMOUS"
+msgstr ""
+
+#: ../../Supported_features.rst:35
+msgid "Anonymous authentication"
+msgstr ""
+
+#: ../../Supported_features.rst:37
+msgid "`XEP-0198 <http://xmpp.org/extensions/xep-0198.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:37
+msgid "Stream Management"
+msgstr ""
+
+#: ../../Supported_features.rst:39
+msgid "`XEP-0199 <http://xmpp.org/extensions/xep-0199.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:39
+msgid "XMPP Ping"
+msgstr ""
+
+#: ../../Supported_features.rst:41
+msgid "`XEP-0203 <http://xmpp.org/extensions/xep-0203.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:41
+msgid "Delayed Delivery"
+msgstr ""
+
+#: ../../Supported_features.rst:41
+msgid "Information about delayed delivery of stanza"
+msgstr ""
+
+#: ../../Supported_features.rst:43
+msgid "`XEP-0280 <http://xmpp.org/extensions/xep-0280.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:43
+msgid "Message Carbons"
+msgstr ""
+
+#: ../../Supported_features.rst:43
+msgid "Support for delivery of messages sent to other resources"
+msgstr ""
+
+#: ../../Supported_features.rst:45
+msgid "`XEP-0352 <http://xmpp.org/extensions/xep-0352.html>`__"
+msgstr ""
+
+#: ../../Supported_features.rst:45
+msgid "Client State Indication"
+msgstr ""
+
+#: ../../Supported_features.rst:45
+msgid "Notifying server about current state of XMPP client"
+msgstr ""
+
+#: ../../Supported_features.rst:47
+msgid "Optimizations designed for mobile devices"
+msgstr ""
+
+#: ../../index.rst:4
+msgid "TigaseSwift Development Guide - Version 1.0.0"
+msgstr ""
+
