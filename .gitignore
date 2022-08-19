@@ -25,4 +25,4 @@ xcuserdata/
 docs
 Documentation/target
 Documentation/src/main/restructured/_build/
-Documentation/src/main/restructured/locale/pl/LC_MESSAGES/*.mo
+Documentation/src/main/restructured/locale/*/LC_MESSAGES/*.mo
