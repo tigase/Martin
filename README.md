@@ -17,6 +17,9 @@
   <img src="https://tc.tigase.net/app/rest/builds/buildType:(id:TigaseXmlTools_Build)/statusIcon" width="100"/>
 </p>-->
 
+![](Documentation/src/main/restructured/images/logo_320.png)
+
+
 # What it is
 
 Martin is an [XMPP](https://xmpp.org) client library written in a [Swift](https://swift.org) programming language. 
