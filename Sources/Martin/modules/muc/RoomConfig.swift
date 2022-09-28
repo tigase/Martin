@@ -23,7 +23,7 @@ import Foundation
 
 open class RoomConfig: DataFormWrapper, @unchecked Sendable {
     
-    public enum WhoisEnum {
+    public enum WhoisEnum: String, DataFormEnum {
         case moderators
         case anyone
     }

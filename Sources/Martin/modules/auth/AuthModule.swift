@@ -44,7 +44,11 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
     public let features = [String]();
     
     @Published
-    open private(set) var state: AuthorizationStatus = .notAuthorized;
+    open private(set) var state: AuthorizationStatus = .notAuthorized {
+        willSet {
+            print("changing auth state to \(newValue) from \(state)")
+        }
+    }
     
     public override init() {
         
@@ -55,12 +59,21 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
      mechanisms for authentication
      */
     open func login() async throws {
-        if let saslModule = context?.modulesManager.moduleOrNil(.sasl) {
+        if let sasl2Module = context?.modulesManager.moduleOrNil(.sasl2), sasl2Module.isSupported {
             do {
-                try await saslModule.login();
-                state = .authorized;
+                try await sasl2Module.login();
+                state = .authorized(streamRestartRequired: false);
             } catch {
                 state = .error(error);
+                throw error;
+            }
+        } else if let saslModule = context?.modulesManager.moduleOrNil(.sasl) {
+            do {
+                try await saslModule.login();
+                state = .authorized(streamRestartRequired: true);
+            } catch {
+                state = .error(error);
+                throw error;
             }
         } else {
             state = .notAuthorized;
@@ -73,7 +86,9 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
     }
     
     public func reset(scopes: Set<ResetableScope>) {
-        state = .notAuthorized;
+        if scopes.contains(.stream) {
+            state = .notAuthorized;
+        }
     }
         
     public enum AuthorizationStatus: Equatable {
@@ -99,7 +114,7 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
                 return 1;
             case .expectedAuthorization:
                 return 2;
-            case .authorized:
+            case .authorized(_):
                 return 3;
             case .error(_):
                 return -1;
@@ -109,7 +124,7 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
         case notAuthorized
         case inProgress
         case expectedAuthorization
-        case authorized
+        case authorized(streamRestartRequired: Bool)
         case error(Error)
     }
 }

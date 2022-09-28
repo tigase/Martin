@@ -57,6 +57,7 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppStanzaProc
     }
     
     func setStreamFeatures(_ element: Element) {
+        print("received stream features:", element)
         self.streamFeatures = StreamFeatures(element: element);
     }
     
@@ -67,9 +68,13 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppStanzaProc
     }
 }
 
-public struct StreamFeatures: Sendable {
+public struct StreamFeatures: CustomStringConvertible, Sendable {
     
     public static let none = StreamFeatures(element: nil);
+    
+    public var description: String {
+        return element?.description ?? "nil";
+    }
     
     public let element: Element?;
  
@@ -90,6 +95,13 @@ public struct StreamFeatures: Sendable {
             return false;
         }
         return feature.check(in: elem);
+    }
+    
+    public func get(_ feature: StreamFeature) -> Element? {
+        guard let elem = self.element else {
+            return nil;
+        }
+        return feature.get(from: elem);
     }
     
     public struct StreamFeature: Sendable {
@@ -124,7 +136,22 @@ public struct StreamFeatures: Sendable {
             }
             return true;
         }
-        
+     
+        public func get(from element: Element) -> Element? {
+            var elem = element;
+            for node in path {
+                guard let subelem = elem.firstChild(name: node.name, xmlns: node.xmlns) else {
+                    return nil;
+                }
+                if node.value != nil {
+                    guard subelem.value == node.value else {
+                        return nil;
+                    }
+                }
+                elem = subelem;
+            }
+            return elem;
+        }
     }
     
 }

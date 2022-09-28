@@ -227,14 +227,17 @@ open class SocketSessionLogic: XmppSessionLogic {
     
     // we can process only 1 stanza at once..
     private let semaphore = DispatchSemaphore(value: 1);
+    private var authTask: Task<Void,Never>?;
     
     private func receivedIncomingStanza(_ stanza:Stanza) {
         semaphore.wait();
         Task {
             defer {
+                print("releasing semaphore")
                 semaphore.signal();
             }
             do {
+                print("received stanza: \(stanza)")
                 for filter in self.modulesManager.filters {
                     if filter.processIncoming(stanza: stanza) {
                         return;
@@ -242,13 +245,17 @@ open class SocketSessionLogic: XmppSessionLogic {
                 }
             
                 if let continuation = await self.responseManager.continuation(for: stanza) {
+                    // FIXME: this is not blocking and causes continuation to be processed after another stanza may be processed!!
                     continuation(stanza);
+                    print("continuation processing finished for: \(stanza)")
                     return;
                 }
                             
                 guard stanza.name != "iq" || (stanza.type != StanzaType.result && stanza.type != StanzaType.error) else {
                     return;
                 }
+                
+                _ = await authTask?.result
             
                 let processors = self.modulesManager.findProcessors(for: stanza);
                 guard !processors.isEmpty else {
@@ -259,6 +266,7 @@ open class SocketSessionLogic: XmppSessionLogic {
                 for processor in processors {
                     try await processor.process(stanza: stanza);
                 }
+                print("stanza processing finished: \(stanza)")
             } catch {
                 Task {
                     do {
@@ -306,23 +314,19 @@ open class SocketSessionLogic: XmppSessionLogic {
         }
     }
                 
-    private func processSessionBindedAndEstablished(resumed: Bool) {
+    private func processSessionBindedAndEstablished(streamFeatures: StreamFeatures) {
+        let resumed = modulesManager.moduleOrNil(.streamManagement)?.wasResumed ?? false;
         state = .connected(resumed: resumed);
         self.logger.debug("\(self.userJid) - session binded and established");
+        Task {
+            try await modulesManager.moduleOrNil(.streamManagement)?.process(streamFeatures: streamFeatures);
+        }
         if let discoveryModule = modulesManager.moduleOrNil(.disco) {
             Task {
                 try await discoveryModule.serverFeatures()
             }
             Task {
                 try await discoveryModule.accountFeatures();
-            }
-        }
-        
-        if !resumed, let streamManagementModule = modulesManager.moduleOrNil(.streamManagement) {
-            if streamManagementModule.isAvailable {
-                Task {
-                    try await streamManagementModule.enable();
-                }
             }
         }
     }
@@ -332,8 +336,9 @@ open class SocketSessionLogic: XmppSessionLogic {
             return;
         }
         
-        self.logger.debug("\(self.userJid) - processing stream features");
-        let authorized = (modulesManager.moduleOrNil(.auth)?.state ?? .notAuthorized) == .authorized;
+        self.logger.debug("\(self.userJid) - processing stream features:\n \(streamFeatures)");
+        // it looks like, this is called before auth task finishes, while it should be executed after task finishes
+        let authorized = (modulesManager.moduleOrNil(.auth)?.state ?? .notAuthorized) == .authorized(streamRestartRequired: false);
         
         if (!connector.activeFeatures.contains(.TLS)) && connector.availableFeatures.contains(.TLS)
             && (!connectionConfiguration.disableTLS) && streamFeatures.contains(.startTLS) {
@@ -343,10 +348,12 @@ open class SocketSessionLogic: XmppSessionLogic {
         } else if !authorized {
             if let authModule: AuthModule = modulesManager.moduleOrNil(.auth) {
                 self.logger.debug("\(self.userJid) - starting authentication");
-                Task {
+                authTask = Task {
                     do {
                         try await authModule.login();
-                        self.startStream();
+                        if case let .authorized(streamRestartRequired) = authModule.state, streamRestartRequired {
+                            self.startStream();
+                        }
                     } catch {
                         await self.stop(force: true);
                     }
@@ -358,7 +365,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         } else if authorized {
             Task {
                 do {
-                    try await self.streamAuthenticated();
+                    try await self.streamAuthenticated(streamFeatures: streamFeatures);
                 } catch {
                     self.stop();
                 }
@@ -367,26 +374,18 @@ open class SocketSessionLogic: XmppSessionLogic {
         self.logger.debug("\(self.userJid) - finished processing stream features");
     }
     
-    private func streamAuthenticated() async throws {
-        do {
-            // handling stream resumption
-            if let streamManagementModule = modulesManager.moduleOrNil(.streamManagement),  streamManagementModule.isResumptionEnabled && streamManagementModule.isAvailable {
-                try await streamManagementModule.resume();
-                processSessionBindedAndEstablished(resumed: true);
-                return;
+    private func streamAuthenticated(streamFeatures: StreamFeatures) async throws {
+        try await modulesManager.moduleOrNil(.streamManagement)?.process(streamFeatures: streamFeatures);
+        if context?.boundJid == nil {
+            // normal connection or stream resumption failed
+            if let bindModule = self.modulesManager.moduleOrNil(.resourceBind) {
+                _ = try await bindModule.bind();
+                try await modulesManager.module(.sessionEstablishment).establish();
+            } else {
+                throw XMPPError(condition: .undefined_condition, message: "BindModule is not registered!")
             }
-        } catch {
-            context?.reset(scopes: [.session]);
         }
-        
-        // normal connection or stream resumption failed
-        if let bindModule = self.modulesManager.moduleOrNil(.resourceBind) {
-            _ = try await bindModule.bind();
-            try await modulesManager.module(.sessionEstablishment).establish();
-            self.processSessionBindedAndEstablished(resumed: false);
-        } else {
-            throw XMPPError(condition: .undefined_condition, message: "BindModule is not registered!")
-        }
+        self.processSessionBindedAndEstablished(streamFeatures: streamFeatures);
     }
     
     private func startStream() {

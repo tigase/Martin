@@ -119,6 +119,10 @@ public class XmppModulesManager : ContextAware, Resetable {
         return modulesById[type.ID] as? T;
     }
 
+    open func modules<T>(_ type: T.Type) -> [T] {
+        return modulesById.values.compactMap({ $0 as? T });
+    }
+    
     open func hasModule(_ type: XmppModule.Type) -> Bool {
         return modulesById[type.ID] != nil;
     }

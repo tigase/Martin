@@ -109,6 +109,8 @@ open class ScramMechanism: SaslMechanism {
     fileprivate let serverKeyData: Data;
     private var saslData: SaslData?;
     
+    public let supportsUpgrade = true;
+
     public init(mechanismName: String, algorithm: ScramAlgorithm, clientKey: Data, serverKey: Data) {
         self.name = mechanismName;
         self.algorithm = algorithm;
@@ -155,7 +157,7 @@ open class ScramMechanism: SaslMechanism {
                     throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
                 }
                 guard let msg = String(data: msgBytes, encoding: .utf8) else {
-                    throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
+                    throw ClientSaslException.badChallenge(msg: "Failed to parse challenge! 1");
                 }
                 let r = ScramMechanism.SERVER_FIRST_MESSAGE.matches(in: msg, options: .withoutAnchoringBounds, range: NSMakeRange(0, msg.count));
                 
@@ -220,7 +222,7 @@ open class ScramMechanism: SaslMechanism {
                     throw ClientSaslException.badChallenge(msg: "Failed to decode challenge!");
                 }
                 guard let msg = String(data: msgBytes, encoding: .utf8) else {
-                    throw ClientSaslException.badChallenge(msg: "Failed to parse challenge!");
+                    throw ClientSaslException.badChallenge(msg: "Failed to parse challenge! 2");
                 }
                 
                 let r = ScramMechanism.SERVER_LAST_MESSAGE.matches(in: msg, options: NSRegularExpression.MatchingOptions.withoutAnchoringBounds, range: NSMakeRange(0, msg.count));
@@ -268,6 +270,22 @@ open class ScramMechanism: SaslMechanism {
             throw ClientSaslException.genericError(msg: "Invalid credentials type for authorization!");
         }
                 
+    }
+    
+    open func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element {
+        guard let saltStr = parameters.firstChild(name: "salt")?.value, let salt = Data(base64Encoded: saltStr) else {
+            throw XMPPError(condition: .bad_request, message: "Missing salt");
+        }
+        guard let iterationsStr = parameters.firstChild(name: "iterations")?.value, let iterations = Int(iterationsStr) else {
+            throw XMPPError(condition: .bad_request, message: "Missing iterations");
+        }
+        switch context.connectionConfiguration.credentials {
+        case .password(let password, let authenticationName, let saltedPasswordCache):
+            let saltedPassword = hi(password: normalize(password), salt: salt, iterations: iterations);
+            return Element(name: "hash", cdata: saltedPassword.base64EncodedString());
+        default:
+            throw XMPPError(condition: .feature_not_implemented, message: "Cannot upgrade SCRAM - no password!");
+        }
     }
     
     open func isAllowedToUse(_ context: Context) -> Bool {

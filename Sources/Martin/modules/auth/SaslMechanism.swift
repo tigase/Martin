@@ -32,6 +32,8 @@ public protocol SaslMechanism: AnyObject, Resetable {
     
     var status: SaslMechanismStatus { get }
     
+    var supportsUpgrade: Bool { get }
+    
     /**
      Process input data and prepare response
      - parameter input: input data
@@ -39,6 +41,8 @@ public protocol SaslMechanism: AnyObject, Resetable {
      - returns: response to send to server
      */
     func evaluateChallenge(_ input: String?, context: Context) throws -> String?
+    
+    func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element
     
     /** 
      Check if mechanism may be used (ie. if needed data are available)

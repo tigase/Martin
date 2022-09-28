@@ -161,6 +161,7 @@ open class XMPPClient: Context {
                 return;
             }
             let oldState = that.state;
+            print("session logic changed state from \(oldState) to \(newState)")
             that.update(state: newState);
             switch newState {
             case .connected:

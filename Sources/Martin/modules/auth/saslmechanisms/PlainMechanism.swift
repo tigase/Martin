@@ -30,6 +30,8 @@ open class PlainMechanism: SaslMechanism {
 
     public private(set) var status: SaslMechanismStatus = .new;
     
+    public let supportsUpgrade = false;
+    
     public func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.stream) {
             status = .new;
@@ -65,6 +67,10 @@ open class PlainMechanism: SaslMechanism {
             status = .new;
             return nil;
         }
+    }
+    
+    public func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element {
+        throw XMPPError(condition: .bad_request, message: "PLAIN does not support upgrade!")
     }
     
     /**

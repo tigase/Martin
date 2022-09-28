@@ -42,25 +42,12 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable, @uncheck
     public static let IDENTIFIER = XmppModuleIdentifier<ResourceBinderModule>();
     
     public let features = [String]();
-    
-    private let lock = UnfairLock();
-    private var _bindedJid: JID?;
-    open var bindedJid: JID? {
-        return lock.with({
-            return _bindedJid;
-        })
-    }
-    
+        
     public override init() {
         
     }
     
     public func reset(scopes: Set<ResetableScope>) {
-        if scopes.contains(.session) {
-            lock.with({
-                _bindedJid = nil;
-            })
-        }
     }
     
     /// Method called to bind resource
@@ -77,9 +64,7 @@ open class ResourceBinderModule: XmppModuleBase, XmppModule, Resetable, @uncheck
         }
         
         let jid = JID(name);
-        lock.with({
-            _bindedJid = jid;
-        })
+        self.context?.boundJid = jid;
         return jid;
     }
     

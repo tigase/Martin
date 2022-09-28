@@ -28,12 +28,16 @@ extension XmppModuleIdentifier {
     }
 }
 
+extension Bind2InlineStageFeatures.Feature {
+    public static let messageCarbons = Bind2InlineStageFeatures.Feature(var: MessageCarbonsModule.MC_XMLNS);
+}
+
 /**
  Module provides support for [XEP-0280: Message Carbons]
  
  [XEP-0280: Message Carbons]: http://xmpp.org/extensions/xep-0280.html
  */
-open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
+open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor, Resetable, Sasl2InlineProtocol, @unchecked Sendable {
     /// Namespace used by Message Carbons
     public static let MC_XMLNS = "urn:xmpp:carbons:2";
     /// Namepsace used for forwarding messages
@@ -57,6 +61,22 @@ open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked
     
     @Published
     open private(set) var isAvailable: Bool = false;
+    open private(set) var isEnabled: Bool = false;
+    
+    private let lock = UnfairLock();
+    private var _shouldEnable: Bool = true;
+    open var shouldEnable: Bool {
+        get {
+            lock.with {
+                return _shouldEnable;
+            }
+        }
+        set {
+            lock.with {
+                _shouldEnable = newValue;
+            }
+        }
+    }
     
     public let carbonsPublisher = PassthroughSubject<CarbonReceived, Never>();
     
@@ -64,6 +84,29 @@ open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked
     
     public override init() {
         
+    }
+    
+    public func featureFor(stage: Sasl2InlineOfferStage) -> Element? {
+        switch stage {
+        case .afterSasl(_):
+            return nil;
+        case .afterBind(let features):
+            guard shouldEnable && features.contains(.messageCarbons) else {
+                return nil;
+            }
+            isEnabled = true;
+            return Element(name: "enable", xmlns: MessageCarbonsModule.MC_XMLNS);
+        }
+    }
+    
+    public func reset(scopes: Set<ResetableScope>) {
+        if scopes.contains(.session) {
+            self.isEnabled = false;
+        }
+    }
+    
+    public func process(result: Element, for stage: Sasl2InlineResultStage) {
+        // nothing to do as it should succeed
     }
     
     open func process(stanza message: Stanza) throws {
@@ -85,10 +128,14 @@ open class MessageCarbonsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked
      Tries to enable/disable message carbons
      */
     open func setState(_ state: Bool) async throws {
+        guard state != isEnabled else {
+            return;
+        }
         let iq = Iq(type: .set, {
             Element(name: state ? "enable" : "disable", xmlns: MessageCarbonsModule.MC_XMLNS)
         });
         try await write(iq: iq);
+        isEnabled = state;
     }
     
     /**
@@ -158,13 +205,14 @@ extension MessageCarbonsModule {
     }
     
     public func setState(_ state: Bool, callback: ((Result<Bool,XMPPError>) -> Void )?) {
-        let actionName = state ? "enable" : "disable";
-        let iq = Iq();
-        iq.type = StanzaType.set;
-        iq.addChild(Element(name: actionName, xmlns: MessageCarbonsModule.MC_XMLNS));
-        write(iq: iq, completionHandler: { result in
-            callback?(result.map({ _ in state }));
-        });
+        Task {
+            do {
+                try await setState(state);
+                callback?(.success(state));
+            } catch {
+                callback?(.failure(error as? XMPPError ?? .undefined_condition));
+            }
+        }
     }
     
 }

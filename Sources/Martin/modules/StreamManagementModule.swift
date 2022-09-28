@@ -32,12 +32,20 @@ extension StreamFeatures.StreamFeature {
     public static let sm = StreamFeatures.StreamFeature(name: "sm", xmlns: StreamManagementModule.SM_XMLNS);
 }
 
+extension Sasl2InlineStageFeatures.Feature {
+    public static let sm3 = Sasl2InlineStageFeatures.Feature(name: "sm", xmlns: "urn:xmpp:sm:3");
+}
+
+extension Bind2InlineStageFeatures.Feature {
+    public static let sm3 = Bind2InlineStageFeatures.Feature(var: "urn:xmpp:sm:3");
+}
+
 /**
  Module implements support for [XEP-0198: Stream Management]
  
  [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
  */
-open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, Resetable, @unchecked Sendable {
+open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, Resetable, Sasl2InlineProtocol, @unchecked Sendable {
     
     /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
@@ -72,6 +80,29 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
     }
     
+    private var _wasResumed: Bool = false;
+    public var wasResumed: Bool {
+        get {
+            lock.with {
+                return _wasResumed;
+            }
+        }
+    }
+    
+    private var _shouldEnable: Mode;
+    open var shouldEnable: Mode {
+        get {
+            lock.with {
+                return _shouldEnable;
+            }
+        }
+        set {
+            lock.with {
+                _shouldEnable = newValue;
+            }
+        }
+    }
+    
     private var lastRequestTimestamp = Date();
     private var lastSentH = UInt32(0);
     
@@ -99,7 +130,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     open private(set) var isAvailable: Bool = false;
     
     public let ackDelay: TimeInterval;
-    private let semaphore = DispatchSemaphore(value: 1);
+    private let semaphore = Blocker();
     
     open override var context: Context? {
         didSet {
@@ -107,9 +138,42 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
     }
     
-    public init(maxResumptionTimeout: Int? = nil, ackDelay: TimeInterval = 0.1) {
+    public init(mode: Mode, maxResumptionTimeout: Int? = nil, ackDelay: TimeInterval = 0.1) {
+        self._shouldEnable = mode;
         self.maxResumptionTimeout = maxResumptionTimeout;
         self.ackDelay = ackDelay;
+    }
+    
+    open func process(streamFeatures: StreamFeatures) async throws {
+        guard streamFeatures.contains(.sm) else {
+            return;
+        }
+        
+        do {
+            guard !isEnabled else {
+                return;
+            }
+
+            guard !isResumptionEnabled else {
+                try await resume();
+                return;
+            }
+            
+            guard context?.boundJid != nil else {
+                return;
+            }
+            
+            switch shouldEnable {
+            case .none:
+                break;
+            case .ack:
+                try await enable(resumption: false);
+            case .resumption:
+                try await enable(resumption: true);
+            }
+        } catch {
+            context?.reset(scopes: [.session]);
+        }
     }
     
     /**
@@ -133,6 +197,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         });
         
         let response = try await write(stanza: enable, for: .init(names: ["enabled","failed"], xmlns: StreamManagementModule.SM_XMLNS));
+        defer {
+            semaphore.release();
+        }
         switch response.name {
         case "enabled":
             processEnabled(response);
@@ -148,8 +215,10 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
 
             if scopes.contains(.stream) {
                 ackEnabled = false;
+                semaphore.release();
             }
             if scopes.contains(.session) {
+                _wasResumed = false;
                 ackEnabled = false;
                 resumptionId = nil
                 _resumptionTime = nil;
@@ -166,11 +235,22 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
      - parameter stanza: stanza to process
      */
     open func processIncoming(stanza: Stanza) -> Bool {
+        semaphore.waitIfRequired(stanza: stanza);
+        
         guard lock.with({ ackEnabled }) else {
+            switch stanza.name {
+            case "enabled", "failed", "resumed":
+                semaphore.startBlocking(items: []);
+            default:
+                break;
+            }
             return false;
         }
         
         guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
+            guard isStanza(stanza) else {
+                return false;
+            }
             lock.with {
                 ackH.incrementIncoming();
             }
@@ -209,13 +289,8 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             return;
         }
         
-        if stanza.xmlns == StreamManagementModule.SM_XMLNS {
-            switch stanza.name {
-            case "a", "r":
-                return;
-            default:
-                break;
-            }
+        guard isStanza(stanza) else {
+            return;
         }
         
         let sendRequest: Bool = lock.with {
@@ -230,6 +305,15 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         
         if sendRequest {
             request();
+        }
+    }
+    
+    open func isStanza(_ stanza: Stanza) -> Bool {
+        switch stanza.name {
+        case "iq", "message", "presence":
+            return true;
+        default:
+            return false;
         }
     }
     
@@ -252,6 +336,10 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
         
         let response = try await write(stanza: resume, for: .init(names: ["resumed","failed"], xmlns: StreamManagementModule.SM_XMLNS));
+        
+        defer {
+            semaphore.release();
+        }
         switch response.name {
         case "resumed":
             processResumed(response);
@@ -263,6 +351,158 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     /// Send ACK to server
     open func sendAck() {
         _sendAck(force: false);
+    }
+    
+    public func featureFor(stage: Sasl2InlineOfferStage) -> Element? {
+        switch stage {
+        case .afterSasl(let features):
+            guard isResumptionEnabled && features.contains(.sm3) else {
+                return nil;
+            }
+            semaphore.startBlocking(items: [.init(xmlns: Sasl2Module.SASL2_XMLNS)])
+            return lock.with {
+                return Element(name: "resume", xmlns: StreamManagementModule.SM_XMLNS, {
+                    Attribute("h", value: String(ackH.incomingCounter))
+                    Attribute("previd", value: resumptionId)
+                });
+            }
+        case .afterBind(let features):
+            guard shouldEnable != .none && features.contains(.sm3) else {
+                return nil;
+            }
+            semaphore.startBlocking(items: [.init(xmlns: Sasl2Module.SASL2_XMLNS)])
+            return Element(name: "enable", xmlns: StreamManagementModule.SM_XMLNS, {
+                if shouldEnable == .resumption {
+                    Attribute("resume", value: shouldEnable == .resumption ? "true" : nil)
+                    if let timeout = maxResumptionTimeout ?? self.maxResumptionTimeout {
+                        Attribute("max", value: String(timeout));
+                    }
+                }
+            });
+        }
+    }
+
+    private class Blocker {
+        private var lock = UnfairLock();
+        private var blocked: Bool = false;
+        private let semaphore = DispatchSemaphore(value: 0);
+        private var blockUnless: BlockUnless?;
+        
+        func waitIfRequired(stanza: Stanza) {
+            guard lock.with({
+                guard let blockUnless = self.blockUnless, blockUnless.shouldBlock(stanza: stanza) else {
+                    return false;
+                }
+                self.blocked = true;
+                return true;
+            }) else {
+                return;
+            }
+            semaphore.wait();
+        }
+        
+        func startBlocking(items: [BlockUnlessItem]) {
+            lock.with({
+                self.blockUnless = BlockUnless(items: items);
+            })
+        }
+        
+        func release() {
+            guard lock.with({
+                self.blockUnless = nil;
+                guard blocked else {
+                    return false;
+                }
+                blocked = false;
+                return true;
+            }) else {
+                return;
+            }
+            semaphore.signal();
+        }
+//
+//        private func wait() {
+//            lock.with({
+//                blocked = true;
+//            })
+//            print("waiting for blocker");
+//            let start = Date();
+//            semaphore.wait();
+//            print("waited for \(Date().timeIntervalSince(start))s");
+//        }
+//
+//        private func signal() {
+//            print("signaling blocker")
+//            guard lock.with({
+//                guard blocked else {
+//                    return false;
+//                }
+//                blocked = false;
+//                return true;
+//            }) else {
+//                return;
+//            }
+//            semaphore.signal();
+//        }
+        
+    }
+    
+    private struct BlockUnless {
+        let items: [BlockUnlessItem];
+        
+        func shouldBlock(stanza: Stanza) -> Bool {
+            for item in items {
+                if item.matches(stanza: stanza) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+    
+    private struct BlockUnlessItem {
+        let name: String?;
+        let xmlns: String?;
+        
+        init(name: String? = nil, xmlns: String? = nil) {
+            self.name = name
+            self.xmlns = xmlns
+        }
+        
+        func matches(stanza: Stanza) -> Bool {
+            if let name = name {
+                return stanza.name == name && (xmlns == nil || stanza.xmlns == xmlns);
+            } else {
+                return stanza.xmlns == xmlns;
+            }
+        }
+    }
+    
+    public func process(result: Element, for stage: Sasl2InlineResultStage) {
+        switch stage {
+        case .afterSasl:
+            guard let response = result.firstChild(xmlns: StreamManagementModule.SM_XMLNS) else {
+                return;
+            }
+            switch response.name {
+            case "resumed":
+                processResumed(Stanza(element: response));
+                semaphore.release();
+            case "failed":
+                context?.reset(scopes: [.session]);
+            default:
+                break;
+            }
+        case .afterBind:
+            defer {
+                semaphore.release();
+            }
+            guard let enabled = result.firstChild(name: "enabled", xmlns: StreamManagementModule.SM_XMLNS) else {
+                reset(scopes: [.stream,.session]);
+                return;
+            }
+            processEnabled(Stanza(element: enabled));
+        }
     }
     
     private func _sendAck(force: Bool) {
@@ -327,6 +567,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         let newH = UInt32(stanza.attribute("h")!) ?? 0;
         let oldOutgoingQueue: Queue<Stanza> = lock.with {
             ackEnabled = true;
+            _wasResumed = true;
             let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
             while left < outgoingQueue.count {
                 _ = outgoingQueue.poll();
@@ -383,12 +624,18 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         
     }
     
+    public enum Mode {
+        case none
+        case ack
+        case resumption
+    }
+
 }
 
 
 /// Internal implementation of queue for holding items
 public class Queue<T> {
-
+    
     private class Node<T> {
         
         let value: T;

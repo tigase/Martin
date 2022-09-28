@@ -37,9 +37,20 @@ open class Context: CustomStringConvertible, Resetable, @unchecked Sendable {
         return connectionConfiguration.userJid;
     }
     
+    private var _boundJid: JID?;
     public var boundJid: JID? {
-        return moduleOrNil(.resourceBind)?.bindedJid;
+        get {
+            return withLock {
+                return _boundJid;
+            }
+        }
+        set {
+            withLock {
+                _boundJid = newValue
+            }
+        }
     }
+    
     public var currentConnectionDetails: XMPPSrvRecord?;
     public var connectionConfiguration: ConnectionConfiguration = ConnectionConfiguration() {
         willSet {
@@ -71,12 +82,13 @@ open class Context: CustomStringConvertible, Resetable, @unchecked Sendable {
     }
     
     private let lock = UnfairLock();
-    public func withLock(body: ()->Void) {
+    @discardableResult
+    public func withLock<T>(body: ()->T) -> T {
         lock.lock();
         defer {
             lock.unlock()
         }
-        body();
+        return body();
     }
 
     public func withLock(body: () throws -> Void) rethrows {
@@ -108,6 +120,9 @@ open class Context: CustomStringConvertible, Resetable, @unchecked Sendable {
     
     open func reset(scopes: Set<ResetableScope>) {
         modulesManager.reset(scopes: scopes);
+        if scopes.contains(.session) {
+            boundJid = nil;
+        }
     }
     
     open func module<T: XmppModule>(_ identifier: XmppModuleIdentifier<T>) -> T {
@@ -124,6 +139,10 @@ open class Context: CustomStringConvertible, Resetable, @unchecked Sendable {
 
     open func moduleOrNil<T: XmppModule>(_ type: T.Type) -> T? {
         return modulesManager.moduleOrNil(type);
+    }
+    
+    open func modules<T>(_ type: T.Type) -> [T] {
+        return modulesManager.modules(type);
     }
 
     open func register(lifecycleAware: ContextLifecycleAware) {

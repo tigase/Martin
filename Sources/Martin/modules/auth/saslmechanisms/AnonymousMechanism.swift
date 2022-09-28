@@ -31,6 +31,8 @@ open class AnonymousMechanism: SaslMechanism {
     
     public private(set) var status: SaslMechanismStatus = .new;
     
+    public let supportsUpgrade = false;
+    
     public init() {
         
     }
@@ -44,6 +46,10 @@ open class AnonymousMechanism: SaslMechanism {
     open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
         status = .completed;
         return nil;
+    }
+    
+    public func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element {
+        throw XMPPError(condition: .bad_request, message: "PLAIN does not support upgrade!")
     }
     
     open func isAllowedToUse(_ context: Context) -> Bool {
