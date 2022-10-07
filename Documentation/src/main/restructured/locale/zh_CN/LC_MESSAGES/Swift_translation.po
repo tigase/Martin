@@ -1,0 +1,1035 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2004-2022, Tigase, Inc
+# This file is distributed under the same license as the TigaseDoc package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: TigaseDoc\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-08-18 23:12-0700\n"
+"PO-Revision-Date: 2022-08-19 20:09+0000\n"
+"Last-Translator: Qian Luo <qian.luo@tigase.net>\n"
+"Language-Team: Chinese (Simplified) <http://translate.tigase.net/projects/"
+"tigae-swift/tigase-swift/zh_Hans/>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 4.11.2\n"
+"Generated-By: Babel 2.8.0\n"
+
+#: ../../Basics.rst:2
+msgid "Basics"
+msgstr "基本"
+
+#: ../../Basics.rst:5
+msgid "Create XMPP client instance"
+msgstr "创建 XMPP 客户端实例"
+
+#: ../../Basics.rst:7
+msgid ""
+"To use TigaseSwift library you need to create instance of ``XMPPClient`` "
+"class which is implementation of XMPP client."
+msgstr "要使用 TigaseSwift 库，您需要创建 ``XMPPClient`` 类的实例，它是 XMPP "
+"客户端的实现。"
+
+#: ../../Basics.rst:14
+msgid "Register required modules"
+msgstr "注册所需的模块"
+
+#: ../../Basics.rst:16
+msgid ""
+"Next step is to register modules providing support for features you would"
+" like to use. Almost in any case you will need at least following "
+"modules:"
+msgstr "下一步是注册为您想要使用的功能提供支持的模块。几乎在任何情况下，您至少需要以"
+"下模块："
+
+#: ../../Basics.rst:18
+msgid "``StreamFeaturesModule``"
+msgstr "``StreamFeaturesModule``"
+
+#: ../../Basics.rst:20
+msgid "Responsible for handling XMPP stream features"
+msgstr "负责处理 XMPP 流特征"
+
+#: ../../Basics.rst:22
+msgid "``AuthModule`` and ``SaslModule``"
+msgstr "``AuthModule`` 和 ``SaslModule``"
+
+#: ../../Basics.rst:24
+msgid ""
+"``AuthModule`` add common authentication features, while ``SaslModule`` "
+"add support for SASL based authentication."
+msgstr "``AuthModule`` 添加常见的身份验证功能，而 ``SaslModule`` 添加对基于 SASL "
+"的身份验证的支持。"
+
+#: ../../Basics.rst:26
+msgid "``ResourceBinderModule``"
+msgstr "``ResourceBinderModule``"
+
+#: ../../Basics.rst:28
+msgid ""
+"Module responsible for resource binding which is part of stream "
+"negotiation process."
+msgstr "负责资源绑定的模块，它是流协商过程的一部分。"
+
+#: ../../Basics.rst:30
+msgid "``SessionEstablishmentModule``"
+msgstr "``SessionEstablishmentModule``"
+
+#: ../../Basics.rst:32
+msgid ""
+"Module handles session establishment which is last step of stream "
+"negotiation, however it is not needed according to `RFC 6120 "
+"<http://xmpp.org/rfcs/rfc6120.html>`__. We recommend to register this "
+"module for compatibility reasons - if it will be not needed then it will "
+"not be used."
+msgstr ""
+"模块处理会话建立，这是流协商的最后一步，但是根据 `RFC 6120 <http://xmpp.org/"
+"rfcs/rfc6120.html>`__ 其并不需要它。出于兼容性原因，我们建议注册此模块 - "
+"如果不需要它，则不会使用它。"
+
+#: ../../Basics.rst:34
+msgid "To register, ie. ``StreamFeaturesModule`` you need to use following code:"
+msgstr "注册，即 ``StreamFeaturesModule`` 你需要使用以下代码："
+
+#: ../../Basics.rst:41
+msgid "Register additional modules you need"
+msgstr "注册您需要的其他模块"
+
+#: ../../Basics.rst:43
+msgid ""
+"You can add any additional modules found in TigaseSwift library or you "
+"can create your own based by implementing support for ``XmppModule`` "
+"protocol."
+msgstr "您可以添加在 TigaseSwift 库中找到的任何其他模块，或者您可以通过实现对 "
+"``XmppModule`` 协议的支持来创建自己的模块。"
+
+#: ../../Basics.rst:45
+msgid "Here is list of some modules provided by TigaseSwift library:"
+msgstr "以下是 TigaseSwift 库提供的一些模块的列表："
+
+#: ../../Basics.rst:47
+msgid "``PresenceModule``"
+msgstr "``PresenceModule``"
+
+#: ../../Basics.rst:49
+msgid ""
+"Responsible for handling incoming presences and allows to set client "
+"presence."
+msgstr "负责处理传入的存在并允许设置客户端存在。"
+
+#: ../../Basics.rst:51
+msgid "``MessageModule``"
+msgstr "``MessageModule``"
+
+#: ../../Basics.rst:53
+msgid ""
+"This module is responsible for processing incoming messages, "
+"creating/destroying chats and sending messages."
+msgstr "该模块负责处理传入消息、创建/销毁聊天和发送消息。"
+
+#: ../../Basics.rst:55
+msgid "``RosterModule``"
+msgstr "``RosterModule``"
+
+#: ../../Basics.rst:57
+msgid "Provides support for retrieval and manipulation of XMPP roster."
+msgstr "为 XMPP 名册的检索和操作提供支持。"
+
+#: ../../Basics.rst:59
+msgid "``MucModule``"
+msgstr "``MucModule``"
+
+#: ../../Basics.rst:61
+msgid ""
+"Provides support for MUC rooms as described in `XEP-0045: Multi-User Chat"
+" <http://xmpp.org/extensions/xep-0045.html>`__"
+msgstr ""
+"提供对 MUC 房间的支持，如 `XEP-0045: Multi-User Chat <http://xmpp.org/"
+"extensions/xep-0045.html>`__ 中所述"
+
+#: ../../Basics.rst:63
+msgid "``DiscoveryModule``"
+msgstr "``DiscoveryModule``"
+
+#: ../../Basics.rst:65
+msgid ""
+"Provides support for service discovery described in `XEP-0030: Service "
+"Discovery <http://xmpp.org/extensions/xep-0030.html>`__"
+msgstr ""
+"为 `XEP-0030: Service Discovery <http://xmpp.org/extensions/xep-0030.html>`"
+"__ 中描述的服务发现提供支持"
+
+#: ../../Basics.rst:67
+msgid "``StreamManagementModule``"
+msgstr "``StreamManagementModule``"
+
+#: ../../Basics.rst:69
+msgid ""
+"Provides support for Stream Management acking and stream resumption as "
+"specified in `XEP-0198: Stream Management "
+"<http://xmpp.org/extensions/xep-0198.html>`__"
+msgstr ""
+"为 `XEP-0198: Stream Management <http://xmpp.org/extensions/xep-0198.html>`"
+"__ 中指定的流管理确认和流恢复提供支持"
+
+#: ../../Basics.rst:71
+msgid "``MessageCarbonsModule``"
+msgstr "``MessageCarbonsModule``"
+
+#: ../../Basics.rst:73
+msgid ""
+"Adds support for forwarding messages delivered to other resources as "
+"described in `XEP-0280: Message Carbons "
+"<http://xmpp.org/extensions/xep-0280.html>`__"
+msgstr ""
+"添加对传递到其他资源的消息转发的支持，如 `XEP-0280: Message Carbons "
+"<http://xmpp.org/extensions/xep-0280.html>`__ 中所述"
+
+#: ../../Basics.rst:75
+msgid "``VCardModule``"
+msgstr "``VCardModule``"
+
+#: ../../Basics.rst:77
+msgid ""
+"Implementation of support for `XEP-0054: vcard-temp "
+"<http://xmpp.org/extensions/xep-0054.html>`__"
+msgstr ""
+"实现对 `XEP-0054: vcard-temp <http://xmpp.org/extensions/xep-0054.html>`__ "
+"的支持"
+
+#: ../../Basics.rst:79
+msgid "``PingModule``"
+msgstr "``PingModule``"
+
+#: ../../Basics.rst:81
+msgid ""
+"Allows to check if other XMPP client is available and it is possible to "
+"deliver packet to this XMPP client as specified in `XEP-0199: XMPP Ping "
+"<http://xmpp.org/extensions/xep-0199.html>`__"
+msgstr ""
+"允许检查其他 XMPP 客户端是否可用，并且可以按照 `XEP-0199: XMPP Ping "
+"<http://xmpp.org/extensions/xep-0199.html>`__ 中的规定将数据包传送到此 XMPP "
+"客户端"
+
+#: ../../Basics.rst:83
+msgid "``InBandRegistrationModule``"
+msgstr "``InBandRegistrationModule``"
+
+#: ../../Basics.rst:85
+msgid ""
+"Adds possibility to register XMPP account using `XEP-0077: In-Band "
+"Registration <http://xmpp.org/extensions/xep-0077.html>`__"
+msgstr ""
+"添加使用 `XEP-0077：带内注册 <http://xmpp.org/extensions/xep-0077.html>`__ "
+"注册XMPP帐户的可能性"
+
+#: ../../Basics.rst:87
+msgid "``MobileModeModule``"
+msgstr "``MobileModeModule``"
+
+#: ../../Basics.rst:89
+msgid "Provides support for using Tigase Optimizations for mobile devices"
+msgstr "支持在移动设备上使用 Tigase 优化"
+
+#: ../../Basics.rst:91
+msgid "``CapabilitiesModule``"
+msgstr "``CapabilitiesModule``"
+
+#: ../../Basics.rst:93
+msgid ""
+"Provides support for `XEP-0115: Entity Capabilities "
+"<http://xmpp.org/extensions/xep-0115.html>`__ which allows for "
+"advertisement and automatic discovery of features supported by other "
+"clients."
+msgstr ""
+"提供对 `XEP-0115: Entity Capabilities <http://xmpp.org/extensions/xep-0115."
+"html>`__ 的支持，允许广告和自动发现其他客户端支持的功能。"
+
+#: ../../Basics.rst:96
+msgid "Provide credentials needed for authentication"
+msgstr "提供身份验证所需的凭据"
+
+#: ../../Basics.rst:98
+msgid "This should be done using ``connectionConfiguration`` properties, ie."
+msgstr "这应该使用 ``connectionConfiguration`` 属性来完成，即"
+
+#: ../../Basics.rst:106
+msgid ""
+"To use ANONYMOUS authentication mechanism, do not set user jid and "
+"password. Instead just set server domain:"
+msgstr "要使用匿名身份验证机制，请不要设置用户 jid 和密码。而仅设置服务器域："
+
+#: ../../Basics.rst:113
+msgid "Register for connection related events"
+msgstr "注册连接相关事件"
+
+#: ../../Basics.rst:115
+msgid "There are three event related to connection state which should be handled:"
+msgstr "应该处理与连接状态相关的三个事件："
+
+#: ../../Basics.rst:117
+msgid "``SocketConnector.ConnectedEvent``"
+msgstr "``SocketConnector.ConnectedEvent``"
+
+#: ../../Basics.rst:119
+msgid ""
+"Fired when client opens TCP connection to server - XMPP stream is not "
+"ready at this point."
+msgstr "当客户端打开与服务器的 TCP 连接时触发 - XMPP 流此时尚未准备好。"
+
+#: ../../Basics.rst:121
+msgid "``SessionEstablishmentModule.SessionEstablishmentSuccessEvent``"
+msgstr "``SessionEstablishmentModule.SessionEstablishmentSuccessEvent``"
+
+#: ../../Basics.rst:123
+msgid ""
+"Fired when client finishes session establishment. It will be called even "
+"if ``SessionEstablishmentModule`` is not registered."
+msgstr "当客户端完成会话建立时触发。即使 ``SessionEstablishmentModule`` "
+"没有注册也会被调用。"
+
+#: ../../Basics.rst:125
+msgid "``SocketConnector.DisconnectedEvent``"
+msgstr "``SocketConnector.DisconnectedEvent``"
+
+#: ../../Basics.rst:127
+msgid ""
+"Fired when TCP connection is closed or when XMPP stream is closed. It "
+"will be also called when TCP connection is broken."
+msgstr "当 TCP 连接关闭或 XMPP 流关闭时触发。当 TCP 连接中断时也会调用它。"
+
+#: ../../Basics.rst:130
+msgid "Login"
+msgstr "登录"
+
+#: ../../Basics.rst:132
+msgid ""
+"To start process of DNS resolution, establishing TCP connection and "
+"establishing XMPP stream you need to call:"
+msgstr "要启动 DNS 解析、建立 TCP 连接和建立 XMPP 流，您需要调用："
+
+#: ../../Basics.rst:139
+msgid "Disconnect"
+msgstr "断开"
+
+#: ../../Basics.rst:141
+msgid ""
+"To disconnect from server properly and close XMPP and TCP connection you "
+"need to call:"
+msgstr "要正确断开与服务器的连接并关闭 XMPP 和 TCP 连接，您需要调用："
+
+#: ../../Basics.rst:148
+msgid "Sending custom stanza"
+msgstr "发送自定义节"
+
+#: ../../Basics.rst:150
+msgid ""
+"Usually class which supports ``XmppModule`` protocol is being implemented"
+" to add new feature to ``TigaseSwift`` library. However in some cases in "
+"which we want to send simple stanza or send stanza and react on received "
+"response there is no need to implement class supporting ``XmppModule`` "
+"protocol. Instead of that following methods may be used."
+msgstr ""
+"通常正在实现支持 ``XmppModule`` 协议的类以向 ``TigaseSwift`` 库添加新功能。然"
+"而，在某些情况下，我们想要发送简单的节或发送节并对收到的响应做出反应，"
+"不需要实现支持 ``XmppModule`` 协议的类。取而代之的是，可以使用以下方法。"
+
+#: ../../Basics.rst:154
+msgid "Sending stanza without waiting for response"
+msgstr "发送节而不等待响应"
+
+#: ../../Basics.rst:156
+msgid ""
+"To send custom stanza you need to construct this stanza and execute "
+"following code"
+msgstr "要发送自定义节，您需要构造此节并执行以下代码"
+
+#: ../../Basics.rst:162
+msgid ""
+"``writer`` is instance of ``PacketWriter`` class responsible for sending "
+"stanzas from client to server. Property can be nil if connection is not "
+"established."
+msgstr "``writer`` 是 ``PacketWriter`` "
+"类的实例，负责将节从客户端发送到服务器。如果未建立连接，则属性可以为 nil。"
+
+#: ../../Basics.rst:166
+msgid "Sending stanza and waiting for response (closures)"
+msgstr "发送节并等待响应（关闭）"
+
+#: ../../Basics.rst:168 ../../Basics.rst:188 ../../Basics.rst:203
+msgid ""
+"It possible to wait for response stanza, but only in case of ``Iq`` "
+"stanzas. To do so, you need to pass callback which will be called when "
+"result will be received, ie."
+msgstr "可以等待响应节，但仅限于 ``Iq`` "
+"节。为此，您需要传递将在收到结果时调用的回调，即"
+
+#: ../../Basics.rst:180
+msgid ""
+"You can omit ``timeout`` parameter. Default value of 30 seconds will be "
+"used as a timeout."
+msgstr "您可以省略 ``timeout`` 参数。默认值 30 秒将用作超时。"
+
+#: ../../Basics.rst:182
+msgid ""
+"You can pass nil as any of closures. In this case particular response "
+"will not trigger any reaction."
+msgstr "您可以将 nil 作为任何闭包传递。在这种情况下，特定的反应不会触发任何反应。"
+
+#: ../../Basics.rst:186
+msgid "Sending stanza and waiting for response (closure)"
+msgstr "发送节并等待响应（关闭）"
+
+#: ../../Basics.rst:196 ../../Basics.rst:211
+msgid ""
+"You can omit ``timeout`` parameter, which will use 30 seconds as default "
+"timeout."
+msgstr "您可以省略 ``timeout`` 参数，它将使用 30 秒作为默认超时。"
+
+#: ../../Basics.rst:198
+msgid ""
+"As callback is called always as it will be called in case of received "
+"``result``, ``error`` or in case of timeout it is required to be able to "
+"distinguish what caused execution of this closure. In case of ``result`` "
+"or ``error`` packet being received, received stanza will be passed to "
+"closure for processing. However in case of timeout ``nil`` will be passed"
+" instead of stanza - as no stanza was received."
+msgstr ""
+"由于回调总是被调用，因为它会在收到 ``result``、 ``error`` "
+"或超时的情况下被调用，因此需要能够区分是什么导致了这个闭包的执行。如果接收到 "
+"``result`` 或 ``error`` "
+"数据包，接收到的节将被传递给闭包进行处理。然而，在超时的情况下，将传递 "
+"``nil`` 而不是节 - 因为没有收到节。"
+
+#: ../../Basics.rst:201
+msgid "Sending stanza and waiting for response (AsyncCallback)"
+msgstr "发送节并等待响应（AsyncCallback）"
+
+#: ../../Basics.rst:209
+msgid "where callback is implementation of ``AsyncCallback`` protocol."
+msgstr "其中回调是 ``AsyncCallback`` 协议的实现。"
+
+#: ../../Examples.rst:2
+msgid "Usage examples"
+msgstr "使用示例"
+
+#: ../../Examples.rst:5
+msgid "Simple client sending message"
+msgstr "简单的客户端发送消息"
+
+#: ../../Examples.rst:7
+msgid ""
+"Below is example code of client which send XMPP message to "
+"``recipient@domain.com`` as ``sender@domain.com`` using ``Pa$$w0rd`` as "
+"password for authentication. Message is sent just after clients connects "
+"to server, authenticates and establishes session."
+msgstr ""
+"下面是客户端的示例代码，它使用 ``Pa$$w0rd`` 作为身份验证密码，将 XMPP "
+"消息作为 ``sender@domain.com`` 发送到 ``recipient@domain."
+"com``。消息在客户端连接到服务器、验证并建立会话后立即发送。"
+
+#: ../../Examples.rst:12
+msgid "Simple client setting presence and handling incoming presences"
+msgstr "简单的客户端设置存在和处理传入的存在"
+
+#: ../../Examples.rst:14
+msgid ""
+"In this example we will connect to server, set our presence to ``Do not "
+"disturb`` with status message set to ``Do not disturb me!``."
+msgstr ""
+"在这个例子中，我们将连接到服务器，将我们的状态设置为 ``Do not disturb``，"
+"状态消息设置为 ``Do not disturb me!``。"
+
+#: ../../Examples.rst:16
+msgid ""
+"This example will also print any presence we will receive from our "
+"contacts. However for this part to work our roster cannot be empty and at"
+" least one of our roster contacts needs to be available."
+msgstr "此示例还将打印我们将从联系人那里收到的任何存在。但是，要使这部分工作，我们的"
+"名册不能为空，并且至少需要有一个名册联系人可用。"
+
+#: ../../Examples.rst:22
+msgid ""
+"Simple client setting presence, handling incoming presences and "
+"responding on incoming messages"
+msgstr "简单的客户端设置存在，处理传入的存在和响应传入的消息"
+
+#: ../../Examples.rst:24
+msgid ""
+"This example presents way to listen for incoming messages and responding "
+"on this messages."
+msgstr "此示例介绍了侦听传入消息和响应此消息的方法。"
+
+#: ../../Examples.rst:30
+msgid "Simple client with support for MUC"
+msgstr "支持 MUC 的简单客户端"
+
+#: ../../Examples.rst:32
+msgid ""
+"In this example you can find how to join to room, send message to room "
+"and handle informations about occupants."
+msgstr "在此示例中，您可以了解如何加入房间、向房间发送消息以及处理有关居住者的信息。"
+
+#: ../../Examples.rst:37
+msgid "Simple client with support for PubSub"
+msgstr "支持 PubSub 的简单客户端"
+
+#: ../../Examples.rst:39
+msgid ""
+"In this example you can find how to create PubSub node, publish item, "
+"receive notifications, retrieve items and delete PubSub node."
+msgstr "在此示例中，您可以了解如何创建 PubSub 节点、发布项目、接收通知、"
+"检索项目和删除 PubSub 节点。"
+
+#: ../../List_of_specifications_and_modules.rst:2
+msgid "List of specifications and modules implementing it"
+msgstr "实现它的规范和模块列表"
+
+#: ../../List_of_specifications_and_modules.rst:6
+msgid "`RFC 6120 XMPP: Core <http://xmpp.org/rfcs/rfc6120.html>`_"
+msgstr "`RFC 6120 XMPP:核心 <http://xmpp.org/rfcs/rfc6120.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:6
+msgid "AuthModule"
+msgstr "AuthModule"
+
+#: ../../List_of_specifications_and_modules.rst:7
+msgid "SaslModule"
+msgstr "SaslModule"
+
+#: ../../List_of_specifications_and_modules.rst:8
+msgid "StreamFeaturesModule"
+msgstr "StreamFeaturesModule"
+
+#: ../../List_of_specifications_and_modules.rst:9
+msgid "ResourceBinderModule"
+msgstr "ResourceBinderModule"
+
+#: ../../List_of_specifications_and_modules.rst:10
+msgid "SessionEstablishmentModule"
+msgstr "SessionEstablishmentModule"
+
+#: ../../List_of_specifications_and_modules.rst:12
+msgid "`RFC 6121 XMPP: IM <http://xmpp.org/rfcs/rfc6121.html>`_"
+msgstr "`RFC 6121 XMPP: IM <http://xmpp.org/rfcs/rfc6121.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:12
+msgid "MessageModule"
+msgstr "MessageModule"
+
+#: ../../List_of_specifications_and_modules.rst:13
+msgid "PresenceModule"
+msgstr "PresenceModule"
+
+#: ../../List_of_specifications_and_modules.rst:14
+msgid "RosterModule"
+msgstr "RosterModule"
+
+#: ../../List_of_specifications_and_modules.rst:16
+msgid "`XEP-0030: Service Discovery <http://xmpp.org/extensions/xep-0030.html>`_"
+msgstr "`XEP-0030: 服务发现 <http://xmpp.org/extensions/xep-0030.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:16
+msgid "DiscoveryModule"
+msgstr "DiscoveryModule"
+
+#: ../../List_of_specifications_and_modules.rst:18
+msgid "`XEP-0045: Multi-User Chat <https://xmpp.org/extensions/xep-0045.html>`_"
+msgstr "`XEP-0045: 多用户聊天 <https://xmpp.org/extensions/xep-0045.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:18
+msgid "MucModule"
+msgstr "MucModule"
+
+#: ../../List_of_specifications_and_modules.rst:20
+msgid "`XEP-0054: vcard-temp <https://xmpp.org/extensions/xep-0054.html>`_"
+msgstr "`XEP-0054: vcard-temp <https://xmpp.org/extensions/xep-0054.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:20
+#: ../../List_of_specifications_and_modules.rst:30
+msgid "VCardModule"
+msgstr "VCardModule"
+
+#: ../../List_of_specifications_and_modules.rst:22
+msgid "`XEP-0060: Publish-Subscribe <https://xmpp.org/extensions/xep-0060.html>`_"
+msgstr "`XEP-0060: 发布-订阅 <https://xmpp.org/extensions/xep-0060.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:22
+#: ../../List_of_specifications_and_modules.rst:32
+msgid "PubSubModule"
+msgstr "PubSubModule"
+
+#: ../../List_of_specifications_and_modules.rst:24
+msgid ""
+"`XEP-0077: In-Band Registration "
+"<https://xmpp.org/extensions/xep-0077.html>`_"
+msgstr "`XEP-0077:带内注册 <https://xmpp.org/extensions/xep-0077.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:24
+msgid "InBandRegistrationModule"
+msgstr "InBandRegistrationModule"
+
+#: ../../List_of_specifications_and_modules.rst:26
+msgid "`XEP-0092: SoftwareVersion <https://xmpp.org/extensions/xep-0092.html>`_"
+msgstr "`XEP-0092:软件版本 <https://xmpp.org/extensions/xep-0092.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:26
+msgid "SoftwareVersionModule"
+msgstr "SoftwareVersionModule"
+
+#: ../../List_of_specifications_and_modules.rst:28
+msgid ""
+"`XEP-0115: Entity Capabilities "
+"<https://xmpp.org/extensions/xep-0115.html>`_"
+msgstr "`XEP-0115:实体功能 <https://xmpp.org/extensions/xep-0115.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:28
+msgid "CapabilitiesModule"
+msgstr "CapabilitiesModule"
+
+#: ../../List_of_specifications_and_modules.rst:30
+msgid ""
+"`XEP-0153: vCard-Based Avatars "
+"<https://xmpp.org/extensions/xep-0153.html>`_"
+msgstr "`XEP-0153: 基于 vCard 的头像 <https://xmpp.org/extensions/xep-0153.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:32
+msgid ""
+"`XEP-0163: Personal Eventing Protocol "
+"<https://xmpp.org/extensions/xep-0163.html>`_"
+msgstr "`XEP-0163: 个人事件协议 <https://xmpp.org/extensions/xep-0163.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:34
+msgid "`XEP-0175: SASL Anonymous <https://xmpp.org/extensions/xep-0175.html>`_"
+msgstr "`XEP-0175:SASL 匿名 <https://xmpp.org/extensions/xep-0175.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:34
+msgid "AnonymousMechanism"
+msgstr "AnonymousMechanism"
+
+#: ../../List_of_specifications_and_modules.rst:36
+msgid "`XEP-0199: XMPP Ping <https://xmpp.org/extensions/xep-0199.html>`_"
+msgstr "`XEP-0199: XMPP Ping <https://xmpp.org/extensions/xep-0199.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:36
+msgid "PingModule"
+msgstr "PingModule"
+
+#: ../../List_of_specifications_and_modules.rst:38
+msgid "`XEP-0203: Delayed Delivery <https://xmpp.org/extensions/xep-0203.html>`_"
+msgstr "`XEP-0203: 延迟传送 <https://xmpp.org/extensions/xep-0203.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:38
+msgid "Delay"
+msgstr "延迟"
+
+#: ../../List_of_specifications_and_modules.rst:40
+msgid "`XEP-0280: Message Carbons <https://xmpp.org/extensions/xep-0280.html>`_"
+msgstr "`XEP-0280: 消息碳 <https://xmpp.org/extensions/xep-0280.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:40
+msgid "MessageCarbonsModule"
+msgstr "MessageCarbonsModule"
+
+#: ../../List_of_specifications_and_modules.rst:42
+msgid ""
+"`XEP-0352: Client State Indication "
+"<https://xmpp.org/extensions/xep-0352.html>`_"
+msgstr "`XEP-0352: 客户端状态指示 <https://xmpp.org/extensions/xep-0352.html>`_"
+
+#: ../../List_of_specifications_and_modules.rst:42
+msgid "ClientStateIndicationModule"
+msgstr "ClientStateIndicationModule"
+
+#: ../../List_of_specifications_and_modules.rst:44
+#: ../../Supported_features.rst:47
+msgid "Mobile Optimizations"
+msgstr "移动优化"
+
+#: ../../List_of_specifications_and_modules.rst:44
+msgid "MobileModeModule"
+msgstr "MobileModeModule"
+
+#: ../../Starting_up.rst:2
+msgid "Starting up"
+msgstr "启动"
+
+#: ../../Starting_up.rst:5
+msgid "Preparation of environment for development"
+msgstr "为发展准备环境"
+
+#: ../../Starting_up.rst:7
+msgid "Download and install newest version of XCode"
+msgstr "下载并安装最新版本的 XCode"
+
+#: ../../Starting_up.rst:9
+msgid "Download source code of library"
+msgstr "下载库源代码"
+
+#: ../../Starting_up.rst:11
+msgid "It is best to download library source code from our Git repository"
+msgstr "最好从我们的 Git 存储库下载库源代码"
+
+#: ../../Starting_up.rst:13
+msgid "Create workspace in XCode"
+msgstr "在 XCode 中创建工作区"
+
+#: ../../Starting_up.rst:15
+msgid ""
+"Add library project to newly created workspace using ``Add Files to "
+"\"workspace_name\"…​`` from ``File`` menu of XCode when workspace is "
+"opened in XCode."
+msgstr ""
+"在 XCode 中打开工作区时，使用 XCode 的 ``File`` 菜单中的 ``Add Files to "
+"\"workspace_name\"…​`` 将库项目添加到新创建的工作区。"
+
+#: ../../Starting_up.rst:17 ../../Starting_up.rst:33
+msgid "|AddFilesTo|"
+msgstr "|AddFilesTo|"
+
+#: ../../Starting_up.rst:51
+msgid "AddFilesTo"
+msgstr "AddFilesTo"
+
+#: ../../Starting_up.rst:19
+msgid ""
+"Select ``TigaseSwift.xcodeproj`` which wil be inside root directory of "
+"source code of library and click ``Add``"
+msgstr "选择位于库源代码根目录中的``TigaseSwift.xcodeproj`` ，然后单击 ``Add``"
+
+#: ../../Starting_up.rst:21
+msgid "|SelectTigaseSwiftLibrary|"
+msgstr "|SelectTigaseSwiftLibrary|"
+
+#: ../../Starting_up.rst:52
+msgid "SelectTigaseSwiftLibrary"
+msgstr "SelectTigaseSwiftLibrary"
+
+#: ../../Starting_up.rst:23
+msgid "Workspace for development using TigaseSwift library is ready"
+msgstr "使用 TigaseSwift 库进行开发的工作区已准备就绪"
+
+#: ../../Starting_up.rst:27
+msgid "Creation of project using TigaseSwift library"
+msgstr "使用 TigaseSwift 库创建项目"
+
+#: ../../Starting_up.rst:29
+msgid "Create project in XCode"
+msgstr "在 XCode 中创建项目"
+
+#: ../../Starting_up.rst:31
+msgid ""
+"Add project to TigaseSwift library workspace created during preparation "
+"of environment for development using @Add Files to \"workspace_name\"…​@ "
+"from @File@ menu of XCode when workspace is opened in XCode."
+msgstr ""
+"在 XCode 中打开工作区时，使用 XCode 的 @File@ 菜单中的 @Add Files to "
+"\"workspace_name\"...​@ 将项目添加到在准备开发环境期间创建的 TigaseSwift "
+"库工作区。"
+
+#: ../../Starting_up.rst:35
+msgid "Select XCode project file of your newly created project and click ``Add``"
+msgstr "选择新创建项目的 XCode 项目文件，然后单击 ``Add``"
+
+#: ../../Starting_up.rst:37
+msgid "This file name will end with ``.xcodeproj``"
+msgstr "此文件名将以 ``.xcodeproj`` 结尾"
+
+#: ../../Starting_up.rst:39
+msgid "|SelectNewProject|"
+msgstr "|SelectNewProject|"
+
+#: ../../Starting_up.rst:53
+msgid "SelectNewProject"
+msgstr "SelectNewProject"
+
+#: ../../Starting_up.rst:41
+msgid "In XCode open ``Build Settings`` tab of imported project"
+msgstr "在 XCode 中打开导入项目的 ``Build Settings`` 选项卡"
+
+#: ../../Starting_up.rst:43
+msgid "In section ``Embedded Binaries`` click on ``+`` sign"
+msgstr "在 ``Embedded Binaries`` 部分中，单击 ``+`` 号"
+
+#: ../../Starting_up.rst:45
+msgid "Select ``TigaseSwift.framework`` and add it to project"
+msgstr "选择 ``TigaseSwift.framework`` 并将其添加到项目中"
+
+#: ../../Starting_up.rst:47
+msgid ""
+"It will be located in ``Products`` folder of ``TigaseSwift`` project "
+"|AddTigaseSwiftAsEmbeddedFramework|"
+msgstr ""
+"它将位于 ``TigaseSwift`` 项目的 ``Products`` 文件夹中 "
+"|AddTigaseSwiftAsEmbeddedFramework|"
+
+#: ../../Starting_up.rst:54
+msgid "AddTigaseSwiftAsEmbeddedFramework"
+msgstr "AddTigaseSwiftAsEmbeddedFramework"
+
+#: ../../Starting_up.rst:49
+msgid "Your project contains embedded ``TigaseSwift`` framework"
+msgstr "您的项目包含嵌入式 ``TigaseSwift`` 框架"
+
+#: ../../Supported_features.rst:2
+msgid "Supported features"
+msgstr "所支持的功能"
+
+#: ../../Supported_features.rst:5
+msgid "Specification"
+msgstr "规格"
+
+#: ../../Supported_features.rst:5
+msgid "Name"
+msgstr "名称"
+
+#: ../../Supported_features.rst:5
+msgid "Description"
+msgstr "描述"
+
+#: ../../Supported_features.rst:7
+msgid "`RFC 6120 <http://xmpp.org/rfcs/rfc6120.html>`__"
+msgstr "`RFC 6120 <http://xmpp.org/rfcs/rfc6120.html>`__"
+
+#: ../../Supported_features.rst:7
+msgid "Extensible Messaging and Presence Protocol (XMPP): Core"
+msgstr "可扩展消息传递和存在协议 (XMPP)：核心"
+
+#: ../../Supported_features.rst:7
+msgid ""
+"XMPP specification including SSL/TLS encryption, SASL authentication, "
+"resource binding, etc.."
+msgstr "XMPP 规范包括 SSL/TLS 加密、SASL 认证、资源绑定等。"
+
+#: ../../Supported_features.rst:9
+msgid "`RFC 6121 <http://xmpp.org/rfcs/rfc6121.html>`__"
+msgstr "`RFC 6121 <http://xmpp.org/rfcs/rfc6121.html>`__"
+
+#: ../../Supported_features.rst:9
+msgid ""
+"Extensible Messaging and Presence Protocol (XMPP): Instant Messaging and "
+"Presence"
+msgstr "可扩展消息传递和存在协议 (XMPP)：即时消息传递和存在"
+
+#: ../../Supported_features.rst:9
+msgid "Roster management, presence subscription, sending and receiving messages"
+msgstr "名册管理、状态订阅、发送和接收消息"
+
+#: ../../Supported_features.rst:11
+msgid "`EP-0030 <http://xmpp.org/extensions/xep-0030.html>`__"
+msgstr "`EP-0030 <http://xmpp.org/extensions/xep-0030.html>`__"
+
+#: ../../Supported_features.rst:11
+msgid "Service Discovery"
+msgstr "服务发现"
+
+#: ../../Supported_features.rst:11
+msgid "Support for XMPP service discovery"
+msgstr "支持 XMPP 服务发现"
+
+#: ../../Supported_features.rst:13
+msgid "`XEP-0045 <http://xmpp.org/extensions/xep-0045.html>`__"
+msgstr "`XEP-0045 <http://xmpp.org/extensions/xep-0045.html>`__"
+
+#: ../../Supported_features.rst:13
+msgid "Multi-User Chat"
+msgstr "多用户聊天"
+
+#: ../../Supported_features.rst:13
+msgid "Support for MUC protocol extension"
+msgstr "支持 MUC 协议扩展"
+
+#: ../../Supported_features.rst:15
+msgid "`XEP-0054 <http://xmpp.org/extensions/xep-0054.html>`__"
+msgstr "`XEP-0054 <http://xmpp.org/extensions/xep-0054.html>`__"
+
+#: ../../Supported_features.rst:15
+msgid "vcard-temp"
+msgstr "vcard-temp"
+
+#: ../../Supported_features.rst:15
+msgid "User vCard implementation"
+msgstr "用户 vCard 实施"
+
+#: ../../Supported_features.rst:17
+msgid "`XEP-0060 <http://xmpp.org/extensions/xep-0060.html>`__"
+msgstr "`XEP-0060 <http://xmpp.org/extensions/xep-0060.html>`__"
+
+#: ../../Supported_features.rst:17
+msgid "Publish-Subscribe"
+msgstr "发布-订阅"
+
+#: ../../Supported_features.rst:17
+msgid "Support for PubSub protocol extension"
+msgstr "支持 PubSub 协议扩展"
+
+#: ../../Supported_features.rst:19
+msgid "`XEP-0077 <http://xmpp.org/extensions/xep-0077.html>`__"
+msgstr "`XEP-0077 <http://xmpp.org/extensions/xep-0077.html>`__"
+
+#: ../../Supported_features.rst:19
+msgid "In-Band Registration"
+msgstr "带内注册"
+
+#: ../../Supported_features.rst:19
+msgid "Support for in-band account registration"
+msgstr "支持带内账户注册"
+
+#: ../../Supported_features.rst:21
+msgid "`XEP-0082 <http://xmpp.org/extensions/xep-0082.html>`__"
+msgstr "`XEP-0082 <http://xmpp.org/extensions/xep-0082.html>`__"
+
+#: ../../Supported_features.rst:21
+msgid "XMPP Date and Time Profiles"
+msgstr "XMPP 日期和时间配置文件"
+
+#: ../../Supported_features.rst:21
+msgid "Support for standarized ISO 8601 profiles and lexical representation"
+msgstr "支持标准化 ISO 8601 配置文件和词汇表达"
+
+#: ../../Supported_features.rst:23
+msgid "`XEP-0092 <http://xmpp.org/extensions/xep-0092.html>`__"
+msgstr "`XEP-0092 <http://xmpp.org/extensions/xep-0092.html>`__"
+
+#: ../../Supported_features.rst:23
+msgid "Software Version"
+msgstr "软件版本"
+
+#: ../../Supported_features.rst:23
+msgid "Support for discovery and advertisement of used software and it’s version"
+msgstr "支持使用过的软件及其版本的发现和广告"
+
+#: ../../Supported_features.rst:25
+msgid "`XEP-0115 <http://xmpp.org/extensions/xep-0115.html>`__"
+msgstr "`XEP-0115 <http://xmpp.org/extensions/xep-0115.html>`__"
+
+#: ../../Supported_features.rst:25
+msgid "Entity Capabilities"
+msgstr "实体功能"
+
+#: ../../Supported_features.rst:25 ../../Supported_features.rst:27
+msgid ""
+"Support for discovery of features supported and advertised by clients and"
+" servers"
+msgstr "支持发现客户端和服务器支持和宣传的功能"
+
+#: ../../Supported_features.rst:27
+msgid "`XEP-0138 <http://xmpp.org/extensions/xep-0138.html>`__"
+msgstr "`XEP-0138 <http://xmpp.org/extensions/xep-0138.html>`__"
+
+#: ../../Supported_features.rst:27
+msgid "Compression of data exchanged between client and server"
+msgstr "压缩客户端和服务器之间交换的数据"
+
+#: ../../Supported_features.rst:29
+msgid "`XEP-0153 <http://xmpp.org/extensions/xep-0153.html>`__"
+msgstr "`XEP-0153 <http://xmpp.org/extensions/xep-0153.html>`__"
+
+#: ../../Supported_features.rst:29
+msgid "vCard-Based Avatars"
+msgstr "基于 vCard 的头像"
+
+#: ../../Supported_features.rst:29
+msgid "Storage of user avatar inside vCard"
+msgstr "在 vCard 中存储用户头像"
+
+#: ../../Supported_features.rst:31
+msgid "`XEP-0163 <http://xmpp.org/extensions/xep-0163.html>`__"
+msgstr "`XEP-0163 <http://xmpp.org/extensions/xep-0163.html>`__"
+
+#: ../../Supported_features.rst:31
+msgid "Personal Eventing Protocol"
+msgstr "个人事件协议"
+
+#: ../../Supported_features.rst:31
+msgid "Support for PEP protocol extension"
+msgstr "支持 PEP 协议扩展"
+
+#: ../../Supported_features.rst:33
+msgid "`XEP-0172 <http://xmpp.org/extensions/xep-0172.html>`__"
+msgstr "`XEP-0172 <http://xmpp.org/extensions/xep-0172.html>`__"
+
+#: ../../Supported_features.rst:33
+msgid "User Nickname"
+msgstr "用户昵称"
+
+#: ../../Supported_features.rst:33
+msgid "Support for communication of user nickname"
+msgstr "支持用户昵称的交流"
+
+#: ../../Supported_features.rst:35
+msgid "`XEP-0175 <https://xmpp.org/extensions/xep-0175.html>`__"
+msgstr "`XEP-0175 <https://xmpp.org/extensions/xep-0175.html>`__"
+
+#: ../../Supported_features.rst:35
+msgid "Best Practices for Use of SASL ANONYMOUS"
+msgstr "使用 SASL ANONYMOUS 的最佳实践"
+
+#: ../../Supported_features.rst:35
+msgid "Anonymous authentication"
+msgstr "匿名认证"
+
+#: ../../Supported_features.rst:37
+msgid "`XEP-0198 <http://xmpp.org/extensions/xep-0198.html>`__"
+msgstr "`XEP-0198 <http://xmpp.org/extensions/xep-0198.html>`__"
+
+#: ../../Supported_features.rst:37
+msgid "Stream Management"
+msgstr "流管理"
+
+#: ../../Supported_features.rst:39
+msgid "`XEP-0199 <http://xmpp.org/extensions/xep-0199.html>`__"
+msgstr "`XEP-0199 <http://xmpp.org/extensions/xep-0199.html>`__"
+
+#: ../../Supported_features.rst:39
+msgid "XMPP Ping"
+msgstr "XMPP Ping"
+
+#: ../../Supported_features.rst:41
+msgid "`XEP-0203 <http://xmpp.org/extensions/xep-0203.html>`__"
+msgstr "`XEP-0203 <http://xmpp.org/extensions/xep-0203.html>`__"
+
+#: ../../Supported_features.rst:41
+msgid "Delayed Delivery"
+msgstr "延迟交付"
+
+#: ../../Supported_features.rst:41
+msgid "Information about delayed delivery of stanza"
+msgstr "关于延迟交付节的信息"
+
+#: ../../Supported_features.rst:43
+msgid "`XEP-0280 <http://xmpp.org/extensions/xep-0280.html>`__"
+msgstr "`XEP-0280 <http://xmpp.org/extensions/xep-0280.html>`__"
+
+#: ../../Supported_features.rst:43
+msgid "Message Carbons"
+msgstr "消息碳"
+
+#: ../../Supported_features.rst:43
+msgid "Support for delivery of messages sent to other resources"
+msgstr "支持传递发送到其他资源的消息"
+
+#: ../../Supported_features.rst:45
+msgid "`XEP-0352 <http://xmpp.org/extensions/xep-0352.html>`__"
+msgstr "`XEP-0352 <http://xmpp.org/extensions/xep-0352.html>`__"
+
+#: ../../Supported_features.rst:45
+msgid "Client State Indication"
+msgstr "客户端状态指示"
+
+#: ../../Supported_features.rst:45
+msgid "Notifying server about current state of XMPP client"
+msgstr "通知服务器 XMPP 客户端的当前状态"
+
+#: ../../Supported_features.rst:47
+msgid "Optimizations designed for mobile devices"
+msgstr "为移动设备设计的优化"
+
+#: ../../index.rst:4
+msgid "TigaseSwift Development Guide - Version 1.0.0"
+msgstr "TigaseSwift 开发指南 - 版本 1.0.0"
