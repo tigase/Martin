@@ -172,6 +172,9 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
         
         guard stanza.xmlns == StreamManagementModule.SM_XMLNS else {
+            guard isStanza(stanza) else {
+                return false;
+            }
             queue.sync {
                 ackH.incrementIncoming();
                 guard !self.scheduledAck else {
@@ -212,13 +215,8 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             return;
         }
         
-        if stanza.xmlns == StreamManagementModule.SM_XMLNS {
-            switch stanza.name {
-            case "a", "r":
-                return;
-            default:
-                break;
-            }
+        guard isStanza(stanza) else {
+            return;
         }
         
         queue.sync {
@@ -230,6 +228,15 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
         }
     }
     
+    open func isStanza(_ stanza: Stanza) -> Bool {
+        switch stanza.name {
+        case "iq", "message", "presence":
+            return true;
+        default:
+            return false;
+        }
+    }
+
     /// Send ACK request to server
     open func request() {
         guard lastRequestTimestamp.timeIntervalSinceNow < 1 else {
