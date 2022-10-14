@@ -21,7 +21,7 @@
 
 import Foundation
 
-protocol VCardEntryItemTypeAware {
+public protocol VCardEntryItemTypeAware {
     var types: [VCard.EntryType] { get set }
 }
 
