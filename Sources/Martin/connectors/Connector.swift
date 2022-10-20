@@ -36,6 +36,8 @@ public protocol Connector: AnyObject {
     
     var currentEndpoint: ConnectorEndpoint? { get }
     
+    var supportedChannelBindings: [ChannelBinding] { get }
+    
     init(context: Context);
     
     func activate(feature: ConnectorFeature);
@@ -52,6 +54,17 @@ public protocol Connector: AnyObject {
     
     func prepareEndpoint(withSeeOtherHost seeOtherHost: String?) -> ConnectorEndpoint?;
     
+    func channelBindingData(type: ChannelBinding) throws -> Data;
+}
+
+public enum ChannelBinding: String {
+    case tlsServerEndPoint = "tls-server-end-point"
+    case tlsUnique = "tls-unique"
+    case tlsExporter = "tls-exporter"
+    
+    public static func parse(element: Element) -> [ChannelBinding] {
+        return element.compactMapChildren({ $0.attribute("type") }).compactMap({ ChannelBinding(rawValue: $0) });
+    }
 }
 
 public protocol ConnectorEndpoint {

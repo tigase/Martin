@@ -33,6 +33,8 @@ extension StreamFeatures.StreamFeature {
     
     public static let sasl2 = StreamFeatures.StreamFeature(name: "authentication", xmlns: "urn:xmpp:sasl:2");
     
+    public static let saslChannelBinding = StreamFeatures.StreamFeature(name: "sasl-channel-binding", xmlns: "urn:xmpp:sasl-cb:0");
+    
 }
 
 /**
@@ -102,7 +104,9 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
     
     public override init() {
         super.init();
+        self.addMechanism(ScramMechanism.ScramSha256Plus());
         self.addMechanism(ScramMechanism.ScramSha256());
+        self.addMechanism(ScramMechanism.ScramSha1Plus());
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
         self.addMechanism(AnonymousMechanism());

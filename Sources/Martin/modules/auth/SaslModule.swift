@@ -57,6 +57,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
     private var _mechanismsOrder = [String]();
     
     private var supportedMechanisms: [String] = [];
+    
         
     /// Order of mechanisms preference
     open var mechanismsOrder:[String] {
@@ -84,7 +85,9 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
     
     public override init() {
         super.init();
+        self.addMechanism(ScramMechanism.ScramSha256Plus());
         self.addMechanism(ScramMechanism.ScramSha256());
+        self.addMechanism(ScramMechanism.ScramSha1Plus());
         self.addMechanism(ScramMechanism.ScramSha1());
         self.addMechanism(PlainMechanism());
         self.addMechanism(AnonymousMechanism());

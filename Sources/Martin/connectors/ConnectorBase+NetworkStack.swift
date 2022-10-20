@@ -65,6 +65,10 @@ extension ConnectorBase {
                 delegate?.read(data: data);
             }
         }
+        
+        public func processor<T>() -> T? {
+            return processors.compactMap({ $0 as? T }).first;
+        }
     }
 
     open class NetworkProcessor: NetworkDelegate {

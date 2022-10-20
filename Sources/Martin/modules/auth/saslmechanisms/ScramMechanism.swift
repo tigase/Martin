@@ -84,15 +84,27 @@ open class ScramMechanism: SaslMechanism {
     public static func ScramSha256() -> ScramMechanism {
         let clientKey = "Client Key".data(using: .utf8)!;
         let serverKey = "Server Key".data(using: .utf8)!;
-        return ScramMechanism(mechanismName: "SCRAM-SHA-256", algorithm: ScramSHA256(), clientKey: clientKey, serverKey: serverKey);
+        return ScramMechanism(mechanismName: "SCRAM-SHA-256", algorithm: ScramSHA256(), clientKey: clientKey, serverKey: serverKey, supportsChannelBinding: false);
+    }
+
+    public static func ScramSha256Plus() -> ScramMechanism {
+        let clientKey = "Client Key".data(using: .utf8)!;
+        let serverKey = "Server Key".data(using: .utf8)!;
+        return ScramMechanism(mechanismName: "SCRAM-SHA-256-PLUS", algorithm: ScramSHA256(), clientKey: clientKey, serverKey: serverKey, supportsChannelBinding: true);
     }
 
     public static func ScramSha1() -> ScramMechanism {
         let clientKey = "Client Key".data(using: .utf8)!;
         let serverKey = "Server Key".data(using: .utf8)!;
-        return ScramMechanism(mechanismName: "SCRAM-SHA-1", algorithm: ScramSHA1(), clientKey: clientKey, serverKey: serverKey);
+        return ScramMechanism(mechanismName: "SCRAM-SHA-1", algorithm: ScramSHA1(), clientKey: clientKey, serverKey: serverKey, supportsChannelBinding: false);
     }
-        
+
+    public static func ScramSha1Plus() -> ScramMechanism {
+        let clientKey = "Client Key".data(using: .utf8)!;
+        let serverKey = "Server Key".data(using: .utf8)!;
+        return ScramMechanism(mechanismName: "SCRAM-SHA-1-PLUS", algorithm: ScramSHA1(), clientKey: clientKey, serverKey: serverKey, supportsChannelBinding: true);
+    }
+
     /// Name of mechanism
     public let name: String;
     public private(set) var status: SaslMechanismStatus = .new {
@@ -110,18 +122,31 @@ open class ScramMechanism: SaslMechanism {
     private var saslData: SaslData?;
     
     public let supportsUpgrade = true;
-
-    public init(mechanismName: String, algorithm: ScramAlgorithm, clientKey: Data, serverKey: Data) {
+    public let supportsChannelBinding: Bool;
+    
+    public init(mechanismName: String, algorithm: ScramAlgorithm, clientKey: Data, serverKey: Data, supportsChannelBinding: Bool) {
         self.name = mechanismName;
         self.algorithm = algorithm;
         self.clientKeyData = clientKey;
         self.serverKeyData = serverKey;
+        self.supportsChannelBinding = supportsChannelBinding;
     }
     
     public func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.stream) {
             status = .new;
         }
+    }
+    
+    private func selectChannelBinding(context: Context) -> ChannelBinding? {
+        let serverBindings = serverSupportedChannelBindings(context: context);
+        let localBindings = (context as? XMPPClient)?.connector?.supportedChannelBindings ?? [];
+        for binding in localBindings {
+            if serverBindings.contains(binding) {
+                return binding;
+            }
+        }
+        return nil;
     }
 
     open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
@@ -140,7 +165,22 @@ open class ScramMechanism: SaslMechanism {
             case 0:
                 data.conce = randomString();
                 
-                var sb = "n,";
+                
+                var sb = "";
+                
+                if supportsChannelBinding, let binding = selectChannelBinding(context: context) {
+                    sb = "p=\(binding.rawValue),";
+                    do {
+                        data.channelBindingData = try (context as? XMPPClient)?.connector?.channelBindingData(type: binding);
+                    } catch let e as XMPPError {
+                        guard e.condition == .feature_not_implemented else {
+                            throw e;
+                        }
+                        sb = "n,";
+                    }
+                } else {
+                    sb = "n,";
+                }
                 sb += ",";
                 data.cb = sb;
                 
@@ -186,9 +226,9 @@ open class ScramMechanism: SaslMechanism {
                     throw ClientSaslException.wrongNonce;
                 }
 
-                let c = data.cb.data(using: .utf8)?.base64EncodedString();
+                let c = ((data.cb.data(using: .utf8)!) + (data.channelBindingData ?? Data())).base64EncodedString();
                 
-                var clientFinalMessage = "c=\(c!),r=\(nonce)";
+                var clientFinalMessage = "c=\(c),r=\(nonce)";
                 let part = ",\(msg),";
                 data.authMessage = data.clientFirstMessageBare! + part + clientFinalMessage;
                 
@@ -291,10 +331,20 @@ open class ScramMechanism: SaslMechanism {
     open func isAllowedToUse(_ context: Context) -> Bool {
         switch context.connectionConfiguration.credentials {
         case .password(_, _, _):
+            if supportsChannelBinding {
+                return selectChannelBinding(context: context) != nil;
+            }
             return true;
         default:
             return false;
         }
+    }
+    
+    private func serverSupportedChannelBindings(context: Context) -> [ChannelBinding] {
+        guard let bindings = context.module(.streamFeatures).streamFeatures.get(.saslChannelBinding) else {
+            return [];
+        }
+        return ChannelBinding.parse(element: bindings)
     }
     
     func hi(password: Data, salt: Data, iterations: Int) -> Data {
@@ -368,5 +418,6 @@ open class ScramMechanism: SaslMechanism {
         var saltedCacheId: String?;
         var saltedPassword: Data?;
         var stage: Int = 0;
+        var channelBindingData: Data?;
     }
 }

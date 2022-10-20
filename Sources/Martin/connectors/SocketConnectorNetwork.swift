@@ -22,6 +22,7 @@
 import Foundation
 import Combine
 import Network
+import CryptoKit
 
 /**
  Implementation of a C2S XMPP connector based on the `Network.framework` (requires custom SSL/TLS implementation)
@@ -30,6 +31,13 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     
     public class var supportedProtocols: [ConnectorProtocol] {
         return [ConnectorProtocol.XMPP, ConnectorProtocol.XMPPS];
+    }
+    
+    public var supportedChannelBindings: [ChannelBinding] {
+        guard let sslProcessor: SSLNetworkProcessor = networkStack.processor() else {
+            return [];
+        }
+        return sslProcessor.supportedChannelBindings;
     }
     
     /// Internal processing queue
@@ -368,6 +376,13 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         self.connection?.send(content: data, completion: completion.sendCompletion)
     }
 
+    public func channelBindingData(type: ChannelBinding) throws -> Data {
+        guard let processor: SSLNetworkProcessor = networkStack.processor() else {
+            throw XMPPError(condition: .feature_not_implemented);
+        }
+        return try processor.channelBindingData(type: type);
+    }
+    
     public struct Endpoint: ConnectorEndpoint, CustomStringConvertible, Equatable {
         
         public let proto: ConnectorProtocol;

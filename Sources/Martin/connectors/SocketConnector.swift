@@ -33,6 +33,10 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         return [ConnectorProtocol.XMPP, ConnectorProtocol.XMPPS];
     }
     
+    public var supportedChannelBindings: [ChannelBinding] {
+        return [];
+    }
+    
     private var inStream: InputStream?
     private var outStream: OutputStream? {
         didSet {
@@ -586,6 +590,10 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         inStream?.remove(from: RunLoop.current, forMode: RunLoop.Mode.default);
         outStream?.remove(from: RunLoop.current, forMode: RunLoop.Mode.default);
         sslCertificateValidated = false;
+    }
+    
+    public func channelBindingData(type: ChannelBinding) throws -> Data {
+        throw XMPPError(condition: .feature_not_implemented)
     }
     
     class WriteBuffer {

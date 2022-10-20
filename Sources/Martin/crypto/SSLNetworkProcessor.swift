@@ -27,6 +27,16 @@ public protocol SSLNetworkProcessor: AnyObject {
     var certificateValidation: SSLCertificateValidation { get set }
     var certificateValidationFailed: ((SecTrust?)->Void)? { get set }
     
+    var supportedChannelBindings: [ChannelBinding] { get }
+    
     func setALPNProtocols(_: [String]);
+ 
+    func channelBindingData(type: ChannelBinding) throws -> Data
+}
+
+public protocol SSLCertificate {
+    
+    var algorithmName: String { get }
+    func derCertificateData() -> Data?;
     
 }
