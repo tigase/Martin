@@ -159,7 +159,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         }
                         
         let conn = connection;
-        connection?.stateUpdateHandler = { [weak self] state in
+        connection?.stateUpdateHandler = { [weak self, weak conn] state in
             guard let that = self else {
                 return;
             }
@@ -175,7 +175,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             case .preparing:
                 that.state = .connecting;
             case .cancelled, .setup:
-                if let currConn = that.connection, conn === currConn {
+                if let currConn = that.connection, let _conn = conn, _conn === currConn {
                     that.state = .disconnected();
                 }
             case .failed(_):
@@ -212,10 +212,10 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     }
     
     private func scheduleRead() {
-        self.connection?.receive(minimumIncompleteLength: 1, maximumLength: 4096 * 2, completion: { data, context, complete, error in
+        self.connection?.receive(minimumIncompleteLength: 1, maximumLength: 4096 * 2, completion: { [weak self] data, context, complete, error in
             if let data = data {
-                self.networkStack.read(data: data);
-                self.scheduleRead();
+                self?.networkStack.read(data: data);
+                self?.scheduleRead();
             }
         })
     }
