@@ -200,8 +200,9 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         
         func resolve(timeout: TimeInterval) {
             queue.async {
-            let result: DNSServiceErrorType = self.srvName.withCString { (srvNameC) -> DNSServiceErrorType in
-                let sdErr = DNSServiceQueryRecord(&self.sdRef, kDNSServiceFlagsReturnIntermediates, UInt32(kDNSServiceInterfaceIndexAny), srvNameC, UInt16(kDNSServiceType_SRV), UInt16(kDNSServiceClass_IN), QueryRecordCallback, XMPPDNSSrvResolver.bridge(self));
+            let selfPtr = XMPPDNSSrvResolver.bridge(self);
+            let result: DNSServiceErrorType = self.srvName.withCString { [weak self] (srvNameC) -> DNSServiceErrorType in
+                let sdErr = DNSServiceQueryRecord(&self!.sdRef, kDNSServiceFlagsReturnIntermediates, UInt32(kDNSServiceInterfaceIndexAny), srvNameC, UInt16(kDNSServiceType_SRV), UInt16(kDNSServiceClass_IN), QueryRecordCallback, selfPtr);
                 return sdErr;
             }
             switch result {
@@ -217,12 +218,15 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                     return;
                 }
                 self.sdFdReadSource = DispatchSource.makeReadSource(fileDescriptor: self.sdFd, queue: self.queue);
-                self.sdFdReadSource?.setEventHandler(handler: {
+                self.sdFdReadSource?.setEventHandler(handler: { [weak self] in
+                    guard let that = self else {
+                        return;
+                    }
                     // lets process data..
                     let res = DNSServiceProcessResult(sdRef);
                     if res != kDNSServiceErr_NoError {
                         // we have an error..
-                        self.fail(withDNSError: res);
+                        that.fail(withDNSError: res);
                     }
                 })
                 self.sdFdReadSource?.setCancelHandler(handler: {
@@ -231,8 +235,8 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                 self.sdFdReadSource?.resume();
                 
                 self.timeoutTimer = DispatchSource.makeTimerSource(flags: [], queue: self.queue);
-                self.timeoutTimer?.setEventHandler(handler: {
-                    self.fail(withError: .timeout);
+                self.timeoutTimer?.setEventHandler(handler: { [weak self] in
+                    self?.fail(withError: .timeout);
                 })
                 let deadline = DispatchTime(uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds + UInt64(timeout * Double(NSEC_PER_SEC)));
                 self.timeoutTimer?.schedule(deadline: deadline, repeating: .never, leeway: .never);
