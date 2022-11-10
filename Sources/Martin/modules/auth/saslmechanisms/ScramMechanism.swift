@@ -44,6 +44,8 @@ open class ScramMechanism<Hash: HashAlgorithm>: Sasl2UpgradableMechanism {
     private let CLIENT_KEY_DATA = "Client Key".data(using: .utf8)!;
     private let SERVER_KEY_DATA = "Server Key".data(using: .utf8)!;
     
+    private let SASL2_UPGRADE_0_XMLNS = "urn:xmpp:scram-upgrade:0";
+    
     /// Name of mechanism
     public let name: String;
     public private(set) var status: SaslMechanismStatus = .new {
@@ -238,18 +240,18 @@ open class ScramMechanism<Hash: HashAlgorithm>: Sasl2UpgradableMechanism {
         }
     }
     
-    open func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element {
-        guard let saltStr = parameters.firstChild(name: "salt")?.value, let salt = Data(base64Encoded: saltStr) else {
+    open func evaluateUpgrade(parameters: [Element], context: Context) async throws -> Element {
+        guard let saltEl = parameters.first(where: { $0.name == "salt" && $0.xmlns == SASL2_UPGRADE_0_XMLNS}), let saltStr = saltEl.value, let salt = Data(base64Encoded: saltStr) else {
             throw XMPPError(condition: .bad_request, message: "Missing salt");
         }
-        guard let iterationsStr = parameters.firstChild(name: "iterations")?.value, let iterations = Int(iterationsStr) else {
+        guard let iterationsStr = saltEl.attribute("iterations"), let iterations = Int(iterationsStr) else {
             throw XMPPError(condition: .bad_request, message: "Missing iterations");
         }
         guard let password = context.connectionConfiguration.credentials.password else {
             throw XMPPError(condition: .feature_not_implemented, message: "Cannot upgrade SCRAM - no password!");
         }
         let saltedPassword = hi(password: normalize(password), salt: salt, iterations: iterations);
-        return Element(name: "hash", cdata: saltedPassword.base64EncodedString());
+        return Element(name: "hash", xmlns: SASL2_UPGRADE_0_XMLNS, cdata: saltedPassword.base64EncodedString());
     }
     
     open func isAllowedToUse(_ context: Context, features: StreamFeatures) -> Bool {

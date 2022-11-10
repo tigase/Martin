@@ -67,7 +67,7 @@ public protocol Sasl2MechanismFeaturesAware: SaslMechanism {
 
 public protocol Sasl2UpgradableMechanism: SaslMechanism {
     
-    func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element
+    func evaluateUpgrade(parameters: [Element], context: Context) async throws -> Element
     
 }
 

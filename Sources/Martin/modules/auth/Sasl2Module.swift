@@ -97,7 +97,7 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
                 try await processChallenge(elem, mechanism: mechanism);
             case "continue":
                 try await processContinue(elem, mechanism: mechanism);
-            case "data", "parameters":
+            case "task-data":
                 guard let upgradable = mechanism as? Sasl2UpgradableMechanism else {
                     throw XMPPError(condition: .feature_not_implemented);
                 }
@@ -208,7 +208,7 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
             }
             let response = try await write(stanza: Stanza(name: "next", xmlns: Sasl2Module.SASL2_XMLNS, {
                 Attribute("task", value: "UPGR-\(upgrade)")
-            }), for: .init(names: ["data", "parameters", "failure", "success"], xmlns: Sasl2Module.SASL2_XMLNS));
+            }), for: .init(names: ["task-data", "failure", "success"], xmlns: Sasl2Module.SASL2_XMLNS));
             try await handleResponse(stanza: response, mechanism: mechanism)
         } else {
             throw XMPPError(condition: .feature_not_implemented, message: "Required unsupported SASL2 task", stanza: stanza);
@@ -216,8 +216,10 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
     }
     
     private func saslUpgrade(_ stanza: Stanza, mechanism: Sasl2UpgradableMechanism) async throws {
-        let hash = try await mechanism.evaluateUpgrade(parameters: stanza.element, context: context!);
-        let response = try await write(stanza: Stanza(element: hash), for: .init(names: ["failure","success"], xmlns: Sasl2Module.SASL2_XMLNS));
+        let hash = try await mechanism.evaluateUpgrade(parameters: stanza.children, context: context!);
+        let response = try await write(stanza: Stanza(element: Element(name: "task-data", xmlns: Sasl2Module.SASL2_XMLNS, {
+            hash
+        })), for: .init(names: ["failure","success"], xmlns: Sasl2Module.SASL2_XMLNS));
         try await handleResponse(stanza: response, mechanism: mechanism);
     }
     
