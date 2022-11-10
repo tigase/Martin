@@ -33,6 +33,18 @@ extension StreamFeatures.StreamFeature {
     public static let ibrPreAuth = StreamFeatures.StreamFeature(name: "register", xmlns: "urn:xmpp:invite");
 }
 
+public enum RegistrationError: Error {
+
+    public static func from(error: XMPPError) -> RegistrationError? {
+        guard let query = error.stanza?.firstChild(name: "query", xmlns: "jabber:iq:register"), let x = query.firstChild(name: "x", xmlns: "jabber:x:data"), let dataForm = DataForm(element: x) else {
+            return nil;
+        }
+        return .moreDataRequired(dataForm);
+    }
+    
+    case moreDataRequired(DataForm)
+}
+
 /**
  Module provides support for [XEP-0077: In-Band Registration]
  
@@ -144,7 +156,14 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Send
                 Element(name: "remove")
             })
         });
-        return try await write(iq: iq);
+        do {
+            return try await write(iq: iq);
+        } catch let err as XMPPError {
+            guard let regError = RegistrationError.from(error: err) else {
+                throw err;
+            }
+            throw regError;
+        }
     }
     
     open func changePassword(for serviceJid: JID? = nil, newPassword: String) async throws -> String {
@@ -158,8 +177,15 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Send
                 Element(name: "password", cdata: newPassword)
             })
         });
-        try await write(iq: iq);
-        return newPassword;
+        do {
+            try await write(iq: iq);
+            return newPassword;
+        } catch let err as XMPPError {
+            guard let regError = RegistrationError.from(error: err) else {
+                throw err;
+            }
+            throw regError;
+        }
     }
     
     @discardableResult

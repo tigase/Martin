@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Combine
 
 public struct ConnectionConfiguration {
     public var userJid: BareJID = BareJID("");
@@ -27,11 +28,29 @@ public struct ConnectionConfiguration {
     public var nickname: String? = nil;
     
     // how about enum with multiple password providers?
-    public var credentials: Credentials = .none;
+    public var credentials: Credentials = .init() {
+        didSet {
+            if oldValue != credentials {
+                self.credentialsPublisher.send(credentials);
+            }
+        }
+    }
+    public let credentialsPublisher = PassthroughSubject<Credentials, Never>();
     
     public var disableCompression: Bool = true;
     public var disableTLS: Bool = false;
     public var useSeeOtherHost: Bool = true;
+    
+    /// List of available to use SASL mechanism in order of preference
+    public var saslMechanisms: [SaslMechanism] =
+        FastMechanism<HashAlgorithms.SHA256>.mechanisms() + [
+            ScramSha256Mechanism(withChannelBinding: true),
+            ScramSha256Mechanism(withChannelBinding: false),
+            ScramSha1Mechanism(withChannelBinding: true),
+            ScramSha1Mechanism(withChannelBinding: false),
+            PlainMechanism(),
+            AnonymousMechanism()
+        ];
     
     public var connectorOptions: ConnectorOptions = SocketConnector.Options();
     
@@ -54,9 +73,4 @@ public protocol ConnectorOptions {
     var connector: Connector.Type { get }
     
     init()
-}
-
-public enum Credentials {
-    case none
-    case password(password: String, authenticationName: String? = nil, cache: ScramSaltedPasswordCacheProtocol? = nil)
 }

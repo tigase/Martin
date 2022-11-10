@@ -33,8 +33,6 @@ extension StreamFeatures.StreamFeature {
     
     public static let sasl2 = StreamFeatures.StreamFeature(name: "authentication", xmlns: "urn:xmpp:sasl:2");
     
-    public static let saslChannelBinding = StreamFeatures.StreamFeature(name: "sasl-channel-binding", xmlns: "urn:xmpp:sasl-cb:0");
-    
 }
 
 /**
@@ -61,10 +59,6 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
 
     public let features = [String]();
     
-    private var lock = UnfairLock();
-    private var mechanisms = [String:SaslMechanism]();
-    private var _mechanismsOrder = [String]();
-    
     private var supportedMechanisms: [String] = [];
         
     open var software: String?;
@@ -78,62 +72,20 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
         return context?.module(.streamFeatures).streamFeatures.contains(.sasl2) ?? false;
     }
     
-    /// Order of mechanisms preference
-    open var mechanismsOrder:[String] {
-        get {
-            return lock.with({
-                return _mechanismsOrder;
-            })
-        }
-        set {
-            lock.with({
-                var value = newValue;
-                for name in newValue {
-                    if mechanisms[name] == nil {
-                        value.remove(at: value.firstIndex(of: name)!);
-                    }
-                }
-                for name in mechanisms.keys {
-                    if value.firstIndex(of: name) == nil {
-                        mechanisms.removeValue(forKey: name);
-                    }
-                }
-            })
-        }
+    open var mechanisms: [SaslMechanism] {
+        return context?.connectionConfiguration.saslMechanisms ?? [];
     }
     
     public override init() {
         super.init();
-        self.addMechanism(ScramMechanism.ScramSha256Plus());
-        self.addMechanism(ScramMechanism.ScramSha256());
-        self.addMechanism(ScramMechanism.ScramSha1Plus());
-        self.addMechanism(ScramMechanism.ScramSha1());
-        self.addMechanism(PlainMechanism());
-        self.addMechanism(AnonymousMechanism());
     }
     
     open func reset(scopes: Set<ResetableScope>) {
-        for mechanism in mechanisms.values {
+        for mechanism in mechanisms {
             mechanism.reset(scopes: scopes);
         }
     }
     
-    /**
-     Add implementation of `SaslMechanism`
-     - parameter mechanism: implementation of mechanism
-     - parameter first: add as best mechanism to use
-     */
-    open func addMechanism(_ mechanism:SaslMechanism, first:Bool = false) {
-        lock.with({
-            self.mechanisms[mechanism.name] = mechanism;
-            if (first) {
-                self._mechanismsOrder.insert(mechanism.name, at: 0);
-            } else {
-                self._mechanismsOrder.append(mechanism.name);
-            }
-        })
-    }
-        
     private func handleResponse(stanza elem: Stanza, mechanism: SaslMechanism) async throws {
         do {
             switch elem.name {
@@ -146,7 +98,10 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
             case "continue":
                 try await processContinue(elem, mechanism: mechanism);
             case "data", "parameters":
-                try await saslUpgrade(elem, mechanism: mechanism);
+                guard let upgradable = mechanism as? Sasl2UpgradableMechanism else {
+                    throw XMPPError(condition: .feature_not_implemented);
+                }
+                try await saslUpgrade(elem, mechanism: upgradable);
             default:
                 throw XMPPError(condition: .feature_not_implemented, stanza: elem);
             }
@@ -165,22 +120,29 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
         }
     }
     
+    private func mechanism(named: String) -> SaslMechanism? {
+        return mechanisms.first(where: { $0.name == named });
+    }
+    
     /**
      Begin SASL authentication process
      */
     open func login() async throws {
-        guard let mechanism = guessSaslMechanism() else {
+        guard let streamFeatures = context?.module(.streamFeatures).streamFeatures, let sasl2 = streamFeatures.sasl2 else {
             throw SaslError.invalid_mechanism;
         }
         
-        let sasl2Features = Sasl2InlineStageFeatures(streamFeatures: context?.module(.streamFeatures).streamFeatures);
-        
-        let upgrades = context?.module(.streamFeatures).streamFeatures.get(.sasl2)?.filterChildren(name: "upgrade").compactMap({ $0.value }).filter({ mechanisms[$0]?.supportsUpgrade ?? false });
+        let features = sasl2.inline;
+        guard let mechanism = guessSaslMechanism(features: streamFeatures) else {
+            throw SaslError.invalid_mechanism;
+        }
+
+        let upgrades = sasl2.upgrades.filter({ self.mechanism(named: $0) is Sasl2UpgradableMechanism});
         
         let result = try mechanism.evaluateChallenge(nil, context: context!);
         let auth = Stanza(name: "authenticate", xmlns: Sasl2Module.SASL2_XMLNS, {
             Attribute("mechanism", value: mechanism.name);
-            Attribute("upgrade", value: upgrades?.first)
+            Attribute("upgrade", value: upgrades.first)
             Element(name: "initial-response", cdata: result)
             Element(name: "user-agent", {
                 Attribute("id", value: self.deviceId)
@@ -188,7 +150,12 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
                 Element(name: "device", cdata: self.deviceName ?? context?.connectionConfiguration.resource)
             })
             for inline in (context?.modules(Sasl2InlineProtocol.self) ?? []) {
-                if let feature = inline.featureFor(stage: .afterSasl(sasl2Features)) {
+                if let feature = inline.featureFor(stage: .afterSasl(features)) {
+                    feature;
+                }
+            }
+            for inline in self.mechanisms.compactMap({ $0 as? Sasl2MechanismFeaturesAware }) {
+                if let feature = inline.feature(context: context!, sasl2: sasl2) {
                     feature;
                 }
             }
@@ -196,19 +163,34 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
                 Element(name: "bind", xmlns: "urn:xmpp:bind:0", {
                     Element(name: "tag", cdata: "Martin")
                     if let inlines = context?.modules(Sasl2InlineProtocol.self), !inlines.isEmpty {
-                        inlines.compactMap({ $0.featureFor(stage: .afterBind(Bind2InlineStageFeatures(sasl2Features: sasl2Features))) })
+                        inlines.compactMap({ $0.featureFor(stage: .afterBind(Bind2InlineStageFeatures(sasl2Features: features))) })
                     }
                 })
             }
         });
                 
-        let response = try await write(stanza: auth, for: .init(names: ["success", "failure", "challenge", "continue"], xmlns: Sasl2Module.SASL2_XMLNS));
-        try await handleResponse(stanza: response, mechanism: mechanism);
+        do {
+            let response = try await write(stanza: auth, for: .init(names: ["success", "failure", "challenge", "continue"], xmlns: Sasl2Module.SASL2_XMLNS));
+            try await handleResponse(stanza: response, mechanism: mechanism);
+        } catch SaslError.not_authorized, SaslError.invalid_mechanism, SaslError.server_not_trusted {
+            if mechanism is FastMechanismProtocol {
+                mechanism.reset(scopes: [.stream]);
+                context?.connectionConfiguration.credentials.fastToken = nil;
+                do {
+                    try await login();
+                } catch {
+                    // some servers may fail to accept subsequent auth request, so lets assume it is temporary failure and retry..
+                    throw SaslError.temporary_auth_failure;
+                }
+            } else {
+                throw SaslError.not_authorized;
+            }
+        }
     }
     
     private func processContinue(_ stanza: Stanza, mechanism: SaslMechanism) async throws {
-        if mechanism.status != .completed, let data = stanza.firstChild(name: "additional-data")?.value {
-            _ = try mechanism.evaluateChallenge(data, context: context!);
+        if mechanism.status != .completed, let additionalData = stanza.firstChild(name: "additional-data") {
+            _ = try mechanism.evaluateChallenge(additionalData.value, context: context!);
         }
         
         if mechanism.status == .completed {
@@ -221,7 +203,7 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
         let tasks = stanza.firstChild(name: "tasks")?.filterChildren(name: "task").compactMap({ $0.value }) ?? [];
         
         if let upgrade = tasks.first(where: { $0.starts(with: "UPGR-") })?.dropFirst(5) {
-            guard let mechanism = mechanisms[String(upgrade)] else {
+            guard let mechanism = self.mechanism(named: String(upgrade)) else {
                 throw XMPPError(condition: .feature_not_implemented, message: "Requested upgrade to unsupported mechanism: \(upgrade)");
             }
             let response = try await write(stanza: Stanza(name: "next", xmlns: Sasl2Module.SASL2_XMLNS, {
@@ -233,18 +215,21 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
         }
     }
     
-    private func saslUpgrade(_ stanza: Stanza, mechanism: SaslMechanism) async throws {
+    private func saslUpgrade(_ stanza: Stanza, mechanism: Sasl2UpgradableMechanism) async throws {
         let hash = try await mechanism.evaluateUpgrade(parameters: stanza.element, context: context!);
         let response = try await write(stanza: Stanza(element: hash), for: .init(names: ["failure","success"], xmlns: Sasl2Module.SASL2_XMLNS));
         try await handleResponse(stanza: response, mechanism: mechanism);
     }
     
     private func processSuccess(_ stanza: Stanza, mechanism: SaslMechanism) throws {
-        if mechanism.status != .completed, let data = stanza.firstChild(name: "additional-data")?.value {
-            _ = try mechanism.evaluateChallenge(data, context: context!);
+        if mechanism.status != .completed, let additionalData = stanza.firstChild(name: "additional-data") {
+            _ = try mechanism.evaluateChallenge(additionalData.value, context: context!);
         }
         for inline in self.context?.modules(Sasl2InlineProtocol.self) ?? [] {
             inline.process(result: stanza.element, for: .afterSasl);
+        }
+        for inline in self.mechanisms.compactMap({ $0 as? Sasl2MechanismFeaturesAware }) {
+            inline.process(result: stanza.element, context: context!);
         }
         if let bound = stanza.element.firstChild(name: "bound", xmlns: "urn:xmpp:bind:0") {
             self.context?.boundJid = JID(stanza.firstChild(name: "authorization-identifier")?.value);
@@ -284,21 +269,53 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
         return streamFeatures.get(.sasl2)?.filterChildren(name: "mechanism").compactMap({ $0.value }) ?? [];
     }
     
-    func guessSaslMechanism() -> SaslMechanism? {
-        let supported = self.supportedMechanisms;
-        for name in mechanismsOrder {
-            if let mechanism = mechanisms[name] {
-                if (!supported.contains(name)) {
-                    continue;
-                }
-                if (mechanism.isAllowedToUse(context!)) {
-                    return mechanism;
-                }
+    func guessSaslMechanism(features: StreamFeatures) -> SaslMechanism? {
+        guard let sasl2 = features.sasl2 else {
+            return nil;
+        }
+        let supported = sasl2.mechanisms + (sasl2.inline.fast?.mechanisms ?? []);
+        for mechanism in mechanisms {
+            if (!supported.contains(mechanism.name)) {
+                continue;
+            }
+            if (mechanism.isAllowedToUse(context!, features: features)) {
+                return mechanism;
             }
         }
         return nil;
     }
 
+}
+
+extension StreamFeatures {
+    
+    public var sasl2: SASL2? {
+        guard let el = element?.firstChild(name: "authentication", xmlns: "urn:xmpp:sasl:2") else {
+            return nil;
+        }
+        return SASL2(element: el);
+    }
+    
+    public struct SASL2 {
+        
+        public let element: Element;
+        
+        init(element: Element) {
+            self.element = element;
+        }
+        
+        public var mechanisms: [String] {
+            return self.element.filterChildren(name: "mechanism").compactMap({ $0.value });
+        }
+        
+        public var inline: Sasl2InlineStageFeatures {
+            return Sasl2InlineStageFeatures(element: self.element.firstChild(name: "inline"));
+        }
+        
+        public var upgrades: [String] {
+            return self.element.filterChildren(name: "upgrade").compactMap({ $0.value });
+        }
+    }
 }
 
 public enum Sasl2InlineOfferStage {

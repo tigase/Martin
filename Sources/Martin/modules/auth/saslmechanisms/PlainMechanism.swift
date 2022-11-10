@@ -30,8 +30,6 @@ open class PlainMechanism: SaslMechanism {
 
     public private(set) var status: SaslMechanismStatus = .new;
     
-    public let supportsUpgrade = false;
-    
     public func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.stream) {
             status = .new;
@@ -44,33 +42,32 @@ open class PlainMechanism: SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: reponse to send to server
      */
-    open func evaluateChallenge(_ input: String?, context: Context) -> String? {
-        if (status == .completed) {
-            return nil;
-        }
-        
-        switch context.connectionConfiguration.credentials {
-        case .password(let password, let authenticationName, _):
+    open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
+        switch status {
+        case .completed:
+            throw SaslError.aborted;
+        case .new:
+            guard let password = context.connectionConfiguration.credentials.password else {
+                throw SaslError.not_authorized;
+            }
+
+            let authenticationName: String? = context.connectionConfiguration.credentials.authenticationName;
+            
             let userJid: BareJID = context.userBareJid;
             let authcid: String = authenticationName ?? userJid.localPart!;
 
             let lreq = "\0\(authcid)\0\(password)";
-            
+                
             let utf8str = lreq.data(using: String.Encoding.utf8);
-            let base64 = utf8str?.base64EncodedString(options: NSData.Base64EncodingOptions(rawValue: 0));
-            if base64 != nil {
-                status = .completed;
+            guard let base64 = utf8str?.base64EncodedString() else {
+                throw SaslError.temporary_auth_failure;
             }
-
+            status = .inProgress;
             return base64;
-        default:
-            status = .new;
+        case .inProgress, .completedExpected:
+            status = .completed;
             return nil;
         }
-    }
-    
-    public func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element {
-        throw XMPPError(condition: .bad_request, message: "PLAIN does not support upgrade!")
     }
     
     /**
@@ -78,13 +75,8 @@ open class PlainMechanism: SaslMechanism {
      - parameter sessionObject: instance of `SessionObject`
      - returns: true if usage is allowed
      */
-    open func isAllowedToUse(_ context: Context) -> Bool {
-        switch context.connectionConfiguration.credentials {
-        case .password(_, _, _):
-            return true;
-        default:
-            return false;
-        }
+    open func isAllowedToUse(_ context: Context, features: StreamFeatures) -> Bool {
+        return context.connectionConfiguration.credentials.password != nil;
     }
     
 

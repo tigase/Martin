@@ -25,14 +25,12 @@ import Foundation
  Protocol which must be implemented by every mechanism for SASL based 
  authentication.
  */
-public protocol SaslMechanism: AnyObject, Resetable {
+public protocol SaslMechanism: AnyObject, Resetable, CustomDebugStringConvertible {
 
     /// Mechanism name
     var name: String { get }
     
     var status: SaslMechanismStatus { get }
-    
-    var supportsUpgrade: Bool { get }
     
     /**
      Process input data and prepare response
@@ -41,15 +39,35 @@ public protocol SaslMechanism: AnyObject, Resetable {
      - returns: response to send to server
      */
     func evaluateChallenge(_ input: String?, context: Context) throws -> String?
-    
-    func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element
-    
+        
     /** 
      Check if mechanism may be used (ie. if needed data are available)
      - parameter sessionObject: instance of `SessionObject`
      - returns: true if possible
      */
-    func isAllowedToUse(_ context: Context) -> Bool;
+    func isAllowedToUse(_ context: Context, features: StreamFeatures) -> Bool;
+    
+}
+
+extension SaslMechanism {
+    
+    public var debugDescription: String {
+        return name;
+    }
+    
+}
+
+public protocol Sasl2MechanismFeaturesAware: SaslMechanism {
+
+    func feature(context: Context, sasl2: StreamFeatures.SASL2) -> Element?;
+    
+    func process(result: Element, context: Context);
+
+}
+
+public protocol Sasl2UpgradableMechanism: SaslMechanism {
+    
+    func evaluateUpgrade(parameters: Element, context: Context) async throws -> Element
     
 }
 
@@ -62,7 +80,7 @@ public enum ClientSaslException: Error {
 
 public enum SaslMechanismStatus {
     case new
+    case inProgress
     case completed
     case completedExpected
 }
-

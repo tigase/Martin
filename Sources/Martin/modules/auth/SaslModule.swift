@@ -52,67 +52,20 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
 
     public let features = [String]();
     
-    private var lock = UnfairLock();
-    private var mechanisms = [String:SaslMechanism]();
-    private var _mechanismsOrder = [String]();
-    
     private var supportedMechanisms: [String] = [];
     
-        
-    /// Order of mechanisms preference
-    open var mechanismsOrder:[String] {
-        get {
-            return lock.with({
-                return _mechanismsOrder;
-            })
-        }
-        set {
-            lock.with({
-                var value = newValue;
-                for name in newValue {
-                    if mechanisms[name] == nil {
-                        value.remove(at: value.firstIndex(of: name)!);
-                    }
-                }
-                for name in mechanisms.keys {
-                    if value.firstIndex(of: name) == nil {
-                        mechanisms.removeValue(forKey: name);
-                    }
-                }
-            })
-        }
+    open var mechanisms: [SaslMechanism] {
+        return context?.connectionConfiguration.saslMechanisms.filter({ !($0 is Sasl2MechanismFeaturesAware) }) ?? [];
     }
     
     public override init() {
         super.init();
-        self.addMechanism(ScramMechanism.ScramSha256Plus());
-        self.addMechanism(ScramMechanism.ScramSha256());
-        self.addMechanism(ScramMechanism.ScramSha1Plus());
-        self.addMechanism(ScramMechanism.ScramSha1());
-        self.addMechanism(PlainMechanism());
-        self.addMechanism(AnonymousMechanism());
     }
     
     open func reset(scopes: Set<ResetableScope>) {
-        for mechanism in mechanisms.values {
+        for mechanism in mechanisms {
             mechanism.reset(scopes: scopes);
         }
-    }
-    
-    /**
-     Add implementation of `SaslMechanism`
-     - parameter mechanism: implementation of mechanism
-     - parameter first: add as best mechanism to use
-     */
-    open func addMechanism(_ mechanism:SaslMechanism, first:Bool = false) {
-        lock.with({
-            self.mechanisms[mechanism.name] = mechanism;
-            if (first) {
-                self._mechanismsOrder.insert(mechanism.name, at: 0);
-            } else {
-                self._mechanismsOrder.append(mechanism.name);
-            }
-        })
     }
         
     private func handleResponse(stanza elem: Stanza, mechanism: SaslMechanism) async throws {
@@ -146,7 +99,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
      Begin SASL authentication process
      */
     open func login() async throws {
-        guard let mechanism = guessSaslMechanism() else {
+        guard let mechanism = guessSaslMechanism(features: context!.module(.streamFeatures).streamFeatures) else {
             throw SaslError.invalid_mechanism;
         }
         
@@ -194,16 +147,14 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
         return streamFeatures.element?.firstChild(name: "mechanisms")?.filterChildren(name: "mechanism").compactMap({ $0.value }) ?? [];
     }
     
-    func guessSaslMechanism() -> SaslMechanism? {
+    func guessSaslMechanism(features: StreamFeatures) -> SaslMechanism? {
         let supported = self.supportedMechanisms;
-        for name in mechanismsOrder {
-            if let mechanism = mechanisms[name] {
-                if (!supported.contains(name)) {
-                    continue;
+        for mechanism in mechanisms{
+            if (!supported.contains(mechanism.name)) {
+                continue;
                 }
-                if (mechanism.isAllowedToUse(context!)) {
-                    return mechanism;
-                }
+            if (mechanism.isAllowedToUse(context!, features: features)) {
+                return mechanism;
             }
         }
         return nil;
