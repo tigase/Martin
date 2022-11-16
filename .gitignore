@@ -21,7 +21,7 @@ xcuserdata/
 .swiftpm/
 !Podfile.lock
 !Gemfile.lock
-.idea/workspace.xml
+.idea/
 docs
 Documentation/target
 Documentation/src/main/restructured/_build/
