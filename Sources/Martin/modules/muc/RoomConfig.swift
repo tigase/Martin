@@ -28,10 +28,17 @@ open class RoomConfig: DataFormWrapper {
         case anyone
     }
     
+    public enum AllowPM: String, DataFormEnum {
+        case anyone
+        case participants
+        case moderators
+        case none
+    }
+
     @Field("muc#maxhistoryfetch")
     public var maxHistoryFetch: Int?;
     @Field("muc#roomconfig_allowpm")
-    public var allowPM: Bool?;
+    public var allowPM: AllowPM?;
     @Field("muc#roomconfig_allowinvites")
     public var allowInvites: Bool?;
     @Field("muc#roomconfig_changesubject")
