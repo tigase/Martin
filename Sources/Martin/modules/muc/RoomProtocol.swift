@@ -201,6 +201,29 @@ extension RoomProtocol {
         
         return message;
     }
+    
+    public func moderateMessage(id: String, reason: String? = nil) async throws {
+        guard let context = self.context else {
+            throw XMPPError.undefined_condition;
+        }
+        guard self.role == .moderator else {
+            throw XMPPError(condition: .forbidden)
+        }
+        
+        let iq = Iq(type: .set, to: JID(self.jid)) {
+            Element(name: "apply-to", xmlns: "urn:xmpp:fasten:0") {
+                Attribute("id", value: id)
+                Element(name: "moderate", xmlns: "urn:xmpp:message-moderate:0") {
+                    Element(name: "retract", xmlns: "urn:xmpp:message-retract:0")
+                    if let reason = reason {
+                        Element(name: "reason", cdata: reason)
+                    }
+                }
+            }
+        }
+        
+        _ = try await context.writer.write(iq: iq)
+    }
 }
 
 // async-await support
