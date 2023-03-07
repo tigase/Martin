@@ -185,6 +185,35 @@ extension RoomProtocol {
         
         return message;
     }
+    
+    public func moderateMessage(id: String, reason: String? = nil, completionHandler: @escaping (Result<Void,XMPPError>)->Void) {
+        guard let context = self.context else {
+            completionHandler(.failure(.undefined_condition));
+            return;
+        }
+        guard self.role == .moderator else {
+            completionHandler(.failure(.forbidden()))
+            return;
+        }
+        
+        let iq = Iq();
+        iq.type = .set;
+        iq.to = JID(self.jid);
+        
+        let applyTo = Element(name: "apply-to", xmlns: "urn:xmpp:fasten:0");
+        applyTo.setAttribute("id", value: id);
+        let moderate = Element(name: "moderate", xmlns: "urn:xmpp:message-moderate:0");
+        moderate.addChild(Element(name: "retract", xmlns: "urn:xmpp:message-retract:0"));
+        if let reason = reason {
+            moderate.addChild(Element(name: "reason", cdata: reason));
+        }
+        applyTo.addChild(moderate);
+        iq.addChild(applyTo);
+        
+        context.writer.write(iq, completionHandler: { result in
+            completionHandler(result.map({ _ in Void() }));
+        })
+    }
 }
 
 // async-await support
