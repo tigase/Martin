@@ -45,7 +45,7 @@ extension Bind2InlineStageFeatures.Feature {
  
  [XEP-0198: Stream Management]: http://xmpp.org/extensions/xep-0198.html
  */
-open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter, Resetable, Sasl2InlineProtocol, @unchecked Sendable {
+open class StreamManagementModule: XmppModuleBase, XmppModule, Resetable, Sasl2InlineProtocol, @unchecked Sendable {
     
     /// Namespace used by stream management
     static let SM_XMLNS = "urn:xmpp:sm:3";
@@ -59,10 +59,8 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     public let features = [String]();
         
     /// Holds queue with stanzas sent but not acked
-    fileprivate var outgoingQueue = Queue<Stanza>();
+    private var outgoingQueue = Queue<Item>();
     
-    // TODO: should this stay here or be moved to sessionObject as in Jaxmpp?
-    //private let queue = DispatchQueue(label: "StreamManagementQueue");
     private var lock = UnfairLock();
     private var ackH = AckHolder();
 
@@ -173,6 +171,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             }
         } catch {
             context?.reset(scopes: [.session]);
+            throw error;
         }
     }
     
@@ -223,9 +222,12 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
                 resumptionId = nil
                 _resumptionTime = nil;
                 _resumptionLocation = nil;
-                    ackH.reset();
-                outgoingQueue.clear();
-
+                ackH.reset();
+                let oldOutgoingQueue = outgoingQueue;
+                outgoingQueue = Queue<Item>();
+                while let item = oldOutgoingQueue.poll() {
+                    item.continuation?.resume(throwing: XMPPError(condition: .service_unavailable));
+                }
             }
         }
     }
@@ -284,27 +286,44 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
      stanza until they will be acked.
      - parameter stanza: stanza to process
      */
-    open func processOutgoing(stanza: Stanza) {
+    open func processOutgoing(stanza: Stanza) -> (Bool,Task<Void,Error>?) {
         guard lock.with({ ackEnabled }) else {
-            return;
+            return (false, nil);
         }
         
         guard isStanza(stanza) else {
-            return;
+            return (false, nil);
         }
         
-        let sendRequest: Bool = lock.with {
+        if let message = stanza as? Message, message.id != nil {
+            return (true, Task {
+                try await withUnsafeThrowingContinuation({ continuation in
+                    _ = self.queueOutgoing(stanza: message, continuation: continuation);
+                })
+            })
+        } else {
+            return (self.queueOutgoing(stanza: stanza, continuation: nil), nil)
+        }
+    }
+    
+    private struct Item {
+        let stanza: Stanza;
+        let continuation: UnsafeContinuation<Void,Error>?;
+    }
+    
+    private func queueOutgoing(stanza: Stanza, continuation: UnsafeContinuation<Void,Error>?) -> Bool {
+        return lock.with {
             ackH.incrementOutgoing();
-            outgoingQueue.offer(stanza);
+            outgoingQueue.offer(.init(stanza: stanza, continuation: continuation));
+            if continuation != nil {
+                lastRequestTimestamp = Date();
+                return true;
+            }
             if lastRequestTimestamp.timeIntervalSinceNow >= 1 && outgoingQueue.count > 3 {
                 lastRequestTimestamp = Date();
                 return true;
             }
             return false;
-        }
-        
-        if sendRequest {
-            request();
         }
     }
     
@@ -539,7 +558,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
             let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
             ackH.outgoingCounter = newH;
             while left < outgoingQueue.count {
-                _ = outgoingQueue.poll();
+                outgoingQueue.poll()?.continuation?.resume();
             }
         }
     }
@@ -565,21 +584,21 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     
     private func processResumed(_ stanza: Stanza) {
         let newH = UInt32(stanza.attribute("h")!) ?? 0;
-        let oldOutgoingQueue: Queue<Stanza> = lock.with {
+        let oldOutgoingQueue: Queue<Item> = lock.with {
             ackEnabled = true;
             _wasResumed = true;
             let left = max(Int(ackH.outgoingCounter) - Int(newH), 0);
             while left < outgoingQueue.count {
-                _ = outgoingQueue.poll();
+                outgoingQueue.poll()?.continuation?.resume();
             }
             ackH.outgoingCounter = newH;
             defer {
-                outgoingQueue = Queue<Stanza>();
+                outgoingQueue = Queue<Item>();
             }
             return outgoingQueue;
         }
-        while let s = oldOutgoingQueue.poll() {
-            write(stanza: s);
+        while let item = oldOutgoingQueue.poll() {
+            write(stanza: item.stanza);
         }
         
         logger.debug("stream resumed");
@@ -588,15 +607,15 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, XmppStanzaFilter,
     private func processEnabled(_ stanza: Stanza) {
         let id = stanza.attribute("id");
         let r = stanza.attribute("resume");
-        let mx = stanza.attribute("max");
+        let max = stanza.attribute("max");
         //let resume = (r == "true" || r == "1") && id != nil;
         lock.with {
             _resumptionLocation = (self.context as? XMPPClient)?.connector?.prepareEndpoint(withResumptionLocation: stanza.attribute("location"))
             
             resumptionId = id;
             ackEnabled = true;
-            if let mx = mx {
-                _resumptionTime = Double(mx);
+            if let max = max {
+                _resumptionTime = Double(max);
             }
         }
         

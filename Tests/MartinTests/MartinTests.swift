@@ -23,7 +23,7 @@ final class MartinTests: XCTestCase {
 
 
         client.connectionConfiguration.userJid = BareJID("home@hi-low.eu")
-        client.connectionConfiguration.credentials = .password(password: "home2013", authenticationName: nil, cache: nil);
+        //client.connectionConfiguration.credentials = .password(password: "home2013", authenticationName: nil, cache: nil);
 
         try await client.loginAndWait();
         let iq = Iq()

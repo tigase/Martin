@@ -90,7 +90,7 @@ open class SocketSessionLogic: XmppSessionLogic {
     private var userJid: BareJID {
         return connectionConfiguration.userJid;
     }
-    
+    private var streamManagementModule: StreamManagementModule?;
     
     private var socketSubscriptions: Set<AnyCancellable> = [];
     private var moduleSubscriptions: Set<AnyCancellable> = [];
@@ -102,6 +102,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         self.context = context;
         self.responseManager = responseManager;
         self.seeOtherHost = seeOtherHost;
+        self.streamManagementModule = context.moduleOrNil(.streamManagement);
         
         connector.statePublisher.removeDuplicates().dropFirst(1).receive(on: self.queue).sink(receiveValue: { [weak self] newState in
             guard newState != .connected else {
@@ -238,10 +239,8 @@ open class SocketSessionLogic: XmppSessionLogic {
             }
             do {
                 print("received stanza: \(stanza)")
-                for filter in self.modulesManager.filters {
-                    if filter.processIncoming(stanza: stanza) {
-                        return;
-                    }
+                if streamManagementModule?.processIncoming(stanza: stanza) ?? false {
+                    return;
                 }
             
                 if let continuation = await self.responseManager.continuation(for: stanza) {
@@ -271,7 +270,7 @@ open class SocketSessionLogic: XmppSessionLogic {
                 Task {
                     do {
                         let errorStanza = try stanza.errorResult(of: error as? XMPPError ?? .undefined_condition);
-                        try await self.sendingOutgoingStanza(errorStanza);
+                        try await self.send(stanza: errorStanza);
                     } catch {
                         self.logger.debug("\(self.userJid) - error: \(error), while processing \(stanza)")
                     }
@@ -285,20 +284,20 @@ open class SocketSessionLogic: XmppSessionLogic {
         guard state == .connected() || state == .connecting else {
            throw XMPPError(condition: .not_authorized, message: "You are not connected to the XMPP server");
         }
-            
-        for filter in self.modulesManager.filters {
-            filter.processOutgoing(stanza: stanza);
-        }
         
-        try await connector.send(.stanza(stanza));
-    }
-
-    
-    private func sendingOutgoingStanza(_ stanza: Stanza) async throws {
-        for filter in self.modulesManager.filters {
-            filter.processOutgoing(stanza: stanza);
+        let (requestAck, task) = streamManagementModule?.processOutgoing(stanza: stanza) ?? (false, nil);
+        if let task {
+            connector.send(.stanza(stanza), completion: .none);
+            if requestAck {
+                streamManagementModule?.request();
+            }
+            try await task.value;
+        } else {
+            try await connector.send(.stanza(stanza));
+            if requestAck {
+                streamManagementModule?.request();
+            }
         }
-        try await self.connector.send(.stanza(stanza));
     }
     
     open func keepalive() async throws {

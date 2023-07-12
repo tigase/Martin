@@ -41,18 +41,9 @@ public class XmppModulesManager : ContextAware, Resetable {
         
     open weak var context: Context?;
     
-    private var _filters: [XmppStanzaFilter] = [];
     private var _modules: [XmppModule] = [];
     private var _processors: [XmppStanzaProcessor] = [];
     
-    /// List of registered instances of `XmppStanzaFilter` which needs to process packets
-    public var filters: [XmppStanzaFilter] {
-        get {
-            return lock.with {
-                return _filters;
-            }
-        }
-    }
     /// List of registered modules
     public var modules: [XmppModule] {
         get {
@@ -154,9 +145,6 @@ public class XmppModulesManager : ContextAware, Resetable {
         return lock.with {
             modulesById[T.ID] = module;
             _modules.append(module);
-            if let filter = module as? XmppStanzaFilter {
-                _filters.append(filter);
-            }
             if let processor = module as? XmppStanzaProcessor {
                 _processors.append(processor);
             }
@@ -179,9 +167,6 @@ public class XmppModulesManager : ContextAware, Resetable {
         return lock.with {
             modulesById.removeValue(forKey: T.ID)
             _modules.removeAll(where: { $0 === module })
-            if let filter = module as? XmppStanzaFilter {
-                _filters.removeAll(where: { $0 === filter })
-            }
             if let processor = module as? XmppStanzaProcessor {
                 _processors.removeAll(where: { $0 === processor });
             }
