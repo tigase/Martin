@@ -392,7 +392,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         //self.send("<stream:stream from='\(userJid)' to='\(userJid.domain)' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>")
         let domain = userJid.domain
         var attributes: [String: String] = ["to": domain];
-        if self.connectionConfiguration.useSeeOtherHost && userJid.localPart != nil {
+        if self.connectionConfiguration.useSeeOtherHost && userJid.localPart != nil && (self.connectionConfiguration.disableTLS || self.connector.activeFeatures.contains(.TLS)) {
             attributes["from"] = userJid.description;
         }
         self.connector.send(.streamOpen(attributes: attributes));
