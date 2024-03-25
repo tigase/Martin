@@ -34,7 +34,9 @@ open class DefaultRosterStore: RosterStore {
     private var version: String?;
     
     private let dispatcher = DispatchQueue(label: "DefaultRoomStore");
-    
+
+    public init() {}
+
     public func clear(for context: Context) {
         return dispatcher.async {
             self.version = nil;
