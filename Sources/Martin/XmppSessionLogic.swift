@@ -141,6 +141,9 @@ open class SocketSessionLogic: XmppSessionLogic {
                         return;
                     }
                 }
+                if that.state == .connecting && (newState == .disconnected(.noRouteToServer) || newState == .disconnected(.timeout)) {
+                    that.modulesManager.moduleOrNil(.streamManagement)?.reset(scopes: [.stream,.session]);
+                }
                 that.state = .disconnected(reason.clientDisconnectionReason);
             }
         }).store(in: &socketSubscriptions);
