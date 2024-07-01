@@ -50,26 +50,27 @@ open class PingModule: XmppModuleBase, AbstractIQModule {
     /**
      Send ping request to jid
      - parameter jid: ping destination
+     - parameter timeout: timeout for ping response
      - parameter callback: executed when response is received or due to timeout
      */
-    open func ping(_ jid: JID, callback: (Stanza?)->Void) {
+    open func ping(_ jid: JID, timeout: TimeInterval = 120.0, completionHandler: @escaping (Result<Void,ErrorCondition>)->Void) {
         let iq = Iq();
         iq.type = StanzaType.get;
         iq.to = jid;
         iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
         
-        write(iq);
-    }
-    
-    open func ping(_ jid: JID, completionHandler: (Result<Void,ErrorCondition>)->Void) {
-        ping(jid, callback: { stanza in
-            let error = stanza?.errorCondition ?? .feature_not_implemented;
-            if error == .feature_not_implemented {
+        write(iq, timeout: timeout, completionHandler: { result in
+            switch result {
+            case .success(_):
                 completionHandler(.success(Void()));
-            } else {
-                completionHandler(.failure(error));
+            case .failure(let error):
+                if error == .feature_not_implemented {
+                    completionHandler(.success(Void()));
+                } else {
+                    completionHandler(.failure(error.errorCondition));
+                }
             }
-        })
+        });
     }
     
     /**

@@ -147,6 +147,12 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         if let timeout = options.connectionTimeout {
             tcpOptions.connectionTimeout = Int(timeout);
         }
+        logger.debug("default tcp keepalive settings idle: \(tcpOptions.keepaliveIdle), count: \(tcpOptions.keepaliveCount), interval: \(tcpOptions.keepaliveInterval), enabled: \(tcpOptions.enableKeepalive)")
+        tcpOptions.keepaliveIdle = options.tcpKeepalive.idle;
+        tcpOptions.keepaliveCount = options.tcpKeepalive.count;
+        tcpOptions.keepaliveInterval = options.tcpKeepalive.interval;
+        tcpOptions.enableKeepalive = options.tcpKeepalive.enable;
+        logger.debug("set tcp keepalive settings idle: \(tcpOptions.keepaliveIdle), count: \(tcpOptions.keepaliveCount), interval: \(tcpOptions.keepaliveInterval), enabled: \(tcpOptions.enableKeepalive)")
         let parameters = NWParameters(tls: nil, tcp: tcpOptions);
         parameters.serviceClass = .responsiveData;
         if options.enableTcpFastOpen {
@@ -404,11 +410,18 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         public var enableTcpFastOpen: Bool = true;
         public var tcpNoDelay: Bool = true;
         public var tcpDisableAckStretching: Bool = true;
+        public var tcpKeepalive: TcpKeepalive = TcpKeepalive();
 
         public var networkProcessorProviders: [NetworkProcessorProvider] = []
         
         public init() {}
         
+        public struct TcpKeepalive {
+            public var enable: Bool = true;
+            public var idle: Int = 60;
+            public var count: Int = 3;
+            public var interval: Int = 90;
+        }
     }
 }
 

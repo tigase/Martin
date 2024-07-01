@@ -352,9 +352,12 @@ open class SocketSessionLogic: XmppSessionLogic {
     
     open func keepalive() {
         if let pingModule = modulesManager.moduleOrNil(.ping) {
-            pingModule.ping(JID(userJid), callback: { (stanza) in
-                if stanza == nil {
+            pingModule.ping(JID(userJid), completionHandler: { result in
+                switch result {
+                case .failure(_):
                     self.logger.debug("\(self.userJid) - no response on ping packet - possible that connection is broken, reconnecting...");
+                case .success(_):
+                    break;
                 }
             });
         }
