@@ -130,6 +130,9 @@ open class SocketSessionLogic: XmppSessionLogic {
                         return;
                     }
                 }
+                if that.state == .connecting && (newState == .disconnected(.noRouteToServer) || newState == .disconnected(.timeout)) {
+                    that.modulesManager.moduleOrNil(.streamManagement)?.reset(scopes: [.stream,.session]);
+                }
                 that.state = .disconnected(reason.clientDisconnectionReason);
             }
         }).store(in: &socketSubscriptions);
@@ -307,8 +310,8 @@ open class SocketSessionLogic: XmppSessionLogic {
             } catch {
                 if (error as? XMPPError)?.condition == .remote_server_timeout {
                     self.logger.debug("\(self.userJid) - no response on ping packet - possible that connection is broken, reconnecting...");
+                    throw error;
                 }
-                throw error;
             }
         }
     }

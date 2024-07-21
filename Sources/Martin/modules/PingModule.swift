@@ -50,12 +50,20 @@ open class PingModule: XmppModuleBase, AbstractIQModule, @unchecked Sendable {
     /**
      Send ping request to jid
      - parameter jid: ping destination
+     - parameter timeout: timeout for ping response
      */
-    open func ping(_ jid: JID) async throws {
+    open func ping(_ jid: JID, timeout: TimeInterval = 120.0) async throws {
         let iq = Iq(type: .get, to: jid);
         iq.addChild(Element(name: "ping", xmlns: PingModule.PING_XMLNS));
         
-        try await write(iq: iq);
+        do {
+            try await write(iq: iq, timeout: timeout);
+        } catch {
+            if let err = error as? XMPPError, err.condition == .feature_not_implemented {
+                return;
+            }
+            throw error;
+        }
     }
     
     /**

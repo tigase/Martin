@@ -1,3 +1,6 @@
+> # NOTE: Tigase has new home at [tigase.dev/tigase/_libraries/Martin/](https://tigase.dev/tigase/_libraries/Martin/) - please submit all issues/pull-requests there!
+
+
 <!--<p align="center">
   <a href="https://tigase.net/">
     <img
