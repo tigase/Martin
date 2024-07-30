@@ -48,7 +48,7 @@ open class AnonymousMechanism: SaslMechanism {
         case .inProgress:
             status = .completed;
         default:
-            throw SaslError.aborted;
+            throw SaslError(cause: .aborted, message: nil);
         }
         return nil;
     }

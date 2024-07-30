@@ -45,10 +45,10 @@ open class PlainMechanism: SaslMechanism {
     open func evaluateChallenge(_ input: String?, context: Context) throws -> String? {
         switch status {
         case .completed:
-            throw SaslError.aborted;
+            throw SaslError(cause: .aborted, message: "Authentication was already completed");
         case .new:
             guard let password = context.connectionConfiguration.credentials.password else {
-                throw SaslError.not_authorized;
+                throw SaslError(cause: .not_authorized, message: "Password not specified!");
             }
 
             let authenticationName: String? = context.connectionConfiguration.credentials.authenticationName;
@@ -60,7 +60,7 @@ open class PlainMechanism: SaslMechanism {
                 
             let utf8str = lreq.data(using: String.Encoding.utf8);
             guard let base64 = utf8str?.base64EncodedString() else {
-                throw SaslError.temporary_auth_failure;
+                throw SaslError(cause: .temporary_auth_failure, message: "Base64 encoding failed");
             }
             status = .inProgress;
             return base64;

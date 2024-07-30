@@ -24,13 +24,28 @@ import Foundation
 /**
  Contains possible SASL errors.
  */
-public enum SaslError: String, Error {
-    case aborted
-    case incorrect_encoding = "incorrect-encoding"
-    case invalid_authzid = "invalid-authzid"
-    case invalid_mechanism = "invalid-mechanism"
-    case mechanism_too_weak = "mechanism-too-weak"
-    case not_authorized = "not-authorized"
-    case server_not_trusted = "server-not-trusted"
-    case temporary_auth_failure = "temporary-auth-failure"
+public struct SaslError: Error, CustomStringConvertible {
+    
+    public enum Cause: String {
+        case aborted
+        case incorrect_encoding = "incorrect-encoding"
+        case invalid_authzid = "invalid-authzid"
+        case invalid_mechanism = "invalid-mechanism"
+        case mechanism_too_weak = "mechanism-too-weak"
+        case not_authorized = "not-authorized"
+        case server_not_trusted = "server-not-trusted"
+        case temporary_auth_failure = "temporary-auth-failure"
+    }
+    
+    public let cause: Cause
+    public let message: String?;
+    
+    public var description: String {
+        return "SaslError(cause: \(cause.rawValue), message: \(message ?? "nil"))"
+    }
+    
+    public init(cause: Cause, message: String?) {
+        self.cause = cause
+        self.message = message
+    }
 }

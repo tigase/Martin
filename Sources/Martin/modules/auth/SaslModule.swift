@@ -82,16 +82,16 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
             }
         } catch ClientSaslException.badChallenge(let msg) {
             logger.debug("Received bad challenge from server: \(msg ?? "nil")");
-            throw SaslError.temporary_auth_failure;
+            throw SaslError(cause: .temporary_auth_failure, message: msg);
         } catch ClientSaslException.genericError(let msg) {
             logger.debug("Generic error happened: \(msg ?? "nil")");
-            throw SaslError.temporary_auth_failure;
+            throw SaslError(cause: .temporary_auth_failure, message: msg);
         } catch ClientSaslException.invalidServerSignature {
             logger.debug("Received answer from server with invalid server signature!");
-            throw SaslError.server_not_trusted;
+            throw SaslError(cause: .server_not_trusted, message: "Invalid server signature");
         } catch ClientSaslException.wrongNonce {
             logger.debug("Received answer from server with wrong nonce!");
-            throw SaslError.server_not_trusted;
+            throw SaslError(cause: .server_not_trusted, message: "Wrong nonce");
         }
     }
     
@@ -100,7 +100,7 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
      */
     open func login() async throws {
         guard let mechanism = guessSaslMechanism(features: context!.module(.streamFeatures).streamFeatures) else {
-            throw SaslError.invalid_mechanism;
+            throw SaslError(cause: .invalid_mechanism, message: "No usable mechamism");
         }
         
         let result = try mechanism.evaluateChallenge(nil, context: context!);
@@ -119,16 +119,17 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
             logger.debug("Authenticated");
         } else {
             logger.debug("Authenticated by server but responses not accepted by client.");
-            throw SaslError.server_not_trusted;
+            throw SaslError(cause: .server_not_trusted, message: "Client rejected server response");
         }
     }
     
     private func processFailure(_ stanza: Stanza, mechanism: SaslMechanism) throws {
-        guard let errorName = stanza.children.first?.name, let error = SaslError(rawValue: errorName) else {
-            throw SaslError.not_authorized;
+        let msg = stanza.children.first(where: { el in el.name == "text"})?.value;
+        guard let errorName = stanza.children.first(where: { el in el.name != "text"})?.name, let errorCause = SaslError.Cause(rawValue: errorName) else {
+            throw SaslError(cause: .not_authorized, message: msg);
         }
-        logger.error("Authentication failed with error: \(error), \(errorName)");
-        throw error;
+        logger.error("Authentication failed with error: \(errorCause), \(errorName), \(msg ?? "nil")");
+        throw SaslError(cause: errorCause, message: msg);
     }
     
     private func processChallenge(_ stanza: Stanza, mechanism: SaslMechanism) async throws {

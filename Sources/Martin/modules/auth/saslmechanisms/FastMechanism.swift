@@ -130,7 +130,7 @@ open class FastMechanism<Hash: HashAlgorithm>: FastMechanismProtocol, Sasl2Mecha
                 throw ClientSaslException.badChallenge(msg: "Response not properly encoded");
             }
             guard let token = context.connectionConfiguration.credentials.fastToken, token.mechanism == name, let tokenData = token.value.data(using: .utf8) else {
-                throw SaslError.invalid_mechanism;
+                throw SaslError(cause: .invalid_mechanism, message: "Missing FAST token (input)");
             }
 
             let cbData = (channelBinding != nil ? try (context as? XMPPClient)?.connector?.channelBindingData(type: channelBinding!) : nil) ?? Data();
@@ -143,7 +143,7 @@ open class FastMechanism<Hash: HashAlgorithm>: FastMechanismProtocol, Sasl2Mecha
             return nil;
         } else {
             guard let token = context.connectionConfiguration.credentials.fastToken, token.mechanism == name, let tokenData = token.value.data(using: .utf8)  else {
-                throw SaslError.invalid_mechanism;
+                throw SaslError(cause: .invalid_mechanism, message: "Missing FAST token (no input)");
             }
 
             let cbData = (channelBinding != nil ? try (context as? XMPPClient)?.connector?.channelBindingData(type: channelBinding!) : nil) ?? Data();

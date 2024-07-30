@@ -107,16 +107,16 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
             }
         } catch ClientSaslException.badChallenge(let msg) {
             logger.debug("Received bad challenge from server: \(msg ?? "nil")");
-            throw SaslError.temporary_auth_failure;
+            throw SaslError(cause: .temporary_auth_failure, message: msg);
         } catch ClientSaslException.genericError(let msg) {
             logger.debug("Generic error happened: \(msg ?? "nil")");
-            throw SaslError.temporary_auth_failure;
+            throw SaslError(cause: .temporary_auth_failure, message: msg);
         } catch ClientSaslException.invalidServerSignature {
             logger.debug("Received answer from server with invalid server signature!");
-            throw SaslError.server_not_trusted;
+            throw SaslError(cause: .server_not_trusted, message: "Invalid server signature!");
         } catch ClientSaslException.wrongNonce {
             logger.debug("Received answer from server with wrong nonce!");
-            throw SaslError.server_not_trusted;
+            throw SaslError(cause: .server_not_trusted, message: "Wrong nonce");
         }
     }
     
@@ -129,12 +129,12 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
      */
     open func login() async throws {
         guard let streamFeatures = context?.module(.streamFeatures).streamFeatures, let sasl2 = streamFeatures.sasl2 else {
-            throw SaslError.invalid_mechanism;
+            throw SaslError(cause: .invalid_mechanism, message: "SASL2 not listed in stream features");
         }
         
         let features = sasl2.inline;
         guard let mechanism = guessSaslMechanism(features: streamFeatures) else {
-            throw SaslError.invalid_mechanism;
+            throw SaslError(cause: .invalid_mechanism, message: "No usable mechanism");
         }
 
         let upgrades = sasl2.upgrades.filter({ self.mechanism(named: $0) is Sasl2UpgradableMechanism});
@@ -172,19 +172,25 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
         do {
             let response = try await write(stanza: auth, for: .init(names: ["success", "failure", "challenge", "continue"], xmlns: Sasl2Module.SASL2_XMLNS));
             try await handleResponse(stanza: response, mechanism: mechanism);
-        } catch SaslError.not_authorized, SaslError.invalid_mechanism, SaslError.server_not_trusted {
-            if mechanism is FastMechanismProtocol {
-                mechanism.reset(scopes: [.stream]);
-                context?.connectionConfiguration.credentials.fastToken = nil;
-                do {
-                    try await login();
-                } catch {
-                    // some servers may fail to accept subsequent auth request, so lets assume it is temporary failure and retry..
-                    throw SaslError.temporary_auth_failure;
+        } catch let error as SaslError {
+            switch error.cause {
+            case .not_authorized, .invalid_mechanism, .server_not_trusted:
+                if mechanism is FastMechanismProtocol {
+                    mechanism.reset(scopes: [.stream]);
+                    context?.connectionConfiguration.credentials.fastToken = nil;
+                    do {
+                        try await login();
+                    } catch {
+                        // some servers may fail to accept subsequent auth request, so lets assume it is temporary failure and retry..
+                        throw SaslError(cause: .temporary_auth_failure, message: "Failure of subsequent authentication attempt");
+                    }
+                } else {
+                    throw error;
                 }
-            } else {
-                throw SaslError.not_authorized;
+            default:
+                throw error;
             }
+
         }
     }
     
@@ -197,7 +203,7 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
             logger.debug("Authenticated - continue");
         } else {
             logger.debug("Authenticated by server but responses not accepted by client. - continue");
-            throw SaslError.server_not_trusted;
+            throw SaslError(cause: .server_not_trusted, message: "Authenticated but server not trusted");
         }
         
         let tasks = stanza.firstChild(name: "tasks")?.filterChildren(name: "task").compactMap({ $0.value }) ?? [];
@@ -243,16 +249,17 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
             logger.debug("Authenticated");
         } else {
             logger.debug("Authenticated by server but responses not accepted by client.");
-            throw SaslError.server_not_trusted;
+            throw SaslError(cause: .server_not_trusted, message: "Authentication response not accepted by client");
         }
     }
     
     private func processFailure(_ stanza: Stanza, mechanism: SaslMechanism) throws {
-        guard let errorName = stanza.children.first?.name, let error = SaslError(rawValue: errorName) else {
-            throw SaslError.not_authorized;
+        let msg = stanza.children.first(where: { el in el.name == "text"})?.value;
+        guard let errorName = stanza.children.first(where: { el in el.name != "text"})?.name, let errorCause = SaslError.Cause(rawValue: errorName) else {
+            throw SaslError(cause: .not_authorized, message: msg);
         }
-        logger.error("Authentication failed with error: \(error), \(errorName)");
-        throw error;
+        logger.error("Authentication failed with error: \(errorCause), \(errorName), \(msg ?? "nil")");
+        throw SaslError(cause: errorCause, message: msg);
     }
     
     private func processChallenge(_ stanza: Stanza, mechanism: SaslMechanism) async throws {

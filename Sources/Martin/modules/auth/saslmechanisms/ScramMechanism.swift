@@ -236,7 +236,7 @@ open class ScramMechanism<Hash: HashAlgorithm>: Sasl2UpgradableMechanism {
             }
             return saltedPassword;
         } else {
-            throw SaslError.not_authorized;
+            throw SaslError(cause: .not_authorized, message: "Password and salted password were not specified");
         }
     }
     
