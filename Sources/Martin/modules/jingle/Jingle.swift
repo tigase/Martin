@@ -364,8 +364,11 @@ extension Jingle {
                         return nil;
                     }
                     
+                    let relAddr = el.getAttribute("rel-addr");
+                    let relPort = UInt16(el.getAttribute("rel-port") ?? "")
+                    
                     let type = CandidateType(rawValue: el.getAttribute("type") ?? "");
-                    self.init(component: component, foundation: foundation, generation: generation, id: id, ip: ip, network: 0, port: port, priority: priority, protocolType: proto, type: type, tcpType: el.getAttribute("tcptype"));
+                    self.init(component: component, foundation: foundation, generation: generation, id: id, ip: ip, network: 0, port: port, priority: priority, protocolType: proto, relAddr: relAddr, relPort: relPort, type: type, tcpType: el.getAttribute("tcptype"));
                 }
                 
                 public init(component: UInt8, foundation: UInt, generation: UInt8, id: String, ip: String, network: UInt8 = 0, port: UInt16, priority: UInt, protocolType: ProtocolType, relAddr: String? = nil, relPort: UInt16? = nil, type: CandidateType?, tcpType: String?) {

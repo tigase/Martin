@@ -62,6 +62,10 @@ public enum ConnectorState: Equatable {
     }
 }
 
+public enum NetworkError: Error, LocalizedError {
+    case connectionFailed
+}
+
 extension XMPPClient {
     
     public enum State: Equatable {
