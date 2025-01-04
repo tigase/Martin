@@ -223,9 +223,22 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     
     private func scheduleRead() {
         self.connection?.receive(minimumIncompleteLength: 1, maximumLength: 4096 * 2, completion: { [weak self] data, context, complete, error in
+            guard let self else {
+                return;
+            }
+            let state = self.connection?.state;
+            self.logger.debug("read data: \(data), complete: \(complete), error: \(error), \(state)")
             if let data = data {
-                self?.networkStack.read(data: data);
-                self?.scheduleRead();
+                self.networkStack.read(data: data);
+            }
+            if complete {
+                self.logger.debug("connection closed by the server")
+                self.connection?.cancel();
+//                self?.logger.debug("updating state")
+//                self?.state = .disconnected(.none);
+//                self?.logger.debug("state updated")
+            } else {
+                self.scheduleRead();
             }
         })
     }
@@ -379,7 +392,13 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     }
     
     public func write(data: Data, completion: WriteCompletion) {
-        self.connection?.send(content: data, completion: completion.sendCompletion)
+        let state = self.connection?.state;
+        switch (state) {
+        case .failed(_), .cancelled:
+            completion.completed(result: .failure(NetworkError.connectionFailed))
+        default:
+            self.connection?.send(content: data, completion: completion.sendCompletion)
+        }
     }
 
     public func channelBindingData(type: ChannelBinding) throws -> Data {

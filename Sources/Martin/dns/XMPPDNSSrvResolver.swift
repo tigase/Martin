@@ -288,8 +288,8 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         }
         
         func cancel() {
-            queue.sync {
-                complete(with: .failure(DNSError.unknownError));
+            queue.async {
+                self.complete(with: .failure(DNSError.unknownError));
             }
         }
     }

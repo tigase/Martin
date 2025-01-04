@@ -33,7 +33,7 @@ open class SDP: @unchecked Sendable {
         for i in 1..<media.count {
             media[i] = "m=" + media[i];
         }
-        media[media.count-1] = String(media[media.count-1].dropLast(2));
+        media[media.count-1] = String(media[media.count-1]);
         
         let sessionLines = media.remove(at: 0).components(separatedBy: "\r\n");
         
@@ -202,7 +202,7 @@ extension Jingle.Content {
     
     public convenience init?(fromSDP media: String, creatorProvider: (String)->Jingle.Content.Creator, localRole: Jingle.Content.Creator) {
         
-        let sdp = media.split(separator: "\r\n");
+        let sdp = media.split(separator: "\r\n").filter { !$0.isEmpty };
         
         let line = sdp[0].components(separatedBy: " ");
         
