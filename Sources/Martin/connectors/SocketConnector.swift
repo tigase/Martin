@@ -124,12 +124,15 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
     }
     
     deinit {
-        self.queue.sync {
-            if let inStream = self.inStream {
+        let inStream = inStream;
+        let outStream = outStream;
+        let stateSubscription = stateSubscription;
+        queue.async {
+            if let inStream = inStream {
                 inStream.close();
                 inStream.remove(from: .main, forMode: .default);
             }
-            if let outStream = self.outStream {
+            if let outStream = outStream {
                 outStream.close();
                 outStream.remove(from: .main, forMode: .default);
             }
