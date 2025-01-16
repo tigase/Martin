@@ -52,7 +52,77 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     private let options: Options;
     private let networkStack = SocketConnector.NetworkStack();
 
-    private var connection: NWConnection?;
+    private var connection: NWConnection? {
+        willSet {
+            if connection !== newValue {
+                connection?.stateUpdateHandler = nil;
+                connection?.viabilityUpdateHandler = nil;
+                connection?.pathUpdateHandler = nil;
+                networkStack.reset();
+                activeFeatures.removeAll();
+                switch connection?.state {
+                case .ready, .setup, .waiting, .preparing:
+                    connection?.cancel();
+                default:
+                    break;
+                }
+            }
+        }
+        didSet {
+            if let conn = connection, oldValue !== conn {
+                conn.stateUpdateHandler = { [weak self, weak conn] state in
+                    guard let that = self, let conn else {
+                        return;
+                    }
+                    let isCurrent = conn === that.connection;
+                    that.logger.debug("\(that.userJid) - changed state to: \(state) for endpoint: \(that.connection?.endpoint) current connection = \(isCurrent)")
+                    that.logger.debug("original endpoint: \(conn.endpoint), current endpoint: \(that.connection?.endpoint)")
+                    guard isCurrent else {
+                        that.logger.debug("\(that.userJid) - skipping processing state change")
+                        return
+                    }
+                    that.logger.debug("\(that.userJid) - processing state change")
+                    switch state {
+                    case .ready:
+                        that.state = .connected;
+                        that.initiateParser();
+                        that.scheduleRead(connection: conn);
+                        if !that.options.enableTcpFastOpen {
+                            that.restartStream();
+                        }
+                    case .preparing:
+                        that.state = .connecting;
+                    case .cancelled, .setup:
+                        that.state = .disconnected();
+                        that.connection = nil;
+                    case .failed(_):
+                        that.logger.debug("\(that.userJid) - establishing connection to:\(that.server, privacy: .auto(mask: .hash)) timed out!");
+                        if let lastConnectionDetails = that.currentEndpoint as? SocketConnectorNetwork.Endpoint {
+                            that.options.dnsResolver.markAsInvalid(for: that.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
+                        }
+                        that.state = .disconnected(.timeout);
+                        that.connection = nil;
+                    case .waiting(_):
+                        that.logger.debug("\(that.userJid) - no route to connect to:\(that.server, privacy: .auto(mask: .hash))!");
+                        if let lastConnectionDetails = that.currentEndpoint as? SocketConnectorNetwork.Endpoint {
+                            that.options.dnsResolver.markAsInvalid(for: that.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
+                        }
+                        that.state = .disconnected(.noRouteToServer);
+                    default:
+                        break;
+                    }
+                }
+                
+                conn.viabilityUpdateHandler = { viable in
+                    print("connectivity is \(viable ? "UP" : "DOWN")")
+                }
+                
+                conn.pathUpdateHandler = { path in
+                    print("better path found " + path.debugDescription)
+                }
+            }
+        }
+    }
     
     public required init(context: Context) {
         self.userJid = context.connectionConfiguration.userJid;
@@ -96,6 +166,12 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         }
     }
     
+    public func reset() {
+        queue.async {
+            self.connection = nil;
+        }
+    }
+    
     public func start(endpoint: ConnectorEndpoint?) {
         queue.sync {
             guard state == .disconnected() else {
@@ -115,15 +191,17 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             } else {
                 self.logger.debug("\(self.userJid) - connecting to server: \(self.server)");
                 self.options.dnsResolver.resolve(domain: server, for: self.userJid) { result in
-                    switch result {
-                    case .success(let dnsResult):
-                        if let record = dnsResult.record() {
-                            self.connect(endpoint: SocketConnectorNetwork.Endpoint(proto: record.directTls ? .XMPPS : .XMPP, host: record.target, port: record.port));
-                        } else {
+                    self.queue.async {
+                        switch result {
+                        case .success(let dnsResult):
+                            if let record = dnsResult.record() {
+                                self.connect(endpoint: SocketConnectorNetwork.Endpoint(proto: record.directTls ? .XMPPS : .XMPP, host: record.target, port: record.port));
+                            } else {
+                                self.connect(endpoint: SocketConnectorNetwork.Endpoint(proto: .XMPP, host: self.server, port: 5222));
+                            }
+                        case .failure(_):
                             self.connect(endpoint: SocketConnectorNetwork.Endpoint(proto: .XMPP, host: self.server, port: 5222));
                         }
-                    case .failure(_):
-                        self.connect(endpoint: SocketConnectorNetwork.Endpoint(proto: .XMPP, host: self.server, port: 5222));
                     }
                 }
             }
@@ -139,6 +217,8 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             logger.log("connect(addr) - stopping connetion as state is not connecting \(self.state)");
             return;
         }
+        
+        assert(connection == nil, "connection was not closed properly!");
         
         self.currentEndpoint = endpoint;
         
@@ -163,56 +243,15 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             parameters.allowFastOpen = true;
         }
         connection = NWConnection(host: .name(endpoint.host, nil), port: .init(integerLiteral: UInt16(endpoint.port)), using: parameters);
-        
+        // FIXME: reconnect happens before connection is actually closed!!
+        networkStack.reset();
+        activeFeatures.removeAll();
         if endpoint.proto == .XMPPS {
             self.initTLSStack();
         }
                         
         let conn = connection;
-        connection?.stateUpdateHandler = { [weak self, weak conn] state in
-            guard let that = self else {
-                return;
-            }
-            that.logger.debug("\(that.userJid) - changed state to: \(state) for endpoint: \(that.connection?.currentPath?.localEndpoint)")
-            switch state {
-            case .ready:
-                that.state = .connected;
-                that.initiateParser();
-                that.scheduleRead();
-                if !that.options.enableTcpFastOpen {
-                    that.restartStream();
-                }
-            case .preparing:
-                that.state = .connecting;
-            case .cancelled, .setup:
-                if let currConn = that.connection, let _conn = conn, _conn === currConn {
-                    that.state = .disconnected();
-                }
-            case .failed(_):
-                that.connection?.cancel();
-                that.logger.debug("\(that.userJid) - establishing connection to:\(that.server, privacy: .auto(mask: .hash)) timed out!");
-                if let lastConnectionDetails = that.currentEndpoint as? SocketConnectorNetwork.Endpoint {
-                    that.options.dnsResolver.markAsInvalid(for: that.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
-                }
-                that.state = .disconnected(.timeout);
-            case .waiting(_):
-                that.logger.debug("\(that.userJid) - no route to connect to:\(that.server, privacy: .auto(mask: .hash))!");
-                if let lastConnectionDetails = that.currentEndpoint as? SocketConnectorNetwork.Endpoint {
-                    that.options.dnsResolver.markAsInvalid(for: that.server, host: lastConnectionDetails.host, port: lastConnectionDetails.port, for: 15 * 60.0);
-                }
-                that.state = .disconnected(.noRouteToServer);
-            default:
-                break;
-            }
-        }
         
-        connection?.viabilityUpdateHandler = { viable in
-            print("connectivity is \(viable ? "UP" : "DOWN")")
-        }
-        
-        connection?.pathUpdateHandler = { path in
-            print("better path found " + path.debugDescription)
-        }
         
         if options.enableTcpFastOpen {
             self.streamEvents.send(.streamStart);
@@ -221,57 +260,57 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         }
     }
     
-    private func scheduleRead() {
-        self.connection?.receive(minimumIncompleteLength: 1, maximumLength: 4096 * 2, completion: { [weak self] data, context, complete, error in
-            guard let self else {
+    private func scheduleRead(connection conn: NWConnection) {
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 4096 * 2, completion: { [weak self] data, context, complete, error in
+            guard let self, conn === self.connection else {
                 return;
             }
-            let state = self.connection?.state;
-            self.logger.debug("read data: \(data), complete: \(complete), error: \(error), \(state)")
+            let state = conn.state;
+            self.logger.debug("\(self.userJid), read data: \(data), complete: \(complete), error: \(error), \(state)")
             if let data = data {
                 self.networkStack.read(data: data);
             }
             if complete {
                 self.logger.debug("connection closed by the server")
-                self.connection?.cancel();
-//                self?.logger.debug("updating state")
-//                self?.state = .disconnected(.none);
-//                self?.logger.debug("state updated")
+                assert(conn === self.connection)
+                conn.cancel();
             } else {
-                self.scheduleRead();
+                self.scheduleRead(connection: conn);
             }
         })
     }
     
     public func stop(force: Bool, completionHandler: @escaping ()->Void) {
-        guard !force else {
-            self.connection?.forceCancel();
-            completionHandler();
-            return;
-        }
-        switch self.state {
-        case .disconnected(_), .disconnecting:
-            self.logger.debug("\(self.userJid) - not connected or already disconnecting");
-            completionHandler();
-            return;
-        case .connected:
-            self.state = .disconnecting;
-            self.logger.debug("\(self.userJid) - closing XMPP stream");
-            
-//            self.streamEvents.send(.streamClose())
-            // TODO: I'm not sure about that!!
-            self.queue.async {
-                self.sendSync("</stream:stream>", completion: .written({ result in
-                    self.connection?.cancel();
-                    completionHandler();
-                }));
+        queue.async {
+            guard !force else {
+                self.connection?.forceCancel();
+                completionHandler();
+                return;
             }
-        case .connecting:
-            self.state = .disconnecting;
-            self.logger.debug("\(self.userJid) - closing TCP connection");
-            self.state = .disconnected(.timeout);
-            self.connection?.cancel();
-            completionHandler();
+            switch self.state {
+            case .disconnected(_), .disconnecting:
+                self.logger.debug("\(self.userJid) - not connected or already disconnecting");
+                completionHandler();
+                return;
+            case .connected:
+                self.state = .disconnecting;
+                self.logger.debug("\(self.userJid) - closing XMPP stream");
+                
+                //            self.streamEvents.send(.streamClose())
+                // TODO: I'm not sure about that!!
+                self.queue.async {
+                    self.sendSync("</stream:stream>", completion: .written({ result in
+                        self.connection?.cancel();
+                        completionHandler();
+                    }));
+                }
+            case .connecting:
+                self.state = .disconnecting;
+                self.logger.debug("\(self.userJid) - closing TCP connection");
+                self.state = .disconnected(.timeout);
+                self.connection?.cancel();
+                completionHandler();
+            }
         }
     }
     
@@ -329,6 +368,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         switch event {
         case .stanza(let packet):
             if packet.name == "error" && packet.xmlns == "http://etherx.jabber.org/streams" {
+                self.reset();
                 state = .disconnected(.streamError(packet.element));
             } else if packet.name == "proceed" && packet.xmlns == "urn:ietf:params:xml:ns:xmpp-tls" {
                 proceedTLS();
@@ -338,10 +378,12 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 streamEvents.send(event);
             }
         case .streamClose(let reason):
-            if (state != .disconnected()) {
-                state = .disconnecting;
+            guard state != .disconnected() else {
+                return;
             }
+            let conn = self.connection;
             sendSync("</stream:stream>",  completion: .written({ _ in
+                assert(conn === self.connection)
                 self.networkStack.reset();
                 self.state = .disconnected(reason == .xmlError ? .xmlError(nil) : .none);
                 self.connection?.cancel();

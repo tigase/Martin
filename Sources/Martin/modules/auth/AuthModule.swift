@@ -106,6 +106,15 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
             }
         }
         
+        public var isAuthorized: Bool {
+            switch self {
+            case .authorized(streamRestartRequired: _):
+                return true;
+            default:
+                return false;
+            }
+        }
+        
         private var value: Int {
             switch self {
             case .notAuthorized:

@@ -606,7 +606,7 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, Resetable, Sasl2I
     
     private func processEnabled(_ stanza: Stanza) {
         let id = stanza.attribute("id");
-        let r = stanza.attribute("resume");
+        let _ = stanza.attribute("resume");
         let max = stanza.attribute("max");
         //let resume = (r == "true" || r == "1") && id != nil;
         lock.with {
@@ -655,11 +655,11 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, Resetable, Sasl2I
 /// Internal implementation of queue for holding items
 public class Queue<T> {
     
-    private class Node<T> {
+    private class Node {
         
         let value: T;
-        weak var prev: Node<T>? = nil;
-        var next: Node<T>? = nil;
+        weak var prev: Node? = nil;
+        var next: Node? = nil;
         
         init(value: T) {
             self.value = value;
@@ -668,8 +668,8 @@ public class Queue<T> {
     }
     
     private var _count: Int = 0;
-    private var head: Node<T>? = nil;
-    private var tail: Node<T>? = nil;
+    private var head: Node? = nil;
+    private var tail: Node? = nil;
     
     public var isEmpty: Bool {
         return head == nil;
@@ -689,7 +689,7 @@ public class Queue<T> {
     }
     
     open func offer(_ value: T) {
-        let newNode = Node<T>(value: value);
+        let newNode = Node(value: value);
         if let tailNode = tail {
             newNode.prev = tailNode;
             tailNode.next = newNode;

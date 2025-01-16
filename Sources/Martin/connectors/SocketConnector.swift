@@ -707,9 +707,9 @@ public protocol NetworkProcessorProvider {
 
 public enum WriteCompletion {
     case none
-    case written((Result<Void,Error>)->Void)
+    case written((sending Result<Void,Error>)->Void)
     
-    public func completed(result: Result<Void,Error>) {
+    public func completed(result: sending Result<Void,Error>) {
         switch self {
         case .none:
             break;

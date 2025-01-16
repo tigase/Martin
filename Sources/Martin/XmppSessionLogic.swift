@@ -248,6 +248,7 @@ open class SocketSessionLogic: XmppSessionLogic {
             
                 if let continuation = await self.responseManager.continuation(for: stanza) {
                     // FIXME: this is not blocking and causes continuation to be processed after another stanza may be processed!!
+                    // is it? semaphore should properly handle ordering in this task
                     continuation(stanza);
                     print("continuation processing finished for: \(stanza)")
                     return;
@@ -340,7 +341,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         
         self.logger.debug("\(self.userJid) - processing stream features:\n \(streamFeatures)");
         // it looks like, this is called before auth task finishes, while it should be executed after task finishes
-        let authorized = (modulesManager.moduleOrNil(.auth)?.state ?? .notAuthorized) == .authorized(streamRestartRequired: false);
+        let authorized = (modulesManager.moduleOrNil(.auth)?.state ?? .notAuthorized).isAuthorized;
         
         if (!connector.activeFeatures.contains(.TLS)) && connector.availableFeatures.contains(.TLS)
             && (!connectionConfiguration.disableTLS) && streamFeatures.contains(.startTLS) {
@@ -350,7 +351,7 @@ open class SocketSessionLogic: XmppSessionLogic {
         } else if !authorized {
             if let authModule: AuthModule = modulesManager.moduleOrNil(.auth) {
                 self.logger.debug("\(self.userJid) - starting authentication");
-                authTask = Task {
+                authTask = Task.detached(operation: {
                     do {
                         try await authModule.login();
                         if case let .authorized(streamRestartRequired) = authModule.state, streamRestartRequired {
@@ -359,7 +360,7 @@ open class SocketSessionLogic: XmppSessionLogic {
                     } catch {
                         await self.stop(force: true);
                     }
-                }
+                })
             } else if modulesManager.moduleOrNil(.inBandRegistration) != nil {
                 self.logger.debug("\(self.userJid) - marking client as connected and ready for registration")
                 self.state = .connected(resumed: false);

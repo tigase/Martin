@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class MixChannelConfig: DataFormWrapper {
+open class MixChannelConfig: DataFormWrapper, @unchecked Sendable {
     
     public enum NodePermission: String, DataFormEnum {
         case participants

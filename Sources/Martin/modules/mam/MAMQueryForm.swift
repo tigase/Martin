@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class MAMQueryForm: DataFormWrapper, Sendable {
+open class MAMQueryForm: DataFormWrapper, @unchecked Sendable {
     
     @Field("with")
     public var with: JID?;

@@ -274,7 +274,7 @@ open class DataForm: DataFormProtocol, @unchecked Sendable {
     }
     
     open func value<V: LosslessStringConvertible>(for key: String, type: V.Type) -> V? {
-        guard let field = fields.first(where: { $0.var == key }) else {
+        guard let field = field(for: key) else {
             return nil;
         }
         switch field {
@@ -320,7 +320,7 @@ open class DataForm: DataFormProtocol, @unchecked Sendable {
     }
     
     open func value(for key: String, type: [String].Type) -> [String]? {
-        guard let field = fields.first(where: { $0.var == key }) else {
+        guard let field = field(for: key) else {
             return nil;
         }
         switch field {
@@ -334,7 +334,7 @@ open class DataForm: DataFormProtocol, @unchecked Sendable {
     }
     
     open func value(for key: String, type: [JID].Type) -> [JID]? {
-        guard let field = fields.first(where: { $0.var == key })else {
+        guard let field = field(for: key) else {
             return nil;
         }
         switch field {
@@ -352,7 +352,7 @@ open class DataForm: DataFormProtocol, @unchecked Sendable {
     }
     
     open func fieldType(for key: String) -> Field.FieldType? {
-        return fields.first(where: { $0.var == key })?.type;
+        return field(for: key)?.type;
     }
     
     open func element(type: FormType, onlyModified: Bool) -> Element {

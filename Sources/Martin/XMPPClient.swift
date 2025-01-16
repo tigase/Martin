@@ -95,7 +95,7 @@ import Combine
  ```
  
  */
-open class XMPPClient: Context {
+open class XMPPClient: Context, @unchecked Sendable {
     
     private let logger = Logger(subsystem: "TigaseSwift", category: "XMPPClient");
     public var context: Context {

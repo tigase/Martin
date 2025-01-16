@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class PubSubNodeConfig: DataFormWrapper {
+open class PubSubNodeConfig: DataFormWrapper, @unchecked Sendable {
     
     public enum AccessModel: String, DataFormEnum {
         case authorize

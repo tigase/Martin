@@ -29,7 +29,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PEPUserNicknameModule: AbstractPEPModule, XmppModule {
+open class PEPUserNicknameModule: AbstractPEPModule, XmppModule, @unchecked Sendable {
 
     public static let XMLNS = "http://jabber.org/protocol/nick";
     

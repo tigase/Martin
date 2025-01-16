@@ -106,7 +106,9 @@ extension Connector {
     public func send(_ data: StreamEvent) async throws {
         do {
             try await withUnsafeThrowingContinuation({ continuation in
-                send(data, completion: .written(continuation.resume(with:)));
+                send(data, completion: .written({ result in
+                    continuation.resume(with: result)
+                }));
             })
         } catch {
             throw XMPPError.remote_server_timeout;

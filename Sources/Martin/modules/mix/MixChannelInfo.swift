@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class MixChannelInfo: DataFormWrapper {
+open class MixChannelInfo: DataFormWrapper, @unchecked Sendable {
     
     @Field("Name")
     public var name: String?;
@@ -70,7 +70,7 @@ extension MixModule {
             case .success(_):
                 completionHandler(.success(Void()));
             case .failure(let error):
-                completionHandler(.failure(XMPPError(condition: .undefined_condition)));
+                completionHandler(.failure(error));
             }
         });
     }

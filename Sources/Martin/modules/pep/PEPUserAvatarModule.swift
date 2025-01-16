@@ -29,7 +29,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PEPUserAvatarModule: AbstractPEPModule, XmppModule {
+open class PEPUserAvatarModule: AbstractPEPModule, XmppModule, @unchecked Sendable {
 
     public static let METADATA_XMLNS = ID + ":metadata";
     public static let DATA_XMLNS = ID + ":data";

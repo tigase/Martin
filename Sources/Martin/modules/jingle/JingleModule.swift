@@ -125,7 +125,7 @@ open class JingleModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendabl
         guard let sid = jingle.attribute("sid") else {
             throw XMPPError(condition: .bad_request, message: "Missing sid attributed")
         }
-        guard let initiator = JID(jingle.attribute("initiator")) ?? stanza.from else {
+        guard (JID(jingle.attribute("initiator")) ?? stanza.from) != nil else {
             throw XMPPError(condition: .bad_request, message: "Missing initiator attribute");
         }
         

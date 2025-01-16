@@ -22,7 +22,7 @@
 import Foundation
 import Combine
 
-open class ChannelBase: ConversationBase, ChannelProtocol {
+open class ChannelBase: ConversationBase, ChannelProtocol, @unchecked Sendable {
         
     open override var defaultMessageType: StanzaType {
         return .groupchat;

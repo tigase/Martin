@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class ChatBase: ConversationBase, ChatProtocol {
+open class ChatBase: ConversationBase, ChatProtocol, @unchecked Sendable {
             
     open override var defaultMessageType: StanzaType {
         return .chat;

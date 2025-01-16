@@ -20,7 +20,7 @@
 //
 import Foundation
 
-open class PubSubSubscribeOptions: DataFormWrapper {
+open class PubSubSubscribeOptions: DataFormWrapper, @unchecked Sendable {
     
     public enum SubscriptionType {
         case items
