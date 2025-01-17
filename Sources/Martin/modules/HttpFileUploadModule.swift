@@ -120,13 +120,13 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule, @unchecked Sendable
         public let maxSize: Int;
     }
     
-    open class Slot {
+    public struct Slot: Sendable {
         
         public let getUri: URL;
         public let putUri: URL;
         public let putHeaders: [String: String];
         
-        public convenience init?(getUri getUriStr: String, putUri putUriStr: String, putHeaders: [String:String]) {
+        public init?(getUri getUriStr: String, putUri putUriStr: String, putHeaders: [String:String]) {
             guard let getUri = URL(string: getUriStr.replacingOccurrences(of: " ", with: "%20")), let putUri = URL(string: putUriStr.replacingOccurrences(of: " ", with: "%20")) else {
                 return nil;
             }

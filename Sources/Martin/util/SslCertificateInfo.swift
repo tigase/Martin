@@ -34,16 +34,16 @@ extension SecCertificate {
     }
 }
 
-public struct SSLCertificateInfo: Codable, Equatable {
+public struct SSLCertificateInfo: Codable, Equatable, Sendable {
     
-    public struct Fingerprint: Codable, Equatable {
+    public struct Fingerprint: Codable, Equatable, Sendable {
 
         enum CodingKeys: String, CodingKey {
             case value
             case algorithm = "alg"
         }
         
-        public enum Algorithm: String, Codable {
+        public enum Algorithm: String, Codable, Sendable {
             case sha1 = "SHA-1"
             case sha256 = "SHA-256"
 
@@ -76,7 +76,7 @@ public struct SSLCertificateInfo: Codable, Equatable {
         }
     }
     
-    public struct Entry: Codable, Equatable {
+    public struct Entry: Codable, Equatable, Sendable {
         
         enum CodingKeys: CodingKey {
             case name

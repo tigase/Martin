@@ -249,8 +249,6 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         if endpoint.proto == .XMPPS {
             self.initTLSStack();
         }
-                        
-        let conn = connection;
         
         
         if options.enableTcpFastOpen {
