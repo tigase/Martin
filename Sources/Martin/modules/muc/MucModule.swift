@@ -368,6 +368,9 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
                 oldOccupant.set(presence: presence);
             }
         } else {
+            _ = room.removeTemp(nickname: nickname);
+            _ = room.addOccupant(nickname: nickname, presence: presence);
+
             if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
                 room.update(state: .joined);
                 
