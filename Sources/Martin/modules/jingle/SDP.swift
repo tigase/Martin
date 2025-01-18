@@ -82,7 +82,6 @@ open class SDP: @unchecked Sendable {
             var contents = self.contents;
             for diffed in diff.contents {
                 if let idx = contents.firstIndex(where: { $0.name == diffed.name }) {
-                    print("setting content \(diffed.name) from \(String(describing: contents[idx].senders)) to \(String(describing: diffed.senders))")
                     contents[idx] = contents[idx].with(senders: diffed.senders, description: diffed.description);
                 }
             }

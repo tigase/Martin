@@ -113,12 +113,12 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                     }
                 }
                 
-                conn.viabilityUpdateHandler = { viable in
-                    print("connectivity is \(viable ? "UP" : "DOWN")")
+                conn.viabilityUpdateHandler = { [weak self] viable in
+                    self?.logger.debug("connectivity is \(viable ? "UP" : "DOWN")")
                 }
                 
-                conn.pathUpdateHandler = { path in
-                    print("better path found " + path.debugDescription)
+                conn.pathUpdateHandler = { [weak self] path in
+                    self?.logger.debug("better path found \(path.debugDescription)")
                 }
             }
         }

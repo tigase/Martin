@@ -439,30 +439,6 @@ open class StreamManagementModule: XmppModuleBase, XmppModule, Resetable, Sasl2I
             }
             semaphore.signal();
         }
-//
-//        private func wait() {
-//            lock.with({
-//                blocked = true;
-//            })
-//            print("waiting for blocker");
-//            let start = Date();
-//            semaphore.wait();
-//            print("waited for \(Date().timeIntervalSince(start))s");
-//        }
-//
-//        private func signal() {
-//            print("signaling blocker")
-//            guard lock.with({
-//                guard blocked else {
-//                    return false;
-//                }
-//                blocked = false;
-//                return true;
-//            }) else {
-//                return;
-//            }
-//            semaphore.signal();
-//        }
         
     }
     

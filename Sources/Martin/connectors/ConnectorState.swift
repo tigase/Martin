@@ -68,7 +68,7 @@ public enum NetworkError: Error, LocalizedError {
 
 extension XMPPClient {
     
-    public enum State: Equatable {
+    public enum State: Equatable, Sendable {
         
         public static func == (lhs: State, rhs: State) -> Bool {
             return lhs.value == rhs.value;

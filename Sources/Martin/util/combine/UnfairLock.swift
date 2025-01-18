@@ -20,19 +20,49 @@
 //
 
 import Foundation
+import os
 
-open class UnfairLock {
+open class UnfairLock<State> {
     
-    private var lock_s = os_unfair_lock();
+    private let lockFn: () -> Void;
+    private let unlockFn: () -> Void;
+    private var state: State;
     
-    public init() {}
+    public init(state: State) {
+        self.state = state;
+        (lockFn, unlockFn) = createUnfairLock(initialState: state);
+    }
     
+    public func with<R>(_ body: (inout State) -> R) -> R {
+        lockFn();
+        defer {
+            unlockFn();
+        }
+        return body(&state);
+    }
+
+    public func with<R>(_ body: (inout State) throws -> R) rethrows -> R {
+        lockFn();
+        defer {
+            unlockFn();
+        }
+        return try body(&state);
+    }
+
+}
+
+extension UnfairLock where State == Void {
+    
+    public convenience init() {
+        self.init(state: ())
+    }
+
     public func lock() {
-        os_unfair_lock_lock(&lock_s);
+        lockFn()
     }
     
     public func unlock() {
-        os_unfair_lock_unlock(&lock_s);
+        unlockFn();
     }
     
     public func with<T>(_ body: () -> T) -> T {
@@ -49,5 +79,18 @@ open class UnfairLock {
             unlock();
         }
         return try body();
+    }
+
+}
+
+
+
+private func createUnfairLock<State>(initialState: State) -> (()->Void,()->Void) {
+    if #available(iOS 16.0, macOS 13.0, *) {
+        let lock = OSAllocatedUnfairLock();
+        return ( lock.lock, lock.unlock )
+    } else {
+        var lock = os_unfair_lock();
+        return ({ os_unfair_lock_lock(&lock) }, { os_unfair_lock_unlock(&lock) });
     }
 }

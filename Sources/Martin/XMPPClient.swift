@@ -131,8 +131,9 @@ open class XMPPClient: Context, @unchecked Sendable {
     }
     
     deinit {
-        releaseKeepAlive();
         let jid = connectionConfiguration.userJid;
+        logger.error("releasing keepalive for: \(jid)")
+        releaseKeepAlive();
         logger.error("deinitializing client for: \(jid)")
     }
     
@@ -161,7 +162,7 @@ open class XMPPClient: Context, @unchecked Sendable {
                 return;
             }
             let oldState = that.state;
-            print("session logic changed state from \(oldState) to \(newState)")
+            that.logger.debug("session logic changed state from \(oldState) to \(newState)")
             that.update(state: newState);
             switch newState {
             case .connected:
@@ -254,20 +255,34 @@ extension XMPPClient {
     
     public func loginAndWait(lastSeeOtherHost: ConnectorEndpoint? = nil) async throws {
         try login(lastSeeOtherHost: lastSeeOtherHost);
-        return try await withUnsafeThrowingContinuation { continuation in
-            var cancellable: AnyCancellable?;
-            cancellable = self.$state.sink(receiveValue: { state in
+        
+        if #available(iOS 15, macOS 12 , *) {
+            for await state in AsyncPublisher(self.$state) {
                 switch state {
                 case .disconnected(let err):
-                    continuation.resume(throwing: err);
-                    cancellable = nil;
+                    throw err;
                 case .connected:
-                    continuation.resume(returning: Void());
-                    cancellable = nil;
+                    return;
                 default:
                     break;
                 }
-            });
+            }
+        } else {
+            return try await withUnsafeThrowingContinuation { continuation in
+                var cancellable: AnyCancellable?;
+                cancellable = self.$state.sink(receiveValue: { state in
+                    switch state {
+                    case .disconnected(let err):
+                        continuation.resume(throwing: err);
+                        cancellable = nil;
+                    case .connected:
+                        continuation.resume(returning: Void());
+                        cancellable = nil;
+                    default:
+                        break;
+                    }
+                });
+            }
         }
     }
     

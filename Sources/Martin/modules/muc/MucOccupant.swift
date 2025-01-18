@@ -61,7 +61,6 @@ open class MucOccupant: Hashable, @unchecked Sendable {
     }
     
     public func set(presence: Presence) {
-        print("setting presence for \(nickname) to \(presence.show?.rawValue ?? "offline")");
         self.presence = presence;
     }
 }

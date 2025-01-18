@@ -466,7 +466,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
     }
     
     private func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
-        print("processing stream event: \(eventCode.rawValue)");
+        logger.debug("processing stream event: \(eventCode.rawValue)");
         queue.async {
             switch eventCode {
             case Stream.Event.errorOccurred:

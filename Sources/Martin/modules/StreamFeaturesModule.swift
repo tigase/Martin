@@ -57,7 +57,6 @@ open class StreamFeaturesModule: XmppModuleBaseSessionStateAware, XmppStanzaProc
     }
     
     func setStreamFeatures(_ element: Element) {
-        print("received stream features:", element)
         self.streamFeatures = StreamFeatures(element: element);
     }
     

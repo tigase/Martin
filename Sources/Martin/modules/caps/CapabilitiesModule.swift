@@ -162,12 +162,12 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, @unchecked Sendable {
      - returns: calculated verification string
      */
     func calculateVerificationString() -> String? {
-        guard let context = self.context else {
+        guard let ctx = self.context else {
             return nil;
         }
         let identity = "\(discoModule.identity.category)/\(discoModule.identity.type)//\(discoModule.identity.name ?? SoftwareVersionModule.DEFAULT_NAME_VAL)";
         
-        let ver = generateVerificationString([identity], features: Array(context.modulesManager.availableFeatures));
+        let ver = generateVerificationString([identity], features: Array(ctx.modulesManager.availableFeatures));
         
         let oldVer: String? = verificationString;
         if oldVer != nil && ver != oldVer {

@@ -202,8 +202,8 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
         func resolve(timeout: TimeInterval) {
             queue.async {
             let selfPtr = XMPPDNSSrvResolver.bridge(self);
-            let result: DNSServiceErrorType = self.srvName.withCString { [weak self] (srvNameC) -> DNSServiceErrorType in
-                let sdErr = DNSServiceQueryRecord(&self!.sdRef, kDNSServiceFlagsReturnIntermediates, UInt32(kDNSServiceInterfaceIndexAny), srvNameC, UInt16(kDNSServiceType_SRV), UInt16(kDNSServiceClass_IN), QueryRecordCallback, selfPtr);
+            let result: DNSServiceErrorType = self.srvName.withCString { (srvNameC) -> DNSServiceErrorType in
+                let sdErr = DNSServiceQueryRecord(&self.sdRef, kDNSServiceFlagsReturnIntermediates, UInt32(kDNSServiceInterfaceIndexAny), srvNameC, UInt16(kDNSServiceType_SRV), UInt16(kDNSServiceClass_IN), QueryRecordCallback, selfPtr);
                 return sdErr;
             }
             switch result {
@@ -230,7 +230,10 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
                         that.fail(withDNSError: res);
                     }
                 })
-                self.sdFdReadSource?.setCancelHandler(handler: {
+                self.sdFdReadSource?.setCancelHandler(handler: { [weak self] in
+                    guard let self else {
+                        return;
+                    }
                     DNSServiceRefDeallocate(self.sdRef);
                 })
                 self.sdFdReadSource?.resume();
@@ -282,6 +285,9 @@ open class XMPPDNSSrvResolver: DNSSrvResolver {
             }
             self.sdFdReadSource = nil;
             self.sdFd = -1;
+            if let sdRef = self.sdRef {
+                DNSServiceRefDeallocate(sdRef);
+            }
             self.sdRef = nil;
             
             self.timeoutTimer = nil;

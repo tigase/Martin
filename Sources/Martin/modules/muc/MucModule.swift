@@ -66,20 +66,63 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
     public let messagesPublisher = PassthroughSubject<MessageReceived, Never>();
     public let inivitationsPublisher = PassthroughSubject<Invitation, Never>();
     
+    private let joinPromises = JoinPromises();
+    
     public init(roomManager: RoomManager) {
         self.roomManager = roomManager;
+    }
+    
+    public final class JoinPromises {
+        private let lock = UnfairLock();
+        private var continuations: [BareJID:UnsafeContinuation<RoomJoinResult,Error>] = [:];
+        
+        deinit {
+            cancelAll()
+        }
+        
+        public func register(jid: BareJID, continuation: UnsafeContinuation<RoomJoinResult,Error>) {
+            lock.with {
+                assert(continuations[jid] == nil)
+                continuations[jid] = continuation;
+            }
+        }
+        
+        public func complete(jid: BareJID, with result: Result<RoomJoinResult,Error>) {
+            guard let continuation = lock.with({
+                self.continuations.removeValue(forKey: jid);
+            }) else { return };
+            continuation.resume(with: result)
+        }
+        
+        public func complete(jid: BareJID, returning value: RoomJoinResult) {
+            complete(jid: jid, with: .success(value))
+        }
+        
+        public func complete(jid: BareJID, throwing error: Error) {
+            complete(jid: jid, with: .failure(error))
+        }
+        
+        public func cancelAll() {
+            let continuations = lock.with({
+                defer {
+                    self.continuations.removeAll();
+                }
+                return self.continuations.values;
+            })
+            continuations.forEach({
+                $0.resume(throwing: XMPPError.remote_server_timeout)
+            })
+        }
+    }
+    
+    deinit {
+        self.joinPromises.cancelAll();
     }
         
     open func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.session) {
             markRoomsAsNotJoined();
-            self.context?.queue.async {
-                let futures = self.joinPromises.values;
-                self.joinPromises.removeAll();
-                for future in futures {
-                    future(.failure(XMPPError.remote_server_timeout));
-                }
-            }
+            joinPromises.cancelAll();
         }
     }
         
@@ -200,7 +243,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
         try await room.inviteDirectly(invitee, reason: reason, threadId: threadId);
     }
     
-    private var joinPromises: [BareJID: (Result<RoomJoinResult,XMPPError>)->Void] = [:];
+//    private var joinPromises: [BareJID: (Result<RoomJoinResult,XMPPError>)->Void] = [:];
     
     /**
      Join MUC room
@@ -225,44 +268,33 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
     }
     
     open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch) async throws -> RoomJoinResult {
+        guard let context = self.context else {
+            throw XMPPError.undefined_condition;
+        }
         return try await withUnsafeThrowingContinuation { continuation in
-            self.join(room: room, fetchHistory: fetchHistory, completionHandler: { result in
-                continuation.resume(with: result);
-            });
+            joinPromises.register(jid: room.jid, continuation: continuation);
+
+            let jid = room.jid;
+            let presence = Presence(to: room.jid.with(resource: room.nickname), {
+                Element(name: "x", xmlns: "http://jabber.org/protocol/muc", {
+                    if let password = room.password {
+                        Element(name: "password", cdata: password)
+                    }
+                    fetchHistory.element()
+                })
+            })
+            
+            room.update(state: .requested);
+            Task.detached(operation: {
+                do {
+                    try await self.write(stanza: presence);
+                } catch {
+                    self.joinPromises.complete(jid: jid, throwing: error);
+                }
+            })
         }
     }
     
-    open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch, completionHandler: @escaping (Result<RoomJoinResult,XMPPError>)->Void) {
-        guard let context = self.context else {
-            completionHandler(.failure(.undefined_condition));
-            return;
-        }
-        
-        context.queue.async {
-            self.joinPromises[room.jid] = completionHandler;
-        }
-        
-        let presence = Presence(to: room.jid.with(resource: room.nickname), {
-            Element(name: "x", xmlns: "http://jabber.org/protocol/muc", {
-                if let password = room.password {
-                    Element(name: "password", cdata: password)
-                }
-                fetchHistory.element()
-            })
-        })
-        
-        room.update(state: .requested);
-        self.write(stanza: presence, completionHandler: { result in
-            guard case .failure(let error) = result else {
-                return;
-            }
-            context.queue.async {
-                self.joinPromises.removeValue(forKey: room.jid);
-            }
-            completionHandler(.failure(error));
-        });
-    }
-
     /**
      Destroy MUC room
      - parameter room: room to destroy
@@ -341,9 +373,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
                 } else {
                     room.update(state: .not_joined());
                 }
-                self.context?.queue.async {
-                    self.joinPromises.removeValue(forKey: roomJid)?(.failure(presence.error ?? .undefined_condition));
-                }
+                self.joinPromises.complete(jid: roomJid, throwing: presence.error ?? .undefined_condition)
             }
         }
         
@@ -375,9 +405,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
                 room.update(state: .joined);
                 
                 let wasCreated = xUser?.statuses.firstIndex(of: 201) != nil;
-                context.queue.async {
-                    self.joinPromises.removeValue(forKey: room.jid)?(.success(wasCreated ? .created(room) : .joined(room)));
-                }
+                self.joinPromises.complete(jid: room.jid, returning: wasCreated ? .created(room) : .joined(room));
             }
         }
 
@@ -653,6 +681,18 @@ extension MucModule {
             }
         }
     }
+    
+    public func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch, completionHandler: @escaping (Result<RoomJoinResult,XMPPError>)->Void) {
+        Task {
+            do {
+                let result = try await self.join(room: room, fetchHistory: fetchHistory)
+                completionHandler(.success(result));
+            } catch {
+                completionHandler(.failure(error as? XMPPError ?? XMPPError.undefined_condition));
+            }
+        }
+    }
+
 
     @discardableResult
     public func destroy(room: RoomProtocol) -> Bool {

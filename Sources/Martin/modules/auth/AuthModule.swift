@@ -46,7 +46,8 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
     @Published
     open private(set) var state: AuthorizationStatus = .notAuthorized {
         willSet {
-            print("changing auth state to \(newValue) from \(state)")
+            let value = state;
+            logger.debug("changing auth state to \(newValue) from \(value)")
         }
     }
     

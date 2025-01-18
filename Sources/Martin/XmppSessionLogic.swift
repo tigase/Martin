@@ -237,11 +237,11 @@ open class SocketSessionLogic: XmppSessionLogic {
         semaphore.wait();
         Task {
             defer {
-                print("releasing semaphore")
+                logger.debug("releasing semaphore")
                 semaphore.signal();
             }
             do {
-                print("received stanza: \(stanza)")
+                logger.debug("received stanza: \(stanza)")
                 if streamManagementModule?.processIncoming(stanza: stanza) ?? false {
                     return;
                 }
@@ -250,7 +250,7 @@ open class SocketSessionLogic: XmppSessionLogic {
                     // FIXME: this is not blocking and causes continuation to be processed after another stanza may be processed!!
                     // is it? semaphore should properly handle ordering in this task
                     continuation(stanza);
-                    print("continuation processing finished for: \(stanza)")
+                    logger.debug("continuation processing finished for: \(stanza)")
                     return;
                 }
                             
@@ -269,7 +269,7 @@ open class SocketSessionLogic: XmppSessionLogic {
                 for processor in processors {
                     try await processor.process(stanza: stanza);
                 }
-                print("stanza processing finished: \(stanza)")
+                logger.debug("stanza processing finished: \(stanza)")
             } catch {
                 Task {
                     do {
