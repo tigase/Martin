@@ -77,8 +77,6 @@ public struct LogicPacketWriter: PacketWriter {
                 if stanza.id == nil {
                     stanza.id = UIDGenerator.nextUid;
                 }
-            } else {
-                throw XMPPError(condition: .bad_request, message: "IQ stanza of type error requires `id` attribute!")
             }
         }
 
