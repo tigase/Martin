@@ -38,7 +38,7 @@ extension Element: ElementItemProtocol {
 extension Array: ElementItemProtocol where Element == ElementItemProtocol {
     
     public func asItems() -> [ElementItemProtocol] {
-        return self;
+        return self.flatMap({ $0.asItems() });
     }
     
 }

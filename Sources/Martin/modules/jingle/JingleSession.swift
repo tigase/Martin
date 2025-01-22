@@ -130,8 +130,8 @@ open class JingleSession: CustomDebugStringConvertible, @unchecked Sendable {
     }
         
     open func accepted(by jid: JID) {
-        self.state = .accepted;
         self.jid = jid;
+        self.state = .accepted;
     }
     
     open func accepted(contents: [Jingle.Content], bundle: Jingle.Bundle?) {

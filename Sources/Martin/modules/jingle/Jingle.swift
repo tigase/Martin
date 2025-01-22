@@ -566,21 +566,31 @@ extension Jingle {
                 return Element(name: "description", xmlns: "urn:xmpp:jingle:apps:rtp:1", {
                     Attribute("media", value: media)
                     Attribute("ssrc", value: ssrc)
-                    payloads.map({ $0.element() })
+                    for payload in payloads {
+                        payload.element()
+                    }
                     if Jingle.supportCryptoAttribute && !encryption.isEmpty {
                         Element(name: "encryption", {
-                            encryption.map({ $0.element() })
+                            for e in encryption {
+                                e.element()
+                            }
                         })
                     }
-                    ssrcGroups.map({ $0.element() })
-                    ssrcs.map({ $0.element() })
+                    for ssrcGroup in ssrcGroups {
+                        ssrcGroup.element()
+                    }
+                    for ssrc in ssrcs {
+                        ssrc.element()
+                    }
                     if let bandwidth = bandwidth {
                         Element(name: "bandwidth", attributes: ["type": bandwidth])
                     }
                     if rtcpMux {
                         Element(name: "rtcp-mux")
                     }
-                    hdrExts.map({ $0.element() })
+                    for hdrExt in hdrExts {
+                        hdrExt.element()
+                    }
                 });
             }
             
@@ -633,12 +643,16 @@ extension Jingle {
                         if let maxptime = self.maxptime {
                             Attribute("maxptime", value: String(maxptime));
                         }
-                        parameters?.map({ $0.element() })
-                        rtcpFeedbacks?.map({
-                            let rtcpFbEl = $0.element();
+                        for parameter in parameters ?? [] {
+                            parameter.element()
+                        }
+                        for el in rtcpFeedbacks?.map({ x -> Element in
+                            let rtcpFbEl = x.element();
                             rtcpFbEl.attribute("id", newValue: String(id));
                             return rtcpFbEl;
-                        })
+                        }) ?? [] {
+                            el
+                        }
                     });
                 }
                 

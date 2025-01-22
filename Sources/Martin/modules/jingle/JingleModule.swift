@@ -287,6 +287,9 @@ open class JingleModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendabl
             Element(name: "jingle", xmlns: JingleModule.XMLNS, {
                 Attribute("action", value: "session-terminate")
                 Attribute("sid", value: sid)
+                Element(name: "reason", {
+                    reason.toElement()
+                })
             })
         });
         
