@@ -54,15 +54,15 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
 
     private var connection: NWConnection? {
         willSet {
-            if connection !== newValue {
-                connection?.stateUpdateHandler = nil;
-                connection?.viabilityUpdateHandler = nil;
-                connection?.pathUpdateHandler = nil;
+            if let connection = self.connection, connection !== newValue {
+                connection.stateUpdateHandler = nil;
+                connection.viabilityUpdateHandler = nil;
+                connection.pathUpdateHandler = nil;
                 networkStack.reset();
                 activeFeatures.removeAll();
-                switch connection?.state {
+                switch connection.state {
                 case .ready, .setup, .waiting, .preparing:
-                    connection?.cancel();
+                    connection.cancel();
                 default:
                     break;
                 }
@@ -268,7 +268,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
             if let data = data {
                 self.networkStack.read(data: data);
             }
-            if complete {
+            if complete || error != nil {
                 self.logger.debug("connection closed by the server")
                 assert(conn === self.connection)
                 conn.cancel();
@@ -362,6 +362,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     }
     
     public override func parsed(_ event: StreamEvent) {
+        logger.debug("\(self.userJid), parsed event: \(event)")
         super.parsed(event);
         switch event {
         case .stanza(let packet):
@@ -386,6 +387,18 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
                 self.state = .disconnected(reason == .xmlError ? .xmlError(nil) : .none);
                 self.connection?.cancel();
             }));
+        case .streamTerminate:
+            guard state != .disconnected() else {
+                return;
+            }
+            let conn = self.connection;
+            sendSync("</stream:stream>",  completion: .written({ _ in
+                assert(conn === self.connection)
+                self.networkStack.reset();
+                self.state = .disconnected(.xmlError(nil));
+                self.connection?.cancel();
+            }));
+
         default:
             streamEvents.send(event);
         }
