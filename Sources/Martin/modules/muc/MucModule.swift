@@ -80,8 +80,11 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
             cancelAll()
         }
         
-        public func register(jid: BareJID, continuation: UnsafeContinuation<RoomJoinResult,Error>) {
-            lock.with {
+        public func register(jid: BareJID, continuation: UnsafeContinuation<RoomJoinResult,Error>) throws {
+            try lock.with {
+                guard continuations[jid] == nil else {
+                    throw XMPPError(condition: .policy_violation, message: "Join request already pending for \(jid)!")
+                }
                 assert(continuations[jid] == nil)
                 continuations[jid] = continuation;
             }
@@ -268,30 +271,40 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
     }
     
     open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch) async throws -> RoomJoinResult {
-        guard let context = self.context else {
+        guard let context = self.context, case .not_joined(_) = room.state else {
             throw XMPPError.undefined_condition;
         }
-        return try await withUnsafeThrowingContinuation { continuation in
-            joinPromises.register(jid: room.jid, continuation: continuation);
-
-            let jid = room.jid;
-            let presence = Presence(to: room.jid.with(resource: room.nickname), {
-                Element(name: "x", xmlns: "http://jabber.org/protocol/muc", {
-                    if let password = room.password {
-                        Element(name: "password", cdata: password)
-                    }
-                    fetchHistory.element()
-                })
-            })
-            
-            room.update(state: .requested);
-            Task.detached(operation: {
+        do {
+            return try await withUnsafeThrowingContinuation { continuation in
                 do {
-                    try await self.write(stanza: presence);
+                    try joinPromises.register(jid: room.jid, continuation: continuation);
                 } catch {
-                    self.joinPromises.complete(jid: jid, throwing: error);
+                    continuation.resume(throwing: error)
+                    return;
                 }
-            })
+                
+                let jid = room.jid;
+                let presence = Presence(to: room.jid.with(resource: room.nickname), {
+                    Element(name: "x", xmlns: "http://jabber.org/protocol/muc", {
+                        if let password = room.password {
+                            Element(name: "password", cdata: password)
+                        }
+                        fetchHistory.element()
+                    })
+                })
+                
+                room.update(state: .requested);
+                Task.detached(operation: {
+                    do {
+                        try await self.write(stanza: presence);
+                    } catch {
+                        self.joinPromises.complete(jid: jid, throwing: error);
+                    }
+                })
+            }
+        } catch {
+            room.update(state: .not_joined(reason: .error(error as? XMPPError ?? .undefined_condition)));
+            throw error
         }
     }
     
