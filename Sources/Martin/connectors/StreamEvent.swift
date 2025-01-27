@@ -24,7 +24,18 @@ import Foundation
 public enum StreamEvent: CustomStringConvertible {
     
     public var description: String {
-        return String(reflecting: self)
+        switch self {
+        case .streamStart:
+            return ".streamStart"
+        case .streamOpen(let attributes):
+            return ".streamOpen(\(attributes))"
+        case .streamClose(let reason):
+            return ".streamClose(\(reason))"
+        case .streamTerminate:
+            return ".streamTerminate"
+        case .stanza(let stanza):
+            return ".stanza(\(stanza))"
+        }
     }
     
     case streamStart

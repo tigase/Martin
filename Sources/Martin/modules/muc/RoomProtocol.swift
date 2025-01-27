@@ -108,7 +108,12 @@ public enum RoomJoinResult: Sendable, CustomStringConvertible {
     case joined(RoomProtocol)
     
     public var description: String {
-        return String(reflecting: self)
+        switch self {
+        case .created(let room):
+            return ".created(\(room.jid))"
+        case .joined(let room):
+            return ".joined(\(room.jid))"
+        }
     }
 }
 

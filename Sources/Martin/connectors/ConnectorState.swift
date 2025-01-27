@@ -40,7 +40,16 @@ public enum ConnectorState: Equatable, CustomStringConvertible {
     case disconnected(DisconnectionReason = .none)
     
     public var description: String {
-        return String(reflecting: self)
+        switch self {
+        case .connecting:
+            return "connecting"
+        case .connected:
+            return "connected"
+        case .disconnecting:
+            return "disconnecting"
+        case .disconnected(let reason):
+            return "disconnected(\(reason))"
+        }
     }
     
     private var value: Int {
@@ -75,9 +84,17 @@ extension XMPPClient {
     public enum State: Equatable, Sendable, CustomStringConvertible {
         
         public var description: String {
-            return String(reflecting: self)
+            switch self {
+            case .connecting:
+                return "connecting"
+            case .connected:
+                return "connected"
+            case .disconnecting:
+                return "disconnecting"
+            case .disconnected(let reason):
+                return "disconnected(\(reason))"
+            }
         }
-        
         
         public static func == (lhs: State, rhs: State) -> Bool {
             return lhs.value == rhs.value;

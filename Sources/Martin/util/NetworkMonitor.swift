@@ -26,7 +26,7 @@ import os
 extension NWPath: @retroactive CustomStringConvertible {
     
     public var description: String {
-        String(reflecting: self)
+        return debugDescription
     }
     
 }

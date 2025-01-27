@@ -331,7 +331,7 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable, @unchec
 
     public struct DiscoveryInfoResult: Sendable, CustomStringConvertible {
         public var description: String {
-            return String(reflecting: self);
+            return "DiscoveryInfoResult(identities: \(identities), features: \(features), form: \(form as Any))";
         }
         
         public let identities: [Identity];

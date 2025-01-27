@@ -99,7 +99,18 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
         }
         
         public var description: String {
-            return String(reflecting: self);
+            switch self {
+            case .authorized(let streamRestartRequired):
+                return ".authorized(streamRestart: \(streamRestartRequired))"
+            case .inProgress:
+                return ".inProgress"
+            case .expectedAuthorization:
+                return ".expectedAuthorization"
+            case .notAuthorized:
+                return ".notAuthorized"
+            case .error(let error):
+                return ".error(\(error))"
+            }
         }
         
         public var isError: Bool {

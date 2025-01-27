@@ -327,26 +327,15 @@ let QueryRecordCallback: DNSServiceQueryRecordReply = { (sdRef, flags, interface
     }
 }
 
-extension OSLogInterpolation {
-    public mutating func appendInterpolation(_ suppplier: @autoclosure @escaping ()->Any.Type) {
-        appendInterpolation(String(reflecting: suppplier()), align: .none);
-    }
-}
-
-protocol LogConvertible: CustomStringConvertible {
-}
-
-extension LogConvertible {
-    
-    public var description: String {
-        String(reflecting: self);
-    }
-}
-
 extension Result: @retroactive CustomStringConvertible {
     
     public var description: String {
-        String(reflecting: self);
+        switch self {
+        case .success(let value):
+            return ".success(\(value))"
+        case .failure(let error):
+            return ".fairure(\(error))"
+        }
     }
     
 }
@@ -356,7 +345,7 @@ import Network
 extension NWEndpoint: @retroactive CustomStringConvertible {
     
     public var description: String {
-        String(reflecting: self)
+        self.debugDescription
     }
     
 }
@@ -364,7 +353,7 @@ extension NWEndpoint: @retroactive CustomStringConvertible {
 extension Optional: @retroactive CustomStringConvertible {
     
     public var description: String {
-        String(reflecting: self)
+        self.debugDescription
     }
         
 }
@@ -372,7 +361,22 @@ extension Optional: @retroactive CustomStringConvertible {
 extension NWConnection.State: @retroactive CustomStringConvertible {
     
     public var description: String {
-        String(reflecting: self)
+        switch self {
+        case .cancelled:
+            return ".cancelled"
+        case .failed(let error):
+            return ".failed(\(error))"
+        case .setup:
+            return ".setup"
+        case .waiting(let x):
+            return ".waiting(\(x))"
+        case .preparing:
+            return ".preparing"
+        case .ready:
+            return ".ready"
+        @unknown default:
+            return "unknown"
+        }
     }
     
 }

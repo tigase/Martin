@@ -65,7 +65,7 @@ open class SDP: CustomStringConvertible, @unchecked Sendable {
     public let bundle: Jingle.Bundle?;
     
     public var description: String {
-        return String(reflecting: self);
+        return "SDP(id: \(id), contents: \(contents), bundle: \(bundle as Any))"
     }
     
     public convenience init(contents: [Jingle.Content], bundle: Jingle.Bundle?) {
