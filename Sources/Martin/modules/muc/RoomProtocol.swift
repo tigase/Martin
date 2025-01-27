@@ -103,9 +103,13 @@ public enum RoomHistoryFetch {
     }
 }
 
-public enum RoomJoinResult: Sendable {
+public enum RoomJoinResult: Sendable, CustomStringConvertible {
     case created(RoomProtocol)
     case joined(RoomProtocol)
+    
+    public var description: String {
+        return String(reflecting: self)
+    }
 }
 
 extension RoomProtocol {

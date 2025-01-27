@@ -398,7 +398,7 @@ extension JingleModule {
     }
 }
 
-public enum JingleSessionTerminateReason: String {
+public enum JingleSessionTerminateReason: String, Sendable {
     case alternativeSession = "alternative-session"
     case busy = "busy"
     case cancel = "cancel"

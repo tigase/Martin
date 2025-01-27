@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class SDP: @unchecked Sendable {
+open class SDP: CustomStringConvertible, @unchecked Sendable {
     
     @available(*, deprecated, message: "May set invalid content 'creator' and 'senders' values. Use method parse(sdpString:,creatorProvider:,localRole:)")
     static public func parse(sdpString sdp: String, creator: Jingle.Content.Creator) -> (SDP, String)? {
@@ -63,6 +63,10 @@ open class SDP: @unchecked Sendable {
     public let id: String;
     public let contents: [Jingle.Content];
     public let bundle: Jingle.Bundle?;
+    
+    public var description: String {
+        return String(reflecting: self);
+    }
     
     public convenience init(contents: [Jingle.Content], bundle: Jingle.Bundle?) {
         self.init(id: "\(Date().timeIntervalSince1970)", contents: contents, bundle: bundle);

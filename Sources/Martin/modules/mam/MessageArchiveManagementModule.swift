@@ -286,7 +286,7 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
         case never
     }
     
-    public enum Version: String, Sendable {
+    public enum Version: String, Sendable, CustomStringConvertible {
         case MAM1 = "urn:xmpp:mam:1"
         case MAM2 = "urn:xmpp:mam:2"
         
@@ -297,6 +297,10 @@ open class MessageArchiveManagementModule: XmppModuleBase, XmppStanzaProcessor, 
                 return false;
             }
             return Version.values.contains(where: { $0.rawValue == xmlns });
+        }
+        
+        public var description: String {
+            return rawValue;
         }
     }
     
