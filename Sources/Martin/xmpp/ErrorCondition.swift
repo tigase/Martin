@@ -26,7 +26,7 @@ import Foundation
  
  [error conditions]: http://xmpp.org/rfcs/rfc6120.html#stanzas-error-conditions
  */
-public enum ErrorCondition: String {
+public enum ErrorCondition: String, Sendable {
     case bad_request = "bad-request"
     case conflict
     case feature_not_implemented = "feature-not-implemented"

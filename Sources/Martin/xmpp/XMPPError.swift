@@ -21,7 +21,7 @@
 
 import Foundation
 
-public struct XMPPError: Error, CustomStringConvertible {
+public struct XMPPError: Error, CustomStringConvertible, Sendable {
     
     public static let remote_server_timeout = XMPPError(condition: .remote_server_timeout);
     public static let undefined_condition = XMPPError(condition: .undefined_condition);

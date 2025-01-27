@@ -22,7 +22,7 @@
 import Foundation
 import os
 
-open class UnfairLock<State> {
+open class UnfairLock<State>: @unchecked Sendable {
     
     private let lockFn: () -> Void;
     private let unlockFn: () -> Void;

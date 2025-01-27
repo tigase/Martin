@@ -212,7 +212,7 @@ open class PresenceModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor,
         }
     }
  
-    public struct ContactPresenceChange {
+    public struct ContactPresenceChange: Sendable {
         
         public let presence: Presence;
         public let jid: JID;
