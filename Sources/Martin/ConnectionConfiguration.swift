@@ -52,7 +52,7 @@ public struct ConnectionConfiguration {
             AnonymousMechanism()
         ];
     
-    public var connectorOptions: ConnectorOptions = SocketConnector.Options();
+    public var connectorOptions: ConnectorOptions = SocketConnectorNetwork.Options();
     
     public mutating func modifyConnectorOptions<T: ConnectorOptions>(_ exec: (inout T) -> Void) {
         var options = connectorOptions as? T ?? T()

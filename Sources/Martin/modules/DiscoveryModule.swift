@@ -329,7 +329,11 @@ open class DiscoveryModule: XmppModuleBase, AbstractIQModule, Resetable, @unchec
         }
     }
 
-    public struct DiscoveryInfoResult: Sendable {
+    public struct DiscoveryInfoResult: Sendable, CustomStringConvertible {
+        public var description: String {
+            return String(reflecting: self);
+        }
+        
         public let identities: [Identity];
         public let features: [String];
         public let form: DataForm?;

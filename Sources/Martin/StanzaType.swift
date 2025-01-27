@@ -22,7 +22,12 @@
 import Foundation
 
 /// Enum contains possible types which may appear as type of XMPP stanza
-public enum StanzaType: String, Sendable {
+public enum StanzaType: String, Sendable, CustomStringConvertible {
+    
+    public var description: String {
+        return rawValue
+    }
+    
     // common
     case error
     // iq

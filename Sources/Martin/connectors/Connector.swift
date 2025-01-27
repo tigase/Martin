@@ -52,9 +52,23 @@ public protocol Connector: AnyObject {
      
     func prepareEndpoint(withResumptionLocation location: String?) -> ConnectorEndpoint?;
     
-    func prepareEndpoint(withSeeOtherHost seeOtherHost: String?) -> ConnectorEndpoint?;
+    func prepareEndpoint(withSeeOtherHost seeOtherHost: SeeOtherHost?) -> ConnectorEndpoint?;
     
     func channelBindingData(type: ChannelBinding) throws -> Data;
+}
+
+public enum WriteCompletion {
+    case none
+    case written((sending Result<Void,Error>)->Void)
+    
+    public func completed(result: sending Result<Void,Error>) {
+        switch self {
+        case .none:
+            break;
+        case .written(let callback):
+            callback(result);
+        }
+    }
 }
 
 public enum ChannelBinding: String {

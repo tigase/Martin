@@ -215,6 +215,7 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Send
                             options.sslCertificateValidation = .default;
                         }
                     })
+                #if swift(<6.0)
                 case is SocketConnector.Options:
                     client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
                         if let fingerprint = acceptedSslCertificate?.subject.fingerprints.first {
@@ -223,6 +224,7 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Send
                             options.sslCertificateValidation = .default;
                         }
                     })
+                #endif
                 default:
                     break;
                 }
@@ -400,7 +402,7 @@ extension InBandRegistrationModule {
             self.preauthToken = preauth;
             
             self.client?.connectionConfiguration.userJid = BareJID(domainName);
-            self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
+            self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnectorNetwork.Options.self, { options in
                 options.sslCertificateValidation = sslCertificateValidator == nil ? .default : .customValidator(sslCertificateValidator!);
             });
             self.onCertificateValidationError = onCertificateValidationError;
@@ -483,7 +485,7 @@ extension InBandRegistrationModule {
                 let certData = SSLCertificateInfo(trust: trust)!;
                 self.serverAvailable = true;
                 onError(certData, {() -> Void in
-                    self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnector.Options.self, { options in
+                    self.client.connectionConfiguration.modifyConnectorOptions(type: SocketConnectorNetwork.Options.self, { options in
                         options.sslCertificateValidation = .fingerprint(certData.subject.fingerprints.first!);
                     })
                     self.acceptedCertificate = certData;

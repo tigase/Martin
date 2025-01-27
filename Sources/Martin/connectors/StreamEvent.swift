@@ -21,7 +21,12 @@
 
 import Foundation
 
-public enum StreamEvent {
+public enum StreamEvent: CustomStringConvertible {
+    
+    public var description: String {
+        return String(reflecting: self)
+    }
+    
     case streamStart
     //case streamOpen(attributes: [String:String])
     case streamOpen(attributes: [String:String])

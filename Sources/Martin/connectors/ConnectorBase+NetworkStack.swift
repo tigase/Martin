@@ -92,6 +92,15 @@ extension ConnectorBase {
 
 }
 
+public protocol NetworkProcessorProvider {
+
+    var providedFeatures: [ConnectorFeature] { get }
+    
+    func supply() -> ConnectorBase.NetworkProcessor;
+    
+}
+
+
 public protocol NetworkDelegate: NetworkReadDelegate, NetworkWriteDelegate {
     
     

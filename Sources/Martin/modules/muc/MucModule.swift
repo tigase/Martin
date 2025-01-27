@@ -19,7 +19,7 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 import Foundation
-import TigaseLogging
+import os
 import Combine
 
 extension XmppModuleIdentifier {
@@ -271,7 +271,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
     }
     
     open func join(room: RoomProtocol, fetchHistory: RoomHistoryFetch) async throws -> RoomJoinResult {
-        guard let context = self.context, case .not_joined(_) = room.state else {
+        guard case .not_joined(_) = room.state else {
             throw XMPPError.undefined_condition;
         }
         do {

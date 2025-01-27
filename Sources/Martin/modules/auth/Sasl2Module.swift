@@ -20,7 +20,7 @@
 //
 
 import Foundation
-import TigaseLogging
+import os
 import Combine
 
 extension XmppModuleIdentifier {

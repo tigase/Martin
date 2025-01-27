@@ -20,7 +20,7 @@
 //
 
 import Foundation
-import TigaseLogging
+import os
 
 open class TigasePushNotificationsModule: PushNotificationsModule, @unchecked Sendable {
     

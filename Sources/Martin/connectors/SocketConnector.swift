@@ -19,13 +19,14 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 import Foundation
-import TigaseLogging
+import os
 import Combine
 
+#if swift(<6.0)
 /**
  Implementation of a C2S XMPP connector based on Streams and Secure Transport API (working but deprecated)
  */
-open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
+open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate, @unchecked Sendable {
         
     public typealias State = ConnectorState
         
@@ -202,17 +203,14 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
     }
     
     public func prepareEndpoint(withResumptionLocation location: String?) -> ConnectorEndpoint? {
-        guard let endpoint = self.currentEndpoint as? SocketConnector.Endpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: location) else {
-            return nil;
-        }
-        return SocketConnector.Endpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
+        return prepareEndpoint(withSeeOtherHost: SeeOtherHost.from(location: location));
     }
     
-    public func prepareEndpoint(withSeeOtherHost seeOtherHost: String?) -> ConnectorEndpoint? {
-        guard let endpoint = self.currentEndpoint as? SocketConnector.Endpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: seeOtherHost) else {
+    public func prepareEndpoint(withSeeOtherHost seeOtherHost: SeeOtherHost?) -> ConnectorEndpoint? {
+        guard let endpoint = self.currentEndpoint as? SocketConnector.Endpoint, let seeOtherHost else {
             return nil;
         }
-        return SocketConnector.Endpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
+        return SocketConnector.Endpoint(proto: endpoint.proto, host: seeOtherHost.host, port: seeOtherHost.port ?? endpoint.port);
     }
     
     /**
@@ -228,11 +226,11 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
         self.currentEndpoint = endpoint;
         
         if (inStream != nil) {
-            logger.error("inStream not null during reconnection! \(self.inStream as Any)");
+            logger.error("inStream not null during reconnection! \(self.inStream)");
             inStream = nil;
         }
         if (outStream != nil) {
-            logger.error("outStream not null during reconnection! \(self.outStream as Any)");
+            logger.error("outStream not null during reconnection! \(self.outStream)");
             outStream = nil;
         }
         
@@ -471,7 +469,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
             switch eventCode {
             case Stream.Event.errorOccurred:
                 // may happen if cannot connect to server or if connection was broken
-                self.logger.debug("stream event: ErrorOccurred: \(aStream.streamError as Any)");
+                self.logger.debug("stream event: ErrorOccurred: \(aStream.streamError)");
                 if (aStream == self.inStream) {
                     // this is intentional - we need to execute onStreamTerminate()
                     // on main queue, but after all task are executed by our serial queue
@@ -510,7 +508,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate {
                     // moved here?
                     self.restartStream();
                 
-                    self.logger.debug("inStream.hasBytesAvailable: \(self.inStream?.hasBytesAvailable as Any)");
+                    self.logger.debug("inStream.hasBytesAvailable: \(self.inStream?.hasBytesAvailable)");
                 }
                 self.logger.debug("stream event: OpenCompleted");
             case Stream.Event.hasBytesAvailable:
@@ -697,24 +695,4 @@ extension SocketConnector {
     }
 }
 
-public protocol NetworkProcessorProvider {
-
-    var providedFeatures: [ConnectorFeature] { get }
-    
-    func supply() -> SocketConnector.NetworkProcessor;
-    
-}
-
-public enum WriteCompletion {
-    case none
-    case written((sending Result<Void,Error>)->Void)
-    
-    public func completed(result: sending Result<Void,Error>) {
-        switch self {
-        case .none:
-            break;
-        case .written(let callback):
-            callback(result);
-        }
-    }
-}
+#endif

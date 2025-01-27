@@ -20,7 +20,7 @@
 //
 
 import Foundation
-import TigaseLogging
+import os
 
 extension XmppModuleIdentifier {
     public static var streamManagement: XmppModuleIdentifier<StreamManagementModule> {

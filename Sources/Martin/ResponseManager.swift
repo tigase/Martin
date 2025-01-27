@@ -19,7 +19,7 @@
 // If not, see http://www.gnu.org/licenses/.
 //
 import Foundation
-import TigaseLogging
+import os
 import Combine
 
 /**

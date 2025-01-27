@@ -28,7 +28,7 @@ import Foundation
  - disconnecting: Connection to XMPP server is being closed
  - disconnected: Connection to XMPP server is closed
  */
-public enum ConnectorState: Equatable {
+public enum ConnectorState: Equatable, CustomStringConvertible {
     
     public static func == (lhs: ConnectorState, rhs: ConnectorState) -> Bool {
         return lhs.value == rhs.value;
@@ -38,6 +38,10 @@ public enum ConnectorState: Equatable {
     case connected
     case disconnecting
     case disconnected(DisconnectionReason = .none)
+    
+    public var description: String {
+        return String(reflecting: self)
+    }
     
     private var value: Int {
         switch self {
@@ -68,7 +72,12 @@ public enum NetworkError: Error, LocalizedError {
 
 extension XMPPClient {
     
-    public enum State: Equatable, Sendable {
+    public enum State: Equatable, Sendable, CustomStringConvertible {
+        
+        public var description: String {
+            return String(reflecting: self)
+        }
+        
         
         public static func == (lhs: State, rhs: State) -> Bool {
             return lhs.value == rhs.value;

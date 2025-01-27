@@ -20,7 +20,7 @@
 //
 
 import Foundation
-import TigaseLogging
+import os
 import Combine
 
 extension StreamFeatures.StreamFeature {
@@ -209,13 +209,13 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
         
     private func onStreamError(_ streamErrorEl: Element) -> Bool {
-        if let seeOtherHostEl = streamErrorEl.firstChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SocketConnector.preprocessConnectionDetails(string: seeOtherHostEl.value) {
+        if let seeOtherHostEl = streamErrorEl.firstChild(name: "see-other-host", xmlns: "urn:ietf:params:xml:ns:xmpp-streams"), let seeOtherHost = SeeOtherHost.from(location: seeOtherHostEl.value) {
 //            if let streamFeaturesWithPipelining = modulesManager.moduleOrNil(.streamFeatures) as? StreamFeaturesModuleWithPipelining {
 //                streamFeaturesWithPipelining.connectionRestarted();
 //            }
             
-            self.logger.log("reconnecting via see-other-host to host \(seeOtherHost.0)");
-            self.seeOtherHost = connector.prepareEndpoint(withSeeOtherHost: seeOtherHostEl.value);
+            self.logger.log("reconnecting via see-other-host to host \(seeOtherHost)");
+            self.seeOtherHost = connector.prepareEndpoint(withSeeOtherHost: seeOtherHost);
             self.connector.start(endpoint: self.serverToConnectDetails());
             return false;
         }

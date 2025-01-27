@@ -21,7 +21,7 @@
 
 import Foundation
 import CryptoKit
-import TigaseLogging
+import os
 
 extension XmppModuleIdentifier {
     public static var caps: XmppModuleIdentifier<CapabilitiesModule> {

@@ -28,7 +28,7 @@ open class XMPPDelegate : NSObject, XMPPStreamDelegate {
     open func onError(msg: String?) {
     }
     
-    open func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason) {
+    open func onStreamTerminate(reason: ConnectorState.DisconnectionReason) {
         if let logger = streamLogger {
             logger.incoming(.streamClose(reason: .none));
         }

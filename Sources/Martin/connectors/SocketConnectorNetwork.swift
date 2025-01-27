@@ -50,7 +50,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
     public private(set) var currentEndpoint: ConnectorEndpoint?;
     
     private let options: Options;
-    private let networkStack = SocketConnector.NetworkStack();
+    private let networkStack = NetworkStack();
 
     private var connection: NWConnection? {
         willSet {
@@ -140,19 +140,16 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         
         networkStack.delegate = self;
     }
-    
+        
     public func prepareEndpoint(withResumptionLocation location: String?) -> ConnectorEndpoint? {
-        guard let endpoint = self.currentEndpoint as? SocketConnectorNetwork.Endpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: location) else {
-            return nil;
-        }
-        return SocketConnectorNetwork.Endpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
+        return prepareEndpoint(withSeeOtherHost: SeeOtherHost.from(location: location));
     }
     
-    public func prepareEndpoint(withSeeOtherHost seeOtherHost: String?) -> ConnectorEndpoint? {
-        guard let endpoint = self.currentEndpoint as? SocketConnectorNetwork.Endpoint, let (host, port) = SocketConnector.preprocessConnectionDetails(string: seeOtherHost) else {
+    public func prepareEndpoint(withSeeOtherHost seeOtherHost: SeeOtherHost?) -> ConnectorEndpoint? {
+        guard let endpoint = self.currentEndpoint as? SocketConnectorNetwork.Endpoint, let seeOtherHost else {
             return nil;
         }
-        return SocketConnectorNetwork.Endpoint(proto: endpoint.proto, host: host, port: port ?? endpoint.port);
+        return SocketConnectorNetwork.Endpoint(proto: endpoint.proto, host: seeOtherHost.host, port: seeOtherHost.port ?? endpoint.port);
     }
     
     public func activate(feature: ConnectorFeature) {

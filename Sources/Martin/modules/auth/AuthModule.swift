@@ -20,7 +20,7 @@
 //
 
 import Foundation
-import TigaseLogging
+import os
 import Combine
 
 extension XmppModuleIdentifier {
@@ -92,10 +92,14 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
         }
     }
         
-    public enum AuthorizationStatus: Equatable {
+    public enum AuthorizationStatus: Equatable, CustomStringConvertible {
         
         public static func == (lhs: AuthorizationStatus, rhs: AuthorizationStatus) -> Bool {
             return lhs.value == rhs.value;
+        }
+        
+        public var description: String {
+            return String(reflecting: self);
         }
         
         public var isError: Bool {

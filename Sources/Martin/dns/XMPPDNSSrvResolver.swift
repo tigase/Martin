@@ -20,7 +20,7 @@
 //
 
 import Foundation
-import TigaseLogging
+import os
 
 import dnssd;
 
@@ -325,4 +325,54 @@ let QueryRecordCallback: DNSServiceQueryRecordReply = { (sdRef, flags, interface
     default:
         request.fail(withDNSError: errorCode);
     }
+}
+
+extension OSLogInterpolation {
+    public mutating func appendInterpolation(_ suppplier: @autoclosure @escaping ()->Any.Type) {
+        appendInterpolation(String(reflecting: suppplier()), align: .none);
+    }
+}
+
+protocol LogConvertible: CustomStringConvertible {
+}
+
+extension LogConvertible {
+    
+    public var description: String {
+        String(reflecting: self);
+    }
+}
+
+extension Result: @retroactive CustomStringConvertible {
+    
+    public var description: String {
+        String(reflecting: self);
+    }
+    
+}
+
+import Network
+
+extension NWEndpoint: @retroactive CustomStringConvertible {
+    
+    public var description: String {
+        String(reflecting: self)
+    }
+    
+}
+
+extension Optional: @retroactive CustomStringConvertible {
+    
+    public var description: String {
+        String(reflecting: self)
+    }
+        
+}
+
+extension NWConnection.State: @retroactive CustomStringConvertible {
+    
+    public var description: String {
+        String(reflecting: self)
+    }
+    
 }

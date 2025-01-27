@@ -21,7 +21,15 @@
 
 import Foundation
 import Network
-import TigaseLogging
+import os
+
+extension NWPath: @retroactive CustomStringConvertible {
+    
+    public var description: String {
+        String(reflecting: self)
+    }
+    
+}
 
 open class NetworkMonitor {
     

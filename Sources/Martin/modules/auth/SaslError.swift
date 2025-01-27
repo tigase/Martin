@@ -26,7 +26,7 @@ import Foundation
  */
 public struct SaslError: Error, CustomStringConvertible {
     
-    public enum Cause: String {
+    public enum Cause: String, CustomStringConvertible {
         case aborted
         case incorrect_encoding = "incorrect-encoding"
         case invalid_authzid = "invalid-authzid"
@@ -35,6 +35,10 @@ public struct SaslError: Error, CustomStringConvertible {
         case not_authorized = "not-authorized"
         case server_not_trusted = "server-not-trusted"
         case temporary_auth_failure = "temporary-auth-failure"
+        
+        public var description: String {
+            return rawValue
+        }
     }
     
     public let cause: Cause

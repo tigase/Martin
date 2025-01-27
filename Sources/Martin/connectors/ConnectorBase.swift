@@ -21,7 +21,7 @@
 
 import Foundation
 import Combine
-import TigaseLogging
+import os
 
 open class ConnectorBase {
     

@@ -408,7 +408,7 @@ public final class Element : CustomStringConvertible, CustomDebugStringConvertib
             }
             fileprivate func onStreamStart(attributes: [String : String]) {
             }
-            fileprivate func onStreamTerminate(reason: SocketConnector.State.DisconnectionReason) {
+            fileprivate func onStreamTerminate(reason: ConnectorState.DisconnectionReason) {
             }
             fileprivate func process(element packet: Element) {
                 parsed = packet;
