@@ -21,7 +21,7 @@
 
 import Foundation
 
-public enum StreamEvent: CustomStringConvertible {
+public enum StreamEvent: CustomStringConvertible, Sendable {
     
     public var description: String {
         switch self {
@@ -46,7 +46,7 @@ public enum StreamEvent: CustomStringConvertible {
     case stanza(Stanza)
 }
 
-public enum StreamEventCloseReason {
+public enum StreamEventCloseReason: Sendable {
     case none
     case xmlError
 }

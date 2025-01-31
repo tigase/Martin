@@ -22,7 +22,7 @@
 import Foundation
 import Combine
 
-public protocol PresenceStore {
+public protocol PresenceStore: Sendable {
     
     var bestPresenceEvents: PassthroughSubject<BestPresenceEvent,Never> { get };
     

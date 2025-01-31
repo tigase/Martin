@@ -21,7 +21,7 @@
 
 import Foundation
 
-open class MixParticipant {
+open class MixParticipant: @unchecked Sendable {
     
     public let id: String;
     public let nickname: String?;

@@ -22,7 +22,7 @@
 import Foundation
 import Combine
 
-open class DefaultPresenceStore: PresenceStore {
+open class DefaultPresenceStore: PresenceStore, @unchecked Sendable {
     
     private let queue = DispatchQueue(label: "presence_store_queue", attributes: DispatchQueue.Attributes.concurrent);
     

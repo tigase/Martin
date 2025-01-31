@@ -21,7 +21,7 @@
 
 import Foundation
 
-public struct ConnectorProtocol: RawRepresentable, Hashable {
+public struct ConnectorProtocol: RawRepresentable, Hashable, Sendable {
     
     public let rawValue: String;
     

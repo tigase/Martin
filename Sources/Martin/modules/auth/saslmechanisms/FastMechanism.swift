@@ -166,7 +166,7 @@ open class FastMechanism<Hash: HashAlgorithm>: FastMechanismProtocol, Sasl2Mecha
     
 }
 
-public struct FastMechanismToken {
+public struct FastMechanismToken: Sendable {
     public let mechanism: String;
     public let value: String;
     public let expiresAt: Date;

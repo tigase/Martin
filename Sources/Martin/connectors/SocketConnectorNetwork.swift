@@ -458,7 +458,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         return try processor.channelBindingData(type: type);
     }
     
-    public struct Endpoint: ConnectorEndpoint, CustomStringConvertible, Equatable {
+    public struct Endpoint: ConnectorEndpoint, CustomStringConvertible, Equatable, Sendable {
         
         public let proto: ConnectorProtocol;
         public let host: String;

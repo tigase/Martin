@@ -23,7 +23,7 @@ import Foundation
 import CryptoKit
 import Combine
 
-public struct Credentials: Codable, Equatable {
+public struct Credentials: Codable, Equatable, Sendable {
 
     public static func anonymous() -> Credentials {
         return Credentials();
@@ -47,7 +47,7 @@ public struct Credentials: Codable, Equatable {
     }
 }
 
-public struct SaltedPassword: Codable, Equatable {
+public struct SaltedPassword: Codable, Equatable, Sendable {
     
     public let id: String;
     public let data: Data;

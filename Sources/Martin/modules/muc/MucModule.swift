@@ -491,7 +491,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
     }
     
     /// Common class for invitations
-    open class Invitation {
+    open class Invitation: @unchecked Sendable {
         public let context: Context;
         /// Received message
         public let message: Message;
@@ -515,7 +515,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
     }
     
     /// Class for direct invitations
-    open class DirectInvitation: Invitation {
+    open class DirectInvitation: Invitation, @unchecked Sendable {
         /// ThreadID of invitation message
         public let threadId: String?;
         /// Continuation flag
@@ -529,7 +529,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
     }
     
     /// Class for mediated invitations over MUC component
-    open class MediatedInvitation: Invitation {
+    open class MediatedInvitation: Invitation, @unchecked Sendable {
         
         public override init(context: Context, message: Message, roomJid: BareJID, inviter: JID?, reason: String?, password: String?) {
             super.init(context: context, message: message, roomJid: roomJid, inviter: inviter, reason: reason, password: password);
@@ -537,7 +537,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
         
     }
     
-    open class DeclinedInvitation: Invitation {
+    open class DeclinedInvitation: Invitation, @unchecked Sendable {
         
         public let invitee: JID?
         
@@ -548,7 +548,7 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
         
     }
     
-    public enum RoomError {
+    public enum RoomError: Sendable {
         case nicknameLockedDown
         case invalidPassword
         case registrationRequired
