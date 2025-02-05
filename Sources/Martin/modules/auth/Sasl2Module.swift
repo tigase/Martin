@@ -51,15 +51,8 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
     private let logger = Logger(subsystem: "TigaseSwift", category: "Sasl2Module")
 
     private var cancellable: Cancellable?;
-    open override var context: Context? {
-        didSet {
-            self.store(context?.module(.streamFeatures).$streamFeatures.map({ Sasl2Module.supportedMechanisms(streamFeatures: $0) }).assign(to: \.supportedMechanisms, on: self));
-        }
-    }
 
     public let features = [String]();
-    
-    private var supportedMechanisms: [String] = [];
         
     open var software: String?;
     open var deviceName: String?;
@@ -68,8 +61,8 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
     open var shouldBind: Bool = true;
     open var shouldUpgrade: Bool = true;
     
-    open var isSupported: Bool {
-        return context?.module(.streamFeatures).streamFeatures.contains(.sasl2) ?? false;
+    open func isSupported(streamFeatures: StreamFeatures) -> Bool {
+        return !(streamFeatures.sasl2?.mechanisms.isEmpty ?? true)
     }
     
     open var mechanisms: [SaslMechanism] {
@@ -127,16 +120,17 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
     /**
      Begin SASL authentication process
      */
-    open func login() async throws {
-        guard let streamFeatures = context?.module(.streamFeatures).streamFeatures, let sasl2 = streamFeatures.sasl2 else {
+    open func login(streamFeatures: StreamFeatures) async throws {
+        guard let sasl2 = streamFeatures.sasl2 else {
             throw SaslError(cause: .invalid_mechanism, message: "SASL2 not listed in stream features");
         }
         
         let features = sasl2.inline;
-        guard let mechanism = guessSaslMechanism(features: streamFeatures) else {
+        guard let mechanism = guessSaslMechanism(streamFeatures: streamFeatures) else {
             throw SaslError(cause: .invalid_mechanism, message: "No usable mechanism");
         }
 
+        (mechanism as? SaslMeachanismStreamFeaturesAware)?.streamFeaturesChanged(streamFeatures);
         let upgrades = sasl2.upgrades.filter({ self.mechanism(named: $0) is Sasl2UpgradableMechanism});
         
         let result = try mechanism.evaluateChallenge(nil, context: context!);
@@ -179,7 +173,7 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
                     mechanism.reset(scopes: [.stream]);
                     context?.connectionConfiguration.credentials.fastToken = nil;
                     do {
-                        try await login();
+                        try await login(streamFeatures: streamFeatures);
                     } catch {
                         // some servers may fail to accept subsequent auth request, so lets assume it is temporary failure and retry..
                         throw SaslError(cause: .temporary_auth_failure, message: "Failure of subsequent authentication attempt");
@@ -273,13 +267,9 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
         let response = try await write(stanza: request, for: .init(names: ["success", "failure", "challenge", "continue"], xmlns: Sasl2Module.SASL2_XMLNS));
         try await handleResponse(stanza: response, mechanism: mechanism);
     }
-    
-    static func supportedMechanisms(streamFeatures: StreamFeatures) -> [String] {
-        return streamFeatures.get(.sasl2)?.filterChildren(name: "mechanism").compactMap({ $0.value }) ?? [];
-    }
-    
-    func guessSaslMechanism(features: StreamFeatures) -> SaslMechanism? {
-        guard let sasl2 = features.sasl2 else {
+        
+    func guessSaslMechanism(streamFeatures: StreamFeatures) -> SaslMechanism? {
+        guard let sasl2 = streamFeatures.sasl2, let context else {
             return nil;
         }
         let supported = sasl2.mechanisms + (sasl2.inline.fast?.mechanisms ?? []);
@@ -287,7 +277,7 @@ open class Sasl2Module: XmppModuleBase, XmppModule, Resetable, @unchecked Sendab
             if (!supported.contains(mechanism.name)) {
                 continue;
             }
-            if (mechanism.isAllowedToUse(context!, features: features)) {
+            if (mechanism.isAllowedToUse(context, features: streamFeatures)) {
                 return mechanism;
             }
         }

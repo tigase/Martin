@@ -44,16 +44,9 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
     private let logger = Logger(subsystem: "TigaseSwift", category: "SaslModule")
 
     private var cancellable: Cancellable?;
-    open override var context: Context? {
-        didSet {
-            self.store(context?.module(.streamFeatures).$streamFeatures.map({ SaslModule.supportedMechanisms(streamFeatures: $0) }).assign(to: \.supportedMechanisms, on: self));
-        }
-    }
 
     public let features = [String]();
-    
-    private var supportedMechanisms: [String] = [];
-    
+        
     open var mechanisms: [SaslMechanism] {
         return context?.connectionConfiguration.saslMechanisms.filter({ !($0 is Sasl2MechanismFeaturesAware) }) ?? [];
     }
@@ -98,11 +91,12 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
     /**
      Begin SASL authentication process
      */
-    open func login() async throws {
-        guard let mechanism = guessSaslMechanism(features: context!.module(.streamFeatures).streamFeatures) else {
+    open func login(streamFeatures: StreamFeatures) async throws {
+        guard let mechanism = guessSaslMechanism(streamFeatures: streamFeatures) else {
             throw SaslError(cause: .invalid_mechanism, message: "No usable mechamism");
         }
         
+        (mechanism as? SaslMeachanismStreamFeaturesAware)?.streamFeaturesChanged(streamFeatures);
         let result = try mechanism.evaluateChallenge(nil, context: context!);
         let auth = Stanza(name: "auth", xmlns: SaslModule.SASL_XMLNS, value: result, {
             Attribute("mechanism", value: mechanism.name);
@@ -148,14 +142,16 @@ open class SaslModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
         return streamFeatures.element?.firstChild(name: "mechanisms")?.filterChildren(name: "mechanism").compactMap({ $0.value }) ?? [];
     }
     
-    func guessSaslMechanism(features: StreamFeatures) -> SaslMechanism? {
-        let supported = self.supportedMechanisms;
-        for mechanism in mechanisms{
-            if (!supported.contains(mechanism.name)) {
-                continue;
+    func guessSaslMechanism(streamFeatures: StreamFeatures) -> SaslMechanism? {
+        let supported = SaslModule.supportedMechanisms(streamFeatures: streamFeatures);
+        if let context {
+            for mechanism in mechanisms{
+                if (!supported.contains(mechanism.name)) {
+                    continue;
                 }
-            if (mechanism.isAllowedToUse(context!, features: features)) {
-                return mechanism;
+                if (mechanism.isAllowedToUse(context, features: streamFeatures)) {
+                    return mechanism;
+                }
             }
         }
         return nil;

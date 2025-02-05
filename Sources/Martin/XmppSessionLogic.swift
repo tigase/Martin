@@ -351,9 +351,9 @@ open class SocketSessionLogic: XmppSessionLogic {
         } else if !authorized {
             if let authModule: AuthModule = modulesManager.moduleOrNil(.auth) {
                 self.logger.debug("\(self.userJid) - starting authentication");
-                authTask = Task.detached(operation: {
+                authTask = Task(operation: {
                     do {
-                        try await authModule.login();
+                        try await authModule.login(streamFeatures: streamFeatures);
                         if case let .authorized(streamRestartRequired) = authModule.state, streamRestartRequired {
                             self.startStream();
                         }

@@ -57,6 +57,7 @@ open class ScramMechanism<Hash: HashAlgorithm>: Sasl2UpgradableMechanism {
     }
     
     private var saslData: SaslData?;
+    private var serverBindings: [ChannelBinding] = [];
     
     public let supportsChannelBinding: Bool;
     public var storeSaltedPassword = false;
@@ -69,11 +70,15 @@ open class ScramMechanism<Hash: HashAlgorithm>: Sasl2UpgradableMechanism {
     public func reset(scopes: Set<ResetableScope>) {
         if scopes.contains(.stream) {
             status = .new;
+            serverBindings = [];
         }
     }
     
+    public func streamFeaturesChanged(_ streamFeatures: StreamFeatures) {
+        serverBindings = streamFeatures.get(.saslChannelBinding).flatMap({ ChannelBinding.parse(element: $0) }) ?? [];
+    }
+    
     private func selectChannelBinding(context: Context) -> ChannelBinding? {
-        let serverBindings = serverSupportedChannelBindings(context: context);
         let localBindings = (context as? XMPPClient)?.connector?.supportedChannelBindings ?? [];
         for binding in localBindings {
             if serverBindings.contains(binding) {
@@ -259,16 +264,9 @@ open class ScramMechanism<Hash: HashAlgorithm>: Sasl2UpgradableMechanism {
             return false;
         }
         if supportsChannelBinding {
-            return selectChannelBinding(context: context) != nil;
+            return !serverBindings.isEmpty;
         }
         return true;
-    }
-    
-    private func serverSupportedChannelBindings(context: Context) -> [ChannelBinding] {
-        guard let bindings = context.module(.streamFeatures).streamFeatures.get(.saslChannelBinding) else {
-            return [];
-        }
-        return ChannelBinding.parse(element: bindings)
     }
     
     func hi(password: Data, salt: Data, iterations: Int) -> Data {

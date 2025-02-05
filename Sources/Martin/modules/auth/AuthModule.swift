@@ -59,10 +59,10 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
      Starts authentication process using other module providing 
      mechanisms for authentication
      */
-    open func login() async throws {
-        if let sasl2Module = context?.modulesManager.moduleOrNil(.sasl2), sasl2Module.isSupported {
+    open func login(streamFeatures: StreamFeatures) async throws {
+        if let sasl2Module = context?.modulesManager.moduleOrNil(.sasl2), sasl2Module.isSupported(streamFeatures: streamFeatures) {
             do {
-                try await sasl2Module.login();
+                try await sasl2Module.login(streamFeatures: streamFeatures);
                 state = .authorized(streamRestartRequired: false);
             } catch {
                 state = .error(error);
@@ -70,7 +70,7 @@ open class AuthModule: XmppModuleBase, XmppModule, Resetable, @unchecked Sendabl
             }
         } else if let saslModule = context?.modulesManager.moduleOrNil(.sasl) {
             do {
-                try await saslModule.login();
+                try await saslModule.login(streamFeatures: streamFeatures);
                 state = .authorized(streamRestartRequired: true);
             } catch {
                 state = .error(error);

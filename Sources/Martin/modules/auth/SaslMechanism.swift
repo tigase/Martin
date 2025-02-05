@@ -42,7 +42,7 @@ public protocol SaslMechanism: AnyObject, Resetable, CustomDebugStringConvertibl
         
     /** 
      Check if mechanism may be used (ie. if needed data are available)
-     - parameter sessionObject: instance of `SessionObject`
+     - parameter context: instance of `Context`
      - returns: true if possible
      */
     func isAllowedToUse(_ context: Context, features: StreamFeatures) -> Bool;
@@ -54,6 +54,12 @@ extension SaslMechanism {
     public var debugDescription: String {
         return name;
     }
+    
+}
+
+public protocol SaslMeachanismStreamFeaturesAware: SaslMechanism {
+    
+    func streamFeaturesChanged(_ streamFeatures: StreamFeatures);
     
 }
 
