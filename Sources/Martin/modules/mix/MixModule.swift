@@ -564,6 +564,7 @@ open class MixModule: XmppModuleBaseSessionStateAware, XmppStanzaProcessor, Rost
             case .retracted(let itemId):
                 if channel.participantId == itemId {
                     channel.update(state: .left);
+                    _ = self.channelManager.close(channel: channel);
                 }
                 if let participant = channel.removeParticipant(withId: itemId) {
                     participantsEvents.send(.left(participant));
