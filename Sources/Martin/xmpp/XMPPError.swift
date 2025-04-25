@@ -21,7 +21,7 @@
 
 import Foundation
 
-public struct XMPPError: Error, CustomStringConvertible, Sendable {
+public struct XMPPError: Error, LocalizedError, CustomStringConvertible, Sendable {
     
     public static let remote_server_timeout = XMPPError(condition: .remote_server_timeout);
     public static let undefined_condition = XMPPError(condition: .undefined_condition);
@@ -30,6 +30,10 @@ public struct XMPPError: Error, CustomStringConvertible, Sendable {
     
     public var description: String  {
         return "XMPPError(condition: \(condition.rawValue), applicationCondition: \(applicationCondition?.description ?? "nil"), message: \(message ?? "nil")";
+    }
+    
+    public var errorDescription: String? {
+        return message ?? applicationCondition?.description ?? condition.rawValue;
     }
     
     public let condition: ErrorCondition;
