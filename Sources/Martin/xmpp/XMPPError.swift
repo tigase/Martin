@@ -33,7 +33,8 @@ public struct XMPPError: Error, LocalizedError, CustomStringConvertible, Sendabl
     }
     
     public var errorDescription: String? {
-        return message ?? applicationCondition?.description ?? condition.rawValue;
+        let prefix = message.map { "\($0) " } ?? "";
+        return "\(prefix)(\(condition.rawValue)\(applicationCondition != nil ? ", \(applicationCondition!.description))" : ""))"
     }
     
     public let condition: ErrorCondition;
