@@ -147,7 +147,7 @@ open class MeetModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable 
         });
         
         let response = try await write(iq: iq);
-        guard let id = iq.firstChild(name: "create", xmlns: MeetModule.ID)?.attribute("id") else {
+        guard let id = response.firstChild(name: "create", xmlns: MeetModule.ID)?.attribute("id") else {
             throw XMPPError(condition: .undefined_condition, stanza: response);
         }
         return JID(BareJID(localPart: id, domain: jid.domain));
