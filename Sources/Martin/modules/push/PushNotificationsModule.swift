@@ -28,7 +28,7 @@ extension XmppModuleIdentifier {
     }
 }
 
-open class PushNotificationsModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendable {
+open class PushNotificationsModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked Sendable {
     
     public static let PUSH_NOTIFICATIONS_XMLNS = "urn:xmpp:push:0";
     
@@ -39,36 +39,37 @@ open class PushNotificationsModule: XmppModuleBase, XmppStanzaProcessor, @unchec
     
     public let features = [String]();
     
-    open var isAvailable: Bool {
-        if let features: [String] = context?.module(.disco).accountDiscoResult.features {
-            if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
-                return true;
+    @Published
+    open var isAvailable: Bool = false;
+    
+    open var accountFeatures: [String] = [];
+    
+    open override weak var context: Context? {
+        didSet {
+            if let discoModule = context?.module(.disco) {
+                discoModule.$accountDiscoResult.combineLatest(discoModule.$serverDiscoResult).first(where: { (!$0.features.isEmpty) && (!$1.features.isEmpty) }).sink(receiveValue: { [weak self] (accountDiscoResult,serverDiscoResult) in
+                    self?.accountFeatures = accountDiscoResult.features;
+                    self?.isAvailable = accountDiscoResult.features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) || serverDiscoResult.features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS)
+                }).store(in: self);
             }
         }
-        
-        // TODO: fallback to handle previous behavior - remove it later on...
-        if let features: [String] = context?.module(.disco).serverDiscoResult.features {
-            if features.contains(PushNotificationsModule.PUSH_NOTIFICATIONS_XMLNS) {
-                return true;
-            }
-        }
-        
-        return false;
     }
     
-    open func isSupported(extension type: PushNotificationsModuleExtension.Type) -> Bool {
-        if let features: [String] = context?.module(.disco).accountDiscoResult.features {
-            return features.contains(type.XMLNS);
+    public func reset(scopes: Set<ResetableScope>) {
+        if (scopes.contains(.session)) {
+            accountFeatures = [];
+            isAvailable = false;
         }
-        return false;
+    }
+        
+    open func isSupported(extension type: PushNotificationsModuleExtension.Type) -> Bool {
+        return accountFeatures.contains(type.XMLNS);
     }
     
     open func isSupported(feature: String) -> Bool {
-        if let features: [String] = context?.module(.disco).accountDiscoResult.features {
-            return features.contains(feature);
-        }
-        return false;
+        return accountFeatures.contains(feature);
     }
+    
 //    open var pushServiceJid: JID?;
     
     public struct NotificationsDisabled: Sendable {
