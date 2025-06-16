@@ -25,17 +25,27 @@ extension Message {
     
     public var messageRetractionId: String? {
         get {
-            guard let el = self.element.firstChild(name: "apply-to", xmlns: "urn:xmpp:fasten:0"), let id = el.attribute("id") else {
-                return nil;
+            guard let el = self.element.firstChild(name: "retract", xmlns: "urn:xmpp:message-retract:1") else {
+                // fallback for previous version of XEP-0424
+                guard let el = self.element.firstChild(name: "apply-to", xmlns: "urn:xmpp:fasten:0"), let id = el.attribute("id") else {
+                    return nil;
+                }
+                guard el.firstChild(name: "retract", xmlns: "urn:xmpp:message-retract:0") != nil else {
+                    return nil;
+                }
+                return id;
             }
-            guard el.firstChild(name: "retract", xmlns: "urn:xmpp:message-retract:0") != nil else {
-                return nil;
-            }
-            return id;
+            return el.attribute("id");
         }
         set {
+            self.element.removeChildren(name: "retract", xmlns: "urn:xmpp:message-retract:1");
+            // fallback for previous version of XEP-0424
             self.element.removeChildren(name: "apply-to", xmlns: "urn:xmpp:fasten:0");
             if let val = newValue {
+                self.element.addChild(Element(name: "retract", xmlns: "urn:xmpp:message-retract:1", {
+                    Attribute("id", value: val)
+                }))
+                // fallback for previous version of XEP-0424
                 let applyTo = Element(name: "apply-to", xmlns: "urn:xmpp:fasten:0");
                 applyTo.attribute("id", newValue: val);
                 applyTo.addChild(Element(name: "retract", xmlns: "urn:xmpp:message-retract:0"));
@@ -48,7 +58,7 @@ extension Message {
 
 extension CapabilitiesModule.AdditionalFeatures {
     
-    public static let messageRetraction = CapabilitiesModule.AdditionalFeatures(rawValue: "urn:xmpp:message-retract:0");
+    public static let messageRetraction = CapabilitiesModule.AdditionalFeatures(rawValue: "urn:xmpp:message-retract:1");
     
 }
 
@@ -57,7 +67,9 @@ extension ConversationProtocol {
     public func createMessageRetraction(forMessageWithId msgId: String, fallbackBody body: String? = nil) -> Message {
         let message = createMessage();
         message.messageRetractionId = msgId;
-        message.addChildren([Element(name: "fallback", xmlns: "urn:xmpp:fallback:0"), Element(name: "body", cdata: body ?? "This person attempted to retract a previous message, but it's unsupported by your client.")]);
+        message.addChildren([Element(name: "fallback", xmlns: "urn:xmpp:fallback:0", {
+            Attribute("for", value: "urn:xmpp:message-retract:1")
+        }), Element(name: "body", cdata: body ?? "This person attempted to retract a previous message, but it's unsupported by your client.")]);
         message.hints = [.store];
         return message;
     }

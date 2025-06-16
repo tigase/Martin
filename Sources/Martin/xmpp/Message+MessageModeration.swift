@@ -36,7 +36,7 @@ extension Message {
         public let retraction: Retraction;
         public let reason: String?;
         
-        public init(retraction: Retraction, by moderator: JID, reason: String?) {
+        public init(retraction: Retraction, by moderator: JID, moderatorOccupantId: String? = nil, reason: String?) {
             self.moderator = moderator;
             self.retraction = retraction;
             self.reason = reason;
@@ -46,15 +46,21 @@ extension Message {
     
     
     public var moderated: Moderation? {
-        guard let applyTo = firstChild(name: "apply-to", xmlns: "urn:xmpp:fasten:0"), let stanzaId = applyTo.attribute("id"), let moderated = applyTo.firstChild(name: "moderated", xmlns: "urn:xmpp:message-moderate:0"), let moderatedBy = JID(moderated.attribute("by")), moderated.firstChild(name: "retract", xmlns: "urn:xmpp:message-retract:0") != nil && from?.resource == nil else {
-
-            guard let moderated = firstChild(name: "moderated", xmlns: "urn:xmpp:message-moderate:0"), let moderatedBy = JID(moderated.attribute("by")), let retracted = moderated.firstChild(name: "retracted", xmlns: "urn:xmpp:message-retract:0"), let stamp = TimestampHelper.parse(timestamp: retracted.attribute("stamp")) else {
-                return nil;
+        guard let retracted = firstChild(name: "retracted", xmlns: "urn:xmpp:message-retract:1") else {
+            guard let applyTo = firstChild(name: "apply-to", xmlns: "urn:xmpp:fasten:0"), let stanzaId = applyTo.attribute("id"), let moderated = applyTo.firstChild(name: "moderated", xmlns: "urn:xmpp:message-moderate:0"), let moderatedBy = JID(moderated.attribute("by")), moderated.firstChild(name: "retract", xmlns: "urn:xmpp:message-retract:0") != nil && from?.resource == nil else {
+                
+                guard let moderated = firstChild(name: "moderated", xmlns: "urn:xmpp:message-moderate:0"), let moderatedBy = JID(moderated.attribute("by")), let retracted = moderated.firstChild(name: "retracted", xmlns: "urn:xmpp:message-retract:0"), let stamp = TimestampHelper.parse(timestamp: retracted.attribute("stamp")) else {
+                    return nil;
+                }
+                return .init(retraction: .retracted(retractionTimestmap: stamp), by: moderatedBy, reason: moderated.firstChild(name: "reason")?.value);
             }
-            return .init(retraction: .retracted(retractionTimestmap: stamp), by: moderatedBy, reason: moderated.firstChild(name: "reason")?.value);
+            
+            return .init(retraction: .retract(stanzaId: stanzaId), by: moderatedBy, reason: moderated.firstChild(name: "reason")?.value);
         }
-     
-        return .init(retraction: .retract(stanzaId: stanzaId), by: moderatedBy, reason: moderated.firstChild(name: "reason")?.value);
+        guard let stanzaId = retracted.attribute("id"), let moderated = firstChild(name: "moderated", xmlns: "urn:xmpp:message-moderate:0"), let moderatedBy = JID(moderated.attribute("by")) else {
+            return nil;
+        }
+        return .init(retraction: .retract(stanzaId: stanzaId), by: moderatedBy, moderatorOccupantId: moderated.firstChild(name: "occupant-id", xmlns: "urn:xmpp:occupant-id:0")?.attribute("id"), reason: retracted.firstChild(name: "reason")?.value)
     }
         
 }

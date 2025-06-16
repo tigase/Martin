@@ -139,7 +139,7 @@ extension DataForm.Field {
         }
         
         open func value(_ value: Bool) {
-            self.currentValue = currentValue;
+            self.currentValue = value;
         }
         
         open override func element(formType: DataForm.FormType) -> Element {
