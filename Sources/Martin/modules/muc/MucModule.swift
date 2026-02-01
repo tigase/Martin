@@ -413,13 +413,13 @@ open class MucModule: XmppModuleBase, XmppStanzaProcessor, Resetable, @unchecked
         } else {
             _ = room.removeTemp(nickname: nickname);
             _ = room.addOccupant(nickname: nickname, presence: presence);
-
-            if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
-                room.update(state: .joined);
-                
-                let wasCreated = xUser?.statuses.firstIndex(of: 201) != nil;
-                self.joinPromises.complete(jid: room.jid, returning: wasCreated ? .created(room) : .joined(room));
-            }
+        }
+        
+        if room.state != .joined && xUser?.statuses.firstIndex(of: 110) != nil {
+            room.update(state: .joined);
+            
+            let wasCreated = xUser?.statuses.firstIndex(of: 201) != nil;
+            self.joinPromises.complete(jid: room.jid, returning: wasCreated ? .created(room) : .joined(room));
         }
 
         if room.nickname == nickname {
