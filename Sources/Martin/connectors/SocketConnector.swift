@@ -537,7 +537,7 @@ open class SocketConnector : XMPPConnectorBase, Connector, NetworkDelegate, @unc
                     let trust: SecTrust = trustVal as! SecTrust;
                     switch self.options.sslCertificateValidation {
                     case .default:
-                        let policy = SecPolicyCreateSSL(false, self.userJid.domain as CFString?);
+                        let policy = SecPolicyCreateSSL(true, self.userJid.domain as CFString?);
                         var secTrustResultType = SecTrustResultType.invalid;
                         SecTrustSetPolicies(trust, policy);
                         SecTrustEvaluate(trust, &secTrustResultType);

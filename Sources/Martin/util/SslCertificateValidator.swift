@@ -25,7 +25,7 @@ import CryptoKit
 open class SslCertificateValidator {
         
     public static func validateSslCertificate(domain: String, fingerprint acceptedFingerprint: SSLCertificateInfo.Fingerprint, trust: SecTrust) -> Bool {
-        let policy = SecPolicyCreateSSL(false, domain as CFString?);
+        let policy = SecPolicyCreateSSL(true, domain as CFString?);
         var secTrustResultType = SecTrustResultType.invalid;
         var error: CFError?;
         SecTrustSetPolicies(trust, policy);
