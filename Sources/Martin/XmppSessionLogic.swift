@@ -53,7 +53,24 @@ public protocol XmppSessionLogic: AnyObject {
     
 }
 
-/** 
+private actor AsyncSemaphore {
+    private var count: Int
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(count: Int = 0) { self.count = count }
+
+    func wait() async {
+        if count > 0 { count -= 1; return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func signal() {
+        if waiters.isEmpty { count += 1; return }
+        waiters.removeFirst().resume()
+    }
+}
+
+/**
  Implementation of XmppSessionLogic protocol which is resposible for
  following XMPP session logic for socket connections.
  */
@@ -230,54 +247,68 @@ open class SocketSessionLogic: XmppSessionLogic {
     }
     
     // we can process only 1 stanza at once..
-    private let semaphore = DispatchSemaphore(value: 1);
+    private let semaphore = AsyncSemaphore(count: 1)// DispatchSemaphore(value: 1);
     private var authTask: Task<Void,Never>?;
+    private var authBacklog: [Stanza] = [];
     
     private func receivedIncomingStanza(_ stanza:Stanza) {
-        semaphore.wait();
         Task {
-            defer {
-                logger.debug("releasing semaphore")
-                semaphore.signal();
+            await semaphore.wait();
+            await processReceivedIncomingStanza(stanza)
+            logger.debug("releasing semaphore")
+            await semaphore.signal();
+        }
+    }
+    
+    private func processReceivedIncomingStanza(_ stanza: Stanza) async {
+        logger.debug("received stanza: \(stanza)")
+        if streamManagementModule?.processIncoming(stanza: stanza) ?? false {
+            return;
+        }
+    
+        if let continuation = await self.responseManager.continuation(for: stanza) {
+            // FIXME: this is not blocking and causes continuation to be processed after another stanza may be processed!!
+            // is it? semaphore should properly handle ordering in this task
+            continuation(stanza);
+            logger.debug("continuation processing finished for: \(stanza), auth state = \(self.modulesManager.moduleOrNil(AuthModule.self)?.state)")
+            return;
+        }
+                    
+        guard stanza.name != "iq" || (stanza.type != StanzaType.result && stanza.type != StanzaType.error) else {
+            return;
+        }
+        
+        // this is blocking if "presence" or other packet will appear before authentication completes
+        // how to block processing until auth finishes...
+        // the issue is that we are awaiting auth task completion instead if checking its state and putting item on a backlog
+//                _ = await authTask?.result
+    
+        if (enqueueIfAuthenticating(stanza: stanza)) {
+            return;
+        }
+        await processReceivedIncomingStanzaByProcessors(stanza: stanza);
+    }
+    
+    private func processReceivedIncomingStanzaByProcessors(stanza: Stanza) async {
+        self.logger.debug("\(self.userJid) - processing incoming stanza by modules: \(stanza)")
+        do {
+            let processors = self.modulesManager.findProcessors(for: stanza);
+            guard !processors.isEmpty else {
+                self.logger.debug("\(self.userJid) - feature-not-implemented \(stanza, privacy: .public)");
+                throw XMPPError(condition: .feature_not_implemented);
             }
-            do {
-                logger.debug("received stanza: \(stanza)")
-                if streamManagementModule?.processIncoming(stanza: stanza) ?? false {
-                    return;
-                }
-            
-                if let continuation = await self.responseManager.continuation(for: stanza) {
-                    // FIXME: this is not blocking and causes continuation to be processed after another stanza may be processed!!
-                    // is it? semaphore should properly handle ordering in this task
-                    continuation(stanza);
-                    logger.debug("continuation processing finished for: \(stanza)")
-                    return;
-                }
-                            
-                guard stanza.name != "iq" || (stanza.type != StanzaType.result && stanza.type != StanzaType.error) else {
-                    return;
-                }
-                
-                _ = await authTask?.result
-            
-                let processors = self.modulesManager.findProcessors(for: stanza);
-                guard !processors.isEmpty else {
-                    self.logger.debug("\(self.userJid) - feature-not-implemented \(stanza, privacy: .public)");
-                    throw XMPPError(condition: .feature_not_implemented);
-                }
-                
-                for processor in processors {
-                    try await processor.process(stanza: stanza);
-                }
-                logger.debug("stanza processing finished: \(stanza)")
-            } catch {
-                Task {
-                    do {
-                        let errorStanza = try stanza.errorResult(of: error as? XMPPError ?? .undefined_condition);
-                        try await self.send(stanza: errorStanza);
-                    } catch {
-                        self.logger.debug("\(self.userJid) - error: \(error), while processing \(stanza)")
-                    }
+        
+            for processor in processors {
+                try await processor.process(stanza: stanza);
+            }
+            logger.debug("stanza processing finished: \(stanza)")
+        } catch {
+            Task {
+                do {
+                    let errorStanza = try stanza.errorResult(of: error as? XMPPError ?? .undefined_condition);
+                    try await self.send(stanza: errorStanza);
+                } catch {
+                    self.logger.debug("\(self.userJid) - error: \(error), while processing \(stanza)")
                 }
             }
         }
@@ -350,17 +381,7 @@ open class SocketSessionLogic: XmppSessionLogic {
             connector.activate(feature: .ZLIB);
         } else if !authorized {
             if let authModule: AuthModule = modulesManager.moduleOrNil(.auth) {
-                self.logger.debug("\(self.userJid) - starting authentication");
-                authTask = Task(operation: {
-                    do {
-                        try await authModule.login(streamFeatures: streamFeatures);
-                        if case let .authorized(streamRestartRequired) = authModule.state, streamRestartRequired {
-                            self.startStream();
-                        }
-                    } catch {
-                        await self.stop(force: true);
-                    }
-                })
+                startAuthentication(authModule: authModule, streamFeatures: streamFeatures);
             } else if modulesManager.moduleOrNil(.inBandRegistration) != nil {
                 self.logger.debug("\(self.userJid) - marking client as connected and ready for registration")
                 self.state = .connected(resumed: false);
@@ -375,6 +396,45 @@ open class SocketSessionLogic: XmppSessionLogic {
             }
         }
         self.logger.debug("\(self.userJid) - finished processing stream features");
+    }
+    
+    // code needs to be run in a "semaphore" lock
+    private func enqueueIfAuthenticating(stanza: Stanza) -> Bool {
+        if (authTask != nil && !(self.modulesManager.moduleOrNil(AuthModule.self)?.state.isAuthorized ?? true)) {
+            // we are in authentication process, but not authorized yet!
+            logger.debug("storing stanza in backlog, got = \(self.modulesManager.moduleOrNil(AuthModule.self)?.state)")
+            authBacklog.append(stanza);
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    private func authenticationCompleted() async {
+        await self.semaphore.wait()
+        while (!self.authBacklog.isEmpty) {
+            let backlogStanza = self.authBacklog.removeFirst();
+            await processReceivedIncomingStanzaByProcessors(stanza: backlogStanza);
+        }
+        self.authTask = nil;
+        await self.semaphore.signal()
+    }
+    
+    private func startAuthentication(authModule: AuthModule, streamFeatures: StreamFeatures) {
+        self.logger.debug("\(self.userJid) - starting authentication");
+        authBacklog.removeAll();
+        authTask = Task(operation: {
+            do {
+                try await authModule.login(streamFeatures: streamFeatures);
+                self.logger.debug( "\(self.userJid) - login successful, got: \(authModule.state)");
+                if case let .authorized(streamRestartRequired) = authModule.state, streamRestartRequired {
+                    self.startStream();
+                }
+                await self.authenticationCompleted()
+            } catch {
+                await self.stop(force: true);
+            }
+        })
     }
     
     private func streamAuthenticated(streamFeatures: StreamFeatures) async throws {
