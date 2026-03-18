@@ -67,8 +67,12 @@ open class PEPBookmarksModule: AbstractPEPModule, XmppModule, @unchecked Sendabl
     }
     
     open func setConferenceAutojoin(_ value: Bool, for jid: JID) async throws {
-        guard let conference = self.currentBookmarks.conference(for: jid), conference.autojoin != value else {
-            throw XMPPError(condition: .item_not_found);
+        guard let conference = self.currentBookmarks.conference(for: jid) else {
+            // we are not updating conference definition if there is none
+            return;
+        }
+        guard conference.autojoin != value else {
+            return;
         }
         try await addOrUpdate(bookmark: conference.with(autojoin: value));
     }

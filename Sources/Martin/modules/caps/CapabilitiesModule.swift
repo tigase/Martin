@@ -97,7 +97,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, @unchecked Sendable {
 
         logger.debug("updating presence CAPS...")
         
-        guard let ver: String = self.verificationString ?? calculateVerificationString() else {
+        guard let ver: String = calculateVerificationString() else {
             return;
         }
             
@@ -199,7 +199,7 @@ open class CapabilitiesModule: XmppModuleBase, XmppModule, @unchecked Sendable {
      - returns: verification string
      */
     func generateVerificationString(_ identities: [String], features availableFeatures: [String]) -> String? {
-        let string = (identities + availableFeatures.sorted()).joined(separator: "<");
+        let string = (identities + availableFeatures.sorted()).joined(separator: "<") + "<";
         return Insecure.SHA1.hash(toBase64: string, using: .utf8);
     }
         
