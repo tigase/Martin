@@ -165,6 +165,7 @@ open class Context: CustomStringConvertible, Resetable, @unchecked Sendable {
                 return;
             }
             self.state = state;
+            print("\(userBareJid), changing state to \(state)")
         }
     }
     
@@ -172,6 +173,7 @@ open class Context: CustomStringConvertible, Resetable, @unchecked Sendable {
         try withLock {
             try precondition(state);
             self.state = newState;
+            print("\(userBareJid), changing state to \(newState) with predicate")
         }
     }
 }

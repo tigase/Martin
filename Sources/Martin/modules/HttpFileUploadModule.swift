@@ -58,6 +58,40 @@ open class HttpFileUploadModule: XmppModuleBase, XmppModule, @unchecked Sendable
         
     }
     
+    open func findHttpUploadComponentsStream() async throws -> AsyncStream<HttpFileUploadModule.UploadComponent> {
+        guard let disco = self.context?.module(.disco) else {
+            throw XMPPError(condition: .unexpected_request, message: "No context!")
+        }
+        
+        let components = try await disco.serverComponents().items.map({ $0.jid });
+        return AsyncStream { continuation in
+            Task {
+                defer {
+                    continuation.finish()
+                }
+                
+                await withTaskGroup(of: UploadComponent?.self, body: { group in
+                    for componentJid in components {
+                        group.addTask {
+                            guard let info = try? await disco.info(for: componentJid), info.features.contains(HttpFileUploadModule.HTTP_FILE_UPLOAD_XMLNS) else {
+                                return nil;
+                            }
+                            
+                            let maxSize: Int = info.form?.value(for: "max-file-size", type: Int.self) ?? Int.max;
+                            return UploadComponent(jid: componentJid, maxSize: maxSize);
+                        }
+                    }
+                    
+                    for await component in group {
+                        if let comp = component {
+                            continuation.yield(comp)
+                        }
+                    }
+                });
+            }
+        }
+    }
+    
     open func findHttpUploadComponents() async throws -> [HttpFileUploadModule.UploadComponent] {
         guard let disco = self.context?.module(.disco) else {
             throw XMPPError(condition: .unexpected_request, message: "No context!")

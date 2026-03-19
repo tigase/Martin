@@ -132,9 +132,9 @@ open class XMPPClient: Context, @unchecked Sendable {
     
     deinit {
         let jid = connectionConfiguration.userJid;
-        logger.error("releasing keepalive for: \(jid)")
+        logger.error("\(jid), releasing keepalive for: \(jid)")
         releaseKeepAlive();
-        logger.error("deinitializing client for: \(jid)")
+        logger.error("\(jid), deinitializing client for: \(jid)")
     }
     
     /**
@@ -143,11 +143,11 @@ open class XMPPClient: Context, @unchecked Sendable {
     open func login(lastSeeOtherHost: ConnectorEndpoint? = nil) throws {
         try update(state: .connecting, precondition: { state in
             guard state == .disconnected() else {
-                logger.debug("XMPP in state: \(self.state), - not starting connection");
+                logger.debug("\(self.connectionConfiguration.userJid), XMPP in state: \(self.state), - not starting connection");
                 throw XMPPError(condition: .unexpected_request, message: "Invalid XMPP connection state! (\(state), expected: disconnected)")
             }
         })
-        logger.debug("starting connection......");
+        logger.debug("\(self.connectionConfiguration.userJid), starting connection......");
         
         Task {
             await self.responseManager.initialize(account: context.userBareJid.jid());
@@ -162,17 +162,20 @@ open class XMPPClient: Context, @unchecked Sendable {
                 return;
             }
             let oldState = that.state;
-            that.logger.debug("session logic changed state from \(oldState) to \(newState)")
-            that.update(state: newState);
+            that.logger.debug("\(that.connectionConfiguration.userJid), session logic changed state from \(oldState) to \(newState)")
             switch newState {
             case .connected:
+                that.update(state: newState);
                 that.scheduleKeepAlive();
             case .disconnected(let reason):
                 that.releaseKeepAlive();
+                // TODO: will stopping session logic here would be a good idea?
+                
                 Task {
                     await that.handleDisconnection(clean: oldState == .disconnecting, reason: reason);
                 }
             default:
+                that.update(state: newState);
                 that.releaseKeepAlive();
             }
         });
@@ -211,9 +214,12 @@ open class XMPPClient: Context, @unchecked Sendable {
         let scopes: Set<ResetableScope> = clean ? [.session, .stream] : [.stream];
         self.reset(scopes: scopes);
         await sessionLogic?.unbind();
+        // TODO: when this is called, state is (or should be) disconnected already
+        // is it possible that reaction on `.diconnected()` set in `sessionLogicCancellable` starts reconnect faster that we call this?
+        // see private func XmppService.reconnect(client: XMPPClient, ignoreCheck: Bool = false) {
         self.update(state: .disconnected(reason));
         sessionLogic = nil;
-        logger.debug("connection stopped......");
+        logger.debug("\(self.connectionConfiguration.userJid), connection stopped......");
     }
     
     /**
@@ -225,7 +231,7 @@ open class XMPPClient: Context, @unchecked Sendable {
      */
     open func disconnect(force: Bool = false) async throws {
         guard self.state == .connected() || self.state == .connecting, let sessionLogic = self.sessionLogic else {
-            self.logger.debug("XMPP in state: \(self.state), - not stopping connection");
+            self.logger.debug("\(self.connectionConfiguration.userJid), XMPP in state: \(self.state), - not stopping connection");
             throw XMPPError.undefined_condition;
         }
         
