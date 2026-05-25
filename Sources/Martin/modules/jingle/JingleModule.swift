@@ -191,7 +191,7 @@ open class JingleModule: XmppModuleBase, XmppStanzaProcessor, @unchecked Sendabl
             break;
         }
         if let context = context {
-            try sessionManager.messageInitiation(for: context, from: from, action: action);
+            try sessionManager.messageInitiation(for: context, from: from, action: action, timestamp: message.delay?.stamp);
         }
     }
     

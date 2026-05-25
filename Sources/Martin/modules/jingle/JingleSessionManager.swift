@@ -32,7 +32,7 @@ public protocol JingleSessionManager {
     
     func transportInfo(for context: Context, with jid: JID, sid: String, contents: [Jingle.Content]) throws
     
-    func messageInitiation(for context: Context, from jid: JID, action: Jingle.MessageInitiationAction) throws
+    func messageInitiation(for context: Context, from jid: JID, action: Jingle.MessageInitiationAction, timestamp: Date?) throws
     
     func contentModified(for context: Context, with jid: JID, sid: String, action: Jingle.ContentAction, contents: [Jingle.Content], bundle: Jingle.Bundle?) throws
     
