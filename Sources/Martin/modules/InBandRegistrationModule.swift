@@ -171,7 +171,7 @@ open class InBandRegistrationModule: XmppModuleBase, XmppModule, @unchecked Send
             throw XMPPError(condition: .remote_server_timeout);
         }
         
-        let iq = Iq(type: .set, to: serviceJid ?? context.boundJid, {
+        let iq = Iq(type: .set, to: serviceJid, {
             Element(name: "query", xmlns: "jabber:iq:register", {
                 Element(name: "username", cdata: username)
                 Element(name: "password", cdata: newPassword)
