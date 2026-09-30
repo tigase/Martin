@@ -126,6 +126,38 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         }
     }
     
+    @available(macOS 14.0, iOS 17.0, *)
+    private static func systemProxyConfiguration(for endpoint: SocketConnectorNetwork.Endpoint) -> ProxyConfiguration? {
+        guard let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue(),
+              let url = URL(string: "https://\(endpoint.host):\(endpoint.port)"),
+              let proxies = CFNetworkCopyProxiesForURL(url as CFURL, settings).takeRetainedValue() as? [[CFString: Any]] else {
+            return nil;
+        }
+        for proxy in proxies {
+            guard let type = proxy[kCFProxyTypeKey] as? String,
+                  let host = proxy[kCFProxyHostNameKey] as? String,
+                  let portNumber = proxy[kCFProxyPortNumberKey] as? Int,
+                  let port = NWEndpoint.Port(rawValue: UInt16(truncatingIfNeeded: portNumber)) else {
+                continue;
+            }
+            let proxyEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: port);
+            var configuration: ProxyConfiguration;
+            switch type {
+            case let t where t == kCFProxyTypeSOCKS as String:
+                configuration = ProxyConfiguration(socksv5Proxy: proxyEndpoint);
+            case let t where t == kCFProxyTypeHTTPS as String || t == kCFProxyTypeHTTP as String:
+                configuration = ProxyConfiguration(httpCONNECTProxy: proxyEndpoint);
+            default:
+                continue;
+            }
+            if let username = proxy[kCFProxyUsernameKey] as? String, let password = proxy[kCFProxyPasswordKey] as? String {
+                configuration.applyCredential(username: username, password: password);
+            }
+            return configuration;
+        }
+        return nil;
+    }
+
     /**
      Should always be called from local dispatch queue!
      */
@@ -157,6 +189,11 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         parameters.serviceClass = .responsiveData;
         if options.enableTcpFastOpen {
             parameters.allowFastOpen = true;
+        }
+        if options.useSystemProxy, #available(macOS 14.0, iOS 17.0, *), let proxy = SocketConnectorNetwork.systemProxyConfiguration(for: endpoint) {
+            let context = NWParameters.PrivacyContext(description: "Martin system proxy");
+            context.proxyConfigurations = [proxy];
+            parameters.setPrivacyContext(context);
         }
         connection = NWConnection(host: .name(endpoint.host, nil), port: .init(integerLiteral: UInt16(endpoint.port)), using: parameters);
         
@@ -430,6 +467,7 @@ open class SocketConnectorNetwork: XMPPConnectorBase, Connector, NetworkDelegate
         public var tcpNoDelay: Bool = true;
         public var tcpDisableAckStretching: Bool = true;
         public var tcpKeepalive: TcpKeepalive = TcpKeepalive();
+        public var useSystemProxy: Bool = true;
 
         public var networkProcessorProviders: [NetworkProcessorProvider] = []
         
